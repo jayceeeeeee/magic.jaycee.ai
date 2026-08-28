@@ -9,19 +9,49 @@
 </head>
 <body>
   <main>
-    <section class="birth-panel" aria-labelledby="birth-title">
-      <h1 id="birth-title">Your birth moment</h1>
-      <p>Enter the date and time you were born.</p>
+    <section class="game-panel step is-active" id="mode-step" aria-labelledby="mode-title">
+      <span class="eyebrow">Game: Conquering the World</span>
+      <h1 id="mode-title">Start a new game <span class="cursor" aria-hidden="true">_</span></h1>
+      <p class="menu-action">Mode:</p>
+
+      <div class="mode-grid" aria-label="Game modes">
+        <button class="mode-button" type="button" data-mode="adventure">Adventure</button>
+        <button class="mode-button" type="button" data-mode="co-op">Co-op</button>
+        <button class="mode-button" type="button" data-mode="competition">Competition</button>
+      </div>
+    </section>
+
+    <section class="game-panel step" id="birth-step" aria-labelledby="birth-title" hidden>
+      <span class="eyebrow">Character Creation</span>
+      <h1 id="birth-title">Start a new game <span class="cursor" aria-hidden="true">_</span></h1>
+      <p class="menu-action">Incarnate a new Character?</p>
 
       <form id="birth-form">
-        <label for="birth-date">
-          Date of birth
-          <input id="birth-date" name="birth-date" type="date" required>
-        </label>
+        <div class="pillars" aria-label="BaZi four pillars">
+          <label class="pillar" for="birth-time">
+            <span class="pillar-label">Hour</span>
+            <strong>&#26178;</strong>
+            <input id="birth-time" name="birth-time" type="time" required>
+          </label>
+          <label class="pillar" for="birth-day">
+            <span class="pillar-label">Day</span>
+            <strong>&#26085;</strong>
+            <input id="birth-day" name="birth-day" type="number" inputmode="numeric" placeholder="DD" min="1" max="31" required>
+          </label>
+          <label class="pillar" for="birth-month">
+            <span class="pillar-label">Month</span>
+            <strong>&#26376;</strong>
+            <input id="birth-month" name="birth-month" type="number" inputmode="numeric" placeholder="MM" min="1" max="12" required>
+          </label>
+          <label class="pillar" for="birth-year">
+            <span class="pillar-label">Year</span>
+            <strong>&#24180;</strong>
+            <input id="birth-year" name="birth-year" type="number" inputmode="numeric" placeholder="YYYY" min="1900" max="2100" required>
+          </label>
+        </div>
 
-        <label for="birth-time">
-          Time of birth
-          <input id="birth-time" name="birth-time" type="time" required>
+        <label for="birth-place">
+          <input id="birth-place" name="birth-place" type="text" autocomplete="address-level2" placeholder="Position: city, country..." required>
         </label>
 
         <button type="submit">Continue</button>
