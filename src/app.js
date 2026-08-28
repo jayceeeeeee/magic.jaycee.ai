@@ -1,27 +1,88 @@
 const modeButtons = document.querySelectorAll(".mode-button");
-const modeStep = document.querySelector("#mode-step");
-const birthStep = document.querySelector("#birth-step");
 const birthForm = document.querySelector("#birth-form");
 const formMessage = document.querySelector("#form-message");
 const siteBanner = document.querySelector(".site-banner");
+const previousButton = document.querySelector("[data-flow-action='previous']");
+const nextButton = document.querySelector("[data-flow-action='next']");
 let selectedMode = "";
+let activeStepId = "mode-step";
+let previousStepId = "";
+let nextStepId = "";
+
+const modeRoutes = {
+  adventure: "birth-step",
+  "co-op": "co-op-step",
+  competition: "competition-step",
+};
+
+const stepFlow = {
+  "mode-step": {
+    previous: "",
+    next: "",
+  },
+  "birth-step": {
+    previous: "mode-step",
+    next: "",
+  },
+};
 
 const updateBannerSpace = () => {
+  if (!siteBanner) {
+    document.documentElement.style.setProperty("--banner-space", "0px");
+    return;
+  }
+
   const bannerHeight = siteBanner.getBoundingClientRect().height;
   const bannerTop = Number.parseFloat(getComputedStyle(siteBanner).top) || 0;
 
   document.documentElement.style.setProperty("--banner-space", `${bannerHeight + bannerTop + 16}px`);
 };
 
-if ("ResizeObserver" in window) {
+if (siteBanner && "ResizeObserver" in window) {
   new ResizeObserver(updateBannerSpace).observe(siteBanner);
 }
 
 window.addEventListener("load", updateBannerSpace);
 window.addEventListener("resize", updateBannerSpace);
 
+const getStep = (stepId) => document.querySelector(`#${stepId}`);
+
+const updateNavigation = () => {
+  if (previousButton) {
+    previousButton.hidden = !previousStepId;
+  }
+
+  if (nextButton) {
+    nextButton.hidden = !nextStepId;
+  }
+};
+
+const showStep = (stepId) => {
+  const targetStep = getStep(stepId);
+
+  if (!targetStep) {
+    return;
+  }
+
+  document.querySelectorAll(".step").forEach((step) => {
+    const isTarget = step.id === stepId;
+
+    step.hidden = !isTarget;
+    step.classList.toggle("is-active", isTarget);
+  });
+
+  activeStepId = stepId;
+  previousStepId = stepFlow[stepId]?.previous || "";
+  nextStepId = stepFlow[stepId]?.next || "";
+  updateNavigation();
+};
+
 document.querySelectorAll("button").forEach((button) => {
   button.addEventListener("pointerdown", () => {
+    if (button.classList.contains("is-locked")) {
+      return;
+    }
+
     button.classList.add("is-pressed");
   });
 
@@ -40,13 +101,34 @@ document.querySelectorAll("button").forEach((button) => {
 
 modeButtons.forEach((button) => {
   button.addEventListener("click", () => {
+    if (button.classList.contains("is-locked")) {
+      return;
+    }
+
     selectedMode = button.dataset.mode;
-    modeStep.hidden = true;
-    modeStep.classList.remove("is-active");
-    birthStep.hidden = false;
-    birthStep.classList.add("is-active");
+    const targetId = button.dataset.target || modeRoutes[selectedMode];
+
+    showStep(targetId);
   });
 });
+
+if (previousButton) {
+  previousButton.addEventListener("click", () => {
+    if (previousStepId) {
+      showStep(previousStepId);
+    }
+  });
+}
+
+if (nextButton) {
+  nextButton.addEventListener("click", () => {
+    if (nextStepId) {
+      showStep(nextStepId);
+    }
+  });
+}
+
+showStep(activeStepId);
 
 birthForm.addEventListener("submit", (event) => {
   event.preventDefault();

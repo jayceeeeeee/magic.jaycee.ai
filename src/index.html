@@ -8,6 +8,7 @@
   <script src="./app.js" defer></script>
 </head>
 <body>
+  <!--
   <header class="site-banner" aria-label="Website invocation">
     <div class="banner-copy">
       <p>
@@ -20,65 +21,73 @@
       alt="Paramahansa Yogananda"
     >
   </header>
+  -->
 
   <main>
-    <section class="game-panel step is-active" id="mode-step" aria-labelledby="mode-title">
-      <span class="eyebrow">Game: Conquering the World</span>
-      <h1 id="mode-title">Start a new game <span class="cursor" aria-hidden="true">_</span></h1>
-      <p class="menu-action">Mode:</p>
-
-      <div class="mode-grid" aria-label="Game modes">
-        <button class="mode-button" type="button" data-mode="adventure">
-          <span class="mode-title">Adventure</span>
-          <span class="mode-description">Explore your solo character's path (your date and place of birth). </span>
-        </button>
-        <button class="mode-button" type="button" data-mode="co-op">
-          <span class="mode-title">Co-op</span>
-          <span class="mode-description">Explore your relationship with other people (or with me to start).</span>
-        </button>
-        <button class="mode-button" type="button" data-mode="competition">
-          <span class="mode-title">Competition</span>
-          <span class="mode-description">Start a quantum war in the present, activating superpowers.</span>
-        </button>
+    <section class="game-panel" aria-label="Game setup">
+      <div class="panel-header">
+        <span class="eyebrow">Game: Conquering the World</span>
+        <button class="nav-button" type="button" data-flow-action="previous" aria-label="Previous step" hidden>&larr;</button>
       </div>
-    </section>
 
-    <section class="game-panel step" id="birth-step" aria-labelledby="birth-title" hidden>
-      <span class="eyebrow">Character Creation</span>
-      <h1 id="birth-title">Start a new game <span class="cursor" aria-hidden="true">_</span></h1>
-      <p class="menu-action">Incarnate a new Character?</p>
+      <div class="step is-active" id="mode-step" aria-labelledby="mode-title">
+        <h1 id="mode-title">Start a new game <span class="cursor" aria-hidden="true">_</span></h1>
+        <p class="menu-action">Mode:</p>
 
-      <form id="birth-form">
-        <div class="pillars" aria-label="BaZi four pillars">
-          <label class="pillar" for="birth-time">
-            <span class="pillar-label">Hour</span>
-            <strong>&#26178;</strong>
-            <input id="birth-time" name="birth-time" type="time" required>
-          </label>
-          <label class="pillar" for="birth-day">
-            <span class="pillar-label">Day</span>
-            <strong>&#26085;</strong>
-            <input id="birth-day" name="birth-day" type="number" inputmode="numeric" placeholder="DD" min="1" max="31" required>
-          </label>
-          <label class="pillar" for="birth-month">
-            <span class="pillar-label">Month</span>
-            <strong>&#26376;</strong>
-            <input id="birth-month" name="birth-month" type="number" inputmode="numeric" placeholder="MM" min="1" max="12" required>
-          </label>
-          <label class="pillar" for="birth-year">
-            <span class="pillar-label">Year</span>
-            <strong>&#24180;</strong>
-            <input id="birth-year" name="birth-year" type="number" inputmode="numeric" placeholder="YYYY" min="1900" max="2100" required>
-          </label>
+        <div class="mode-grid" aria-label="Game modes">
+          <button class="mode-button mode-button-adventure" type="button" data-mode="adventure" data-target="birth-step">
+            <span class="mode-title">Adventure</span>
+            <span class="mode-description">Explore your solo character's path (your date and place of birth). </span>
+          </button>
+          <button class="mode-button is-locked" type="button" data-mode="co-op" data-target="co-op-step" aria-disabled="true">
+            <span class="lock-icon" aria-hidden="true">&#128274;</span>
+            <span class="mode-title">Co-op</span>
+            <span class="mode-description">Explore your relationship with other people (or with me to start).</span>
+          </button>
+          <button class="mode-button is-locked" type="button" data-mode="competition" data-target="competition-step" aria-disabled="true">
+            <span class="lock-icon" aria-hidden="true">&#128274;</span>
+            <span class="mode-title">Competition</span>
+            <span class="mode-description">Start a quantum war in the present, activating superpowers.</span>
+          </button>
         </div>
+      </div>
 
-        <label for="birth-place">
-          <input id="birth-place" name="birth-place" type="text" autocomplete="address-level2" placeholder="Position: city, country..." required>
-        </label>
+      <div class="step" id="birth-step" aria-labelledby="birth-title" hidden>
+        <h1 id="birth-title">Choosing your incarnation <span class="cursor" aria-hidden="true">_</span></h1>
+        <p class="menu-action">Spawn:</p>
 
-        <button type="submit">Continue</button>
-        <p id="form-message" class="form-message" aria-live="polite"></p>
-      </form>
+        <form id="birth-form">
+          <div class="pillars" aria-label="BaZi four pillars">
+            <label class="pillar" for="birth-time">
+              <span class="pillar-label">Hour</span>
+              <strong>&#26178;</strong>
+              <input id="birth-time" name="birth-time" type="time" required>
+            </label>
+            <label class="pillar" for="birth-day">
+              <span class="pillar-label">Day</span>
+              <strong>&#26085;</strong>
+              <input id="birth-day" name="birth-day" type="number" inputmode="numeric" placeholder="DD" min="1" max="31" required>
+            </label>
+            <label class="pillar" for="birth-month">
+              <span class="pillar-label">Month</span>
+              <strong>&#26376;</strong>
+              <input id="birth-month" name="birth-month" type="number" inputmode="numeric" placeholder="MM" min="1" max="12" required>
+            </label>
+            <label class="pillar" for="birth-year">
+              <span class="pillar-label">Year</span>
+              <strong>&#24180;</strong>
+              <input id="birth-year" name="birth-year" type="number" inputmode="numeric" placeholder="YYYY" min="1900" max="2100" required>
+            </label>
+          </div>
+
+          <label for="birth-place">
+            <input id="birth-place" name="birth-place" type="text" autocomplete="address-level2" placeholder="Position: city, country..." required>
+          </label>
+
+          <button type="submit">Continue</button>
+          <p id="form-message" class="form-message" aria-live="polite"></p>
+        </form>
+      </div>
     </section>
   </main>
 </body>
