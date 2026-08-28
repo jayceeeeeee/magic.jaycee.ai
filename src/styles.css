@@ -12,6 +12,8 @@
   --color-primary-hover: #a8ffc0;
   --color-border: #247a3d;
   --shadow-panel: 0 0 34px rgba(66, 247, 124, 0.1), 0 28px 60px rgba(0, 0, 0, 0.48);
+  --banner-space: 84px;
+  --page-gap: 24px;
 }
 
 body {
@@ -26,11 +28,49 @@ body {
   background-size: 34px 34px;
 }
 
+.site-banner {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  z-index: 10;
+  width: min(calc(100% - 32px), 980px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(66, 247, 124, 0.34);
+  border-radius: 2px;
+  padding: 8px 8px 8px 16px;
+  background: rgba(6, 16, 9, 0.88);
+  box-shadow: 0 0 24px rgba(66, 247, 124, 0.08);
+}
+
+.banner-copy {
+  min-width: 0;
+}
+
+.site-banner p {
+  margin: 0;
+  color: #bdf7cd;
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.banner-image {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(66, 247, 124, 0.32);
+  border-radius: 2px;
+  object-fit: cover;
+}
+
 main {
   min-height: 100vh;
   display: grid;
   place-items: center;
-  padding: 24px;
+  padding: calc(var(--banner-space) + var(--page-gap)) 24px 24px;
 }
 
 .game-panel {
@@ -58,7 +98,7 @@ main {
 }
 
 h1 {
-  margin: 0 0 34px;
+  margin: 0 0 30px;
   font-size: clamp(2rem, 6vw, 3rem);
   line-height: 1.04;
   font-weight: 760;
@@ -236,13 +276,40 @@ button {
 }
 
 .mode-button {
-  min-height: 96px;
+  min-height: 88px;
+  display: grid;
+  align-content: center;
+  gap: 8px;
   text-align: center;
-  padding: 0 12px;
+  padding: 14px 12px;
   letter-spacing: 0.04em;
 }
 
-button:hover {
+.mode-title {
+  color: inherit;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.mode-description {
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.mode-button:hover .mode-description,
+.mode-button:focus-visible .mode-description,
+.mode-button:active .mode-description,
+.mode-button.is-pressed .mode-description {
+  color: #001505;
+}
+
+button:hover,
+button:focus-visible,
+button:active,
+button.is-pressed {
   color: #001505;
   background: var(--color-primary);
   transform: translateY(-1px);
@@ -250,7 +317,16 @@ button:hover {
 }
 
 button:active {
-  transform: translateY(0);
+  transform: translateY(0) scale(0.99);
+}
+
+button.is-pressed {
+  transform: translateY(0) scale(0.99);
+}
+
+button:focus-visible {
+  outline: 2px solid var(--color-primary-hover);
+  outline-offset: 3px;
 }
 
 .form-message {
@@ -261,8 +337,29 @@ button:active {
 }
 
 @media (max-width: 480px) {
+  :root {
+    --page-gap: 10px;
+  }
+
+  .site-banner {
+    width: calc(100% - 24px);
+    top: 12px;
+    padding: 8px 8px 8px 12px;
+  }
+
+  .site-banner p {
+    font-size: 0.72rem;
+  }
+
+  .banner-image {
+    width: 44px;
+    height: 44px;
+  }
+
   main {
-    padding: 18px;
+    min-height: auto;
+    place-items: start center;
+    padding: calc(var(--banner-space) + var(--page-gap)) 18px 18px;
   }
 
   .game-panel {

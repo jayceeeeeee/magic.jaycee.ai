@@ -8,6 +8,19 @@
   <script src="./app.js" defer></script>
 </head>
 <body>
+  <header class="site-banner" aria-label="Website invocation">
+    <div class="banner-copy">
+      <p>
+        I first work for God by Devotion, then for Yogananda and the Gurus by Friendship, then for Myself by Love, then for Technology and the World by Passion.
+      </p>
+    </div>
+    <img
+      class="banner-image"
+      src="./paramahansa-yogananda-yogoda-satsanga-society-of-india-front.jpg"
+      alt="Paramahansa Yogananda"
+    >
+  </header>
+
   <main>
     <section class="game-panel step is-active" id="mode-step" aria-labelledby="mode-title">
       <span class="eyebrow">Game: Conquering the World</span>
@@ -15,9 +28,18 @@
       <p class="menu-action">Mode:</p>
 
       <div class="mode-grid" aria-label="Game modes">
-        <button class="mode-button" type="button" data-mode="adventure">Adventure</button>
-        <button class="mode-button" type="button" data-mode="co-op">Co-op</button>
-        <button class="mode-button" type="button" data-mode="competition">Competition</button>
+        <button class="mode-button" type="button" data-mode="adventure">
+          <span class="mode-title">Adventure</span>
+          <span class="mode-description">Explore your solo character's path (your date and place of birth). </span>
+        </button>
+        <button class="mode-button" type="button" data-mode="co-op">
+          <span class="mode-title">Co-op</span>
+          <span class="mode-description">Explore your relationship with other people (or with me to start).</span>
+        </button>
+        <button class="mode-button" type="button" data-mode="competition">
+          <span class="mode-title">Competition</span>
+          <span class="mode-description">Start a quantum war in the present, activating superpowers.</span>
+        </button>
       </div>
     </section>
 
