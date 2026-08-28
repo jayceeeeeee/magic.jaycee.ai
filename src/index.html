@@ -57,32 +57,30 @@
         <p class="menu-action">Spawn:</p>
 
         <form id="birth-form">
-          <div class="pillars" aria-label="BaZi four pillars">
-            <label class="pillar" for="birth-time">
-              <span class="pillar-label">Hour</span>
-              <strong>&#26178;</strong>
+          <label for="full-name">
+            Full name
+            <input id="full-name" name="full-name" type="text" autocomplete="name" placeholder="Your full name" required>
+          </label>
+
+          <div class="form-grid">
+            <label for="birth-date">
+              Date of birth
+              <input id="birth-date" name="birth-date" type="date" required>
+            </label>
+
+            <label for="birth-time">
+              Time of birth
               <input id="birth-time" name="birth-time" type="time" required>
-            </label>
-            <label class="pillar" for="birth-day">
-              <span class="pillar-label">Day</span>
-              <strong>&#26085;</strong>
-              <input id="birth-day" name="birth-day" type="number" inputmode="numeric" placeholder="DD" min="1" max="31" required>
-            </label>
-            <label class="pillar" for="birth-month">
-              <span class="pillar-label">Month</span>
-              <strong>&#26376;</strong>
-              <input id="birth-month" name="birth-month" type="number" inputmode="numeric" placeholder="MM" min="1" max="12" required>
-            </label>
-            <label class="pillar" for="birth-year">
-              <span class="pillar-label">Year</span>
-              <strong>&#24180;</strong>
-              <input id="birth-year" name="birth-year" type="number" inputmode="numeric" placeholder="YYYY" min="1900" max="2100" required>
             </label>
           </div>
 
-          <label for="birth-place">
-            <input id="birth-place" name="birth-place" type="text" autocomplete="address-level2" placeholder="Position: city, country..." required>
-          </label>
+          <div class="location-field">
+            <label for="birth-place">
+              Place of birth
+              <input id="birth-place" name="birth-place" type="text" autocomplete="off" placeholder="Search city, country..." required>
+            </label>
+            <ul class="location-results" id="location-results" aria-label="Location suggestions" hidden></ul>
+          </div>
 
           <button type="submit">Continue</button>
           <p id="form-message" class="form-message" aria-live="polite"></p>
