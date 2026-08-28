@@ -4,6 +4,8 @@ const formMessage = document.querySelector("#form-message");
 const birthDateInput = document.querySelector("#birth-date");
 const birthPlaceInput = document.querySelector("#birth-place");
 const locationResults = document.querySelector("#location-results");
+const yearPillarSymbol = document.querySelector("#year-pillar-symbol");
+const yearPillarMeta = document.querySelector("#year-pillar-meta");
 const siteBanner = document.querySelector(".site-banner");
 const previousButton = document.querySelector("[data-flow-action='previous']");
 const nextButton = document.querySelector("[data-flow-action='next']");
@@ -27,9 +29,41 @@ const stepFlow = {
   },
   "birth-step": {
     previous: "mode-step",
+    next: "pillar-step",
+  },
+  "pillar-step": {
+    previous: "birth-step",
     next: "",
   },
 };
+
+const heavenlyStems = [
+  { hanzi: "甲", pinyin: "Jia", element: "Wood", polarity: "Yang" },
+  { hanzi: "乙", pinyin: "Yi", element: "Wood", polarity: "Yin" },
+  { hanzi: "丙", pinyin: "Bing", element: "Fire", polarity: "Yang" },
+  { hanzi: "丁", pinyin: "Ding", element: "Fire", polarity: "Yin" },
+  { hanzi: "戊", pinyin: "Wu", element: "Earth", polarity: "Yang" },
+  { hanzi: "己", pinyin: "Ji", element: "Earth", polarity: "Yin" },
+  { hanzi: "庚", pinyin: "Geng", element: "Metal", polarity: "Yang" },
+  { hanzi: "辛", pinyin: "Xin", element: "Metal", polarity: "Yin" },
+  { hanzi: "壬", pinyin: "Ren", element: "Water", polarity: "Yang" },
+  { hanzi: "癸", pinyin: "Gui", element: "Water", polarity: "Yin" },
+];
+
+const earthlyBranches = [
+  { hanzi: "子", pinyin: "Zi", animal: "Rat" },
+  { hanzi: "丑", pinyin: "Chou", animal: "Ox" },
+  { hanzi: "寅", pinyin: "Yin", animal: "Tiger" },
+  { hanzi: "卯", pinyin: "Mao", animal: "Rabbit" },
+  { hanzi: "辰", pinyin: "Chen", animal: "Dragon" },
+  { hanzi: "巳", pinyin: "Si", animal: "Snake" },
+  { hanzi: "午", pinyin: "Wu", animal: "Horse" },
+  { hanzi: "未", pinyin: "Wei", animal: "Goat" },
+  { hanzi: "申", pinyin: "Shen", animal: "Monkey" },
+  { hanzi: "酉", pinyin: "You", animal: "Rooster" },
+  { hanzi: "戌", pinyin: "Xu", animal: "Dog" },
+  { hanzi: "亥", pinyin: "Hai", animal: "Pig" },
+];
 
 const updateBannerSpace = () => {
   if (!siteBanner) {
@@ -60,7 +94,7 @@ const updateNavigation = () => {
   }
 
   if (nextButton) {
-    nextButton.hidden = !nextStepId;
+    nextButton.hidden = true;
   }
 };
 
@@ -160,6 +194,46 @@ const getBirthFormData = () => {
           longitude: selectedLocation.longitude,
         }
       : null,
+  };
+};
+
+const getBaziYear = (dateValue) => {
+  const [year, month, day] = dateValue.split("-").map(Number);
+
+  if (month < 2 || (month === 2 && day < 4)) {
+    return year - 1;
+  }
+
+  return year;
+};
+
+const getCycleIndex = (year) => ((year - 1984) % 60 + 60) % 60;
+
+const getYearPillar = (dateValue) => {
+  const baziYear = getBaziYear(dateValue);
+  const cycleIndex = getCycleIndex(baziYear);
+  const stem = heavenlyStems[cycleIndex % heavenlyStems.length];
+  const branch = earthlyBranches[cycleIndex % earthlyBranches.length];
+
+  return {
+    baziYear,
+    hanzi: `${stem.hanzi}${branch.hanzi}`,
+    pinyin: `${stem.pinyin} ${branch.pinyin}`,
+    description: `${stem.polarity} ${stem.element} ${branch.animal}`,
+  };
+};
+
+const renderPillarResults = (profile) => {
+  const yearPillar = getYearPillar(profile.birthDate);
+
+  yearPillarSymbol.textContent = yearPillar.hanzi;
+  yearPillarMeta.textContent = `${yearPillar.pinyin} - ${yearPillar.description}`;
+
+  return {
+    ...profile,
+    pillars: {
+      year: yearPillar,
+    },
   };
 };
 
@@ -293,6 +367,8 @@ birthForm.addEventListener("submit", (event) => {
     return;
   }
 
-  localStorage.setItem("birthProfile", JSON.stringify(profile));
-  setFormMessage(`${profile.mode} profile saved locally.`, "success");
+  const profileWithPillars = renderPillarResults(profile);
+
+  localStorage.setItem("birthProfile", JSON.stringify(profileWithPillars));
+  showStep("pillar-step");
 });

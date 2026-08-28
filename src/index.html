@@ -86,6 +86,34 @@
           <p id="form-message" class="form-message" aria-live="polite"></p>
         </form>
       </div>
+
+      <div class="step" id="pillar-step" aria-labelledby="pillar-title" hidden>
+        <h1 id="pillar-title">Character generated <span class="cursor" aria-hidden="true">_</span></h1>
+        <p class="menu-action">Four pillars:</p>
+
+        <div class="pillar-results" aria-label="BaZi four pillars result">
+          <article class="result-pillar is-empty">
+            <span class="pillar-label">Hour</span>
+            <strong>--</strong>
+            <span class="pillar-meta">Pending</span>
+          </article>
+          <article class="result-pillar is-empty">
+            <span class="pillar-label">Day</span>
+            <strong>--</strong>
+            <span class="pillar-meta">Pending</span>
+          </article>
+          <article class="result-pillar is-empty">
+            <span class="pillar-label">Month</span>
+            <strong>--</strong>
+            <span class="pillar-meta">Pending</span>
+          </article>
+          <article class="result-pillar" id="year-pillar">
+            <span class="pillar-label">Year</span>
+            <strong id="year-pillar-symbol">--</strong>
+            <span class="pillar-meta" id="year-pillar-meta">Awaiting data</span>
+          </article>
+        </div>
+      </div>
     </section>
   </main>
 </body>

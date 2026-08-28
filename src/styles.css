@@ -280,6 +280,50 @@ input:focus {
   transform: none;
 }
 
+.pillar-results {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.result-pillar {
+  min-height: 150px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  padding: 14px 10px;
+  background: #061009;
+  text-align: center;
+}
+
+.result-pillar.is-empty {
+  opacity: 0.48;
+}
+
+.pillar-label {
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.result-pillar strong {
+  color: var(--color-primary);
+  font-size: 2.15rem;
+  line-height: 1;
+  font-weight: 650;
+  text-shadow: 0 0 10px rgba(66, 247, 124, 0.22);
+}
+
+.pillar-meta {
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
 button {
   min-height: 54px;
   border: 1px solid var(--color-primary);
@@ -468,6 +512,10 @@ button:focus-visible {
 
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .pillar-results {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .mode-grid {
