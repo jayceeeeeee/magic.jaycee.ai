@@ -7,7 +7,7 @@ export const modeRoutes = {
 export const stepFlow = {
   "mode-step": {
     previous: "",
-    next: "",
+    next: "birth-step",
   },
   "birth-step": {
     previous: "mode-step",

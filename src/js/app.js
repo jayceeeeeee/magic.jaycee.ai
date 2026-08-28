@@ -1,5 +1,12 @@
 import { modeRoutes, stepFlow } from "./config/flow.js";
-import { saveBirthProfile } from "./services/storage.js";
+import {
+  loadAppState,
+  loadBirthDraft,
+  loadBirthProfile,
+  saveAppState,
+  saveBirthDraft,
+  saveBirthProfile,
+} from "./services/storage.js";
 import { initBannerSpacing } from "./ui/banner.js";
 import { initButtonPressFeedback } from "./ui/buttons.js";
 import { createLocationSearch } from "./ui/locationSearch.js";
@@ -17,7 +24,20 @@ const yearPillarMeta = document.querySelector("#year-pillar-meta");
 const siteBanner = document.querySelector(".site-banner");
 const previousButton = document.querySelector("[data-flow-action='previous']");
 const nextButton = document.querySelector("[data-flow-action='next']");
-let selectedMode = "";
+const savedAppState = loadAppState();
+const savedDraft = loadBirthDraft();
+const savedProfile = loadBirthProfile();
+let selectedMode = savedAppState?.selectedMode || savedDraft?.mode || savedProfile?.mode || "";
+
+const savedLocation =
+  savedDraft?.selectedLocation ||
+  (savedProfile?.coordinates
+    ? {
+        name: savedProfile.birthPlace,
+        latitude: savedProfile.coordinates.latitude,
+        longitude: savedProfile.coordinates.longitude,
+      }
+    : null);
 
 const setFormMessage = (message, type = "info") => {
   formMessage.textContent = message;
@@ -56,6 +76,27 @@ const getBirthFormData = (selectedLocation) => {
   };
 };
 
+const getCurrentDraft = (selectedLocation) => getBirthFormData(selectedLocation);
+
+const saveCurrentState = (activeStepId, unlockedSteps = []) => {
+  saveAppState({
+    activeStepId,
+    selectedMode,
+    unlockedSteps,
+  });
+};
+
+const restoreBirthForm = (profile) => {
+  if (!profile) {
+    return;
+  }
+
+  birthForm.elements["full-name"].value = profile.fullName || "";
+  birthForm.elements["birth-date"].value = profile.birthDate || "";
+  birthForm.elements["birth-time"].value = profile.birthTime || "";
+  birthForm.elements["birth-place"].value = profile.birthPlace || "";
+};
+
 const validateBirthProfile = (profile, selectedLocation) => {
   if (!profile.fullName) {
     return "Enter your full name.";
@@ -80,22 +121,61 @@ const validateBirthProfile = (profile, selectedLocation) => {
   return "";
 };
 
+const getHashStepId = () => window.location.hash.replace("#", "");
+
+const getInitialStepId = () => {
+  const hashStepId = getHashStepId();
+
+  if (hashStepId) {
+    return hashStepId;
+  }
+
+  return "mode-step";
+};
+
 initBannerSpacing(siteBanner);
 initButtonPressFeedback();
 
 birthDateInput.max = new Date().toISOString().split("T")[0];
 
+restoreBirthForm(savedDraft || savedProfile);
+
 const stepController = createStepController({
   stepFlow,
   previousButton,
   nextButton,
+  unlockedSteps: savedAppState?.unlockedSteps || [],
+  onStepChange: (activeStepId) => saveCurrentState(activeStepId, stepController.getUnlockedSteps()),
 });
 
 const locationSearch = createLocationSearch({
   input: birthPlaceInput,
   resultsList: locationResults,
+  initialLocation: savedLocation,
   onError: (message) => setFormMessage(message, "error"),
+  onSelect: (selectedLocation) => {
+    saveBirthDraft({
+      ...getCurrentDraft(selectedLocation),
+      selectedLocation,
+    });
+  },
 });
+
+if (savedProfile?.pillars?.year) {
+  renderPillarResults({
+    profile: savedProfile,
+    yearPillarSymbol,
+    yearPillarMeta,
+  });
+}
+
+if (savedAppState?.selectedMode || savedDraft || savedProfile) {
+  stepController.unlockStep("birth-step");
+}
+
+if (savedProfile?.pillars?.year) {
+  stepController.unlockStep("pillar-step");
+}
 
 modeButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -106,13 +186,36 @@ modeButtons.forEach((button) => {
     selectedMode = button.dataset.mode;
     const targetId = button.dataset.target || modeRoutes[selectedMode];
 
+    stepController.unlockStep(targetId);
+    saveCurrentState("mode-step", stepController.getUnlockedSteps());
     stepController.showStep(targetId);
+  });
+});
+
+birthForm.addEventListener("input", () => {
+  const selectedLocation = locationSearch.getSelectedLocation();
+
+  saveBirthDraft({
+    ...getCurrentDraft(selectedLocation),
+    selectedLocation,
   });
 });
 
 previousButton?.addEventListener("click", stepController.showPreviousStep);
 nextButton?.addEventListener("click", stepController.showNextStep);
-stepController.showStep("mode-step");
+
+window.addEventListener("hashchange", () => {
+  const hashStepId = getHashStepId();
+
+  if (hashStepId && stepController.canShowStep(hashStepId)) {
+    stepController.showStep(hashStepId, { updateHash: false });
+    return;
+  }
+
+  stepController.showStep("mode-step", { updateHash: false });
+});
+
+stepController.showStep(getInitialStepId());
 
 birthForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -133,5 +236,10 @@ birthForm.addEventListener("submit", (event) => {
   });
 
   saveBirthProfile(profileWithPillars);
+  saveBirthDraft({
+    ...profile,
+    selectedLocation,
+  });
+  stepController.unlockStep("pillar-step");
   stepController.showStep("pillar-step");
 });

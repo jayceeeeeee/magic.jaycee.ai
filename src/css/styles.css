@@ -89,6 +89,13 @@ main {
   margin-bottom: 14px;
 }
 
+.nav-row {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .step[hidden] {
   display: none;
 }
@@ -128,7 +135,28 @@ main {
   color: var(--color-primary-hover);
   background: transparent;
   box-shadow: none;
+}
+
+.nav-button[data-flow-action="previous"] {
+  margin-right: auto;
+}
+
+.nav-button[data-flow-action="next"] {
+  margin-left: auto;
+}
+
+.nav-button[data-flow-action="previous"]:hover,
+.nav-button[data-flow-action="previous"]:focus-visible,
+.nav-button[data-flow-action="previous"]:active,
+.nav-button[data-flow-action="previous"].is-pressed {
   transform: translateX(-2px);
+}
+
+.nav-button[data-flow-action="next"]:hover,
+.nav-button[data-flow-action="next"]:focus-visible,
+.nav-button[data-flow-action="next"]:active,
+.nav-button[data-flow-action="next"].is-pressed {
+  transform: translateX(2px);
 }
 
 h1 {

@@ -1,7 +1,7 @@
 import { searchLocations } from "../services/geocoding.js";
 
-export const createLocationSearch = ({ input, resultsList, onError }) => {
-  let selectedLocation = null;
+export const createLocationSearch = ({ input, resultsList, initialLocation = null, onError, onSelect }) => {
+  let selectedLocation = initialLocation;
   let searchTimeout = null;
 
   const clearResults = () => {
@@ -34,6 +34,7 @@ export const createLocationSearch = ({ input, resultsList, onError }) => {
 
         input.value = selectedLocation.name;
         clearResults();
+        onSelect?.(selectedLocation);
       });
 
       item.append(button);
@@ -45,6 +46,7 @@ export const createLocationSearch = ({ input, resultsList, onError }) => {
 
   input.addEventListener("input", () => {
     selectedLocation = null;
+    onSelect?.(selectedLocation);
     clearTimeout(searchTimeout);
 
     const query = input.value.trim();
@@ -73,5 +75,8 @@ export const createLocationSearch = ({ input, resultsList, onError }) => {
 
   return {
     getSelectedLocation: () => selectedLocation,
+    setSelectedLocation: (location) => {
+      selectedLocation = location;
+    },
   };
 };
