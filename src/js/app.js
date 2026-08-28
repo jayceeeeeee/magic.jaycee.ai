@@ -1,0 +1,137 @@
+import { modeRoutes, stepFlow } from "./config/flow.js";
+import { saveBirthProfile } from "./services/storage.js";
+import { initBannerSpacing } from "./ui/banner.js";
+import { initButtonPressFeedback } from "./ui/buttons.js";
+import { createLocationSearch } from "./ui/locationSearch.js";
+import { renderPillarResults } from "./ui/pillarResults.js";
+import { createStepController } from "./ui/steps.js";
+
+const modeButtons = document.querySelectorAll(".mode-button");
+const birthForm = document.querySelector("#birth-form");
+const formMessage = document.querySelector("#form-message");
+const birthDateInput = document.querySelector("#birth-date");
+const birthPlaceInput = document.querySelector("#birth-place");
+const locationResults = document.querySelector("#location-results");
+const yearPillarSymbol = document.querySelector("#year-pillar-symbol");
+const yearPillarMeta = document.querySelector("#year-pillar-meta");
+const siteBanner = document.querySelector(".site-banner");
+const previousButton = document.querySelector("[data-flow-action='previous']");
+const nextButton = document.querySelector("[data-flow-action='next']");
+let selectedMode = "";
+
+const setFormMessage = (message, type = "info") => {
+  formMessage.textContent = message;
+  formMessage.dataset.type = type;
+};
+
+const isValidBirthDate = (dateValue) => {
+  if (!dateValue) {
+    return false;
+  }
+
+  const date = new Date(`${dateValue}T00:00:00`);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return !Number.isNaN(date.getTime()) && date <= today;
+};
+
+const isValidBirthTime = (timeValue) => /^([01]\d|2[0-3]):[0-5]\d$/.test(timeValue);
+
+const getBirthFormData = (selectedLocation) => {
+  const formData = new FormData(birthForm);
+
+  return {
+    mode: selectedMode || "adventure",
+    fullName: String(formData.get("full-name")).trim(),
+    birthDate: String(formData.get("birth-date")),
+    birthTime: String(formData.get("birth-time")),
+    birthPlace: String(formData.get("birth-place")).trim(),
+    coordinates: selectedLocation
+      ? {
+          latitude: selectedLocation.latitude,
+          longitude: selectedLocation.longitude,
+        }
+      : null,
+  };
+};
+
+const validateBirthProfile = (profile, selectedLocation) => {
+  if (!profile.fullName) {
+    return "Enter your full name.";
+  }
+
+  if (!isValidBirthDate(profile.birthDate)) {
+    return "Enter a valid birth date.";
+  }
+
+  if (!isValidBirthTime(profile.birthTime)) {
+    return "Enter a valid birth time.";
+  }
+
+  if (!profile.birthPlace) {
+    return "Enter your place of birth.";
+  }
+
+  if (!selectedLocation || selectedLocation.name !== profile.birthPlace) {
+    return "Choose a place from the location results.";
+  }
+
+  return "";
+};
+
+initBannerSpacing(siteBanner);
+initButtonPressFeedback();
+
+birthDateInput.max = new Date().toISOString().split("T")[0];
+
+const stepController = createStepController({
+  stepFlow,
+  previousButton,
+  nextButton,
+});
+
+const locationSearch = createLocationSearch({
+  input: birthPlaceInput,
+  resultsList: locationResults,
+  onError: (message) => setFormMessage(message, "error"),
+});
+
+modeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    if (button.classList.contains("is-locked")) {
+      return;
+    }
+
+    selectedMode = button.dataset.mode;
+    const targetId = button.dataset.target || modeRoutes[selectedMode];
+
+    stepController.showStep(targetId);
+  });
+});
+
+previousButton?.addEventListener("click", stepController.showPreviousStep);
+nextButton?.addEventListener("click", stepController.showNextStep);
+stepController.showStep("mode-step");
+
+birthForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const selectedLocation = locationSearch.getSelectedLocation();
+  const profile = getBirthFormData(selectedLocation);
+  const error = validateBirthProfile(profile, selectedLocation);
+
+  if (error) {
+    setFormMessage(error, "error");
+    return;
+  }
+
+  const profileWithPillars = renderPillarResults({
+    profile,
+    yearPillarSymbol,
+    yearPillarMeta,
+  });
+
+  saveBirthProfile(profileWithPillars);
+  stepController.showStep("pillar-step");
+});
