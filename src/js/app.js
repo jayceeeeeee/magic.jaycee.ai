@@ -106,15 +106,11 @@ const validateBirthProfile = (profile, selectedLocation) => {
     return "Enter a valid birth date.";
   }
 
-  if (!isValidBirthTime(profile.birthTime)) {
+  if (profile.birthTime && !isValidBirthTime(profile.birthTime)) {
     return "Enter a valid birth time.";
   }
 
-  if (!profile.birthPlace) {
-    return "Enter your place of birth.";
-  }
-
-  if (!selectedLocation || selectedLocation.name !== profile.birthPlace) {
+  if (profile.birthPlace && (!selectedLocation || selectedLocation.name !== profile.birthPlace)) {
     return "Choose a place from the location results.";
   }
 
