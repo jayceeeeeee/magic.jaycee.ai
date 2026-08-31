@@ -21,7 +21,7 @@ const birthPlaceInput = document.querySelector("#birth-place");
 const locationResults = document.querySelector("#location-results");
 const yearPillarSymbol = document.querySelector("#year-pillar-symbol");
 const yearPillarMeta = document.querySelector("#year-pillar-meta");
-const siteBanner = document.querySelector(".site-banner");
+const siteBanner = document.querySelector(".info-banner");
 const previousButton = document.querySelector("[data-flow-action='previous']");
 const nextButton = document.querySelector("[data-flow-action='next']");
 const savedAppState = loadAppState();
