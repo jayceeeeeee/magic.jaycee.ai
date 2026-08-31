@@ -19,6 +19,8 @@ const formMessage = document.querySelector("#form-message");
 const birthDateInput = document.querySelector("#birth-date");
 const birthPlaceInput = document.querySelector("#birth-place");
 const locationResults = document.querySelector("#location-results");
+const monthPillarSymbol = document.querySelector("#month-pillar-symbol");
+const monthPillarMeta = document.querySelector("#month-pillar-meta");
 const yearPillarSymbol = document.querySelector("#year-pillar-symbol");
 const yearPillarMeta = document.querySelector("#year-pillar-meta");
 const siteBanner = document.querySelector(".info-banner");
@@ -160,6 +162,8 @@ const locationSearch = createLocationSearch({
 if (savedProfile?.pillars?.year) {
   renderPillarResults({
     profile: savedProfile,
+    monthPillarSymbol,
+    monthPillarMeta,
     yearPillarSymbol,
     yearPillarMeta,
   });
@@ -227,6 +231,8 @@ birthForm.addEventListener("submit", (event) => {
 
   const profileWithPillars = renderPillarResults({
     profile,
+    monthPillarSymbol,
+    monthPillarMeta,
     yearPillarSymbol,
     yearPillarMeta,
   });

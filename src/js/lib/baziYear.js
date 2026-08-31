@@ -1,29 +1,42 @@
 import { earthlyBranches, heavenlyStems } from "../data/baziData.js";
+import { findSolarLongitudeTransition, getBirthInstant } from "./baziSolar.js";
 
 const REFERENCE_YEAR = 1984;
+const START_OF_SPRING_LONGITUDE = 315;
 
-export const getBaziYear = (dateValue) => {
-  const [year, month, day] = dateValue.split("-").map(Number);
-
-  if (month < 2 || (month === 2 && day < 4)) {
-    return year - 1;
-  }
-
-  return year;
-};
-
+// 1984 is a Jia-Zi year, so it anchors the 60-year stem/branch cycle.
 const getCycleIndex = (year) => ((year - REFERENCE_YEAR) % 60 + 60) % 60;
 
-export const getYearPillar = (dateValue) => {
-  const baziYear = getBaziYear(dateValue);
+export const getBaziYear = (profileOrDateValue) => {
+  const profile =
+    typeof profileOrDateValue === "string"
+      ? { birthDate: profileOrDateValue }
+      : profileOrDateValue;
+  const birthInstant = getBirthInstant(profile);
+  const birthYear = Number(profile.birthDate.split("-")[0]);
+  const springBegins = findSolarLongitudeTransition(birthYear, START_OF_SPRING_LONGITUDE);
+
+  // BaZi years begin at Lichun, the solar term at 315 degrees longitude.
+  return birthInstant < springBegins ? birthYear - 1 : birthYear;
+};
+
+export const getYearPillar = (profileOrDateValue) => {
+  const profile =
+    typeof profileOrDateValue === "string"
+      ? { birthDate: profileOrDateValue }
+      : profileOrDateValue;
+  const baziYear = getBaziYear(profile);
   const cycleIndex = getCycleIndex(baziYear);
   const stem = heavenlyStems[cycleIndex % heavenlyStems.length];
   const branch = earthlyBranches[cycleIndex % earthlyBranches.length];
 
   return {
     baziYear,
+    stem,
+    branch,
     hanzi: `${stem.hanzi}${branch.hanzi}`,
     pinyin: `${stem.pinyin} ${branch.pinyin}`,
+    pinyinTone: `${stem.pinyinTone} ${branch.pinyinTone}`,
     description: `${stem.polarity} ${stem.element} ${branch.animal}`,
   };
 };
