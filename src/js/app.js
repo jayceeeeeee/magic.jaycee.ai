@@ -29,6 +29,7 @@ const nextButton = document.querySelector("[data-flow-action='next']");
 const savedAppState = loadAppState();
 const savedDraft = loadBirthDraft();
 const savedProfile = loadBirthProfile();
+const hasSavedProfile = Boolean(savedProfile?.birthDate);
 let selectedMode = savedAppState?.selectedMode || savedDraft?.mode || savedProfile?.mode || "";
 
 const savedLocation =
@@ -138,11 +139,15 @@ birthDateInput.max = new Date().toISOString().split("T")[0];
 
 restoreBirthForm(savedDraft || savedProfile);
 
+const initialUnlockedSteps = (savedAppState?.unlockedSteps || []).filter(
+  (stepId) => stepId !== "pillar-step" || hasSavedProfile,
+);
+
 const stepController = createStepController({
   stepFlow,
   previousButton,
   nextButton,
-  unlockedSteps: savedAppState?.unlockedSteps || [],
+  unlockedSteps: initialUnlockedSteps,
   onStepChange: (activeStepId) => saveCurrentState(activeStepId, stepController.getUnlockedSteps()),
 });
 
@@ -159,21 +164,23 @@ const locationSearch = createLocationSearch({
   },
 });
 
-if (savedProfile?.pillars?.year) {
-  renderPillarResults({
+if (hasSavedProfile) {
+  const profileWithPillars = renderPillarResults({
     profile: savedProfile,
     monthPillarSymbol,
     monthPillarMeta,
     yearPillarSymbol,
     yearPillarMeta,
   });
+
+  saveBirthProfile(profileWithPillars);
 }
 
 if (savedAppState?.selectedMode || savedDraft || savedProfile) {
   stepController.unlockStep("birth-step");
 }
 
-if (savedProfile?.pillars?.year) {
+if (hasSavedProfile) {
   stepController.unlockStep("pillar-step");
 }
 
