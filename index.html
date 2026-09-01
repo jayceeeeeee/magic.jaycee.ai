@@ -16,7 +16,7 @@
   <main>
     <section class="game-panel" aria-label="Game setup">
       <div class="panel-header">
-        <span class="eyebrow">Game: Conquering the World</span>
+        <span class="eyebrow">Game: Conquer the World</span>
         <div class="nav-row" aria-label="Step navigation">
           <button class="nav-button" type="button" data-flow-action="previous" aria-label="Previous step" hidden>&larr;</button>
           <button class="nav-button" type="button" data-flow-action="next" aria-label="Next step" hidden>&rarr;</button>
@@ -35,12 +35,12 @@
           <button class="mode-button is-locked" type="button" data-mode="co-op" data-target="co-op-step" aria-disabled="true">
             <span class="lock-icon" aria-hidden="true">&#128274;</span>
             <span class="mode-title">Co-op</span>
-            <span class="mode-description">Explore your relationship with other people (or with me to start).</span>
+            <span class="mode-description">Explore your relationship with other people (or with the Creator to start).</span>
           </button>
           <button class="mode-button is-locked" type="button" data-mode="competition" data-target="competition-step" aria-disabled="true">
             <span class="lock-icon" aria-hidden="true">&#128274;</span>
             <span class="mode-title">Competition</span>
-            <span class="mode-description">Start a quantum war in the present, activating superpowers.</span>
+            <span class="mode-description">Start a quantum war in the present, activating your superpowers in your DNA.</span>
           </button>
         </div>
       </div>
@@ -84,27 +84,68 @@
         <h1 id="pillar-title">Character generated <span class="cursor" aria-hidden="true">_</span></h1>
         <p class="menu-action">Four pillars:</p>
 
-        <div class="pillar-results" aria-label="BaZi four pillars result">
-          <article class="result-pillar is-empty">
-            <span class="pillar-label">Hour</span>
-            <strong>--</strong>
-            <span class="pillar-meta">Pending</span>
-          </article>
-          <article class="result-pillar is-empty">
-            <span class="pillar-label">Day</span>
-            <strong>--</strong>
-            <span class="pillar-meta">Pending</span>
-          </article>
-          <article class="result-pillar" id="month-pillar">
-            <span class="pillar-label">Month</span>
-            <strong id="month-pillar-symbol">--</strong>
-            <span class="pillar-meta" id="month-pillar-meta">Awaiting data</span>
-          </article>
-          <article class="result-pillar" id="year-pillar">
-            <span class="pillar-label">Year</span>
-            <strong id="year-pillar-symbol">--</strong>
-            <span class="pillar-meta" id="year-pillar-meta">Awaiting data</span>
-          </article>
+        <div class="pillar-table-wrap">
+          <table class="pillar-table" aria-label="BaZi four pillars result">
+            <thead>
+              <tr>
+                <th scope="col">Hour</th>
+                <th scope="col">Day</th>
+                <th scope="col">Month</th>
+                <th scope="col">Year</th>
+                <th class="pillar-row-heading pillar-row-heading-top" scope="col" aria-label="Pillar layer labels"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="is-empty">
+                  <strong class="pillar-symbol">--</strong>
+                  <span class="pillar-cell-meta">Pending</span>
+                </td>
+                <td class="is-empty">
+                  <strong class="pillar-symbol">--</strong>
+                  <span class="pillar-cell-meta">Pending</span>
+                </td>
+                <td>
+                  <strong class="pillar-symbol" id="month-stem-symbol">--</strong>
+                  <span class="pillar-cell-meta" id="month-stem-meta">Awaiting data</span>
+                </td>
+                <td>
+                  <strong class="pillar-symbol" id="year-stem-symbol">--</strong>
+                  <span class="pillar-cell-meta" id="year-stem-meta">Awaiting data</span>
+                </td>
+                <th class="pillar-row-heading" scope="row">
+                  <span class="pillar-row-heading-inner">
+                    <span>Heavenly Stem</span>
+                    <strong>&#22825;&#24178;</strong>
+                  </span>
+                </th>
+              </tr>
+              <tr>
+                <td class="is-empty">
+                  <strong class="pillar-symbol">--</strong>
+                  <span class="pillar-cell-meta">Pending</span>
+                </td>
+                <td class="is-empty">
+                  <strong class="pillar-symbol">--</strong>
+                  <span class="pillar-cell-meta">Pending</span>
+                </td>
+                <td>
+                  <strong class="pillar-symbol" id="month-branch-symbol">--</strong>
+                  <span class="pillar-cell-meta" id="month-branch-meta">Awaiting data</span>
+                </td>
+                <td>
+                  <strong class="pillar-symbol" id="year-branch-symbol">--</strong>
+                  <span class="pillar-cell-meta" id="year-branch-meta">Awaiting data</span>
+                </td>
+                <th class="pillar-row-heading" scope="row">
+                  <span class="pillar-row-heading-inner">
+                    <span>Earthly Branch</span>
+                    <strong>&#22320;&#25903;</strong>
+                  </span>
+                </th>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </section>

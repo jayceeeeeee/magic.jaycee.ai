@@ -19,10 +19,14 @@ const formMessage = document.querySelector("#form-message");
 const birthDateInput = document.querySelector("#birth-date");
 const birthPlaceInput = document.querySelector("#birth-place");
 const locationResults = document.querySelector("#location-results");
-const monthPillarSymbol = document.querySelector("#month-pillar-symbol");
-const monthPillarMeta = document.querySelector("#month-pillar-meta");
-const yearPillarSymbol = document.querySelector("#year-pillar-symbol");
-const yearPillarMeta = document.querySelector("#year-pillar-meta");
+const monthStemSymbol = document.querySelector("#month-stem-symbol");
+const monthStemMeta = document.querySelector("#month-stem-meta");
+const monthBranchSymbol = document.querySelector("#month-branch-symbol");
+const monthBranchMeta = document.querySelector("#month-branch-meta");
+const yearStemSymbol = document.querySelector("#year-stem-symbol");
+const yearStemMeta = document.querySelector("#year-stem-meta");
+const yearBranchSymbol = document.querySelector("#year-branch-symbol");
+const yearBranchMeta = document.querySelector("#year-branch-meta");
 const siteBanner = document.querySelector(".info-banner");
 const previousButton = document.querySelector("[data-flow-action='previous']");
 const nextButton = document.querySelector("[data-flow-action='next']");
@@ -167,10 +171,14 @@ const locationSearch = createLocationSearch({
 if (hasSavedProfile) {
   const profileWithPillars = renderPillarResults({
     profile: savedProfile,
-    monthPillarSymbol,
-    monthPillarMeta,
-    yearPillarSymbol,
-    yearPillarMeta,
+    monthStemSymbol,
+    monthStemMeta,
+    monthBranchSymbol,
+    monthBranchMeta,
+    yearStemSymbol,
+    yearStemMeta,
+    yearBranchSymbol,
+    yearBranchMeta,
   });
 
   saveBirthProfile(profileWithPillars);
@@ -238,10 +246,14 @@ birthForm.addEventListener("submit", (event) => {
 
   const profileWithPillars = renderPillarResults({
     profile,
-    monthPillarSymbol,
-    monthPillarMeta,
-    yearPillarSymbol,
-    yearPillarMeta,
+    monthStemSymbol,
+    monthStemMeta,
+    monthBranchSymbol,
+    monthBranchMeta,
+    yearStemSymbol,
+    yearStemMeta,
+    yearBranchSymbol,
+    yearBranchMeta,
   });
 
   saveBirthProfile(profileWithPillars);
