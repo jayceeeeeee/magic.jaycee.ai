@@ -55,6 +55,20 @@
             <input id="full-name" name="full-name" type="text" autocomplete="name" placeholder="Your full name" required>
           </label>
 
+          <fieldset class="gender-field">
+            <legend>Gender *</legend>
+            <div class="gender-options">
+              <label class="gender-option" for="gender-male">
+                <input id="gender-male" name="gender" type="radio" value="male" required>
+                <span>Male</span>
+              </label>
+              <label class="gender-option" for="gender-female">
+                <input id="gender-female" name="gender" type="radio" value="female" required>
+                <span>Female</span>
+              </label>
+            </div>
+          </fieldset>
+
           <div class="form-grid">
             <label for="birth-date">
               Date of birth *

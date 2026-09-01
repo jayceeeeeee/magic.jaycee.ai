@@ -81,6 +81,7 @@ const getBirthFormData = (selectedLocation) => {
   return {
     mode: selectedMode || "adventure",
     fullName: String(formData.get("full-name")).trim(),
+    gender: String(formData.get("gender") || ""),
     birthDate: String(formData.get("birth-date")),
     birthTime: String(formData.get("birth-time")),
     birthPlace: String(formData.get("birth-place")).trim(),
@@ -109,6 +110,9 @@ const restoreBirthForm = (profile) => {
   }
 
   birthForm.elements["full-name"].value = profile.fullName || "";
+  if (profile.gender && birthForm.elements.gender) {
+    birthForm.elements.gender.value = profile.gender;
+  }
   birthForm.elements["birth-date"].value = profile.birthDate || "";
   birthForm.elements["birth-time"].value = profile.birthTime || "";
   birthForm.elements["birth-place"].value = profile.birthPlace || "";
@@ -117,6 +121,10 @@ const restoreBirthForm = (profile) => {
 const validateBirthProfile = (profile, selectedLocation) => {
   if (!profile.fullName) {
     return "Enter your full name.";
+  }
+
+  if (!profile.gender) {
+    return "Choose your gender.";
   }
 
   if (!isValidBirthDate(profile.birthDate)) {

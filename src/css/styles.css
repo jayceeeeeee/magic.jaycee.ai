@@ -181,6 +181,73 @@ legend {
   font-weight: 650;
 }
 
+.gender-field {
+  display: grid;
+  gap: 8px;
+}
+
+.gender-field legend {
+  margin-bottom: 0;
+}
+
+.gender-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 4px;
+  border: 1px solid var(--field-border);
+  border-radius: 8px;
+  background: rgba(var(--accent-rgb), 0.035);
+}
+
+.gender-option {
+  position: relative;
+  display: grid;
+  min-height: 46px;
+  place-items: center;
+  border: 1px solid var(--field-border-soft);
+  border-radius: 6px;
+  color: var(--muted);
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.gender-option input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.gender-option span {
+  color: inherit;
+  font-weight: 750;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.gender-option:has(input:checked) {
+  border-color: var(--neon-border-strong);
+  background:
+    var(--active-button-bg),
+    var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 8px 18px rgba(var(--accent-rgb), 0.14);
+}
+
+.gender-option:has(input:focus-visible) {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 3px;
+}
+
+.gender-option:hover {
+  border-color: var(--neon-border);
+  color: var(--accent-soft);
+  transform: translateY(-1px);
+}
+
 input {
   width: 100%;
   min-height: 54px;
