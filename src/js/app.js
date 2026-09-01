@@ -19,6 +19,10 @@ const formMessage = document.querySelector("#form-message");
 const birthDateInput = document.querySelector("#birth-date");
 const birthPlaceInput = document.querySelector("#birth-place");
 const locationResults = document.querySelector("#location-results");
+const dayStemSymbol = document.querySelector("#day-stem-symbol");
+const dayStemMeta = document.querySelector("#day-stem-meta");
+const dayBranchSymbol = document.querySelector("#day-branch-symbol");
+const dayBranchMeta = document.querySelector("#day-branch-meta");
 const monthStemSymbol = document.querySelector("#month-stem-symbol");
 const monthStemMeta = document.querySelector("#month-stem-meta");
 const monthBranchSymbol = document.querySelector("#month-branch-symbol");
@@ -171,6 +175,10 @@ const locationSearch = createLocationSearch({
 if (hasSavedProfile) {
   const profileWithPillars = renderPillarResults({
     profile: savedProfile,
+    dayStemSymbol,
+    dayStemMeta,
+    dayBranchSymbol,
+    dayBranchMeta,
     monthStemSymbol,
     monthStemMeta,
     monthBranchSymbol,
@@ -246,6 +254,10 @@ birthForm.addEventListener("submit", (event) => {
 
   const profileWithPillars = renderPillarResults({
     profile,
+    dayStemSymbol,
+    dayStemMeta,
+    dayBranchSymbol,
+    dayBranchMeta,
     monthStemSymbol,
     monthStemMeta,
     monthBranchSymbol,

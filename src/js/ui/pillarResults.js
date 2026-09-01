@@ -1,3 +1,4 @@
+import { getDayPillar } from "../lib/baziDay.js";
 import { getMonthPillar } from "../lib/baziMonth.js";
 import { getYearPillar } from "../lib/baziYear.js";
 
@@ -10,6 +11,10 @@ const renderPillar = ({ pillar, stemSymbol, stemMeta, branchSymbol, branchMeta }
 
 export const renderPillarResults = ({
   profile,
+  dayStemSymbol,
+  dayStemMeta,
+  dayBranchSymbol,
+  dayBranchMeta,
   yearStemSymbol,
   yearStemMeta,
   yearBranchSymbol,
@@ -19,8 +24,17 @@ export const renderPillarResults = ({
   monthBranchSymbol,
   monthBranchMeta,
 }) => {
+  const dayPillar = getDayPillar(profile);
   const yearPillar = getYearPillar(profile);
   const monthPillar = getMonthPillar(profile, yearPillar);
+
+  renderPillar({
+    pillar: dayPillar,
+    stemSymbol: dayStemSymbol,
+    stemMeta: dayStemMeta,
+    branchSymbol: dayBranchSymbol,
+    branchMeta: dayBranchMeta,
+  });
 
   renderPillar({
     pillar: yearPillar,
@@ -43,6 +57,7 @@ export const renderPillarResults = ({
   return {
     ...profile,
     pillars: {
+      day: dayPillar,
       month: monthPillar,
       year: yearPillar,
     },

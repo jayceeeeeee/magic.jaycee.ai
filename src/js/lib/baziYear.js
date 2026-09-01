@@ -1,4 +1,4 @@
-import { earthlyBranches, heavenlyStems } from "../data/baziData.js";
+import { getSexagenaryPillar } from "./baziCycle.js";
 import { findSolarLongitudeTransition, getBirthInstant } from "./baziSolar.js";
 
 const REFERENCE_YEAR = 1984;
@@ -27,16 +27,10 @@ export const getYearPillar = (profileOrDateValue) => {
       : profileOrDateValue;
   const baziYear = getBaziYear(profile);
   const cycleIndex = getCycleIndex(baziYear);
-  const stem = heavenlyStems[cycleIndex % heavenlyStems.length];
-  const branch = earthlyBranches[cycleIndex % earthlyBranches.length];
+  const pillar = getSexagenaryPillar(cycleIndex);
 
   return {
+    ...pillar,
     baziYear,
-    stem,
-    branch,
-    hanzi: `${stem.hanzi}${branch.hanzi}`,
-    pinyin: `${stem.pinyin} ${branch.pinyin}`,
-    pinyinTone: `${stem.pinyinTone} ${branch.pinyinTone}`,
-    description: `${stem.polarity} ${stem.element} ${branch.animal}`,
   };
 };
