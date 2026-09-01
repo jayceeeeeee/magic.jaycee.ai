@@ -1,12 +1,13 @@
 import { earthlyBranches, heavenlyStems, sexagenaryCycle } from "../data/baziData.js";
 
-export const getSexagenaryPillar = (cycleIndex) => {
-  const cycleEntry = sexagenaryCycle[((cycleIndex % sexagenaryCycle.length) + sexagenaryCycle.length) % sexagenaryCycle.length];
-  const stem = heavenlyStems.find((candidate) => candidate.pinyin === cycleEntry.stem);
-  const branch = earthlyBranches.find((candidate) => candidate.pinyin === cycleEntry.branch);
+// Expands a lightweight data pair like { stem: "Jia", branch: "Zi" }
+// into the full pillar object used by the UI and saved profile.
+export const getPillarFromStemBranch = ({ stem: stemPinyin, branch: branchPinyin }) => {
+  const stem = heavenlyStems.find((candidate) => candidate.pinyin === stemPinyin);
+  const branch = earthlyBranches.find((candidate) => candidate.pinyin === branchPinyin);
 
   if (!stem || !branch) {
-    throw new Error(`Invalid sexagenary cycle entry at index: ${cycleIndex}`);
+    throw new Error(`Invalid stem/branch pair: ${stemPinyin} ${branchPinyin}`);
   }
 
   return {
@@ -17,4 +18,10 @@ export const getSexagenaryPillar = (cycleIndex) => {
     pinyinTone: `${stem.pinyinTone} ${branch.pinyinTone}`,
     description: `${stem.polarity} ${stem.element} ${branch.animal}`,
   };
+};
+
+export const getSexagenaryPillar = (cycleIndex) => {
+  const cycleEntry = sexagenaryCycle[((cycleIndex % sexagenaryCycle.length) + sexagenaryCycle.length) % sexagenaryCycle.length];
+
+  return getPillarFromStemBranch(cycleEntry);
 };

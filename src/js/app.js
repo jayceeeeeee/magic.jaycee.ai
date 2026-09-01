@@ -19,6 +19,12 @@ const formMessage = document.querySelector("#form-message");
 const birthDateInput = document.querySelector("#birth-date");
 const birthPlaceInput = document.querySelector("#birth-place");
 const locationResults = document.querySelector("#location-results");
+const hourStemCell = document.querySelector("#hour-stem-cell");
+const hourStemSymbol = document.querySelector("#hour-stem-symbol");
+const hourStemMeta = document.querySelector("#hour-stem-meta");
+const hourBranchCell = document.querySelector("#hour-branch-cell");
+const hourBranchSymbol = document.querySelector("#hour-branch-symbol");
+const hourBranchMeta = document.querySelector("#hour-branch-meta");
 const dayStemSymbol = document.querySelector("#day-stem-symbol");
 const dayStemMeta = document.querySelector("#day-stem-meta");
 const dayBranchSymbol = document.querySelector("#day-branch-symbol");
@@ -175,6 +181,12 @@ const locationSearch = createLocationSearch({
 if (hasSavedProfile) {
   const profileWithPillars = renderPillarResults({
     profile: savedProfile,
+    hourStemCell,
+    hourStemSymbol,
+    hourStemMeta,
+    hourBranchCell,
+    hourBranchSymbol,
+    hourBranchMeta,
     dayStemSymbol,
     dayStemMeta,
     dayBranchSymbol,
@@ -254,6 +266,12 @@ birthForm.addEventListener("submit", (event) => {
 
   const profileWithPillars = renderPillarResults({
     profile,
+    hourStemCell,
+    hourStemSymbol,
+    hourStemMeta,
+    hourBranchCell,
+    hourBranchSymbol,
+    hourBranchMeta,
     dayStemSymbol,
     dayStemMeta,
     dayBranchSymbol,
