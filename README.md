@@ -13,4 +13,4 @@ Main Jaycee.ai app.
 - `src/js/auth/` contains Supabase auth, auth page, and account page behavior.
 - `src/assets/brand/` contains Jaycee.ai logo assets.
 - `src/profile/` contains profile page CSS, JS, and images.
-- `src/js/` and `src/css/styles.css` contain the Magic app logic and game-specific styles.
+- `src/js/` and `src/css/app.css` contain the Magic app logic and game-specific styles.
