@@ -158,8 +158,9 @@
     flex: 0 0 auto;
     width: 44px;
     aspect-ratio: 1;
-    border: 1px solid rgba(var(--accent-rgb), 0.16);
-    filter: var(--logo-filter);
+    padding: 2px;
+    border: 1px solid rgba(var(--accent-rgb), 0.22);
+    background: #050706;
     object-fit: contain;
 }
 
