@@ -38,7 +38,6 @@ const yearStemSymbol = document.querySelector("#year-stem-symbol");
 const yearStemMeta = document.querySelector("#year-stem-meta");
 const yearBranchSymbol = document.querySelector("#year-branch-symbol");
 const yearBranchMeta = document.querySelector("#year-branch-meta");
-const luckCycleSummary = document.querySelector("#luck-cycle-summary");
 const luckCycleList = document.querySelector("#luck-cycle-list");
 const siteBanner = document.querySelector(".info-banner");
 const previousButton = document.querySelector("[data-flow-action='previous']");
@@ -213,7 +212,6 @@ if (hasSavedProfile) {
   });
   const profileWithLuckCycle = renderLuckCycleResults({
     profile: profileWithPillars,
-    summary: luckCycleSummary,
     list: luckCycleList,
   });
 
@@ -303,7 +301,6 @@ birthForm.addEventListener("submit", (event) => {
   });
   const profileWithLuckCycle = renderLuckCycleResults({
     profile: profileWithPillars,
-    summary: luckCycleSummary,
     list: luckCycleList,
   });
 

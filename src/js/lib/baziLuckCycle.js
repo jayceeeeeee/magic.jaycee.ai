@@ -29,22 +29,19 @@ const getSurroundingJieqiTransitions = (birthYear) =>
     .flatMap((year) =>
       solarTerms
         .filter((term) => term.type === "jieqi")
-        .map((term) => ({
-          term,
-          date: findSolarLongitudeTransition(year, term.longitude),
-        })),
+        .map((term) => findSolarLongitudeTransition(year, term.longitude)),
     )
-    .sort((first, second) => first.date - second.date);
+    .sort((first, second) => first - second);
 
 // Forward Da Yun counts from birth to the next jieqi; reverse counts back to the previous one.
 const getReferenceJieqi = ({ birthInstant, birthYear, direction }) => {
   const transitions = getSurroundingJieqiTransitions(birthYear);
 
   if (direction === "forward") {
-    return transitions.find((transition) => transition.date > birthInstant);
+    return transitions.find((transitionDate) => transitionDate > birthInstant);
   }
 
-  const previousTransitions = transitions.filter((transition) => transition.date < birthInstant);
+  const previousTransitions = transitions.filter((transitionDate) => transitionDate < birthInstant);
 
   return previousTransitions[previousTransitions.length - 1];
 };
@@ -53,10 +50,7 @@ const getStartAge = ({ birthInstant, referenceDate }) => {
   // Ceil turns a partial remaining day into a counted day, while the birth day itself is excluded.
   const dayCount = Math.ceil(Math.abs(referenceDate - birthInstant) / DAY_MS);
 
-  return {
-    dayCount,
-    startAge: dayCount * LUCK_YEARS_PER_COUNTED_DAY,
-  };
+  return dayCount * LUCK_YEARS_PER_COUNTED_DAY;
 };
 
 const formatAge = (age) => (Number.isInteger(age) ? String(age) : age.toFixed(1));
@@ -81,15 +75,15 @@ export const getLuckCycle = (profileOrDateValue, pillars = {}) => {
 
   const birthInstant = getBirthInstant(profile);
   const birthYear = Number(profile.birthDate.split("-")[0]);
-  const referenceJieqi = getReferenceJieqi({ birthInstant, birthYear, direction });
+  const referenceJieqiDate = getReferenceJieqi({ birthInstant, birthYear, direction });
 
-  if (!referenceJieqi) {
+  if (!referenceJieqiDate) {
     throw new Error("Unable to find the Da Yun reference jieqi.");
   }
 
-  const { dayCount, startAge } = getStartAge({
+  const startAge = getStartAge({
     birthInstant,
-    referenceDate: referenceJieqi.date,
+    referenceDate: referenceJieqiDate,
   });
   const monthCycleIndex = getSexagenaryIndexFromPillar(monthPillar);
   const cycleStep = direction === "forward" ? 1 : -1;
@@ -107,13 +101,6 @@ export const getLuckCycle = (profileOrDateValue, pillars = {}) => {
   });
 
   return {
-    name: "Da Yun",
-    hanzi: "\u5927\u904b",
-    direction,
-    dayCount,
-    startAge,
-    startAgeLabel: formatAge(startAge),
-    referenceJieqi,
     pillars: pillarsList,
   };
 };

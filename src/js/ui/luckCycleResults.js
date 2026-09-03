@@ -1,17 +1,10 @@
 import { getLuckCycle } from "../lib/baziLuckCycle.js";
 
-const getDirectionLabel = (direction) => (direction === "forward" ? "Forward" : "Reverse");
-
-const renderEmptyLuckCycle = ({ summary, list }, message) => {
-  summary.textContent = message;
-  list.innerHTML = "";
-};
-
-export const renderLuckCycleResults = ({ profile, summary, list }) => {
+export const renderLuckCycleResults = ({ profile, list }) => {
   const luckCycle = getLuckCycle(profile, profile.pillars);
 
   if (!luckCycle) {
-    renderEmptyLuckCycle({ summary, list }, "Awaiting gender");
+    list.innerHTML = "";
 
     return {
       ...profile,
@@ -19,7 +12,6 @@ export const renderLuckCycleResults = ({ profile, summary, list }) => {
     };
   }
 
-  summary.textContent = `${getDirectionLabel(luckCycle.direction)} cycle - ${luckCycle.dayCount} days / 3 = age ${luckCycle.startAgeLabel}`;
   list.innerHTML = luckCycle.pillars
     .map(
       (entry) => `
