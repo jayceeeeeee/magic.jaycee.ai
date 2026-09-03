@@ -1,12 +1,12 @@
 (function () {
     const scriptElement = document.currentScript;
-    const assetBase = new URL("../", scriptElement ? scriptElement.src : window.location.href);
+    const assetBase = new URL("../../", scriptElement ? scriptElement.src : window.location.href);
     const defaultTheme = "lotus";
     const themeStorageKey = "jaycee-theme";
     const defaultHomeHref = "/";
     const defaultContactHref = "/profile.html";
-    const defaultLightLogoSrc = new URL("assets/logo_trans_black.png", assetBase).href;
-    const defaultDarkLogoSrc = new URL("assets/logo_trans_white.png", assetBase).href;
+    const defaultLightLogoSrc = new URL("assets/brand/logo_trans_black.png", assetBase).href;
+    const defaultDarkLogoSrc = new URL("assets/brand/logo_trans_white.png", assetBase).href;
 
     document.documentElement.style.setProperty("--jaycee-logo-light", `url("${defaultLightLogoSrc}")`);
     document.documentElement.style.setProperty("--jaycee-logo-dark", `url("${defaultDarkLogoSrc}")`);
