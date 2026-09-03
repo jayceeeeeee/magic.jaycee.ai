@@ -1,7 +1,6 @@
 const sectionButtons = document.querySelectorAll("[data-section-target]");
 const sectionLinks = document.querySelectorAll("[data-section-link]");
 const sectionPanels = document.querySelectorAll("[data-section-panel]");
-const pageTheme = document.body.dataset.theme;
 
 function getDefaultSection() {
     return sectionButtons[0]?.dataset.sectionTarget || sectionPanels[0]?.dataset.sectionPanel || "";
@@ -59,12 +58,6 @@ window.addEventListener("hashchange", () => {
     showSection(window.location.hash.slice(1));
 });
 
-function applyPageTheme() {
-    if (pageTheme && window.JayceeShared) {
-        window.JayceeShared.setTheme(pageTheme);
-    }
-}
-
 const initialSection = getKnownSection(window.location.hash.slice(1) || defaultSection);
 showSection(initialSection);
 
@@ -72,8 +65,3 @@ if (initialSection === defaultSection && window.location.hash) {
     history.replaceState(null, "", getSectionUrl(defaultSection));
 }
 
-if (document.readyState === "loading") {
-    window.addEventListener("DOMContentLoaded", applyPageTheme);
-} else {
-    applyPageTheme();
-}

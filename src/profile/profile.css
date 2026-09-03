@@ -699,3 +699,21 @@ h3 {
         background-size: cover;
     }
 }
+
+.profile-body > .contact-actions {
+    grid-column: 1 / -1;
+    flex-wrap: nowrap;
+    justify-content: center;
+    margin-top: 0;
+}
+
+.profile-body > .contact-actions .contact-link {
+    flex: 0 0 36px;
+    width: 36px;
+    padding: 0;
+    gap: 0;
+}
+
+.profile-body > .contact-actions .contact-link span {
+    display: none;
+}

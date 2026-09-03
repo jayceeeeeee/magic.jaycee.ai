@@ -1,15 +1,20 @@
 (function () {
     const scriptElement = document.currentScript;
     const assetBase = new URL("../../", scriptElement ? scriptElement.src : window.location.href);
-    const defaultTheme = "lotus";
-    const themeStorageKey = "jaycee-theme";
-    const defaultHomeHref = "/";
-    const defaultContactHref = "/profile.html";
-    const defaultLightLogoSrc = new URL("assets/brand/logo_trans_black.png", assetBase).href;
-    const defaultDarkLogoSrc = new URL("assets/brand/logo_trans_white.png", assetBase).href;
+    const brandName = "jaycee.ai";
+    const logoLabel = "J";
+    const routes = {
+        home: "/",
+        login: "/auth.html",
+        signup: "/auth.html?mode=signup",
+        account: "/account.html",
+        contact: "/profile.html",
+    };
+    const lightLogoSrc = new URL("assets/brand/logo_trans_black.png", assetBase).href;
+    const darkLogoSrc = new URL("assets/brand/logo_trans_white.png", assetBase).href;
 
-    document.documentElement.style.setProperty("--jaycee-logo-light", `url("${defaultLightLogoSrc}")`);
-    document.documentElement.style.setProperty("--jaycee-logo-dark", `url("${defaultDarkLogoSrc}")`);
+    document.documentElement.style.setProperty("--jaycee-logo-light", `url("${lightLogoSrc}")`);
+    document.documentElement.style.setProperty("--jaycee-logo-dark", `url("${darkLogoSrc}")`);
 
     function escapeHtml(value) {
         return String(value).replace(/[&<>"']/g, (character) => ({
@@ -21,92 +26,25 @@
         }[character]));
     }
 
-    function getStoredTheme(storageKey) {
-        try {
-            return localStorage.getItem(storageKey);
-        } catch {
-            return null;
-        }
-    }
-
-    function storeTheme(storageKey, theme) {
-        try {
-            localStorage.setItem(storageKey, theme);
-        } catch {
-            return;
-        }
-    }
-
-    function getKnownTheme(theme, themeButtons, fallbackTheme) {
-        return Array.from(themeButtons).some((button) => button.dataset.themeChoice === theme)
-            ? theme
-            : fallbackTheme;
-    }
-
-    function setTheme(theme, options) {
-        const nextTheme = getKnownTheme(theme, options.themeButtons, options.defaultTheme);
-
-        document.body.dataset.theme = nextTheme;
-
-        options.themeButtons.forEach((button) => {
-            const isActive = button.dataset.themeChoice === nextTheme;
-            button.classList.toggle("is-active", isActive);
-            button.setAttribute("aria-pressed", String(isActive));
-        });
-
-        storeTheme(options.themeStorageKey, nextTheme);
-    }
-
-    function initJayceeShared(userOptions = {}) {
-        const options = {
-            defaultTheme: userOptions.defaultTheme || defaultTheme,
-            themeStorageKey: userOptions.themeStorageKey || themeStorageKey,
-            themeButtons: document.querySelectorAll("[data-theme-choice]"),
-        };
-
-        options.themeButtons.forEach((button) => {
-            button.addEventListener("click", () => {
-                setTheme(button.dataset.themeChoice, options);
-            });
-        });
-
-        if (options.themeButtons.length > 0) {
-            setTheme(document.body.dataset.theme || getStoredTheme(options.themeStorageKey) || options.defaultTheme, options);
-        } else if (!document.body.dataset.theme) {
-            document.body.dataset.theme = options.defaultTheme;
-        }
-    }
-
     class JayceeBanner extends HTMLElement {
         connectedCallback() {
-            const homeHref = escapeHtml(this.getAttribute("home-href") || defaultHomeHref);
-            const brandLabel = escapeHtml(this.getAttribute("brand-label") || "jaycee.ai");
-            const logoText = escapeHtml(this.getAttribute("logo-text") || "J");
-            const logoSrc = this.getAttribute("logo-src");
-            const logoMarkup = logoSrc
-                ? `<img class="site-logo-image" src="${escapeHtml(logoSrc)}" alt="" aria-hidden="true">`
-                : `<span class="site-logo-image site-logo-themed" aria-label="${logoText}"></span>`;
-            const loginHref = escapeHtml(this.getAttribute("login-href") || "#login");
-            const signupHref = escapeHtml(this.getAttribute("signup-href") || "#signup");
-            const accountHref = escapeHtml(this.getAttribute("account-href") || "#account");
-            const accountLabel = escapeHtml(this.getAttribute("account-label") || "Account");
             const userName = this.getAttribute("user-name") || "";
             const isSignedIn = this.getAttribute("auth-state") === "signed-in" || userName.length > 0;
-            const accountText = escapeHtml(userName || accountLabel);
+            const accountText = escapeHtml(userName || "Account");
 
             this.innerHTML = `
                 <header class="site-header">
                     <div class="site-header-inner">
-                        <a class="site-brand" href="${homeHref}">
-                            ${logoMarkup}
-                            <span class="site-brand-name">${brandLabel}</span>
+                        <a class="site-brand" href="${routes.home}">
+                            <span class="site-logo-image site-logo-themed" aria-label="${logoLabel}"></span>
+                            <span class="site-brand-name">${brandName}</span>
                         </a>
                         <nav class="account-nav" aria-label="Account">
                             ${isSignedIn
-                                ? `<a class="account-button account-button-primary" href="${accountHref}">${accountText}</a>`
+                                ? `<a class="account-button account-button-primary" href="${routes.account}">${accountText}</a>`
                                 : `
-                                    <a class="account-button account-button-ghost" href="${loginHref}">Log in</a>
-                                    <a class="account-button account-button-primary" href="${signupHref}">Sign up</a>
+                                    <a class="account-button account-button-ghost" href="${routes.login}">Log in</a>
+                                    <a class="account-button account-button-primary" href="${routes.signup}">Sign up</a>
                                 `}
                         </nav>
                     </div>
@@ -117,16 +55,14 @@
 
     class JayceeFooter extends HTMLElement {
         connectedCallback() {
-            const brandLabel = escapeHtml(this.getAttribute("brand-label") || "jaycee.ai");
-            const contactHref = escapeHtml(this.getAttribute("contact-href") || defaultContactHref);
-            const year = escapeHtml(this.getAttribute("year") || new Date().getFullYear());
+            const year = new Date().getFullYear();
 
             this.innerHTML = `
                 <footer class="site-footer">
                     <div class="site-footer-inner">
-                        <span>&copy; ${brandLabel} ${year}</span>
+                        <span>&copy; ${brandName} ${year}</span>
                         <span>-</span>
-                        <a href="${contactHref}">contact me</a>
+                        <a href="${routes.contact}">contact me</a>
                     </div>
                 </footer>
             `;
@@ -139,22 +75,5 @@
 
     if (!customElements.get("jaycee-footer")) {
         customElements.define("jaycee-footer", JayceeFooter);
-    }
-
-    window.JayceeShared = {
-        init: initJayceeShared,
-        setTheme: (theme) => {
-            setTheme(theme, {
-                defaultTheme,
-                themeStorageKey,
-                themeButtons: document.querySelectorAll("[data-theme-choice]"),
-            });
-        },
-    };
-
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", () => initJayceeShared());
-    } else {
-        initJayceeShared();
     }
 })();

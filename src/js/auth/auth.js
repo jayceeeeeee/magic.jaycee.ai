@@ -61,11 +61,6 @@
 
     function setBannerSignedOut() {
         document.querySelectorAll("jaycee-banner").forEach((banner) => {
-            const loginHref = banner.getAttribute("login-href") || getAuthUrl("login");
-            const signupHref = banner.getAttribute("signup-href") || getAuthUrl("signup");
-
-            banner.setAttribute("login-href", loginHref);
-            banner.setAttribute("signup-href", signupHref);
             banner.removeAttribute("auth-state");
             banner.removeAttribute("user-name");
             banner.connectedCallback();
@@ -74,10 +69,7 @@
 
     function setBannerSignedIn(user) {
         document.querySelectorAll("jaycee-banner").forEach((banner) => {
-            const accountHref = banner.getAttribute("account-href") || getAccountUrl();
-
             banner.setAttribute("auth-state", "signed-in");
-            banner.setAttribute("account-href", accountHref);
             banner.setAttribute("user-name", getDisplayName(user));
             banner.connectedCallback();
         });
@@ -139,6 +131,8 @@
     window.JayceeAuth = {
         getSupabaseClient,
         getAfterSignInUrl,
+        getAccountUrl,
+        getAuthUrl,
         getSession,
         refreshHeader,
         signIn,

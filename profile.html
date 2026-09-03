@@ -11,14 +11,7 @@
     <link rel="stylesheet" href="./src/profile/profile.css">
 </head>
 <body data-theme="aurora">
-    <jaycee-banner login-href="/auth.html" signup-href="/auth.html?mode=signup" account-href="/account.html"></jaycee-banner>
-
-    <nav class="theme-switcher" aria-label="Visual themes" hidden>
-        <button class="theme-choice is-active" type="button" data-theme-choice="matrix" aria-pressed="true">Matrix</button>
-        <button class="theme-choice" type="button" data-theme-choice="saffron" aria-pressed="false">Saffron</button>
-        <button class="theme-choice" type="button" data-theme-choice="lotus" aria-pressed="false">Lotus</button>
-        <button class="theme-choice" type="button" data-theme-choice="aurora" aria-pressed="false">Aurora</button>
-    </nav>
+    <jaycee-banner></jaycee-banner>
 
     <main class="card-page">
         <section class="profile-card" aria-labelledby="profile-title">
@@ -43,6 +36,34 @@
                 <p>
                     I help people reach enlightenment using Technomancy / 機術 - the art of connecting Technology with Energy.
                 </p>
+
+                <div class="timeline-actions contact-actions" aria-label="Contact links">
+                    <a class="timeline-link contact-link" href="mailto:jaubertcedric13@gmail.com" target="_blank" rel="noopener noreferrer" aria-label="Send an email">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M4 6h16v12H4z"></path>
+                            <path d="m4 7 8 6 8-6"></path>
+                        </svg>
+                        <span>Email</span>
+                    </a>
+                    <a class="timeline-link contact-link" href="https://wa.me/33786625391" target="_blank" rel="noopener noreferrer" aria-label="Contact on WhatsApp">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M19.2 12.1a7.2 7.2 0 0 1-10.4 6.4L5 19.4l1-3.7a7.2 7.2 0 1 1 13.2-3.6Z"></path>
+                            <path d="M9.6 8.8c.2-.3.4-.4.6-.3h.5c.2 0 .3.1.4.3l.5 1.2c.1.2.1.4-.1.6l-.3.4c.5 1 1.2 1.7 2.2 2.2l.4-.4c.2-.2.4-.2.6-.1l1.2.6c.2.1.3.2.3.4v.4c0 .3-.2.5-.5.6-.4.1-.8.2-1.3.1-2.3-.4-4.6-2.7-5-5-.1-.4 0-.8.1-1Z"></path>
+                        </svg>
+                        <span>WhatsApp</span>
+                    </a>
+                    <a class="timeline-link contact-link" href="https://line.me/ti/p/twvTbsqHG6" target="_blank" rel="noopener noreferrer" aria-label="Contact on LINE">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M20 11.2c0 3.4-3.6 6.2-8 6.2-.6 0-1.1 0-1.7-.1L6.2 20l1.2-3.6C5.3 15.2 4 13.3 4 11.2 4 7.8 7.6 5 12 5s8 2.8 8 6.2Z"></path>
+                            <path d="M8.4 9.8v3.1h1.5"></path>
+                            <path d="M11 9.8v3.1"></path>
+                            <path d="M12.4 12.9V9.8l2 3.1V9.8"></path>
+                            <path d="M17.2 9.8h-1.6v3.1h1.6"></path>
+                            <path d="M15.6 11.4h1.4"></path>
+                        </svg>
+                        <span>LINE</span>
+                    </a>
+                </div>
             </div>
         </section>
 
@@ -240,7 +261,32 @@
 
         <section class="content-section" aria-label="About" data-section-panel="about" hidden>
             <p class="eyebrow">About</p>
-            <div class="info-card">
+            <div class="projects-grid">
+                <article class="info-card">
+                    <span class="timeline-dot" aria-hidden="true"></span>
+                    <h3>Kriya Yoga</h3>
+                    <p>
+                        A practical inner technology for refining attention, breath, and energy. This is where the spiritual method behind my work begins, connecting daily discipline with direct experience.
+                    </p>
+                </article>
+
+                <article class="info-card">
+                    <span class="timeline-dot" aria-hidden="true"></span>
+                    <h3>Me</h3>
+                    <p>
+                        I explore the meeting point between mystical traditions, software, and modern life. My path is about translating subtle practices into clear tools people can actually use.
+                    </p>
+                </article>
+
+                <article class="info-card">
+                    <span class="timeline-dot" aria-hidden="true"></span>
+                    <h3>Jaycee.ai</h3>
+                    <p>
+                        Jaycee.ai is the living system that gathers these experiments into one place: a magical interface for self-knowledge, alignment, and technology guided by the heart.
+                    </p>
+                </article>
+            </div>
+            <div class="info-card" hidden>
                 <h3>Contact</h3>
                 <p>
                     If you have any questions or suggestions about what is <b>Technomancy / 機術</b>, who is <b>Jaycee.ai</b>, and who am <b>I</b>, please contact me using the <b>links</b> below.

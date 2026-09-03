@@ -7,8 +7,7 @@
             return;
         }
 
-        const banner = document.querySelector("jaycee-banner");
-        window.location.href = banner?.getAttribute("login-href") || "/auth.html?mode=login";
+        window.location.href = window.JayceeAuth?.getAuthUrl?.("login") || "/auth.html?mode=login";
     }
 
     async function initAccountPage() {
