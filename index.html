@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="./src/css/styles.css">
 </head>
 <body data-theme="aurora">
-  <jaycee-banner></jaycee-banner>
+  <jaycee-banner login-href="/auth.html" signup-href="/auth.html?mode=signup" account-href="/account.html"></jaycee-banner>
 
   <main>
     <section class="game-panel" aria-label="Game setup">
@@ -162,13 +162,6 @@
   <jaycee-footer></jaycee-footer>
 
   <script src="https://shared.jaycee.ai/src/js/jaycee-shared.js"></script>
-  <script>
-    window.JayceeAuthConfig = {
-      authPagePath: "/auth.html",
-      accountPagePath: "/account.html",
-      afterSignInPath: "/",
-    };
-  </script>
   <script src="https://shared.jaycee.ai/src/js/jaycee-auth.js"></script>
   <script type="module" src="./src/js/app.js"></script>
 </body>

@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="https://shared.jaycee.ai/src/css/jaycee-shared.css">
 </head>
 <body data-theme="aurora">
-  <jaycee-banner></jaycee-banner>
+  <jaycee-banner login-href="/auth.html" signup-href="/auth.html?mode=signup" account-href="/account.html"></jaycee-banner>
 
   <main class="auth-page">
     <section class="auth-panel" aria-labelledby="auth-title">
@@ -37,13 +37,6 @@
   <jaycee-footer></jaycee-footer>
 
   <script src="https://shared.jaycee.ai/src/js/jaycee-shared.js"></script>
-  <script>
-    window.JayceeAuthConfig = {
-      authPagePath: "/auth.html",
-      accountPagePath: "/account.html",
-      afterSignInPath: "/",
-    };
-  </script>
   <script src="https://shared.jaycee.ai/src/js/jaycee-auth.js"></script>
   <script src="https://shared.jaycee.ai/src/js/jaycee-auth-page.js"></script>
 </body>
