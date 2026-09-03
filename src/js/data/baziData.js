@@ -124,6 +124,13 @@ export const tigerMonthStemRules = [
   { yearStems: ["Wu", "Gui"], tigerMonthStem: "Jia", combinedElement: "Fire", motherElement: "Wood" },
 ];
 
+export const luckCycleDirections = [
+  { gender: "male", yearPolarity: "Yang", direction: "forward" },
+  { gender: "female", yearPolarity: "Yin", direction: "forward" },
+  { gender: "male", yearPolarity: "Yin", direction: "reverse" },
+  { gender: "female", yearPolarity: "Yang", direction: "reverse" },
+];
+
 export const hourPillarTable = [
   {
     branch: "Zi",

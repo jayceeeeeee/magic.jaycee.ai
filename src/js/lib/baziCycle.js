@@ -25,3 +25,15 @@ export const getSexagenaryPillar = (cycleIndex) => {
 
   return getPillarFromStemBranch(cycleEntry);
 };
+
+export const getSexagenaryIndexFromPillar = (pillar) => {
+  const cycleIndex = sexagenaryCycle.findIndex(
+    (cycleEntry) => cycleEntry.stem === pillar.stem.pinyin && cycleEntry.branch === pillar.branch.pinyin,
+  );
+
+  if (cycleIndex === -1) {
+    throw new Error(`Pillar is not in the 60-cycle: ${pillar.pinyin}`);
+  }
+
+  return cycleIndex;
+};

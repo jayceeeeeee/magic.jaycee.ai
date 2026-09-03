@@ -9,6 +9,7 @@ import {
 } from "./services/storage.js";
 import { initBannerSpacing } from "./ui/banner.js";
 import { initButtonPressFeedback } from "./ui/buttons.js";
+import { renderLuckCycleResults } from "./ui/luckCycleResults.js";
 import { createLocationSearch } from "./ui/locationSearch.js";
 import { renderPillarResults } from "./ui/pillarResults.js";
 import { createStepController } from "./ui/steps.js";
@@ -37,6 +38,8 @@ const yearStemSymbol = document.querySelector("#year-stem-symbol");
 const yearStemMeta = document.querySelector("#year-stem-meta");
 const yearBranchSymbol = document.querySelector("#year-branch-symbol");
 const yearBranchMeta = document.querySelector("#year-branch-meta");
+const luckCycleSummary = document.querySelector("#luck-cycle-summary");
+const luckCycleList = document.querySelector("#luck-cycle-list");
 const siteBanner = document.querySelector(".info-banner");
 const previousButton = document.querySelector("[data-flow-action='previous']");
 const nextButton = document.querySelector("[data-flow-action='next']");
@@ -208,8 +211,13 @@ if (hasSavedProfile) {
     yearBranchSymbol,
     yearBranchMeta,
   });
+  const profileWithLuckCycle = renderLuckCycleResults({
+    profile: profileWithPillars,
+    summary: luckCycleSummary,
+    list: luckCycleList,
+  });
 
-  saveBirthProfile(profileWithPillars);
+  saveBirthProfile(profileWithLuckCycle);
 }
 
 if (savedAppState?.selectedMode || savedDraft || savedProfile) {
@@ -293,8 +301,13 @@ birthForm.addEventListener("submit", (event) => {
     yearBranchSymbol,
     yearBranchMeta,
   });
+  const profileWithLuckCycle = renderLuckCycleResults({
+    profile: profileWithPillars,
+    summary: luckCycleSummary,
+    list: luckCycleList,
+  });
 
-  saveBirthProfile(profileWithPillars);
+  saveBirthProfile(profileWithLuckCycle);
   saveBirthDraft({
     ...profile,
     selectedLocation,

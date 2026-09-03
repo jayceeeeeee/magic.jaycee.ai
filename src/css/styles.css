@@ -421,6 +421,75 @@ input:focus {
   text-orientation: upright;
 }
 
+.luck-cycle {
+  margin-top: 26px;
+}
+
+.luck-cycle-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.luck-cycle-header .eyebrow,
+.luck-cycle-summary {
+  margin: 0;
+}
+
+.luck-cycle-summary {
+  color: var(--muted);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.luck-cycle-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.luck-cycle-card {
+  min-width: 0;
+  display: grid;
+  min-height: 104px;
+  align-content: center;
+  gap: 6px;
+  border: 1px solid var(--field-border-soft);
+  border-radius: 6px;
+  padding: 10px 8px;
+  background: rgba(var(--accent-rgb), 0.035);
+  text-align: center;
+}
+
+.luck-cycle-age {
+  color: var(--muted);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.62rem;
+  line-height: 1;
+}
+
+.luck-cycle-age::before {
+  content: "AGE ";
+}
+
+.luck-cycle-symbol {
+  color: var(--accent);
+  font-size: 1.75rem;
+  line-height: 1;
+  font-weight: 650;
+}
+
+.luck-cycle-meta {
+  color: var(--muted);
+  font-size: 0.66rem;
+  line-height: 1.2;
+}
+
 button {
   min-height: 54px;
   border: 1px solid var(--neon-border);
@@ -602,6 +671,14 @@ button:focus-visible {
 
   .pillar-table {
     min-width: 390px;
+  }
+
+  .luck-cycle-header {
+    display: grid;
+  }
+
+  .luck-cycle-summary {
+    text-align: left;
   }
 
   .mode-grid {
