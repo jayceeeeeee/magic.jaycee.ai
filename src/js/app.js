@@ -7,6 +7,7 @@ import {
   saveBirthDraft,
   saveBirthProfile,
 } from "./services/storage.js";
+import { loadCurrentAccount, logIn, logOut, signUp } from "./services/account.js";
 import { initBannerSpacing } from "./ui/banner.js";
 import { initButtonPressFeedback } from "./ui/buttons.js";
 import { renderLuckCycleResults } from "./ui/luckCycleResults.js";
@@ -42,21 +43,40 @@ const luckCycleList = document.querySelector("#luck-cycle-list");
 const siteBanner = document.querySelector(".info-banner");
 const previousButton = document.querySelector("[data-flow-action='previous']");
 const nextButton = document.querySelector("[data-flow-action='next']");
+const accountStatus = document.querySelector("#account-status");
+const accountLoginButton = document.querySelector("[data-account-action='login']");
+const accountSignupButton = document.querySelector("[data-account-action='signup']");
+const accountLogoutButton = document.querySelector("[data-account-action='logout']");
+const accountCloseButton = document.querySelector("[data-account-action='close']");
+const accountDialog = document.querySelector("#account-dialog");
+const accountForm = document.querySelector("#account-form");
+const accountDialogTitle = document.querySelector("#account-dialog-title");
+const accountNameField = document.querySelector(".account-name-field");
+const accountNameInput = document.querySelector("#account-name");
+const accountEmailInput = document.querySelector("#account-email");
+const accountPasswordInput = document.querySelector("#account-password");
+const accountSubmitButton = document.querySelector("#account-submit-button");
+const accountMessage = document.querySelector("#account-message");
 const savedAppState = loadAppState();
-const savedDraft = loadBirthDraft();
-const savedProfile = loadBirthProfile();
+let currentAccount = loadCurrentAccount();
+const savedDraft = currentAccount ? null : loadBirthDraft();
+const savedProfile = loadBirthProfile(currentAccount?.id) || (!currentAccount ? loadBirthProfile() : null);
 const hasSavedProfile = Boolean(savedProfile?.birthDate);
 let selectedMode = savedAppState?.selectedMode || savedDraft?.mode || savedProfile?.mode || "";
+let accountMode = "login";
+
+const getProfileLocation = (profile) =>
+  profile?.coordinates
+    ? {
+        name: profile.birthPlace,
+        latitude: profile.coordinates.latitude,
+        longitude: profile.coordinates.longitude,
+      }
+    : null;
 
 const savedLocation =
   savedDraft?.selectedLocation ||
-  (savedProfile?.coordinates
-    ? {
-        name: savedProfile.birthPlace,
-        latitude: savedProfile.coordinates.latitude,
-        longitude: savedProfile.coordinates.longitude,
-      }
-    : null);
+  getProfileLocation(savedProfile);
 
 const setFormMessage = (message, type = "info") => {
   formMessage.textContent = message;
@@ -104,6 +124,36 @@ const saveCurrentState = (activeStepId, unlockedSteps = []) => {
     selectedMode,
     unlockedSteps,
   });
+};
+
+const saveCurrentBirthProfile = (profile) => {
+  saveBirthProfile(profile, currentAccount?.id);
+};
+
+const updateAccountUi = () => {
+  accountStatus.textContent = currentAccount ? currentAccount.name || currentAccount.email : "Guest";
+  accountLoginButton.hidden = Boolean(currentAccount);
+  accountSignupButton.hidden = Boolean(currentAccount);
+  accountLogoutButton.hidden = !currentAccount;
+};
+
+const setAccountMessage = (message, type = "info") => {
+  accountMessage.textContent = message;
+  accountMessage.dataset.type = type;
+};
+
+const openAccountDialog = (mode) => {
+  accountMode = mode;
+  const isSignup = mode === "signup";
+
+  accountDialogTitle.textContent = isSignup ? "Sign up" : "Login";
+  accountSubmitButton.textContent = isSignup ? "Sign up" : "Login";
+  accountNameField.hidden = !isSignup;
+  accountNameInput.required = isSignup;
+  accountPasswordInput.autocomplete = isSignup ? "new-password" : "current-password";
+  accountForm.reset();
+  setAccountMessage("");
+  accountDialog.showModal();
 };
 
 const restoreBirthForm = (profile) => {
@@ -158,6 +208,7 @@ const getInitialStepId = () => {
 
 initBannerSpacing(siteBanner);
 initButtonPressFeedback();
+updateAccountUi();
 
 birthDateInput.max = new Date().toISOString().split("T")[0];
 
@@ -181,6 +232,10 @@ const locationSearch = createLocationSearch({
   initialLocation: savedLocation,
   onError: (message) => setFormMessage(message, "error"),
   onSelect: (selectedLocation) => {
+    if (currentAccount) {
+      return;
+    }
+
     saveBirthDraft({
       ...getCurrentDraft(selectedLocation),
       selectedLocation,
@@ -188,96 +243,7 @@ const locationSearch = createLocationSearch({
   },
 });
 
-if (hasSavedProfile) {
-  const profileWithPillars = renderPillarResults({
-    profile: savedProfile,
-    hourStemCell,
-    hourStemSymbol,
-    hourStemMeta,
-    hourBranchCell,
-    hourBranchSymbol,
-    hourBranchMeta,
-    dayStemSymbol,
-    dayStemMeta,
-    dayBranchSymbol,
-    dayBranchMeta,
-    monthStemSymbol,
-    monthStemMeta,
-    monthBranchSymbol,
-    monthBranchMeta,
-    yearStemSymbol,
-    yearStemMeta,
-    yearBranchSymbol,
-    yearBranchMeta,
-  });
-  const profileWithLuckCycle = renderLuckCycleResults({
-    profile: profileWithPillars,
-    list: luckCycleList,
-  });
-
-  saveBirthProfile(profileWithLuckCycle);
-}
-
-if (savedAppState?.selectedMode || savedDraft || savedProfile) {
-  stepController.unlockStep("birth-step");
-}
-
-if (hasSavedProfile) {
-  stepController.unlockStep("pillar-step");
-}
-
-modeButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    if (button.classList.contains("is-locked")) {
-      return;
-    }
-
-    selectedMode = button.dataset.mode;
-    const targetId = button.dataset.target || modeRoutes[selectedMode];
-
-    stepController.unlockStep(targetId);
-    saveCurrentState("mode-step", stepController.getUnlockedSteps());
-    stepController.showStep(targetId);
-  });
-});
-
-birthForm.addEventListener("input", () => {
-  const selectedLocation = locationSearch.getSelectedLocation();
-
-  saveBirthDraft({
-    ...getCurrentDraft(selectedLocation),
-    selectedLocation,
-  });
-});
-
-previousButton?.addEventListener("click", stepController.showPreviousStep);
-nextButton?.addEventListener("click", stepController.showNextStep);
-
-window.addEventListener("hashchange", () => {
-  const hashStepId = getHashStepId();
-
-  if (hashStepId && stepController.canShowStep(hashStepId)) {
-    stepController.showStep(hashStepId, { updateHash: false });
-    return;
-  }
-
-  stepController.showStep("mode-step", { updateHash: false });
-});
-
-stepController.showStep(getInitialStepId());
-
-birthForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-
-  const selectedLocation = locationSearch.getSelectedLocation();
-  const profile = getBirthFormData(selectedLocation);
-  const error = validateBirthProfile(profile, selectedLocation);
-
-  if (error) {
-    setFormMessage(error, "error");
-    return;
-  }
-
+const renderAndSaveBirthProfile = (profile) => {
   const profileWithPillars = renderPillarResults({
     profile,
     hourStemCell,
@@ -304,11 +270,138 @@ birthForm.addEventListener("submit", (event) => {
     list: luckCycleList,
   });
 
-  saveBirthProfile(profileWithLuckCycle);
+  saveCurrentBirthProfile(profileWithLuckCycle);
+
+  return profileWithLuckCycle;
+};
+
+if (hasSavedProfile) {
+  renderAndSaveBirthProfile(savedProfile);
+}
+
+if (savedAppState?.selectedMode || savedDraft || savedProfile) {
+  stepController.unlockStep("birth-step");
+}
+
+if (hasSavedProfile) {
+  stepController.unlockStep("pillar-step");
+}
+
+modeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    if (button.classList.contains("is-locked")) {
+      return;
+    }
+
+    selectedMode = button.dataset.mode;
+    const targetId = button.dataset.target || modeRoutes[selectedMode];
+
+    stepController.unlockStep(targetId);
+    saveCurrentState("mode-step", stepController.getUnlockedSteps());
+    stepController.showStep(targetId);
+  });
+});
+
+birthForm.addEventListener("input", () => {
+  if (currentAccount) {
+    return;
+  }
+
+  const selectedLocation = locationSearch.getSelectedLocation();
+
   saveBirthDraft({
-    ...profile,
+    ...getCurrentDraft(selectedLocation),
     selectedLocation,
   });
+});
+
+previousButton?.addEventListener("click", stepController.showPreviousStep);
+nextButton?.addEventListener("click", stepController.showNextStep);
+accountLoginButton?.addEventListener("click", () => openAccountDialog("login"));
+accountSignupButton?.addEventListener("click", () => openAccountDialog("signup"));
+accountCloseButton?.addEventListener("click", () => accountDialog.close());
+accountLogoutButton?.addEventListener("click", () => {
+  logOut();
+  window.location.reload();
+});
+
+accountForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setAccountMessage("");
+
+  try {
+    const formData = new FormData(accountForm);
+    const accountPayload = {
+      name: String(formData.get("account-name") || "").trim(),
+      email: String(formData.get("account-email") || "").trim(),
+      password: String(formData.get("account-password") || ""),
+    };
+    currentAccount =
+      accountMode === "signup"
+        ? await signUp(accountPayload)
+        : await logIn(accountPayload);
+    const accountProfile = loadBirthProfile(currentAccount.id);
+    const selectedLocation = locationSearch.getSelectedLocation();
+    const currentProfile = getBirthFormData(selectedLocation);
+    const currentProfileError = validateBirthProfile(currentProfile, selectedLocation);
+
+    updateAccountUi();
+    accountDialog.close();
+
+    if (accountProfile) {
+      selectedMode = accountProfile.mode || selectedMode;
+      restoreBirthForm(accountProfile);
+      locationSearch.setSelectedLocation(getProfileLocation(accountProfile));
+      renderAndSaveBirthProfile(accountProfile);
+      stepController.unlockStep("birth-step");
+      stepController.unlockStep("pillar-step");
+      stepController.showStep("pillar-step");
+      return;
+    }
+
+    if (!currentProfileError) {
+      renderAndSaveBirthProfile(currentProfile);
+      stepController.unlockStep("birth-step");
+      stepController.unlockStep("pillar-step");
+      stepController.showStep("pillar-step");
+    }
+  } catch (error) {
+    setAccountMessage(error.message, "error");
+  }
+});
+
+window.addEventListener("hashchange", () => {
+  const hashStepId = getHashStepId();
+
+  if (hashStepId && stepController.canShowStep(hashStepId)) {
+    stepController.showStep(hashStepId, { updateHash: false });
+    return;
+  }
+
+  stepController.showStep("mode-step", { updateHash: false });
+});
+
+stepController.showStep(getInitialStepId());
+
+birthForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const selectedLocation = locationSearch.getSelectedLocation();
+  const profile = getBirthFormData(selectedLocation);
+  const error = validateBirthProfile(profile, selectedLocation);
+
+  if (error) {
+    setFormMessage(error, "error");
+    return;
+  }
+
+  renderAndSaveBirthProfile(profile);
+  if (!currentAccount) {
+    saveBirthDraft({
+      ...profile,
+      selectedLocation,
+    });
+  }
   stepController.unlockStep("pillar-step");
   stepController.showStep("pillar-step");
 });

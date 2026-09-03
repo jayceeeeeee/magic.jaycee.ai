@@ -17,6 +17,14 @@
     <section class="game-panel" aria-label="Game setup">
       <div class="panel-header">
         <span class="eyebrow">Game: Conquer the World</span>
+        <div class="account-bar" aria-label="Account">
+          <span class="account-status" id="account-status">Guest</span>
+          <div class="account-actions">
+            <button class="account-button" type="button" data-account-action="login">Login</button>
+            <button class="account-button" type="button" data-account-action="signup">Sign up</button>
+            <button class="account-button" type="button" data-account-action="logout" hidden>Logout</button>
+          </div>
+        </div>
         <div class="nav-row" aria-label="Step navigation">
           <button class="nav-button" type="button" data-flow-action="previous" aria-label="Previous step" hidden>&larr;</button>
           <button class="nav-button" type="button" data-flow-action="next" aria-label="Next step" hidden>&rarr;</button>
@@ -157,6 +165,33 @@
         </section>
       </div>
     </section>
+
+    <dialog class="account-dialog" id="account-dialog" aria-labelledby="account-dialog-title">
+      <form class="account-form" id="account-form">
+        <div class="account-dialog-header">
+          <h2 id="account-dialog-title">Login</h2>
+          <button class="account-close-button" type="button" data-account-action="close" aria-label="Close">&times;</button>
+        </div>
+
+        <label class="account-name-field" for="account-name">
+          Name
+          <input id="account-name" name="account-name" type="text" autocomplete="name" placeholder="Your name">
+        </label>
+
+        <label for="account-email">
+          Email
+          <input id="account-email" name="account-email" type="email" autocomplete="email" placeholder="you@example.com" required>
+        </label>
+
+        <label for="account-password">
+          Password
+          <input id="account-password" name="account-password" type="password" autocomplete="current-password" minlength="6" required>
+        </label>
+
+        <button id="account-submit-button" type="submit">Login</button>
+        <p class="form-message" id="account-message" aria-live="polite"></p>
+      </form>
+    </dialog>
   </main>
 
   <jaycee-footer></jaycee-footer>

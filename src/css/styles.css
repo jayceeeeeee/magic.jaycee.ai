@@ -39,6 +39,32 @@ main {
   justify-content: space-between;
 }
 
+.account-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.account-status {
+  min-width: 0;
+  color: var(--muted);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.account-actions {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
 .step[hidden] {
   display: none;
 }
@@ -386,6 +412,70 @@ input:focus {
   margin-top: 26px;
 }
 
+.account-button {
+  min-height: 30px;
+  margin: 0;
+  padding: 0 10px;
+  font-size: 0.68rem;
+  box-shadow: none;
+}
+
+.account-button[hidden] {
+  display: none;
+}
+
+.account-dialog {
+  width: min(calc(100% - 32px), 420px);
+  border: 1px solid var(--field-border);
+  border-radius: 8px;
+  padding: 0;
+  color: var(--text);
+  background:
+    var(--panel-light),
+    var(--panel-aura),
+    var(--card);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.62);
+}
+
+.account-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.66);
+}
+
+.account-form {
+  padding: 26px;
+}
+
+.account-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.account-dialog h2 {
+  margin: 0;
+  color: var(--accent);
+  font-size: 1.35rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.account-close-button {
+  width: 32px;
+  min-height: 32px;
+  border-color: var(--field-border-soft);
+  margin: 0;
+  padding: 0;
+  box-shadow: none;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.account-name-field[hidden] {
+  display: none;
+}
+
 .luck-cycle-header {
   margin-bottom: 12px;
 }
@@ -606,6 +696,21 @@ button:focus-visible {
 
   .nav-button {
     font-size: 1.45rem;
+  }
+
+  .account-bar {
+    align-items: stretch;
+    display: grid;
+    gap: 8px;
+  }
+
+  .account-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .account-button {
+    padding: 0 8px;
   }
 
   .game-panel {

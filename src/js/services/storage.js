@@ -2,12 +2,15 @@ const BIRTH_PROFILE_KEY = "birthProfile";
 const BIRTH_DRAFT_KEY = "birthDraft";
 const APP_STATE_KEY = "appState";
 
-export const saveBirthProfile = (profile) => {
-  localStorage.setItem(BIRTH_PROFILE_KEY, JSON.stringify(profile));
+const getBirthProfileKey = (accountId = "") =>
+  accountId ? `${BIRTH_PROFILE_KEY}:${accountId}` : BIRTH_PROFILE_KEY;
+
+export const saveBirthProfile = (profile, accountId = "") => {
+  localStorage.setItem(getBirthProfileKey(accountId), JSON.stringify(profile));
 };
 
-export const loadBirthProfile = () => {
-  const savedProfile = localStorage.getItem(BIRTH_PROFILE_KEY);
+export const loadBirthProfile = (accountId = "") => {
+  const savedProfile = localStorage.getItem(getBirthProfileKey(accountId));
 
   return savedProfile ? JSON.parse(savedProfile) : null;
 };
