@@ -162,6 +162,13 @@
   <jaycee-footer></jaycee-footer>
 
   <script src="https://shared.jaycee.ai/src/js/jaycee-shared.js"></script>
+  <script>
+    window.JayceeAuthConfig = {
+      authPagePath: "/auth.html",
+      accountPagePath: "/account.html",
+      afterSignInPath: "/",
+    };
+  </script>
   <script src="https://shared.jaycee.ai/src/js/jaycee-auth.js"></script>
   <script type="module" src="./src/js/app.js"></script>
 </body>
