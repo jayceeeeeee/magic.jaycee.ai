@@ -662,23 +662,93 @@ button:focus-visible {
   }
 
   .game-panel {
-    padding: 26px;
+    padding: 22px 16px;
   }
 
   .form-grid {
     grid-template-columns: 1fr;
   }
 
+  .pillar-table-wrap {
+    overflow-x: visible;
+  }
+
   .pillar-table {
-    min-width: 390px;
+    min-width: 0;
+    border-spacing: 4px;
+  }
+
+  .pillar-table thead th {
+    padding: 7px 4px;
+    font-size: 0.48rem;
+  }
+
+  .pillar-table td {
+    height: 92px;
+    padding: 8px 4px;
+  }
+
+  .pillar-symbol {
+    margin-bottom: 6px;
+    font-size: 1.85rem;
+  }
+
+  .pillar-cell-meta {
+    min-height: 28px;
+    font-size: 0.56rem;
+    line-height: 1.18;
+  }
+
+  .pillar-row-heading {
+    width: 30px;
+    padding: 4px 2px;
+  }
+
+  .pillar-row-heading-inner {
+    min-height: 78px;
+    gap: 4px;
+  }
+
+  .pillar-row-heading span {
+    font-size: 0.46rem;
+  }
+
+  .pillar-row-heading strong {
+    font-size: 0.72rem;
   }
 
   .luck-cycle-header {
     display: grid;
+    gap: 6px;
   }
 
   .luck-cycle-summary {
+    font-size: 0.62rem;
     text-align: left;
+  }
+
+  .luck-cycle-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .luck-cycle-card {
+    min-height: 82px;
+    gap: 4px;
+    padding: 8px 4px;
+  }
+
+  .luck-cycle-age {
+    font-size: 0.52rem;
+  }
+
+  .luck-cycle-symbol {
+    font-size: 1.35rem;
+  }
+
+  .luck-cycle-meta {
+    font-size: 0.54rem;
+    line-height: 1.12;
   }
 
   .mode-grid {
