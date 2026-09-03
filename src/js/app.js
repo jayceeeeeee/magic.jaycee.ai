@@ -39,7 +39,7 @@ const yearStemMeta = document.querySelector("#year-stem-meta");
 const yearBranchSymbol = document.querySelector("#year-branch-symbol");
 const yearBranchMeta = document.querySelector("#year-branch-meta");
 const luckCycleList = document.querySelector("#luck-cycle-list");
-const siteBanner = document.querySelector(".info-banner");
+const siteBanner = document.querySelector(".site-header");
 const previousButton = document.querySelector("[data-flow-action='previous']");
 const nextButton = document.querySelector("[data-flow-action='next']");
 const savedAppState = loadAppState();

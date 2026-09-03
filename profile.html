@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cedric JAUBERT | jaycee.ai</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./src/shared/css/jaycee-shared.css">
+    <link rel="stylesheet" href="./src/profile/profile.css">
+</head>
+<body data-theme="aurora">
+    <jaycee-banner login-href="/auth.html" signup-href="/auth.html?mode=signup" account-href="/account.html"></jaycee-banner>
+
+    <nav class="theme-switcher" aria-label="Visual themes" hidden>
+        <button class="theme-choice is-active" type="button" data-theme-choice="matrix" aria-pressed="true">Matrix</button>
+        <button class="theme-choice" type="button" data-theme-choice="saffron" aria-pressed="false">Saffron</button>
+        <button class="theme-choice" type="button" data-theme-choice="lotus" aria-pressed="false">Lotus</button>
+        <button class="theme-choice" type="button" data-theme-choice="aurora" aria-pressed="false">Aurora</button>
+    </nav>
+
+    <main class="card-page">
+        <section class="profile-card" aria-labelledby="profile-title">
+            <div class="profile-heading">
+                <div class="profile-avatar">
+                    <img src="./src/profile/images/pp.png" alt="Cedric JBT">
+                </div>
+                <div class="profile-identity">
+                    <h1 id="profile-title">Cedric JAUBERT</h1>
+                </div>
+            </div>
+
+            <div class="profile-body">
+                <div class="current-company">
+                    <img src="./src/shared/assets/logo_white.png" alt="Current company logo">
+                    <div>
+                        <p class="eyebrow">Founder</p>
+                        <p class="company-name">of JAYCEE.AI</p>
+                    </div>
+                </div>
+
+                <p>
+                    I help people reach enlightenment using Technomancy / 機術 - the art of connecting Technology with Energy.
+                </p>
+            </div>
+        </section>
+
+        <section class="action-grid" aria-label="Profile sections">
+            <button class="action-tile is-active" type="button" data-section-target="services" aria-pressed="true">
+                <span>Services</span>
+            </button>
+
+            <button class="action-tile" type="button" data-section-target="experiences" aria-pressed="false">
+                <span>Experiences</span>
+            </button>
+
+            <button class="action-tile" type="button" data-section-target="projects" aria-pressed="false">
+                <span>Projects</span>
+            </button>
+
+            <button class="action-tile" type="button" data-section-target="about" aria-pressed="false">
+                <span>About</span>
+            </button>
+        </section>
+        <section class="content-section is-visible" aria-label="Services" data-section-panel="services">
+            <p class="eyebrow">Services</p>
+            <div class="services-grid">
+                <article class="service-card">
+                    <span class="timeline-dot" aria-hidden="true"></span>
+                    <div class="service-header">
+                        <h3>Consulting</h3>
+                        <!--<p class="service-meta">About your Techno-Profile</p>-->
+                    </div>
+                    <div class="service-copy">
+                        <p class="service-intro">I combine <b>Kriya Yoga</b>, <b>Chinese metaphysics</b>, and <b>Kabbalistic principles</b> to:</p>
+                        <ul class="service-list">
+                            <li>Help you understand yourself and your own <b>DNA Algorithm</b>.</li>
+                            <li>Help you understand the <b>hidden forces</b> influencing your present situation.</li>
+                            <li>Help you understand the dynamics between you and your <b>relationships</b>.</li>
+                            <li>Guide you through a daily <b>scientific method</b> to bring you closer to <b>enlightenment</b> still while using <b>Technology</b> and staying in the <b>modern</b> world.</li>
+                        </ul>
+                    </div>
+                    <div class="timeline-actions">
+                        <a class="timeline-link" href="/">Start the game</a>
+                    </div>
+                </article>
+
+                <article class="service-card is-locked">
+                    <span class="timeline-dot" aria-hidden="true"></span>
+                    <div class="service-header">
+                        <h3>Building</h3>
+                        <!--<p class="service-meta">Your own Techno-Temple</p>-->
+                    </div>
+                    <div class="service-copy">
+                        <p class="service-intro">I <b>connect people</b> together to help them to:</p>
+                        <ul class="service-list">
+                            <li>Accomplish their <b>online mission</b> and <b>projects</b>.</li>
+                            <li>Define their relationship's <b>alignment</b> and <b>matching</b>.</li>
+                            <li>Manage their <b>work-life balance</b> and <b>spiritual growth</b>.</li>
+                            <li><b>Expand</b> while living in <b>harmony</b> in a <b>community</b>.</li>
+                        </ul>
+                    </div>
+                    <div class="timeline-actions">
+                        <button class="timeline-link" type="button" disabled>In construction</button>
+                    </div>
+                </article>
+
+                <article class="service-card is-locked">
+                    <span class="timeline-dot" aria-hidden="true"></span>
+                    <div class="service-header">
+                        <h3>Educating</h3>
+                        <!--<p class="service-meta">Aspiring Techno-Mancers</p>-->
+                    </div>
+                    <div class="service-copy">
+                        <p class="service-intro">I guide you continuously on the <b>Technomancer path</b> with:</p>
+                        <ul class="service-list">
+                            <li>A continuous update of my <b>knowledge</b> about <b>Technomancy</b>.</li>
+                            <li>An evolving <b>community</b> of people that walk on the same <b>path</b>.</li>
+                            <li>An <b>application</b> that constantly updates itself for you in <b>real time</b>.</li>
+                            <li>Practical <b>actions</b> to apply everyday and adapted to your <b>level</b>.</li>
+                        </ul>
+                    </div>
+                    <div class="timeline-actions">
+                        <button class="timeline-link" type="button" disabled>In construction</button>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="timeline-section content-section" aria-label="Experiences" data-section-panel="experiences" hidden>
+            <p class="eyebrow">Experiences</p>
+
+            <div class="timeline">
+                <article class="timeline-card experience-card">
+                    <span class="timeline-dot" aria-hidden="true"></span>
+                    <div class="experience-header">
+                        <h3>Quantum Relationships</h3>
+                        <span class="experience-date">2025-2026</span>
+                    </div>
+                    <div class="experience-body">
+                        <a class="experience-media experience-media-youtube" href="https://www.youtube.com/@jayceejbt/playlists/" target="_blank" rel="noopener noreferrer" aria-label="Open video">
+                            <svg class="experience-link-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M7 17 17 7"></path>
+                                <path d="M9 7h8v8"></path>
+                            </svg>
+                        </a>
+                        <div class="experience-copy">
+                            <p>
+                                <span class="experience-result">I helped people manifest their <b>soul mates</b>, and live in <b>harmony</b> with <b>nature</b> and a <b>community</b>.</span>
+                                <span class="experience-method">By connecting <b>social networks</b> to the <b>Heavens</b> and <b>Earth</b> on my <b>phone</b>, using <b>Daoism</b>, <b>Shintoism</b> and <b>Hinduism</b>.</span>
+                            </p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="timeline-card experience-card">
+                    <span class="timeline-dot" aria-hidden="true"></span>
+                    <div class="experience-header">
+                        <h3>Manifestation Technology</h3>
+                        <span class="experience-date">2023-2025</span>
+                    </div>
+                    <div class="experience-body">
+                        <a class="experience-media experience-media-notes" href="https://notes.jaycee.ai" target="_blank" rel="noopener noreferrer" aria-label="Open notes.jaycee.ai">
+                            <svg class="experience-link-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M7 17 17 7"></path>
+                                <path d="M9 7h8v8"></path>
+                            </svg>
+                        </a>
+                        <div class="experience-copy">
+                            <p>
+                                <span class="experience-result">I helped people manifest their dream <b>relationships</b> and <b>business opportunities</b>.</span>
+                                <span class="experience-method">By transforming my <b>computer</b> into a <b>manifestation tool</b> using <b>Kabbalah</b> and the <b>Tree of Life</b>.</span>
+                            </p>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="timeline-card experience-card">
+                    <span class="timeline-dot" aria-hidden="true"></span>
+                    <div class="experience-header">
+                        <h3>Your Inner AI</h3>
+                        <span class="experience-date">2009-2023</span>
+                    </div>
+                    <div class="experience-body">
+                        <a class="experience-media experience-media-jaycee" href="https://youtu.be/_NlzXQKX4RU" target="_blank" rel="noopener noreferrer" aria-label="Open Jaycee.ai video">
+                            <svg class="experience-link-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M7 17 17 7"></path>
+                                <path d="M9 7h8v8"></path>
+                            </svg>
+                        </a>
+                        <div class="experience-copy">
+                            <p>
+                                <span class="experience-result">I helped people <b>heal</b>, do <b>telepathy</b>, and <b>manifest</b> what they needed.</span>
+                                <span class="experience-method">By creating the <b>Love Algorithm</b> based on <b>Jaycee.ai</b> that uses <b>the Heart</b> and <b>Unconditional Love</b> at its source.</span>
+                            </p>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="content-section" aria-label="Projects" data-section-panel="projects" hidden>
+            <p class="eyebrow">Projects</p>
+            <div class="projects-grid">
+                <article class="info-card">
+                    <span class="timeline-dot" aria-hidden="true"></span>
+                    <h3>A Magical App</h3>
+                    <p>
+                        This application is the first one ever to channel <b>Energy</b> directly from the <b>Heavens</b> and <b>Earth</b> by combining <b>Kriya Yoga</b>, <b>Chinese metaphysics</b>, and <b>Kabbalistic principles</b> to connect your own <b>DNA</b> with your <b>phone</b>.
+                    </p>
+                    <div class="timeline-actions">
+                        <a class="timeline-link" href="https://github.com/jayceeeeeee/magic.jaycee.ai" target="_blank" rel="noopener noreferrer">Contribute</a>
+                    </div>
+                </article>
+
+                <article class="info-card is-locked">
+                    <span class="timeline-dot" aria-hidden="true"></span>
+                    <h3>Quantum Accounts</h3>
+                    <p>
+                        Building a system of <b>accounts</b> on this platform that allows the users to manifest their <b>dream reality</b> by channeling its <b>energy</b> just like writing a <b>prayer</b> in a real <b>temple</b>.
+                    </p>
+                    <div class="timeline-actions">
+                        <button class="timeline-link" type="button" disabled>Planned</button>
+                    </div>
+                </article>
+
+                <article class="info-card is-locked">
+                    <span class="timeline-dot" aria-hidden="true"></span>
+                    <h3>Supernatural Technomancers</h3>
+                    <p>
+                        Creating a <b>community group</b> that allows people on this application to perform <b>miracles</b>, even at a <b>distance</b>, in <b>real time</b>, through various established <b>Technomantic protocols</b>.
+                    </p>
+                    <div class="timeline-actions">
+                        <button class="timeline-link" type="button" disabled>Planned</button>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="content-section" aria-label="About" data-section-panel="about" hidden>
+            <p class="eyebrow">About</p>
+            <div class="info-card">
+                <h3>Contact</h3>
+                <p>
+                    If you have any questions or suggestions about what is <b>Technomancy / 機術</b>, who is <b>Jaycee.ai</b>, and who am <b>I</b>, please contact me using the <b>links</b> below.
+                </p>
+                <div class="timeline-actions contact-actions" aria-label="Contact links">
+                    <a class="timeline-link contact-link" href="mailto:jaubertcedric13@gmail.com" target="_blank" rel="noopener noreferrer" aria-label="Send an email">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M4 6h16v12H4z"></path>
+                            <path d="m4 7 8 6 8-6"></path>
+                        </svg>
+                        <span>Email</span>
+                    </a>
+                    <a class="timeline-link contact-link" href="https://wa.me/33786625391" target="_blank" rel="noopener noreferrer" aria-label="Contact on WhatsApp">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M19.2 12.1a7.2 7.2 0 0 1-10.4 6.4L5 19.4l1-3.7a7.2 7.2 0 1 1 13.2-3.6Z"></path>
+                            <path d="M9.6 8.8c.2-.3.4-.4.6-.3h.5c.2 0 .3.1.4.3l.5 1.2c.1.2.1.4-.1.6l-.3.4c.5 1 1.2 1.7 2.2 2.2l.4-.4c.2-.2.4-.2.6-.1l1.2.6c.2.1.3.2.3.4v.4c0 .3-.2.5-.5.6-.4.1-.8.2-1.3.1-2.3-.4-4.6-2.7-5-5-.1-.4 0-.8.1-1Z"></path>
+                        </svg>
+                        <span>WhatsApp</span>
+                    </a>
+                    <a class="timeline-link contact-link" href="https://line.me/ti/p/twvTbsqHG6" target="_blank" rel="noopener noreferrer" aria-label="Contact on LINE">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M20 11.2c0 3.4-3.6 6.2-8 6.2-.6 0-1.1 0-1.7-.1L6.2 20l1.2-3.6C5.3 15.2 4 13.3 4 11.2 4 7.8 7.6 5 12 5s8 2.8 8 6.2Z"></path>
+                            <path d="M8.4 9.8v3.1h1.5"></path>
+                            <path d="M11 9.8v3.1"></path>
+                            <path d="M12.4 12.9V9.8l2 3.1V9.8"></path>
+                            <path d="M17.2 9.8h-1.6v3.1h1.6"></path>
+                            <path d="M15.6 11.4h1.4"></path>
+                        </svg>
+                        <span>LINE</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <jaycee-footer></jaycee-footer>
+
+    <script src="./src/shared/js/jaycee-shared.js"></script>
+    <script src="./src/shared/js/jaycee-auth.js"></script>
+    <script src="./src/profile/profile.js"></script>
+</body>
+</html>

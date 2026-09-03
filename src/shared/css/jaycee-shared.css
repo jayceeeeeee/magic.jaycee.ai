@@ -1,0 +1,622 @@
+:root {
+    color-scheme: dark;
+
+    /* Brand theme tokens: change these values to reshape the whole identity. */
+    --page-bg: #050706;
+    --card: rgba(16, 19, 18, 0.9);
+    --card-strong: rgba(22, 26, 24, 0.96);
+    --surface: rgba(8, 11, 10, 0.82);
+    --surface-soft: rgba(8, 11, 10, 0.2);
+    --surface-muted: rgba(0, 0, 0, 0.2);
+    --deep-accent-bg: #061009;
+    --banner-bg: rgba(4, 6, 5, 0.92);
+    --footer-bg: rgba(4, 6, 5, 0.9);
+    --text: #eef5ef;
+    --muted: #9ca6a0;
+    --metal: #b6bcb8;
+    --accent: #28ff82;
+    --accent-soft: #9dffc7;
+    --accent-ink: #031007;
+    --accent-rgb: 40, 255, 130;
+    --accent-line: rgba(var(--accent-rgb), 0.42);
+    --field-border: rgba(182, 188, 184, 0.2);
+    --field-border-soft: rgba(182, 188, 184, 0.16);
+    --bg-oracle-text: "01 10 11 00 01 10 01 11";
+    --bg-oracle-color: rgba(var(--accent-rgb), 0.08);
+    --bg-oracle-spacing: 0.28em;
+    --bg-top-glow: rgba(var(--accent-rgb), 0.16);
+    --bg-grid-line: rgba(255, 255, 255, 0.025);
+    --bg-grid-line-alt: rgba(255, 255, 255, 0.02);
+    --bg-scan-line: rgba(var(--accent-rgb), 0.035);
+    --bg-base: linear-gradient(145deg, rgba(5, 7, 6, 0.98) 0%, rgba(20, 24, 22, 0.98) 48%, rgba(6, 8, 7, 0.98) 100%);
+    --button-glow: linear-gradient(145deg, rgba(var(--accent-rgb), 0.1), var(--surface-soft) 42%);
+    --active-button-bg: linear-gradient(145deg, var(--accent), var(--accent-soft));
+    --panel-light: linear-gradient(145deg, rgba(255, 255, 255, 0.08), transparent 32%);
+    --panel-aura: linear-gradient(315deg, rgba(var(--accent-rgb), 0.08), transparent 42%);
+    --card-fill: linear-gradient(135deg, rgba(53, 59, 56, 0.9), rgba(13, 17, 15, 0.96));
+    --image-filter: grayscale(18%) contrast(1.06) saturate(0.92);
+    --logo-filter: none;
+    --jaycee-logo-current: var(--jaycee-logo-dark);
+}
+
+body[data-theme="saffron"] {
+    color-scheme: light;
+    --page-bg: #fbf6e8;
+    --card: rgba(255, 251, 240, 0.88);
+    --card-strong: rgba(255, 249, 235, 0.94);
+    --surface: rgba(255, 248, 232, 0.84);
+    --surface-soft: rgba(255, 212, 124, 0.22);
+    --surface-muted: rgba(255, 241, 211, 0.72);
+    --deep-accent-bg: #fff7df;
+    --banner-bg: rgba(255, 250, 239, 0.9);
+    --footer-bg: rgba(255, 250, 239, 0.9);
+    --text: #2a241b;
+    --muted: #675f52;
+    --metal: #856e43;
+    --accent: #d9851b;
+    --accent-soft: #2d8c83;
+    --accent-ink: #fffaf0;
+    --accent-rgb: 217, 133, 27;
+    --field-border: rgba(120, 86, 39, 0.22);
+    --field-border-soft: rgba(120, 86, 39, 0.16);
+    --bg-oracle-text: "AUM  RAM  OM  SHANTI  JYOTI";
+    --bg-oracle-color: rgba(217, 133, 27, 0.11);
+    --bg-oracle-spacing: 0.16em;
+    --bg-top-glow: rgba(255, 202, 113, 0.32);
+    --bg-grid-line: rgba(120, 86, 39, 0.08);
+    --bg-grid-line-alt: rgba(45, 140, 131, 0.06);
+    --bg-scan-line: rgba(217, 133, 27, 0.05);
+    --bg-base: linear-gradient(145deg, rgba(251, 246, 232, 0.98) 0%, rgba(255, 238, 196, 0.96) 52%, rgba(230, 247, 240, 0.98) 100%);
+    --button-glow: linear-gradient(145deg, rgba(217, 133, 27, 0.18), rgba(45, 140, 131, 0.08) 48%);
+    --active-button-bg: linear-gradient(145deg, #d9851b, #f3c95e);
+    --panel-light: linear-gradient(145deg, rgba(255, 255, 255, 0.7), transparent 34%);
+    --panel-aura: linear-gradient(315deg, rgba(45, 140, 131, 0.12), transparent 46%);
+    --card-fill: linear-gradient(135deg, rgba(255, 253, 246, 0.94), rgba(255, 241, 211, 0.88));
+    --image-filter: contrast(1.05) saturate(1.08) sepia(0.08);
+    --logo-filter: invert(1);
+    --jaycee-logo-current: var(--jaycee-logo-light);
+}
+
+body[data-theme="lotus"] {
+    color-scheme: light;
+    --page-bg: #f8f7ff;
+    --card: rgba(255, 255, 255, 0.88);
+    --card-strong: rgba(255, 255, 255, 0.94);
+    --surface: rgba(255, 255, 255, 0.78);
+    --surface-soft: rgba(130, 110, 220, 0.14);
+    --surface-muted: rgba(238, 242, 255, 0.72);
+    --deep-accent-bg: #f7f3ff;
+    --banner-bg: rgba(252, 250, 255, 0.9);
+    --footer-bg: rgba(252, 250, 255, 0.9);
+    --text: #252037;
+    --muted: #635e72;
+    --metal: #756993;
+    --accent: #7b61d1;
+    --accent-soft: #d15d8f;
+    --accent-ink: #ffffff;
+    --accent-rgb: 123, 97, 209;
+    --field-border: rgba(72, 61, 115, 0.2);
+    --field-border-soft: rgba(72, 61, 115, 0.14);
+    --bg-oracle-text: "LOTUS  LIGHT  AUM  SOURCE";
+    --bg-oracle-color: rgba(123, 97, 209, 0.1);
+    --bg-oracle-spacing: 0.18em;
+    --bg-top-glow: rgba(209, 93, 143, 0.28);
+    --bg-grid-line: rgba(72, 61, 115, 0.07);
+    --bg-grid-line-alt: rgba(209, 93, 143, 0.05);
+    --bg-scan-line: rgba(123, 97, 209, 0.04);
+    --bg-base: linear-gradient(145deg, rgba(248, 247, 255, 0.98) 0%, rgba(239, 245, 255, 0.96) 50%, rgba(255, 239, 247, 0.98) 100%);
+    --button-glow: linear-gradient(145deg, rgba(123, 97, 209, 0.16), rgba(209, 93, 143, 0.08) 48%);
+    --active-button-bg: linear-gradient(145deg, #7b61d1, #d15d8f);
+    --panel-light: linear-gradient(145deg, rgba(255, 255, 255, 0.78), transparent 34%);
+    --panel-aura: linear-gradient(315deg, rgba(209, 93, 143, 0.12), transparent 46%);
+    --card-fill: linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(241, 244, 255, 0.88));
+    --image-filter: contrast(1.04) saturate(1.12) hue-rotate(-4deg);
+    --logo-filter: invert(1);
+    --jaycee-logo-current: var(--jaycee-logo-light);
+}
+
+body[data-theme="aurora"] {
+    color-scheme: dark;
+    --page-bg: #071113;
+    --card: rgba(10, 24, 27, 0.88);
+    --card-strong: rgba(12, 30, 33, 0.95);
+    --surface: rgba(7, 21, 24, 0.82);
+    --surface-soft: rgba(83, 220, 198, 0.13);
+    --surface-muted: rgba(255, 255, 255, 0.06);
+    --deep-accent-bg: #041113;
+    --banner-bg: rgba(6, 17, 20, 0.9);
+    --footer-bg: rgba(6, 17, 20, 0.9);
+    --text: #f2fffb;
+    --muted: #a9c3be;
+    --metal: #c4ddd6;
+    --accent: #53dcc6;
+    --accent-soft: #ffd56b;
+    --accent-ink: #041113;
+    --accent-rgb: 83, 220, 198;
+    --field-border: rgba(196, 221, 214, 0.2);
+    --field-border-soft: rgba(196, 221, 214, 0.14);
+    --bg-oracle-text: "NORTH  STAR  AUM  LIGHT";
+    --bg-oracle-color: rgba(83, 220, 198, 0.08);
+    --bg-oracle-spacing: 0.2em;
+    --bg-top-glow: rgba(255, 213, 107, 0.18);
+    --bg-grid-line: rgba(255, 255, 255, 0.025);
+    --bg-grid-line-alt: rgba(83, 220, 198, 0.03);
+    --bg-scan-line: rgba(83, 220, 198, 0.035);
+    --bg-base: linear-gradient(145deg, rgba(7, 17, 19, 0.98) 0%, rgba(18, 44, 45, 0.98) 48%, rgba(22, 23, 41, 0.98) 100%);
+    --button-glow: linear-gradient(145deg, rgba(83, 220, 198, 0.14), rgba(255, 213, 107, 0.08) 42%);
+    --active-button-bg: linear-gradient(145deg, #53dcc6, #ffd56b);
+    --panel-light: linear-gradient(145deg, rgba(255, 255, 255, 0.08), transparent 32%);
+    --panel-aura: linear-gradient(315deg, rgba(255, 213, 107, 0.08), transparent 42%);
+    --card-fill: linear-gradient(135deg, rgba(24, 52, 54, 0.9), rgba(11, 25, 29, 0.96));
+    --image-filter: grayscale(6%) contrast(1.05) saturate(1.08);
+    --logo-filter: none;
+    --jaycee-logo-current: var(--jaycee-logo-dark);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+html {
+    scroll-behavior: smooth;
+    background: var(--page-bg);
+}
+
+body {
+    --neon-border-soft: rgba(var(--accent-rgb), 0.22);
+    --neon-border: rgba(var(--accent-rgb), 0.32);
+    --neon-border-strong: rgba(var(--accent-rgb), 0.78);
+    --neon-line: rgba(var(--accent-rgb), 0.74);
+    --neon-sheen: rgba(var(--accent-rgb), 0.08);
+    --neon-shadow: rgba(var(--accent-rgb), 0.16);
+    --neon-shadow-strong: rgba(var(--accent-rgb), 0.54);
+    position: relative;
+    min-height: 100vh;
+    margin: 0;
+    background: transparent;
+    color: var(--text);
+    font-family: "Rajdhani", Arial, sans-serif;
+    letter-spacing: 0;
+    overflow-x: hidden;
+}
+
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -2;
+    background:
+        radial-gradient(circle at 50% -10%, var(--bg-top-glow), transparent 28rem),
+        var(--bg-base),
+        linear-gradient(var(--bg-grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--bg-grid-line-alt) 1px, transparent 1px);
+    background-size: auto, auto, 56px 56px, 56px 56px;
+    opacity: 1;
+}
+
+body::after {
+    content: var(--bg-oracle-text);
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    color: var(--bg-oracle-color);
+    font-family: "Share Tech Mono", monospace;
+    font-size: 1rem;
+    line-height: 2.2;
+    letter-spacing: var(--bg-oracle-spacing);
+    overflow: hidden;
+    pointer-events: none;
+    white-space: pre-wrap;
+    word-spacing: 1.2rem;
+    background:
+        repeating-linear-gradient(
+            90deg,
+            transparent 0 30px,
+            var(--bg-scan-line) 30px 31px,
+            transparent 31px 72px
+        );
+    opacity: 0.42;
+}
+
+.site-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 5;
+    width: 100%;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--neon-border);
+    background: var(--banner-bg);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
+    backdrop-filter: blur(8px);
+}
+
+.site-header-inner {
+    width: min(100%, 1120px);
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin: 0 auto;
+}
+
+.site-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    color: var(--text);
+    text-decoration: none;
+}
+
+.site-logo {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(var(--accent-rgb), 0.46);
+    border-radius: 6px;
+    background: var(--button-glow);
+    color: var(--accent);
+    font-family: "Share Tech Mono", monospace;
+    font-size: 1rem;
+    line-height: 1;
+    text-transform: uppercase;
+    box-shadow: 0 8px 20px rgba(var(--accent-rgb), 0.08);
+}
+
+.site-logo-image {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+    object-fit: contain;
+}
+
+.site-logo-themed {
+    display: block;
+    background-image: var(--jaycee-logo-current);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+}
+
+.site-brand-name {
+    overflow: hidden;
+    font-size: 1.04rem;
+    font-weight: 700;
+    line-height: 1;
+    text-overflow: ellipsis;
+    text-transform: lowercase;
+    white-space: nowrap;
+}
+
+.account-nav {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.account-button {
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: "Rajdhani", Arial, sans-serif;
+    font-size: 0.84rem;
+    font-weight: 700;
+    line-height: 1;
+    text-decoration: none;
+    text-transform: uppercase;
+    white-space: nowrap;
+    transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.account-button:hover,
+.account-button:focus-visible {
+    border-color: var(--neon-border-strong);
+    transform: translateY(-1px);
+}
+
+.account-button-ghost {
+    background: var(--surface-muted);
+    color: var(--muted);
+}
+
+.account-button-primary {
+    border-color: rgba(var(--accent-rgb), 0.58);
+    background: var(--active-button-bg);
+    color: var(--accent-ink);
+    box-shadow: 0 8px 22px rgba(var(--accent-rgb), 0.12);
+}
+
+.account-button-primary:hover,
+.account-button-primary:focus-visible {
+    box-shadow: 0 10px 26px rgba(var(--accent-rgb), 0.18);
+}
+
+.theme-switcher {
+    position: fixed;
+    top: 66px;
+    left: 50%;
+    z-index: 4;
+    display: flex;
+    gap: 4px;
+    width: min(100% - 28px, 420px);
+    padding: 4px;
+    border: 1px solid var(--field-border-soft);
+    border-radius: 8px;
+    background: var(--banner-bg);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+    backdrop-filter: blur(8px);
+    transform: translateX(-50%);
+}
+
+.theme-choice {
+    flex: 1 1 0;
+    min-height: 26px;
+    padding: 6px 7px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: var(--page-bg);
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.theme-choice:hover,
+.theme-choice:focus-visible,
+.theme-choice.is-active {
+    border-color: var(--neon-border-strong);
+    background: var(--active-button-bg);
+    color: var(--accent-ink);
+    transform: translateY(-1px);
+}
+
+.site-footer {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 5;
+    padding: 12px 16px;
+    border-top: 1px solid var(--neon-border-soft);
+    background: var(--footer-bg);
+    box-shadow: 0 -8px 22px rgba(0, 0, 0, 0.18);
+    backdrop-filter: blur(8px);
+}
+
+.site-footer-inner {
+    width: min(100%, 1120px);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 8px 12px;
+    margin: 0 auto;
+    color: var(--muted);
+    font-size: 0.86rem;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.site-footer a {
+    color: var(--accent-soft);
+    text-decoration: none;
+    text-underline-offset: 3px;
+    transition: color 160ms ease, opacity 160ms ease, transform 160ms ease;
+}
+
+.site-footer a:hover,
+.site-footer a:focus-visible {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
+.auth-page {
+    width: min(100% - 28px, 420px);
+    min-height: 100vh;
+    display: grid;
+    align-items: center;
+    margin: 0 auto;
+    padding: 96px 0 84px;
+}
+
+.auth-panel {
+    padding: 24px;
+    border: 1px solid var(--field-border);
+    border-radius: 8px;
+    background: var(--card);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.18);
+    backdrop-filter: blur(8px);
+}
+
+.auth-eyebrow {
+    margin: 0 0 8px;
+    color: var(--accent);
+    font-family: "Share Tech Mono", monospace;
+    font-size: 0.78rem;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.auth-panel h1 {
+    margin: 0 0 18px;
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.auth-form {
+    display: grid;
+    gap: 14px;
+}
+
+.auth-form label {
+    display: grid;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.auth-form input {
+    width: 100%;
+    min-height: 42px;
+    padding: 10px 12px;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 1rem;
+    outline: none;
+}
+
+.auth-form input:focus {
+    border-color: var(--neon-border-strong);
+    box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.12);
+}
+
+.auth-submit {
+    width: 100%;
+    margin-top: 4px;
+}
+
+.auth-submit:disabled {
+    cursor: wait;
+    opacity: 0.68;
+    transform: none;
+}
+
+.auth-status {
+    min-height: 1.2em;
+    margin: 14px 0 0;
+    color: var(--accent-soft);
+    font-size: 0.92rem;
+    line-height: 1.3;
+}
+
+.auth-switch {
+    margin: 14px 0 0;
+    color: var(--muted);
+    font-size: 0.92rem;
+    line-height: 1.3;
+}
+
+.auth-switch a {
+    color: var(--accent-soft);
+    text-decoration: none;
+}
+
+.auth-switch a:hover,
+.auth-switch a:focus-visible {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.account-details {
+    display: grid;
+    gap: 12px;
+    margin: 0 0 18px;
+}
+
+.account-details div {
+    display: grid;
+    gap: 4px;
+    padding: 12px;
+    border: 1px solid var(--field-border-soft);
+    border-radius: 6px;
+    background: var(--surface-muted);
+}
+
+.account-details dt {
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.account-details dd {
+    margin: 0;
+    color: var(--text);
+    font-size: 1rem;
+    line-height: 1.2;
+    word-break: break-word;
+}
+
+@media (max-width: 620px) {
+    .site-header {
+        padding: 8px 10px;
+    }
+
+    .site-header-inner {
+        min-height: 38px;
+        gap: 10px;
+    }
+
+    .site-logo {
+        width: 32px;
+        height: 32px;
+    }
+
+    .site-logo-image {
+        width: 32px;
+        height: 32px;
+    }
+
+    .site-brand-name {
+        font-size: 0.96rem;
+    }
+
+    .account-nav {
+        gap: 6px;
+    }
+
+    .account-button {
+        min-height: 32px;
+        padding: 8px 9px;
+        font-size: 0.76rem;
+    }
+
+    .theme-switcher {
+        top: 56px;
+        width: min(100% - 20px, 560px);
+        padding: 4px;
+    }
+
+    .theme-choice {
+        min-height: 25px;
+        padding: 6px 4px;
+        font-size: 0.66rem;
+    }
+
+    .site-footer {
+        padding: 10px 12px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+}
