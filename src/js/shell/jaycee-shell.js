@@ -49,7 +49,7 @@
                         <div class="temple-header-note">
                             <p>
                                 <span class="temple-header-track">
-                                    <span>This website is a <a href="${routes.about}">Techno-temple</a> directly connected to Yogananda</span>
+                                    <span>This website is a <a href="${routes.about}">Techno-temple</a> directly connected to Yogananda.</span>
                                 </span>
                             </p>
                             <img src="${yoganandaImageSrc}" alt="Paramahansa Yogananda">
