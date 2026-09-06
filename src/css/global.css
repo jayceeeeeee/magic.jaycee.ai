@@ -239,7 +239,7 @@ body::after {
     width: min(100%, 1120px);
     min-height: 40px;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(180px, auto) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 470px) minmax(0, 1fr);
     align-items: center;
     gap: 14px;
     margin: 0 auto;
@@ -299,17 +299,23 @@ body::after {
 
 .temple-header-note {
     min-width: 0;
+    width: 100%;
+    max-width: 470px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
     justify-self: center;
+    overflow: hidden;
     text-align: center;
 }
 
 .temple-header-note p {
+    flex: 1 1 auto;
+    min-width: 0;
     max-width: 430px;
     margin: 0;
+    overflow: hidden;
     font-family: "Share Tech Mono", monospace;
     color: var(--accent-soft);
     font-size: 0.72rem;
@@ -317,6 +323,16 @@ body::after {
     line-height: 1.35;
     text-shadow: 0 0 10px rgba(var(--accent-rgb), 0.14);
     text-transform: uppercase;
+}
+
+.temple-header-track {
+    display: inline-block;
+    width: max-content;
+    transform: translateX(0);
+}
+
+.temple-header-note p.is-overflowing .temple-header-track {
+    animation: temple-header-scroll 8s linear infinite alternate;
 }
 
 .temple-header-note a {
@@ -383,6 +399,18 @@ body::after {
     color: var(--accent);
     transform: translateY(-1px);
     box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.16);
+}
+
+@keyframes temple-header-scroll {
+    0%,
+    12% {
+        transform: translateX(0);
+    }
+
+    88%,
+    100% {
+        transform: translateX(calc(-1 * var(--temple-scroll-distance, 0px)));
+    }
 }
 
 .account-nav {
@@ -617,7 +645,7 @@ body::after {
 
     .site-header-inner {
         min-height: 38px;
-        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-columns: 32px minmax(0, 1fr) 34px;
         gap: 8px;
     }
 
@@ -635,14 +663,24 @@ body::after {
         display: none;
     }
 
+    .temple-header-note {
+        max-width: 100%;
+    }
+
     .temple-header-note p {
-        display: -webkit-box;
         max-width: 100%;
         overflow: hidden;
         font-size: 0.62rem;
         line-height: 1.35;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 2;
+        white-space: nowrap;
+    }
+
+    .temple-header-track {
+        display: inline-block;
+    }
+
+    .temple-header-note p.is-overflowing .temple-header-track {
+        animation-duration: 7s;
     }
 
     .temple-header-note img {
@@ -689,5 +727,9 @@ body::after {
 @media (prefers-reduced-motion: reduce) {
     html {
         scroll-behavior: auto;
+    }
+
+    .temple-header-track {
+        animation: none;
     }
 }

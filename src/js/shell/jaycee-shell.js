@@ -30,6 +30,11 @@
 
     class JayceeBanner extends HTMLElement {
         connectedCallback() {
+            this.templeResizeObserver?.disconnect();
+            if (this.templeResizeHandler) {
+                window.removeEventListener("resize", this.templeResizeHandler);
+            }
+
             const userName = this.getAttribute("user-name") || "";
             const isSignedIn = this.getAttribute("auth-state") === "signed-in" || userName.length > 0;
             const accountText = escapeHtml(userName || "Account");
@@ -42,7 +47,11 @@
                             <span class="site-brand-name">${brandName}</span>
                         </a>
                         <div class="temple-header-note">
-                            <p>This website is a <a href="${routes.about}">Techno-temple</a> directly connected to Yogananda at its source</p>
+                            <p>
+                                <span class="temple-header-track">
+                                    <span>This website is a <a href="${routes.about}">Techno-temple</a> directly connected to Yogananda</span>
+                                </span>
+                            </p>
                             <img src="${yoganandaImageSrc}" alt="Paramahansa Yogananda">
                         </div>
                         <button class="account-menu-button" type="button" aria-label="Open account menu" aria-expanded="false">
@@ -64,6 +73,15 @@
 
             const header = this.querySelector(".site-header");
             const menuButton = this.querySelector(".account-menu-button");
+            const templeText = this.querySelector(".temple-header-note p");
+            const templeTrack = this.querySelector(".temple-header-track");
+
+            const updateTempleTextMotion = () => {
+                const overflowDistance = templeTrack.scrollWidth - templeText.clientWidth;
+
+                templeText.classList.toggle("is-overflowing", overflowDistance > 1);
+                templeTrack.style.setProperty("--temple-scroll-distance", `${Math.max(0, overflowDistance)}px`);
+            };
 
             menuButton.addEventListener("click", () => {
                 const isOpen = header.classList.toggle("is-menu-open");
@@ -79,6 +97,26 @@
                     menuButton.setAttribute("aria-label", "Open account menu");
                 });
             });
+
+            requestAnimationFrame(updateTempleTextMotion);
+
+            if (window.ResizeObserver) {
+                const resizeObserver = new ResizeObserver(updateTempleTextMotion);
+
+                resizeObserver.observe(templeText);
+                resizeObserver.observe(templeTrack);
+                this.templeResizeObserver = resizeObserver;
+            } else {
+                this.templeResizeHandler = updateTempleTextMotion;
+                window.addEventListener("resize", this.templeResizeHandler);
+            }
+        }
+
+        disconnectedCallback() {
+            this.templeResizeObserver?.disconnect();
+            if (this.templeResizeHandler) {
+                window.removeEventListener("resize", this.templeResizeHandler);
+            }
         }
     }
 
