@@ -594,6 +594,42 @@ button:focus-visible {
   color: var(--accent-soft);
 }
 
+.game-actions {
+  display: grid;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.game-link-button {
+  min-height: 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--neon-border);
+  border-radius: 6px;
+  padding: 8px 14px;
+  color: var(--accent);
+  background:
+    var(--button-glow),
+    var(--surface);
+  font: inherit;
+  font-weight: 750;
+  text-decoration: none;
+  text-transform: uppercase;
+  box-shadow: 0 0 14px var(--neon-shadow);
+  transition: transform 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+.game-link-button:hover,
+.game-link-button:focus-visible {
+  color: #001505;
+  background:
+    var(--active-button-bg),
+    var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 0 22px var(--neon-shadow);
+}
+
 @media (max-width: 480px) {
   :root {
     --page-gap: 10px;

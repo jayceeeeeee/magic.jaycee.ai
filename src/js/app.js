@@ -42,6 +42,11 @@ const luckCycleList = document.querySelector("#luck-cycle-list");
 const siteBanner = document.querySelector(".site-header");
 const previousButton = document.querySelector("[data-flow-action='previous']");
 const nextButton = document.querySelector("[data-flow-action='next']");
+const createAccountStepButton = document.querySelector("[data-flow-action='create-account']");
+const skipAccountButton = document.querySelector("[data-flow-action='skip-account']");
+const accountStepTitleText = document.querySelector("[data-account-step-title-text]");
+const accountStepMessage = document.querySelector("[data-account-step-message]");
+const accountCreateLink = document.querySelector("[data-account-create-link]");
 const savedAppState = loadAppState();
 const savedDraft = loadBirthDraft();
 const savedProfile = loadBirthProfile();
@@ -152,15 +157,50 @@ const getInitialStepId = () => {
   return "mode-step";
 };
 
+const updateAccountStepForSession = async () => {
+  if (!window.JayceeAuth) {
+    return;
+  }
+
+  let data = null;
+
+  try {
+    ({ data } = await window.JayceeAuth.getSession());
+  } catch {
+    return;
+  }
+
+  const isSignedIn = Boolean(data?.session?.user);
+
+  if (createAccountStepButton) {
+    createAccountStepButton.textContent = isSignedIn ? "Continue with your account" : "Create account with this character";
+  }
+
+  if (skipAccountButton) {
+    skipAccountButton.textContent = isSignedIn ? "Back to game" : "Not now";
+  }
+
+  if (!accountStepTitleText || !accountStepMessage || !accountCreateLink) {
+    return;
+  }
+
+  accountStepTitleText.textContent = isSignedIn ? "Account ready" : "Save your character";
+  accountStepMessage.textContent = isSignedIn
+    ? "You are already logged in. Your character is saved in this browser for now, and this account step is ready for the next phase."
+    : "Your birth date, gender, optional name, optional birth time, optional birth place, Four Pillars, and Luck Pillars are saved in this browser. Create an account if you want to attach this character to your Jaycee.ai identity for the next phase.";
+  accountCreateLink.hidden = isSignedIn;
+};
+
 initBannerSpacing(siteBanner);
 initButtonPressFeedback();
+updateAccountStepForSession();
 
 birthDateInput.max = new Date().toISOString().split("T")[0];
 
 restoreBirthForm(savedDraft || savedProfile);
 
 const initialUnlockedSteps = (savedAppState?.unlockedSteps || []).filter(
-  (stepId) => stepId !== "pillar-step" || hasSavedProfile,
+  (stepId) => !["pillar-step", "account-step"].includes(stepId) || hasSavedProfile,
 );
 
 const stepController = createStepController({
@@ -168,7 +208,13 @@ const stepController = createStepController({
   previousButton,
   nextButton,
   unlockedSteps: initialUnlockedSteps,
-  onStepChange: (activeStepId) => saveCurrentState(activeStepId, stepController.getUnlockedSteps()),
+  onStepChange: (activeStepId) => {
+    saveCurrentState(activeStepId, stepController.getUnlockedSteps());
+
+    if (activeStepId === "account-step") {
+      updateAccountStepForSession();
+    }
+  },
 });
 
 const locationSearch = createLocationSearch({
@@ -220,6 +266,7 @@ if (savedAppState?.selectedMode || savedDraft || savedProfile) {
 
 if (hasSavedProfile) {
   stepController.unlockStep("pillar-step");
+  stepController.unlockStep("account-step");
 }
 
 modeButtons.forEach((button) => {
@@ -248,6 +295,13 @@ birthForm.addEventListener("input", () => {
 
 previousButton?.addEventListener("click", stepController.showPreviousStep);
 nextButton?.addEventListener("click", stepController.showNextStep);
+createAccountStepButton?.addEventListener("click", () => {
+  stepController.unlockStep("account-step");
+  stepController.showStep("account-step");
+});
+skipAccountButton?.addEventListener("click", () => {
+  stepController.showStep("mode-step");
+});
 
 window.addEventListener("hashchange", () => {
   const hashStepId = getHashStepId();
@@ -306,5 +360,6 @@ birthForm.addEventListener("submit", (event) => {
     selectedLocation,
   });
   stepController.unlockStep("pillar-step");
+  stepController.unlockStep("account-step");
   stepController.showStep("pillar-step");
 });

@@ -155,6 +155,22 @@
           </div>
           <div class="luck-cycle-list" id="luck-cycle-list" aria-label="Luck pillars"></div>
         </section>
+
+        <div class="game-actions">
+          <button type="button" data-flow-action="create-account">Create account with this character</button>
+        </div>
+      </div>
+
+      <div class="step" id="account-step" aria-labelledby="account-step-title" hidden>
+        <h1 id="account-step-title"><span data-account-step-title-text>Save your character</span> <span class="cursor" aria-hidden="true">_</span></h1>
+        <p class="menu-action">Account:</p>
+        <p data-account-step-message>
+          Your birth date, gender, optional name, optional birth time, optional birth place, Four Pillars, and Luck Pillars are saved in this browser. Create an account if you want to attach this character to your Jaycee.ai identity for the next phase.
+        </p>
+        <div class="game-actions">
+          <a class="game-link-button" href="/auth.html?mode=signup" data-account-create-link>Create account</a>
+          <button type="button" data-flow-action="skip-account">Not now</button>
+        </div>
       </div>
     </section>
   </main>

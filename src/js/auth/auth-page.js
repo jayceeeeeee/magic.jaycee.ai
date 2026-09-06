@@ -1,4 +1,30 @@
 (function () {
+    const birthProfileKey = "birthProfile";
+
+    function loadBirthProfile() {
+        try {
+            const savedProfile = localStorage.getItem(birthProfileKey);
+
+            return savedProfile ? JSON.parse(savedProfile) : null;
+        } catch {
+            return null;
+        }
+    }
+
+    function hasCompletedGameProfile(profile) {
+        return Boolean(profile?.birthDate && profile?.gender && profile?.pillars);
+    }
+
+    function isExistingAccountSignupResult(result) {
+        const identities = result?.data?.user?.identities;
+
+        return Array.isArray(identities) && identities.length === 0;
+    }
+
+    function isExistingAccountError(error) {
+        return /already|registered|exists/i.test(error?.message || "");
+    }
+
     function initAuthPage() {
         const params = new URLSearchParams(window.location.search);
         let mode = params.get("mode") === "signup" ? "signup" : "login";
@@ -13,27 +39,39 @@
             return;
         }
 
+        function showExistingAccountMessage() {
+            status.textContent = "An account with this email already exists.";
+            switcher.innerHTML = 'Already have an account? <a href="?mode=login" data-auth-mode="login">Log in instead</a>.';
+        }
+
         function renderMode() {
             const isSignup = mode === "signup";
+            const birthProfile = loadBirthProfile();
+            const canCreateAccount = !isSignup || hasCompletedGameProfile(birthProfile);
 
             title.textContent = isSignup ? "Create account" : "Log in";
             submit.textContent = isSignup ? "Sign up" : "Log in";
             password.autocomplete = isSignup ? "new-password" : "current-password";
+            form.hidden = !canCreateAccount;
             switcher.innerHTML = isSignup
-                ? 'Already have an account? <a href="?mode=login">Log in</a>'
-                : 'No account yet? <a href="?mode=signup">Sign up</a>';
-            status.textContent = "";
+                ? canCreateAccount
+                    ? 'Already have an account? <a href="?mode=login" data-auth-mode="login">Log in</a>'
+                    : 'Create your character first. <a href="/">Start the game</a> or <a href="?mode=login" data-auth-mode="login">log in</a>.'
+                : 'No account yet? <a href="?mode=signup" data-auth-mode="signup">Sign up</a>';
+            status.textContent = isSignup && !canCreateAccount
+                ? "Accounts are created after the game so your character data can be attached to your identity."
+                : "";
         }
 
         switcher.addEventListener("click", (event) => {
-            const link = event.target.closest("a");
+            const link = event.target.closest("a[data-auth-mode]");
 
             if (!link) {
                 return;
             }
 
             event.preventDefault();
-            mode = mode === "signup" ? "login" : "signup";
+            mode = link.dataset.authMode === "signup" ? "signup" : "login";
             window.history.replaceState({}, "", `?mode=${mode}`);
             renderMode();
         });
@@ -46,14 +84,37 @@
             const formData = new FormData(form);
             const email = String(formData.get("email")).trim();
             const passwordValue = String(formData.get("password"));
+            const birthProfile = loadBirthProfile();
+
+            if (mode === "signup" && !hasCompletedGameProfile(birthProfile)) {
+                submit.disabled = false;
+                renderMode();
+                return;
+            }
+
             const result = mode === "signup"
-                ? await window.JayceeAuth.signUp(email, passwordValue)
+                ? await window.JayceeAuth.signUp(email, passwordValue, {
+                    data: {
+                        full_name: birthProfile.fullName || "",
+                        birth_profile: birthProfile,
+                    },
+                })
                 : await window.JayceeAuth.signIn(email, passwordValue);
 
             submit.disabled = false;
 
             if (result.error) {
+                if (mode === "signup" && isExistingAccountError(result.error)) {
+                    showExistingAccountMessage();
+                    return;
+                }
+
                 status.textContent = result.error.message;
+                return;
+            }
+
+            if (mode === "signup" && isExistingAccountSignupResult(result)) {
+                showExistingAccountMessage();
                 return;
             }
 

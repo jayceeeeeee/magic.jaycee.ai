@@ -15,6 +15,10 @@ export const stepFlow = {
   },
   "pillar-step": {
     previous: "birth-step",
+    next: "account-step",
+  },
+  "account-step": {
+    previous: "pillar-step",
     next: "",
   },
 };
