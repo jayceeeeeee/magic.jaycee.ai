@@ -9,8 +9,8 @@
         signup: "/auth.html?mode=signup",
         account: "/account.html",
         contact: "/profile.html",
+        about: "/profile.html#about",
     };
-    const templeMessage = "This website is a Techno-temple directly connected to Yogananda at its source";
     const lightLogoSrc = new URL("assets/brand/logo_trans_black.png", assetBase).href;
     const darkLogoSrc = new URL("assets/brand/logo_trans_white.png", assetBase).href;
     const yoganandaImageSrc = new URL("assets/images/paramahansa-yogananda-yogoda-satsanga-society-of-india-front.jpg", assetBase).href;
@@ -41,10 +41,15 @@
                             <span class="site-logo-image site-logo-themed" aria-label="${logoLabel}"></span>
                             <span class="site-brand-name">${brandName}</span>
                         </a>
-                        <div class="temple-header-note" hidden>
-                            <p>${templeMessage}</p>
+                        <div class="temple-header-note">
+                            <p>This website is a <a href="${routes.about}">Techno-temple</a> directly connected to Yogananda at its source</p>
                             <img src="${yoganandaImageSrc}" alt="Paramahansa Yogananda">
                         </div>
+                        <button class="account-menu-button" type="button" aria-label="Open account menu" aria-expanded="false">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </button>
                         <nav class="account-nav" aria-label="Account">
                             ${isSignedIn
                                 ? `<a class="account-button account-button-primary" href="${routes.account}">${accountText}</a>`
@@ -56,6 +61,24 @@
                     </div>
                 </header>
             `;
+
+            const header = this.querySelector(".site-header");
+            const menuButton = this.querySelector(".account-menu-button");
+
+            menuButton.addEventListener("click", () => {
+                const isOpen = header.classList.toggle("is-menu-open");
+
+                menuButton.setAttribute("aria-expanded", String(isOpen));
+                menuButton.setAttribute("aria-label", isOpen ? "Close account menu" : "Open account menu");
+            });
+
+            this.querySelectorAll(".account-nav a").forEach((link) => {
+                link.addEventListener("click", () => {
+                    header.classList.remove("is-menu-open");
+                    menuButton.setAttribute("aria-expanded", "false");
+                    menuButton.setAttribute("aria-label", "Open account menu");
+                });
+            });
         }
     }
 
