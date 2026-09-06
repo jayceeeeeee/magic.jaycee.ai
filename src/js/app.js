@@ -121,10 +121,6 @@ const restoreBirthForm = (profile) => {
 };
 
 const validateBirthProfile = (profile, selectedLocation) => {
-  if (!profile.fullName) {
-    return "Enter your full name.";
-  }
-
   if (!profile.gender) {
     return "Choose your gender.";
   }
