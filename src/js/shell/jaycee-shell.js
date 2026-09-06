@@ -10,8 +10,10 @@
         account: "/account.html",
         contact: "/profile.html",
     };
+    const templeMessage = "This website is a Techno-temple directly connected to Yogananda at its source";
     const lightLogoSrc = new URL("assets/brand/logo_trans_black.png", assetBase).href;
     const darkLogoSrc = new URL("assets/brand/logo_trans_white.png", assetBase).href;
+    const yoganandaImageSrc = new URL("assets/images/paramahansa-yogananda-yogoda-satsanga-society-of-india-front.jpg", assetBase).href;
 
     document.documentElement.style.setProperty("--jaycee-logo-light", `url("${lightLogoSrc}")`);
     document.documentElement.style.setProperty("--jaycee-logo-dark", `url("${darkLogoSrc}")`);
@@ -39,6 +41,10 @@
                             <span class="site-logo-image site-logo-themed" aria-label="${logoLabel}"></span>
                             <span class="site-brand-name">${brandName}</span>
                         </a>
+                        <div class="temple-header-note" hidden>
+                            <p>${templeMessage}</p>
+                            <img src="${yoganandaImageSrc}" alt="Paramahansa Yogananda">
+                        </div>
                         <nav class="account-nav" aria-label="Account">
                             ${isSignedIn
                                 ? `<a class="account-button account-button-primary" href="${routes.account}">${accountText}</a>`
