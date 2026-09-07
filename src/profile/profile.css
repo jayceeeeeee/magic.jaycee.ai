@@ -291,14 +291,30 @@ h3 {
 .service-card.is-locked,
 .info-card.is-locked {
     border-color: var(--field-border-soft);
-    opacity: 0.72;
+    background:
+        linear-gradient(135deg, rgba(var(--accent-rgb), 0.035), transparent 52%),
+        var(--surface);
+    box-shadow:
+        0 10px 24px rgba(0, 0, 0, 0.14),
+        inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .service-card.is-locked h3,
 .service-card.is-locked .service-copy,
 .info-card.is-locked h3,
 .info-card.is-locked p {
-    opacity: 0.78;
+    opacity: 0.7;
+}
+
+.service-card.is-locked .timeline-dot,
+.info-card.is-locked .timeline-dot {
+    opacity: 0.45;
+    box-shadow: none;
+}
+
+.service-card.is-locked b,
+.info-card.is-locked b {
+    color: rgba(var(--accent-rgb), 0.72);
 }
 
 .service-header {
@@ -429,6 +445,20 @@ h3 {
     padding: 0 6px;
     color: var(--accent);
     font-weight: 700;
+}
+
+.techno-prayer-disclaimer {
+    margin: 2px 0 0;
+    padding: 12px 14px;
+    border: 1px solid var(--field-border-soft);
+    border-left-color: var(--neon-border-strong);
+    border-left-width: 3px;
+    border-radius: 6px;
+    background: rgba(var(--accent-rgb), 0.07);
+    color: var(--muted);
+    font-size: 0.96rem;
+    font-weight: 600;
+    line-height: 1.45;
 }
 
 .techno-prayer-submit {
