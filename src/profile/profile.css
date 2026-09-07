@@ -542,6 +542,14 @@ h3 {
     text-align: center;
 }
 
+.techno-prayer-status[data-type="error"] {
+    color: #ff8f8f;
+}
+
+.techno-prayer-status[data-type="success"] {
+    color: var(--accent-soft);
+}
+
 .techno-prayer-form + .service-copy {
     margin-top: 16px;
 }
