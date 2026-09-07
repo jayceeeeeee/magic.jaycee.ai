@@ -67,7 +67,8 @@
 .timeline-card,
 .vision-card,
 .info-card,
-.service-card {
+.service-card,
+.techno-prayer-page-card {
     position: relative;
     border: 1px solid var(--field-border);
     border-radius: 8px;
@@ -92,7 +93,8 @@
 .timeline-card::after,
 .vision-card::after,
 .info-card::after,
-.service-card::after {
+.service-card::after,
+.techno-prayer-page-card::after {
     content: "";
     position: absolute;
     inset: 0;
@@ -381,7 +383,23 @@ h3 {
     background: transparent;
 }
 
-.techno-prayer-page {
+.techno-prayer-page-main {
+    width: min(100% - 28px, 560px);
+    margin: 0 auto;
+    padding: 112px 0 96px;
+}
+
+.techno-prayer-page-card {
+    width: 100%;
+    margin: 0 auto;
+    padding: 24px;
+}
+
+.techno-prayer-page-card h1 {
+    margin-bottom: 18px;
+}
+
+.techno-prayer-page.is-embedded {
     min-height: auto;
     margin: 0;
     padding: 0;
@@ -389,13 +407,32 @@ h3 {
     background: transparent;
 }
 
-.techno-prayer-page main {
+.techno-prayer-page.is-embedded jaycee-banner,
+.techno-prayer-page.is-embedded jaycee-footer,
+.techno-prayer-page.is-embedded .techno-prayer-page-card > .eyebrow,
+.techno-prayer-page.is-embedded .techno-prayer-page-card > h1 {
+    display: none;
+}
+
+.techno-prayer-page.is-embedded .techno-prayer-page-main {
     display: block;
+    width: 100%;
     margin: 0;
     padding: 0;
 }
 
-.techno-prayer-page .techno-prayer-form {
+.techno-prayer-page.is-embedded .techno-prayer-page-card {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.techno-prayer-page.is-embedded .techno-prayer-page-card::after {
+    content: none;
+}
+
+.techno-prayer-page.is-embedded .techno-prayer-form {
     margin-top: 0;
 }
 
@@ -486,6 +523,10 @@ h3 {
     font-size: 0.96rem;
     font-weight: 600;
     line-height: 1.45;
+}
+
+.techno-prayer-contact + .techno-prayer-disclaimer {
+    margin-top: 8px;
 }
 
 .techno-prayer-submit {

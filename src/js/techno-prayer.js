@@ -1,10 +1,17 @@
 (function () {
+    const isEmbedded = window.self !== window.top;
     const technoPrayerForm = document.querySelector(".techno-prayer-form");
     const technoPrayerLearning = document.querySelector("[data-techno-prayer-learning]");
     const technoPrayerContact = document.querySelector("[data-techno-prayer-contact]");
     const technoPrayerStatus = document.querySelector("[data-techno-prayer-status]");
 
+    document.body.classList.toggle("is-embedded", isEmbedded);
+
     function notifyHeight() {
+        if (!isEmbedded) {
+            return;
+        }
+
         const targetOrigin = window.location.origin === "null" ? "*" : window.location.origin;
 
         window.parent?.postMessage({
