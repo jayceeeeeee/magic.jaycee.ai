@@ -325,6 +325,28 @@ body::after {
     text-transform: uppercase;
 }
 
+.temple-donate-link {
+    flex: 0 0 auto;
+    min-height: 29px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 7px 10px;
+    border: 1px solid var(--neon-border);
+    border-radius: 6px;
+    background:
+        var(--button-glow),
+        var(--surface);
+    color: var(--accent);
+    font-size: 0.705rem;
+    font-weight: 700;
+    line-height: 1;
+    text-decoration: none;
+    text-transform: uppercase;
+    box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.12);
+    transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
 .temple-header-track {
     display: inline-block;
     width: max-content;
@@ -335,16 +357,26 @@ body::after {
     animation: temple-header-scroll 8s linear infinite alternate;
 }
 
-.temple-header-note a {
+.temple-header-note p a {
     color: var(--accent);
     text-decoration: underline;
     text-decoration-thickness: 1px;
     text-underline-offset: 3px;
 }
 
-.temple-header-note a:hover,
-.temple-header-note a:focus-visible {
+.temple-header-note p a:hover,
+.temple-header-note p a:focus-visible {
     color: var(--accent-soft);
+}
+
+.temple-donate-link:hover,
+.temple-donate-link:focus-visible {
+    border-color: var(--neon-border-strong);
+    background:
+        var(--active-button-bg),
+        var(--accent);
+    color: var(--accent-ink);
+    transform: translateY(-1px);
 }
 
 .temple-header-note img {
@@ -665,6 +697,7 @@ body::after {
 
     .temple-header-note {
         max-width: 100%;
+        gap: 5px;
     }
 
     .temple-header-note p {
@@ -673,6 +706,12 @@ body::after {
         font-size: 0.62rem;
         line-height: 1.35;
         white-space: nowrap;
+    }
+
+    .temple-donate-link {
+        min-height: 27px;
+        padding: 6px 8px;
+        font-size: 0.625rem;
     }
 
     .temple-header-track {

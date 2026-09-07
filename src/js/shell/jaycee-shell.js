@@ -9,6 +9,7 @@
         signup: "/auth.html?mode=signup",
         account: "/account.html",
         contact: "/profile.html",
+        donate: "https://buy.stripe.com/14A14o70HbZXdtr73FfQI01",
         services: "/profile.html",
         about: "/profile.html#about",
     };
@@ -48,6 +49,7 @@
                             <span class="site-brand-name">${brandName}</span>
                         </a>
                         <div class="temple-header-note">
+                            <a class="temple-donate-link" href="${routes.donate}" target="_blank" rel="noopener noreferrer">Donate</a>
                             <p>
                                 <span class="temple-header-track">
                                     <span>This website is a <a href="${routes.services}" data-section-link="services">Techno-temple</a> directly connected to <a href="${routes.about}" data-section-link="about">Yogananda</a>.</span>
@@ -130,7 +132,7 @@
                     <div class="site-footer-inner">
                         <span>&copy; ${brandName} ${year}</span>
                         <span>-</span>
-                        <a href="${routes.contact}">contact me</a>
+                        <a href="${routes.contact}">contact</a>
                     </div>
                 </footer>
             `;
