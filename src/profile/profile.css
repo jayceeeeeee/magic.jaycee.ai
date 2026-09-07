@@ -327,8 +327,7 @@ h3 {
 
 .service-intro b,
 .service-list b,
-.service-copy b,
-.techno-prayer-note b,
+.service-card b,
 .info-card b {
     color: var(--accent);
 }
@@ -357,6 +356,14 @@ h3 {
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
+.techno-prayer-form h4 {
+    margin: 0;
+    color: var(--accent);
+    font-size: 1rem;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
 .techno-prayer-form label {
     display: grid;
     gap: 7px;
@@ -364,6 +371,7 @@ h3 {
     font-weight: 700;
 }
 
+.techno-prayer-form input,
 .techno-prayer-form textarea,
 .techno-prayer-form select {
     width: 100%;
@@ -378,22 +386,25 @@ h3 {
     transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
 
+.techno-prayer-form input,
+.techno-prayer-form select {
+    min-height: 42px;
+    padding: 8px 10px;
+}
+
 .techno-prayer-form textarea {
     min-height: 92px;
     resize: vertical;
     padding: 10px 12px;
 }
 
-.techno-prayer-form select {
-    min-height: 42px;
-    padding: 8px 10px;
-}
-
+.techno-prayer-form input::placeholder,
 .techno-prayer-form textarea::placeholder {
     color: var(--muted);
     opacity: 0.72;
 }
 
+.techno-prayer-form input:focus,
 .techno-prayer-form textarea:focus,
 .techno-prayer-form select:focus {
     border-color: var(--neon-border-strong);
@@ -401,11 +412,40 @@ h3 {
     box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.16);
 }
 
-.techno-prayer-note {
-    margin-top: 14px;
-    color: var(--muted);
-    font-size: 0.98rem;
-    line-height: 1.5;
+.techno-prayer-contact {
+    display: grid;
+    gap: 10px;
+    margin: 2px 0 0;
+    padding: 12px;
+    border: 1px solid var(--field-border-soft);
+    border-radius: 6px;
+}
+
+.techno-prayer-contact[hidden] {
+    display: none;
+}
+
+.techno-prayer-contact legend {
+    padding: 0 6px;
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.techno-prayer-submit {
+    justify-self: center;
+    margin-top: 2px;
+}
+
+.techno-prayer-status {
+    margin: 0;
+    color: var(--accent);
+    font-size: 0.96rem;
+    line-height: 1.35;
+    text-align: center;
+}
+
+.techno-prayer-form + .service-copy {
+    margin-top: 16px;
 }
 
 .timeline {

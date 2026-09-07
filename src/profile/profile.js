@@ -65,3 +65,58 @@ if (initialSection === defaultSection && window.location.hash) {
     history.replaceState(null, "", getSectionUrl(defaultSection));
 }
 
+const technoPrayerForm = document.querySelector(".techno-prayer-form");
+const technoPrayerLearning = document.querySelector("[data-techno-prayer-learning]");
+const technoPrayerContact = document.querySelector("[data-techno-prayer-contact]");
+const technoPrayerStatus = document.querySelector("[data-techno-prayer-status]");
+
+function needsTechnoPrayerContact() {
+    return Number(technoPrayerLearning?.selectedIndex || 0) > 0;
+}
+
+function getTechnoPrayerContactValues() {
+    if (!technoPrayerForm) {
+        return [];
+    }
+
+    const formData = new FormData(technoPrayerForm);
+
+    return ["email", "whatsapp", "line"].map((fieldName) => String(formData.get(fieldName) || "").trim());
+}
+
+function updateTechnoPrayerContactVisibility() {
+    if (!technoPrayerContact) {
+        return;
+    }
+
+    technoPrayerContact.hidden = !needsTechnoPrayerContact();
+
+    if (technoPrayerStatus) {
+        technoPrayerStatus.textContent = "";
+    }
+}
+
+technoPrayerLearning?.addEventListener("change", updateTechnoPrayerContactVisibility);
+
+technoPrayerForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    if (!technoPrayerForm.reportValidity()) {
+        return;
+    }
+
+    if (needsTechnoPrayerContact() && getTechnoPrayerContactValues().every((value) => !value)) {
+        if (technoPrayerStatus) {
+            technoPrayerStatus.textContent = "Please add at least one contact method.";
+        }
+
+        return;
+    }
+
+    if (technoPrayerStatus) {
+        technoPrayerStatus.textContent = "Techno-Prayer received.";
+    }
+});
+
+updateTechnoPrayerContactVisibility();
+
