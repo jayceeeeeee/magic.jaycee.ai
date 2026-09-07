@@ -372,6 +372,33 @@ h3 {
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
+.techno-prayer-embed {
+    width: 100%;
+    min-height: 560px;
+    display: block;
+    margin-top: 18px;
+    border: 0;
+    background: transparent;
+}
+
+.techno-prayer-page {
+    min-height: auto;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: transparent;
+}
+
+.techno-prayer-page main {
+    display: block;
+    margin: 0;
+    padding: 0;
+}
+
+.techno-prayer-page .techno-prayer-form {
+    margin-top: 0;
+}
+
 .techno-prayer-form h4 {
     margin: 0;
     color: var(--accent);

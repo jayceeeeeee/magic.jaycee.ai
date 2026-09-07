@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Techno-Prayer | jaycee.ai</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./src/css/global.css">
+    <link rel="stylesheet" href="./src/profile/profile.css">
+</head>
+<body class="techno-prayer-page" data-theme="aurora">
+    <main>
+        <form class="techno-prayer-form" aria-labelledby="techno-prayer-title">
+            <h4 id="techno-prayer-title">Make a Techno-Prayer:</h4>
+            <label>
+                <span>What is the problem that you want to solve?</span>
+                <textarea name="problem" rows="3" placeholder="Describe the problem and what is the negative of this situation"></textarea>
+            </label>
+
+            <label>
+                <span>What is your prayer?</span>
+                <textarea name="prayer" rows="3" placeholder="Describe the prayer and what is the positive you're missing out of this situation"></textarea>
+            </label>
+
+            <label>
+                <span>What would you like to learn?</span>
+                <select name="learning" data-techno-prayer-learning>
+                    <option>Nothing - I just want the manifestation</option>
+                    <option>I want to get an advice and learn more about myself</option>
+                    <option>I want to get initiated into the Technomancer path</option>
+                </select>
+            </label>
+
+            <label>
+                <span>Full name *</span>
+                <input name="name" type="text" autocomplete="name" required>
+            </label>
+
+            <fieldset class="techno-prayer-contact" data-techno-prayer-contact hidden>
+                <legend>How would you like to be contacted?</legend>
+                <label>
+                    <span>Email</span>
+                    <input name="email" type="email" autocomplete="email">
+                </label>
+                <label>
+                    <span>WhatsApp</span>
+                    <input name="whatsapp" type="tel" autocomplete="tel">
+                </label>
+                <label>
+                    <span>LINE</span>
+                    <input name="line" type="text" autocomplete="off">
+                </label>
+            </fieldset>
+
+            <p class="techno-prayer-disclaimer">
+                By entering this <b>database</b>, your <b>prayer</b>
+                will automatically become a <b>part of me</b> and
+                I will both share your <b>pain</b> and help you
+                into your <b>manifestation</b>.
+                <br><br>Your <b>data</b> will be <b>deleted</b>
+                just after the <b>process</b> has been <b>completed</b>.
+            </p>
+            <button class="timeline-link techno-prayer-submit" type="submit">Submit</button>
+            <p class="techno-prayer-status" data-techno-prayer-status aria-live="polite"></p>
+        </form>
+    </main>
+
+    <script src="./src/js/techno-prayer.js"></script>
+</body>
+</html>
