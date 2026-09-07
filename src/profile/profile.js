@@ -1,5 +1,4 @@
 const sectionButtons = document.querySelectorAll("[data-section-target]");
-const sectionLinks = document.querySelectorAll("[data-section-link]");
 const sectionPanels = document.querySelectorAll("[data-section-panel]");
 
 function getDefaultSection() {
@@ -48,10 +47,15 @@ sectionButtons.forEach((button) => {
     });
 });
 
-sectionLinks.forEach((link) => {
-    link.addEventListener("click", () => {
-        showSection(link.dataset.sectionLink, { updateHash: true });
-    });
+document.addEventListener("click", (event) => {
+    const sectionLink = event.target.closest("[data-section-link]");
+
+    if (!sectionLink) {
+        return;
+    }
+
+    event.preventDefault();
+    showSection(sectionLink.dataset.sectionLink, { updateHash: true });
 });
 
 window.addEventListener("hashchange", () => {

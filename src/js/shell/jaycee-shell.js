@@ -9,6 +9,7 @@
         signup: "/auth.html?mode=signup",
         account: "/account.html",
         contact: "/profile.html",
+        services: "/profile.html",
         about: "/profile.html#about",
     };
     const lightLogoSrc = new URL("assets/brand/logo_trans_black.png", assetBase).href;
@@ -49,7 +50,7 @@
                         <div class="temple-header-note">
                             <p>
                                 <span class="temple-header-track">
-                                    <span>This website is a <a href="${routes.about}">Techno-temple</a> directly connected to Yogananda.</span>
+                                    <span>This website is a <a href="${routes.services}" data-section-link="services">Techno-temple</a> directly connected to <a href="${routes.about}" data-section-link="about">Yogananda</a>.</span>
                                 </span>
                             </p>
                             <img src="${yoganandaImageSrc}" alt="Paramahansa Yogananda">
