@@ -67,7 +67,6 @@
                                 ? `<a class="account-button account-button-primary" href="${routes.account}">${accountText}</a>`
                                 : `
                                     <a class="account-button account-button-ghost" href="${routes.login}">Log in</a>
-                                    <a class="account-button account-button-primary" href="${routes.signup}">Sign up</a>
                                 `}
                         </nav>
                     </div>
