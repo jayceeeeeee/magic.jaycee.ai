@@ -346,6 +346,7 @@ h3 {
 .service-intro b,
 .service-list b,
 .service-card b,
+.techno-prayer-form b,
 .info-card b {
     color: var(--accent);
 }
@@ -442,6 +443,18 @@ h3 {
     font-size: 1rem;
     letter-spacing: 0;
     text-transform: uppercase;
+}
+
+.techno-prayer-form h4 a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.techno-prayer-form h4 a:hover,
+.techno-prayer-form h4 a:focus-visible {
+    color: var(--accent-soft);
+    text-decoration: underline;
+    text-underline-offset: 3px;
 }
 
 .techno-prayer-form label {

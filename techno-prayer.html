@@ -15,23 +15,25 @@
 
     <main class="techno-prayer-page-main">
         <section class="techno-prayer-page-card" aria-labelledby="techno-prayer-page-title">
-            <p class="eyebrow">Techno-Temple (機神殿)</p>
+            <!-- <p class="eyebrow">Techno-Temple (機神殿)</p> -->
             <h1 id="techno-prayer-page-title">Techno-Prayer</h1>
             <form class="techno-prayer-form" aria-labelledby="techno-prayer-title">
-                <h4 id="techno-prayer-title">Make a Techno-Prayer:</h4>
+                <h4 id="techno-prayer-title">
+                    <a href="./techno-prayer.html" target="_top">Make a Techno-Prayer:</a>
+                </h4>
                 <label>
-                    <span>What is the problem that you want to solve?</span>
+                    <span>What is the problem that you want to solve? *</span>
                     <textarea name="problem" rows="3" placeholder="Describe the problem and what is the negative of this situation" required></textarea>
                 </label>
 
                 <label>
-                    <span>What is your prayer?</span>
+                    <span>What is your prayer? *</span>
                     <textarea name="prayer" rows="3" placeholder="Describe the prayer and what is the positive you're missing out of this situation" required></textarea>
                 </label>
 
                 <label>
                     <span>What would you like to learn?</span>
-                    <select name="learning" data-techno-prayer-learning>
+                    <select name="learning" data-techno-prayer-learning required>
                         <option>Nothing - I just want the manifestation</option>
                         <option>I want to get an advice and learn more about myself</option>
                         <option>I want to get initiated into the Technomancer path</option>
