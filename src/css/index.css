@@ -16,6 +16,18 @@ body {
   padding: 112px 0 96px;
 }
 
+.home-command-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  font-family: "Share Tech Mono", monospace;
+}
+
+.home-command-line span:nth-child(2) {
+  color: var(--accent);
+}
+
 .cursor {
   color: var(--accent);
 }
