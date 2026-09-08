@@ -20,11 +20,12 @@ body {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 7px;
+  gap: 0;
   font-family: "Share Tech Mono", monospace;
 }
 
 .home-command-line span:nth-child(2) {
+  margin: 0 7px;
   color: var(--accent);
 }
 
