@@ -1,0 +1,83 @@
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+}
+
+.home-frame-main {
+  width: min(100% - 28px, 560px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 112px 0 96px;
+}
+
+.cursor {
+  color: var(--accent);
+}
+
+.cursor {
+  display: inline-block;
+  animation: blink 900ms steps(1) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.home-techno-prayer-frame {
+  width: 100%;
+  min-height: 560px;
+  display: block;
+  border: 0;
+  background: transparent;
+}
+
+.home-card-link {
+  margin: 18px 0 0;
+  text-align: left;
+}
+
+.home-card-link a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: none;
+  text-underline-offset: 4px;
+}
+
+.home-card-link a span:first-child {
+  display: inline-grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 1px solid var(--neon-border-strong);
+  border-radius: 50%;
+  color: var(--accent-soft);
+  font-size: 0.78rem;
+  line-height: 1;
+}
+
+.home-card-link a span:last-child {
+  text-decoration: underline;
+}
+
+.home-card-link a:hover,
+.home-card-link a:focus-visible {
+  color: var(--accent-soft);
+}
+
+@media (max-width: 620px) {
+  .home-frame-main {
+    width: min(100% - 20px, 560px);
+    padding: 118px 0 96px;
+  }
+}

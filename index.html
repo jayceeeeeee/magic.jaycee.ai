@@ -4,9 +4,32 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Jaycee.ai</title>
-  <link rel="stylesheet" href="./src/css/home.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./src/css/global.css">
+  <link rel="stylesheet" href="./src/profile/profile.css">
+  <link rel="stylesheet" href="./src/css/techno-prayer.css">
+  <link rel="stylesheet" href="./src/css/index.css">
 </head>
-<body>
-  <iframe class="home-profile-frame" src="./profile.html" title="Jaycee.ai profile"></iframe>
+<body data-theme="aurora">
+  <jaycee-banner></jaycee-banner>
+
+  <main class="home-frame-main">
+    <section class="techno-prayer-page-card" aria-labelledby="home-techno-prayer-title">
+      <p class="eyebrow">jaycee.ai &gt;</p>
+      <h1 id="home-techno-prayer-title">Welcome to my Techno-Temple! <span class="cursor" aria-hidden="true">_</span></h1>
+      <iframe class="home-techno-prayer-frame" data-techno-prayer-frame src="./techno-prayer.html" title="Techno-Prayer form"></iframe>
+      <p class="home-card-link">
+        <a href="./profile.html"><span aria-hidden="true">?</span><span>How does it work?</span></a>
+      </p>
+    </section>
+  </main>
+
+  <jaycee-footer></jaycee-footer>
+
+  <script src="./src/js/shell/jaycee-shell.js"></script>
+  <script src="./src/js/auth/auth.js"></script>
+  <script src="./src/js/techno-prayer-frame.js"></script>
 </body>
 </html>
