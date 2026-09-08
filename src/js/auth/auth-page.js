@@ -57,7 +57,7 @@
                 ? canCreateAccount
                     ? 'Already have an account? <a href="?mode=login" data-auth-mode="login">Log in</a>'
                     : 'Create your character first. <a href="/game.html">Start the game</a> or <a href="?mode=login" data-auth-mode="login">log in</a>.'
-                : 'No account yet? <a href="/index.html">Start here</a>';
+                : 'No account yet? <a href="/">Start here</a>';
             status.textContent = isSignup && !canCreateAccount
                 ? "Accounts are created after the game so your character data can be attached to your identity."
                 : "";
