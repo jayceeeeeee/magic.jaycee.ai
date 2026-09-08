@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Magic</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./src/css/global.css">
+  <link rel="stylesheet" href="./src/css/app.css">
+</head>
+<body data-theme="aurora">
+  <jaycee-banner></jaycee-banner>
+
+  <main>
+    <section class="game-panel" aria-label="Game setup">
+      <div class="panel-header">
+        <span class="eyebrow">Game: The path of the Technomancer (機術師)</span>
+        <div class="nav-row" aria-label="Step navigation">
+          <button class="nav-button" type="button" data-flow-action="previous" aria-label="Previous step" hidden>&larr;</button>
+          <button class="nav-button" type="button" data-flow-action="next" aria-label="Next step" hidden>&rarr;</button>
+        </div>
+      </div>
+
+      <div class="step is-active" id="mode-step" aria-labelledby="mode-title">
+        <h1 id="mode-title">Start a new game <span class="cursor" aria-hidden="true">_</span></h1>
+        <p class="menu-action">Mode:</p>
+
+        <div class="mode-grid" aria-label="Game modes">
+          <button class="mode-button mode-button-adventure" type="button" data-mode="adventure" data-target="birth-step">
+            <span class="mode-title">Adventure</span>
+            <span class="mode-description">Explore your solo character's path (using your date and place of birth). </span>
+          </button>
+          <button class="mode-button is-locked" type="button" data-mode="co-op" data-target="co-op-step" aria-disabled="true">
+            <span class="lock-icon" aria-hidden="true">&#128274;</span>
+            <span class="mode-title">Co-op</span>
+            <span class="mode-description">Explore your relationship with other people (or with the Creator to start).</span>
+          </button>
+          <button class="mode-button is-locked" type="button" data-mode="competition" data-target="competition-step" aria-disabled="true">
+            <span class="lock-icon" aria-hidden="true">&#128274;</span>
+            <span class="mode-title">Competition</span>
+            <span class="mode-description">Start a quantum war in the present, activating your DNA's superpowers.</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="step" id="birth-step" aria-labelledby="birth-title" hidden>
+        <h1 id="birth-title">Choosing your incarnation <span class="cursor" aria-hidden="true">_</span></h1>
+        <p class="menu-action">Spawn:</p>
+
+        <form id="birth-form">
+          <label for="full-name">
+            Full name
+            <input id="full-name" name="full-name" type="text" autocomplete="name" placeholder="Your full name">
+          </label>
+
+          <fieldset class="gender-field">
+            <legend>Gender *</legend>
+            <div class="gender-options">
+              <label class="gender-option" for="gender-male">
+                <input id="gender-male" name="gender" type="radio" value="male" required>
+                <span>Male</span>
+              </label>
+              <label class="gender-option" for="gender-female">
+                <input id="gender-female" name="gender" type="radio" value="female" required>
+                <span>Female</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <div class="form-grid">
+            <label for="birth-date">
+              Date of birth *
+              <input id="birth-date" name="birth-date" type="date" required>
+            </label>
+
+            <label for="birth-time">
+              Time of birth
+              <input id="birth-time" name="birth-time" type="time">
+            </label>
+          </div>
+
+          <div class="location-field">
+            <label for="birth-place">
+              Place of birth
+              <input id="birth-place" name="birth-place" type="text" autocomplete="off" placeholder="Search city, country...">
+            </label>
+            <ul class="location-results" id="location-results" aria-label="Location suggestions" hidden></ul>
+          </div>
+
+          <button type="submit">Continue</button>
+          <p id="form-message" class="form-message" aria-live="polite"></p>
+        </form>
+      </div>
+
+      <div class="step" id="pillar-step" aria-labelledby="pillar-title" hidden>
+        <h1 id="pillar-title">Character generated <span class="cursor" aria-hidden="true">_</span></h1>
+        <p class="menu-action">Four pillars:</p>
+
+        <div class="pillar-table-wrap">
+          <table class="pillar-table" aria-label="BaZi four pillars result">
+            <thead>
+              <tr>
+                <th scope="col">Hour</th>
+                <th scope="col">Day</th>
+                <th scope="col">Month</th>
+                <th scope="col">Year</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td id="hour-stem-cell" class="is-empty">
+                  <strong class="pillar-symbol" id="hour-stem-symbol">--</strong>
+                  <span class="pillar-cell-meta" id="hour-stem-meta">Awaiting birth time</span>
+                </td>
+                <td>
+                  <strong class="pillar-symbol" id="day-stem-symbol">--</strong>
+                  <span class="pillar-cell-meta" id="day-stem-meta">Awaiting data</span>
+                </td>
+                <td>
+                  <strong class="pillar-symbol" id="month-stem-symbol">--</strong>
+                  <span class="pillar-cell-meta" id="month-stem-meta">Awaiting data</span>
+                </td>
+                <td>
+                  <strong class="pillar-symbol" id="year-stem-symbol">--</strong>
+                  <span class="pillar-cell-meta" id="year-stem-meta">Awaiting data</span>
+                </td>
+              </tr>
+              <tr>
+                <td id="hour-branch-cell" class="is-empty">
+                  <strong class="pillar-symbol" id="hour-branch-symbol">--</strong>
+                  <span class="pillar-cell-meta" id="hour-branch-meta">Awaiting birth time</span>
+                </td>
+                <td>
+                  <strong class="pillar-symbol" id="day-branch-symbol">--</strong>
+                  <span class="pillar-cell-meta" id="day-branch-meta">Awaiting data</span>
+                </td>
+                <td>
+                  <strong class="pillar-symbol" id="month-branch-symbol">--</strong>
+                  <span class="pillar-cell-meta" id="month-branch-meta">Awaiting data</span>
+                </td>
+                <td>
+                  <strong class="pillar-symbol" id="year-branch-symbol">--</strong>
+                  <span class="pillar-cell-meta" id="year-branch-meta">Awaiting data</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <section class="luck-cycle" aria-labelledby="luck-cycle-title">
+          <div class="luck-cycle-header">
+            <p class="menu-action" id="luck-cycle-title">Luck pillars:</p>
+          </div>
+          <div class="luck-cycle-list" id="luck-cycle-list" aria-label="Luck pillars"></div>
+        </section>
+
+        <div class="game-actions">
+          <button type="button" data-flow-action="create-account">Create account with this character</button>
+        </div>
+      </div>
+
+      <div class="step" id="account-step" aria-labelledby="account-step-title" hidden>
+        <h1 id="account-step-title"><span data-account-step-title-text>Save your character</span> <span class="cursor" aria-hidden="true">_</span></h1>
+        <p class="menu-action">Account:</p>
+        <p data-account-step-message>
+          Your birth date, gender, optional name, optional birth time, optional birth place, Four Pillars, and Luck Pillars are saved in this browser. Create an account if you want to attach this character to your Jaycee.ai identity for the next phase.
+        </p>
+        <div class="game-actions">
+          <a class="game-link-button" href="/auth.html?mode=signup" data-account-create-link>Create account</a>
+          <button type="button" data-flow-action="skip-account">Not now</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <jaycee-footer></jaycee-footer>
+
+  <script src="./src/js/shell/jaycee-shell.js"></script>
+  <script src="./src/js/auth/auth.js"></script>
+  <script type="module" src="./src/js/app.js"></script>
+</body>
+</html>
