@@ -507,27 +507,37 @@ h3 {
     transform: translateY(-1px);
 }
 
-.experience-lock-badge {
+.locked-card-status {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    pointer-events: none;
+}
+
+.locked-card-badge {
     position: relative;
     z-index: 1;
     display: inline-flex;
     align-items: center;
-    gap: 7px;
-    padding: 8px 11px;
-    border: 1px solid var(--field-border-soft);
+    gap: 8px;
+    padding: 10px 14px;
+    border: 1px solid rgba(var(--accent-rgb), 0.38);
     border-radius: 999px;
-    background: rgba(0, 0, 0, 0.42);
-    color: var(--muted);
-    font-size: 0.88rem;
+    background: rgba(0, 0, 0, 0.58);
+    color: var(--text-soft);
+    font-size: 0.94rem;
     font-weight: 700;
     line-height: 1;
     text-transform: uppercase;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-.experience-lock-icon {
-    width: 15px;
-    height: 15px;
+.locked-card-icon {
+    width: 16px;
+    height: 16px;
     fill: none;
     stroke: currentColor;
     stroke-linecap: round;
