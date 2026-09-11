@@ -129,7 +129,7 @@
             this.innerHTML = `
                 <footer class="site-footer">
                     <div class="site-footer-inner">
-                        <span>&copy; ${brandName} ${year}</span>
+                        <span>&copy; <a href="${routes.home}">${brandName}</a> ${year}</span>
                         <span>-</span>
                         <a href="${routes.contact}">contact</a>
                     </div>
