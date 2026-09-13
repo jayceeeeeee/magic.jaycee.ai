@@ -87,6 +87,22 @@ body {
   white-space: pre-wrap;
 }
 
+.home-console-link {
+  color: var(--accent);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.home-console-link:visited {
+  color: var(--accent);
+}
+
+.home-console-link:hover,
+.home-console-link:focus-visible {
+  color: var(--accent-soft);
+}
+
 .home-start-panel {
   display: grid;
   gap: 0;

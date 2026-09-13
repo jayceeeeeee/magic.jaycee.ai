@@ -7,7 +7,14 @@
     const formShell = document.querySelector("[data-home-form-shell]");
     const frame = document.querySelector("[data-techno-prayer-frame]");
     const gameStartLines = [
-        "You have entered the Techno-Temple...",
+        [
+            "You have entered the ",
+            {
+                text: "Techno-Temple",
+                href: "./profile.html",
+            },
+            "...",
+        ],
         "Start with a Techno-Prayer...",
     ];
     let consoleQueue = Promise.resolve();
@@ -29,16 +36,44 @@
     function createConsoleLine(message) {
         const line = document.createElement("p");
         const prompt = document.createElement("span");
-        const text = document.createElement("span");
 
         line.className = "home-level-line is-entering";
-        line.dataset.consoleLine = message;
         prompt.setAttribute("aria-hidden", "true");
         prompt.textContent = ">";
-        text.className = "home-console-text";
-        line.append(prompt, text);
+        line.append(prompt);
 
         return line;
+    }
+
+    function normalizeConsoleLine(message) {
+        if (Array.isArray(message)) {
+            return message.map((segment) => {
+                if (typeof segment === "string") {
+                    return { text: segment };
+                }
+
+                return segment;
+            });
+        }
+
+        return [{ text: message }];
+    }
+
+    function createTextSegment(segment) {
+        if (!segment.href) {
+            const text = document.createElement("span");
+
+            text.className = "home-console-text";
+
+            return text;
+        }
+
+        const link = document.createElement("a");
+
+        link.className = "home-console-link home-console-text";
+        link.href = segment.href;
+
+        return link;
     }
 
     function moveCursorTo(line) {
@@ -47,12 +82,6 @@
     }
 
     async function typeConsoleLine(line, message) {
-        const text = line.querySelector(".home-console-text");
-
-        if (!text) {
-            return;
-        }
-
         moveCursorTo(line);
 
         requestAnimationFrame(() => {
@@ -61,9 +90,15 @@
 
         await wait(90);
 
-        for (const character of message) {
-            text.textContent += character;
-            await wait(typingSpeed);
+        for (const segment of normalizeConsoleLine(message)) {
+            const text = createTextSegment(segment);
+
+            line.insertBefore(text, line.querySelector(".cursor"));
+
+            for (const character of segment.text) {
+                text.textContent += character;
+                await wait(typingSpeed);
+            }
         }
 
         await wait(linePause);
