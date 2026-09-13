@@ -42,20 +42,15 @@
 
         function renderMode() {
             const isSignup = mode === "signup";
-            const canCreateAccount = !isSignup;
 
             title.textContent = isSignup ? "Create account" : "Log in";
             submit.textContent = isSignup ? "Sign up" : "Log in";
             password.autocomplete = isSignup ? "new-password" : "current-password";
-            form.hidden = !canCreateAccount;
+            form.hidden = false;
             switcher.innerHTML = isSignup
-                ? canCreateAccount
-                    ? 'Already have an account? <a href="?mode=login" data-auth-mode="login">Log in</a>'
-                    : 'Submit your first Techno-Prayer with an email first. <a href="/">Start here</a> or <a href="?mode=login" data-auth-mode="login">log in</a>.'
-                : 'No account yet? <a href="/">Start here</a>';
-            status.textContent = isSignup && !canCreateAccount
-                ? "Accounts are created after your first Techno-Prayer so your prayer can be attached to your identity."
+                ? 'Already have an account? <a href="?mode=login" data-auth-mode="login">Log in</a>'
                 : "";
+            status.textContent = "";
         }
 
         switcher.addEventListener("click", (event) => {
@@ -80,12 +75,6 @@
             const email = String(formData.get("email")).trim();
             const passwordValue = String(formData.get("password"));
             const birthProfile = loadBirthProfile();
-
-            if (mode === "signup") {
-                submit.disabled = false;
-                renderMode();
-                return;
-            }
 
             const result = mode === "signup"
                 ? await window.JayceeAuth.signUp(email, passwordValue, {
