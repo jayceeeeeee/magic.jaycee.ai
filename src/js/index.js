@@ -8,7 +8,7 @@
     const frame = document.querySelector("[data-techno-prayer-frame]");
     const gameStartLines = [
         [
-            "You have entered the ",
+            "Welcome! You have entered the ",
             {
                 text: "Techno-Temple",
                 href: "./profile.html",
