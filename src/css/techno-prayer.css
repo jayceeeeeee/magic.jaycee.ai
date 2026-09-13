@@ -207,22 +207,24 @@
 .techno-prayer-help-link {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
-    color: var(--accent);
-    font-weight: 700;
+    gap: 5px;
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-weight: 600;
+    opacity: 0.82;
     text-decoration: none;
-    text-underline-offset: 4px;
+    text-underline-offset: 3px;
 }
 
 .techno-prayer-help-link span:first-child {
     display: inline-grid;
-    width: 18px;
-    height: 18px;
+    width: 14px;
+    height: 14px;
     place-items: center;
     border: 1px solid var(--neon-border-strong);
     border-radius: 50%;
     color: var(--accent-soft);
-    font-size: 0.78rem;
+    font-size: 0.62rem;
     line-height: 1;
 }
 
@@ -233,4 +235,6 @@
 .techno-prayer-help-link:hover,
 .techno-prayer-help-link:focus-visible {
     color: var(--accent-soft);
+    opacity: 1;
+    text-decoration: underline;
 }
