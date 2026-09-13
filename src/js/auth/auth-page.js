@@ -1,5 +1,6 @@
 (function () {
     const birthProfileKey = "birthProfile";
+    const prayerAccountInviteKey = "jayceePrayerAccountInvite";
 
     function loadBirthProfile() {
         try {
@@ -11,8 +12,22 @@
         }
     }
 
-    function hasCompletedGameProfile(profile) {
-        return Boolean(profile?.birthDate && profile?.gender && profile?.pillars);
+    function loadPrayerAccountInvite() {
+        try {
+            const savedInvite = localStorage.getItem(prayerAccountInviteKey);
+            const invite = savedInvite ? JSON.parse(savedInvite) : null;
+
+            if (!invite?.email) {
+                return null;
+            }
+
+            return {
+                ...invite,
+                email: String(invite.email).trim().toLowerCase(),
+            };
+        } catch {
+            return null;
+        }
     }
 
     function isExistingAccountSignupResult(result) {
@@ -34,8 +49,9 @@
         const status = document.querySelector("[data-auth-status]");
         const switcher = document.querySelector("[data-auth-switch]");
         const password = form?.elements.password;
+        const emailInput = form?.elements.email;
 
-        if (!form || !title || !submit || !status || !switcher || !password || !window.JayceeAuth) {
+        if (!form || !title || !submit || !status || !switcher || !password || !emailInput || !window.JayceeAuth) {
             return;
         }
 
@@ -46,20 +62,23 @@
 
         function renderMode() {
             const isSignup = mode === "signup";
-            const birthProfile = loadBirthProfile();
-            const canCreateAccount = !isSignup || hasCompletedGameProfile(birthProfile);
+            const prayerInvite = loadPrayerAccountInvite();
+            const canCreateAccount = !isSignup || Boolean(prayerInvite);
 
             title.textContent = isSignup ? "Create account" : "Log in";
             submit.textContent = isSignup ? "Sign up" : "Log in";
             password.autocomplete = isSignup ? "new-password" : "current-password";
+            if (isSignup && prayerInvite && !emailInput.value) {
+                emailInput.value = prayerInvite.email;
+            }
             form.hidden = !canCreateAccount;
             switcher.innerHTML = isSignup
                 ? canCreateAccount
                     ? 'Already have an account? <a href="?mode=login" data-auth-mode="login">Log in</a>'
-                    : 'Create your character first. <a href="/game.html">Start the game</a> or <a href="?mode=login" data-auth-mode="login">log in</a>.'
+                    : 'Submit your first Techno-Prayer with an email first. <a href="/">Start here</a> or <a href="?mode=login" data-auth-mode="login">log in</a>.'
                 : 'No account yet? <a href="/">Start here</a>';
             status.textContent = isSignup && !canCreateAccount
-                ? "Accounts are created after the game so your character data can be attached to your identity."
+                ? "Accounts are created after your first Techno-Prayer so your prayer can be attached to your identity."
                 : "";
         }
 
@@ -83,19 +102,28 @@
 
             const formData = new FormData(form);
             const email = String(formData.get("email")).trim();
+            const normalizedEmail = email.toLowerCase();
             const passwordValue = String(formData.get("password"));
             const birthProfile = loadBirthProfile();
+            const prayerInvite = loadPrayerAccountInvite();
 
-            if (mode === "signup" && !hasCompletedGameProfile(birthProfile)) {
+            if (mode === "signup" && !prayerInvite) {
                 submit.disabled = false;
                 renderMode();
+                return;
+            }
+
+            if (mode === "signup" && prayerInvite.email !== normalizedEmail) {
+                submit.disabled = false;
+                status.textContent = "Use the same email you entered in your first Techno-Prayer.";
                 return;
             }
 
             const result = mode === "signup"
                 ? await window.JayceeAuth.signUp(email, passwordValue, {
                     data: {
-                        full_name: birthProfile.fullName || "",
+                        full_name: prayerInvite.fullName || birthProfile?.fullName || "",
+                        prayer_invite_email: prayerInvite.email,
                         birth_profile: birthProfile,
                     },
                 })

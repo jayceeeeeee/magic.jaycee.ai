@@ -5,6 +5,8 @@
     const technoPrayerContact = document.querySelector("[data-techno-prayer-contact]");
     const technoPrayerStatus = document.querySelector("[data-techno-prayer-status]");
     const technoPrayerSubmit = technoPrayerForm?.querySelector("[type='submit']");
+    const technoPrayerEmail = technoPrayerForm?.elements.email;
+    const prayerAccountInviteKey = "jayceePrayerAccountInvite";
 
     document.body.classList.toggle("is-embedded", isEmbedded);
 
@@ -25,14 +27,14 @@
         return Number(technoPrayerLearning?.selectedIndex || 0) > 0;
     }
 
-    function getTechnoPrayerContactValues() {
+    function getTechnoPrayerContactEmail() {
         if (!technoPrayerForm) {
-            return [];
+            return "";
         }
 
         const formData = new FormData(technoPrayerForm);
 
-        return ["email", "whatsapp", "line"].map((fieldName) => String(formData.get(fieldName) || "").trim());
+        return String(formData.get("email") || "").trim();
     }
 
     function getTechnoPrayerPayload() {
@@ -47,6 +49,22 @@
             whatsapp: String(formData.get("whatsapp") || "").trim() || null,
             line: String(formData.get("line") || "").trim() || null,
         };
+    }
+
+    function savePrayerAccountInvite(payload) {
+        if (!payload.email) {
+            return;
+        }
+
+        try {
+            localStorage.setItem(prayerAccountInviteKey, JSON.stringify({
+                email: payload.email,
+                fullName: payload.full_name || "",
+                createdAt: new Date().toISOString(),
+            }));
+        } catch {
+            // The prayer was still submitted; account eligibility just will not persist locally.
+        }
     }
 
     function getLearningTypeValue(learningChoice) {
@@ -108,6 +126,10 @@
 
         technoPrayerContact.hidden = !needsTechnoPrayerContact();
 
+        if (technoPrayerEmail) {
+            technoPrayerEmail.required = needsTechnoPrayerContact();
+        }
+
         if (technoPrayerStatus) {
             technoPrayerStatus.textContent = "";
         }
@@ -125,8 +147,8 @@
             return;
         }
 
-        if (needsTechnoPrayerContact() && getTechnoPrayerContactValues().every((value) => !value)) {
-            setStatus("Please add at least one contact method.", "error");
+        if (needsTechnoPrayerContact() && !getTechnoPrayerContactEmail()) {
+            setStatus("Please add your email.", "error");
             return;
         }
 
@@ -146,6 +168,7 @@
                 return;
             }
 
+            savePrayerAccountInvite(payload);
             technoPrayerForm.reset();
             updateTechnoPrayerContactVisibility();
             setStatus("Techno-Prayer received.", "success");
