@@ -6,7 +6,6 @@
     const technoPrayerStatus = document.querySelector("[data-techno-prayer-status]");
     const technoPrayerSubmit = technoPrayerForm?.querySelector("[type='submit']");
     const technoPrayerEmail = technoPrayerForm?.elements.email;
-    const prayerAccountInviteKey = "jayceePrayerAccountInvite";
 
     document.body.classList.toggle("is-embedded", isEmbedded);
 
@@ -49,22 +48,6 @@
             whatsapp: String(formData.get("whatsapp") || "").trim() || null,
             line: String(formData.get("line") || "").trim() || null,
         };
-    }
-
-    function savePrayerAccountInvite(payload) {
-        if (!payload.email) {
-            return;
-        }
-
-        try {
-            localStorage.setItem(prayerAccountInviteKey, JSON.stringify({
-                email: payload.email,
-                fullName: payload.full_name || "",
-                createdAt: new Date().toISOString(),
-            }));
-        } catch {
-            // The prayer was still submitted; account eligibility just will not persist locally.
-        }
     }
 
     function getLearningTypeValue(learningChoice) {
@@ -168,7 +151,6 @@
                 return;
             }
 
-            savePrayerAccountInvite(payload);
             technoPrayerForm.reset();
             updateTechnoPrayerContactVisibility();
             setStatus("Techno-Prayer received.", "success");

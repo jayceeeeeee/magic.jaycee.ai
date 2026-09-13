@@ -1,30 +1,11 @@
 (function () {
     const birthProfileKey = "birthProfile";
-    const prayerAccountInviteKey = "jayceePrayerAccountInvite";
 
     function loadBirthProfile() {
         try {
             const savedProfile = localStorage.getItem(birthProfileKey);
 
             return savedProfile ? JSON.parse(savedProfile) : null;
-        } catch {
-            return null;
-        }
-    }
-
-    function loadPrayerAccountInvite() {
-        try {
-            const savedInvite = localStorage.getItem(prayerAccountInviteKey);
-            const invite = savedInvite ? JSON.parse(savedInvite) : null;
-
-            if (!invite?.email) {
-                return null;
-            }
-
-            return {
-                ...invite,
-                email: String(invite.email).trim().toLowerCase(),
-            };
         } catch {
             return null;
         }
@@ -49,9 +30,8 @@
         const status = document.querySelector("[data-auth-status]");
         const switcher = document.querySelector("[data-auth-switch]");
         const password = form?.elements.password;
-        const emailInput = form?.elements.email;
 
-        if (!form || !title || !submit || !status || !switcher || !password || !emailInput || !window.JayceeAuth) {
+        if (!form || !title || !submit || !status || !switcher || !password || !window.JayceeAuth) {
             return;
         }
 
@@ -62,15 +42,11 @@
 
         function renderMode() {
             const isSignup = mode === "signup";
-            const prayerInvite = loadPrayerAccountInvite();
-            const canCreateAccount = !isSignup || Boolean(prayerInvite);
+            const canCreateAccount = !isSignup;
 
             title.textContent = isSignup ? "Create account" : "Log in";
             submit.textContent = isSignup ? "Sign up" : "Log in";
             password.autocomplete = isSignup ? "new-password" : "current-password";
-            if (isSignup && prayerInvite && !emailInput.value) {
-                emailInput.value = prayerInvite.email;
-            }
             form.hidden = !canCreateAccount;
             switcher.innerHTML = isSignup
                 ? canCreateAccount
@@ -102,28 +78,19 @@
 
             const formData = new FormData(form);
             const email = String(formData.get("email")).trim();
-            const normalizedEmail = email.toLowerCase();
             const passwordValue = String(formData.get("password"));
             const birthProfile = loadBirthProfile();
-            const prayerInvite = loadPrayerAccountInvite();
 
-            if (mode === "signup" && !prayerInvite) {
+            if (mode === "signup") {
                 submit.disabled = false;
                 renderMode();
-                return;
-            }
-
-            if (mode === "signup" && prayerInvite.email !== normalizedEmail) {
-                submit.disabled = false;
-                status.textContent = "Use the same email you entered in your first Techno-Prayer.";
                 return;
             }
 
             const result = mode === "signup"
                 ? await window.JayceeAuth.signUp(email, passwordValue, {
                     data: {
-                        full_name: prayerInvite.fullName || birthProfile?.fullName || "",
-                        prayer_invite_email: prayerInvite.email,
+                        full_name: birthProfile?.fullName || "",
                         birth_profile: birthProfile,
                     },
                 })
