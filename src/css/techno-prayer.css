@@ -205,11 +205,6 @@
 }
 
 .techno-prayer-help-link {
-    margin: 2px 0 0;
-    text-align: left;
-}
-
-.techno-prayer-help-link a {
     display: inline-flex;
     align-items: center;
     gap: 7px;
@@ -219,7 +214,7 @@
     text-underline-offset: 4px;
 }
 
-.techno-prayer-help-link a span:first-child {
+.techno-prayer-help-link span:first-child {
     display: inline-grid;
     width: 18px;
     height: 18px;
@@ -231,11 +226,11 @@
     line-height: 1;
 }
 
-.techno-prayer-help-link a span:last-child {
+.techno-prayer-help-link span:last-child {
     text-decoration: underline;
 }
 
-.techno-prayer-help-link a:hover,
-.techno-prayer-help-link a:focus-visible {
+.techno-prayer-help-link:hover,
+.techno-prayer-help-link:focus-visible {
     color: var(--accent-soft);
 }

@@ -45,7 +45,7 @@ body {
   gap: 0;
   color: var(--accent);
   font-family: "Share Tech Mono", monospace;
-  font-size: 1rem;
+  font-size: 0.9rem;
   line-height: 1.35;
   margin: 0;
   text-shadow: 0 0 12px rgba(var(--accent-rgb), 0.18);
