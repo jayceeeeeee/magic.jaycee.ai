@@ -203,3 +203,39 @@
 .techno-prayer-status[data-type="success"] {
     color: var(--accent-soft);
 }
+
+.techno-prayer-help-link {
+    margin: 2px 0 0;
+    text-align: left;
+}
+
+.techno-prayer-help-link a {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--accent);
+    font-weight: 700;
+    text-decoration: none;
+    text-underline-offset: 4px;
+}
+
+.techno-prayer-help-link a span:first-child {
+    display: inline-grid;
+    width: 18px;
+    height: 18px;
+    place-items: center;
+    border: 1px solid var(--neon-border-strong);
+    border-radius: 50%;
+    color: var(--accent-soft);
+    font-size: 0.78rem;
+    line-height: 1;
+}
+
+.techno-prayer-help-link a span:last-child {
+    text-decoration: underline;
+}
+
+.techno-prayer-help-link a:hover,
+.techno-prayer-help-link a:focus-visible {
+    color: var(--accent-soft);
+}
