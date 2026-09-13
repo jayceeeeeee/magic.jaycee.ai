@@ -1,6 +1,7 @@
 (function () {
     const startGameButton = document.querySelector("[data-start-game]");
     const frame = document.querySelector("[data-techno-prayer-frame]");
+    const homeCardLink = document.querySelector("[data-home-card-link]");
 
     startGameButton?.addEventListener("click", () => {
         if (!frame) {
@@ -8,6 +9,7 @@
         }
 
         frame.hidden = false;
+        homeCardLink?.removeAttribute("hidden");
         startGameButton.closest(".home-start-panel")?.setAttribute("hidden", "");
         frame.contentWindow?.focus();
         frame.addEventListener("load", () => frame.contentWindow?.focus(), { once: true });
