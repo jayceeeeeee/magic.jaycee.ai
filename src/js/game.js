@@ -173,7 +173,7 @@ const updateAccountStepForSession = async () => {
   const isSignedIn = Boolean(data?.session?.user);
 
   if (createAccountStepButton) {
-    createAccountStepButton.textContent = isSignedIn ? "Continue with your account" : "Create account with this character";
+    createAccountStepButton.textContent = isSignedIn ? "Continue with your account" : "Continue";
   }
 
   if (skipAccountButton) {
@@ -187,8 +187,10 @@ const updateAccountStepForSession = async () => {
   accountStepTitleText.textContent = isSignedIn ? "Account ready" : "Save your character";
   accountStepMessage.textContent = isSignedIn
     ? "You are already logged in. Your character is saved in this browser for now, and this account step is ready for the next phase."
-    : "Your birth date, gender, optional name, optional birth time, optional birth place, Four Pillars, and Luck Pillars are saved in this browser. Create an account if you want to attach this character to your Jaycee.ai identity for the next phase.";
+    : "Your birth date, gender, optional name, optional birth time, optional birth place, Four Pillars, and Luck Pillars are saved in this browser. Accounts are invite-only for now.";
   accountCreateLink.hidden = isSignedIn;
+  accountCreateLink.href = "/auth.html";
+  accountCreateLink.textContent = "Log in";
 };
 
 initBannerSpacing(siteBanner);

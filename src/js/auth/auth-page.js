@@ -11,10 +11,6 @@
         }
     }
 
-    function hasCompletedGameProfile(profile) {
-        return Boolean(profile?.birthDate && profile?.gender && profile?.pillars);
-    }
-
     function isExistingAccountSignupResult(result) {
         const identities = result?.data?.user?.identities;
 
@@ -46,21 +42,15 @@
 
         function renderMode() {
             const isSignup = mode === "signup";
-            const birthProfile = loadBirthProfile();
-            const canCreateAccount = !isSignup || hasCompletedGameProfile(birthProfile);
 
             title.textContent = isSignup ? "Create account" : "Log in";
             submit.textContent = isSignup ? "Sign up" : "Log in";
             password.autocomplete = isSignup ? "new-password" : "current-password";
-            form.hidden = !canCreateAccount;
+            form.hidden = false;
             switcher.innerHTML = isSignup
-                ? canCreateAccount
-                    ? 'Already have an account? <a href="?mode=login" data-auth-mode="login">Log in</a>'
-                    : 'Create your character first. <a href="/game.html">Start the game</a> or <a href="?mode=login" data-auth-mode="login">log in</a>.'
-                : 'No account yet? <a href="/">Start here</a>';
-            status.textContent = isSignup && !canCreateAccount
-                ? "Accounts are created after the game so your character data can be attached to your identity."
+                ? 'Already have an account? <a href="?mode=login" data-auth-mode="login">Log in</a>'
                 : "";
+            status.textContent = "";
         }
 
         switcher.addEventListener("click", (event) => {
@@ -86,16 +76,10 @@
             const passwordValue = String(formData.get("password"));
             const birthProfile = loadBirthProfile();
 
-            if (mode === "signup" && !hasCompletedGameProfile(birthProfile)) {
-                submit.disabled = false;
-                renderMode();
-                return;
-            }
-
             const result = mode === "signup"
                 ? await window.JayceeAuth.signUp(email, passwordValue, {
                     data: {
-                        full_name: birthProfile.fullName || "",
+                        full_name: birthProfile?.fullName || "",
                         birth_profile: birthProfile,
                     },
                 })

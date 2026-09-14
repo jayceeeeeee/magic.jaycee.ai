@@ -16,13 +16,18 @@
   <jaycee-banner></jaycee-banner>
 
   <main class="home-frame-main">
-    <section class="techno-prayer-page-card" aria-labelledby="home-techno-prayer-title">
-      <p class="eyebrow home-command-line"><span>jaycee.ai</span><span aria-hidden="true"> &gt; </span><span>game room initialization...</span></p>
-      <h1 id="home-techno-prayer-title"ew game <span class="cursor" aria-hidden="true">&gt;</span></h1>
-      <iframe class="home-techno-prayer-frame" data-techno-prayer-frame src="./techno-prayer.html" title="Techno-Prayer form"></iframe>
-      <p class="home-card-link">
-        <a href="./profile.html"><span aria-hidden="true">?</span><span>How does it work?</span></a>
-      </p>
+    <section class="techno-prayer-page-card home-game-room" aria-label="Game room initialization">
+      <div class="home-console is-booting" data-home-console aria-live="polite">
+        <p class="home-command-line"><span>Jaycee.ai</span><span aria-hidden="true"> &gt; </span><span>game room initialization...</span></p>
+        <p class="home-level-line" data-console-line="Unknown user..."><span aria-hidden="true">&gt;</span>Unknown user...</p>
+        <p class="home-level-line" data-console-line="New game initialized..."><span aria-hidden="true">&gt;</span>You are at level 1...<span class="cursor" aria-hidden="true">_</span></p>
+      </div>
+      <div class="home-start-panel">
+        <button class="timeline-link home-start-button" type="button" data-start-game>Start a new game</button>
+      </div>
+      <div class="home-form-shell" data-home-form-shell hidden>
+        <iframe class="home-techno-prayer-frame" data-techno-prayer-frame src="./techno-prayer.html" title="Techno-Prayer form"></iframe>
+      </div>
     </section>
   </main>
 
@@ -30,6 +35,6 @@
 
   <script src="./src/js/shell/jaycee-shell.js"></script>
   <script src="./src/js/auth/auth.js"></script>
-  <script src="./src/js/techno-prayer-frame.js"></script>
+  <script src="./src/js/index.js"></script>
 </body>
 </html>

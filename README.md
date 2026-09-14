@@ -5,7 +5,7 @@ Main Jaycee.ai app.
 ## Structure
 
 - `index.html` is the Magic app.
-- `auth.html` handles log in and sign up.
+- `auth.html` handles log in. Accounts are invite-only for now.
 - `account.html` shows the current user session and logout.
 - `profile.html` is Cedric's public profile page, migrated from the old card site.
 - `src/css/global.css` contains app-wide themes, header, footer, auth page, and account page styles.

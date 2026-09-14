@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Techno-Prayer | jaycee.ai</title>
+    <title>Techno-prayer Room | jaycee.ai</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -16,18 +16,15 @@
 
     <main class="techno-prayer-page-main">
         <section class="techno-prayer-page-card" aria-labelledby="techno-prayer-page-title">
-            <h1 id="techno-prayer-page-title">Prayer room</h1>
-            <form class="techno-prayer-form" aria-labelledby="techno-prayer-title">
-                <h4 id="techno-prayer-title">
-                    <a href="./techno-prayer.html" target="_top">Start with a Techno-Prayer:</a>
-                </h4>
+            <h1 id="techno-prayer-page-title">Techno-prayer Room</h1>
+            <form class="techno-prayer-form" aria-label="Techno-prayer form">
                 <label>
-                    <span>What is the problem that you want to solve? *</span>
+                    <span>What is the problem that you want to solve today? <br/>And what is the negative feeling associated with it? *</span>
                     <textarea name="problem" rows="3" placeholder="Describe the problem and what is the negative feeling of this situation." required></textarea>
                 </label>
 
                 <label>
-                    <span>What is your prayer? *</span>
+                    <span>What is your prayer? <br/>And what is the positive feeling you're missing out of this situation? *</span>
                     <textarea name="prayer" rows="3" placeholder="Write the prayer and what is the positive feeling you're missing out of this situation." required></textarea>
                 </label>
 
@@ -45,21 +42,10 @@
                     <input name="name" type="text" autocomplete="name" placeholder="Your name and the sound it carries is what will manifest." required>
                 </label>
 
-                <fieldset class="techno-prayer-contact" data-techno-prayer-contact hidden>
-                    <legend>How would you like to be contacted?</legend>
-                    <label>
-                        <span>Email</span>
-                        <input name="email" type="email" autocomplete="email">
-                    </label>
-                    <label>
-                        <span>WhatsApp</span>
-                        <input name="whatsapp" type="tel" autocomplete="tel">
-                    </label>
-                    <label>
-                        <span>LINE</span>
-                        <input name="line" type="text" autocomplete="off">
-                    </label>
-                </fieldset>
+                <label data-techno-prayer-contact hidden>
+                    <span>Email *</span>
+                    <input name="email" type="email" autocomplete="email" placeholder="Where should we contact you?">
+                </label>
 
                 <p class="techno-prayer-disclaimer">
                     By entering this <b>database</b>, your <b>prayer</b>
@@ -68,6 +54,7 @@
                     into your <b>manifestation</b>.
                     <br><br>Your <b>data</b> will be <b>deleted</b>
                     just after the <b>consecration process</b> has been done.
+                    <br><br><a class="techno-prayer-help-link" href="./profile.html" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">?</span><span>How does it work?</span></a>
                 </p>
                 <button class="timeline-link techno-prayer-submit" type="submit">Submit</button>
                 <p class="techno-prayer-status" data-techno-prayer-status aria-live="polite"></p>

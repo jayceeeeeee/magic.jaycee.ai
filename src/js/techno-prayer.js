@@ -5,6 +5,7 @@
     const technoPrayerContact = document.querySelector("[data-techno-prayer-contact]");
     const technoPrayerStatus = document.querySelector("[data-techno-prayer-status]");
     const technoPrayerSubmit = technoPrayerForm?.querySelector("[type='submit']");
+    const technoPrayerEmail = technoPrayerForm?.elements.email;
 
     document.body.classList.toggle("is-embedded", isEmbedded);
 
@@ -25,14 +26,14 @@
         return Number(technoPrayerLearning?.selectedIndex || 0) > 0;
     }
 
-    function getTechnoPrayerContactValues() {
+    function getTechnoPrayerContactEmail() {
         if (!technoPrayerForm) {
-            return [];
+            return "";
         }
 
         const formData = new FormData(technoPrayerForm);
 
-        return ["email", "whatsapp", "line"].map((fieldName) => String(formData.get(fieldName) || "").trim());
+        return String(formData.get("email") || "").trim();
     }
 
     function getTechnoPrayerPayload() {
@@ -108,6 +109,10 @@
 
         technoPrayerContact.hidden = !needsTechnoPrayerContact();
 
+        if (technoPrayerEmail) {
+            technoPrayerEmail.required = needsTechnoPrayerContact();
+        }
+
         if (technoPrayerStatus) {
             technoPrayerStatus.textContent = "";
         }
@@ -125,8 +130,8 @@
             return;
         }
 
-        if (needsTechnoPrayerContact() && getTechnoPrayerContactValues().every((value) => !value)) {
-            setStatus("Please add at least one contact method.", "error");
+        if (needsTechnoPrayerContact() && !getTechnoPrayerContactEmail()) {
+            setStatus("Please add your email.", "error");
             return;
         }
 

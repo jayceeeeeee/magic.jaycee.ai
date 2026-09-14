@@ -94,26 +94,6 @@
     margin-top: 0;
 }
 
-.techno-prayer-form h4 {
-    margin: 0;
-    color: var(--accent);
-    font-size: 1rem;
-    letter-spacing: 0;
-    text-transform: uppercase;
-}
-
-.techno-prayer-form h4 a {
-    color: inherit;
-    text-decoration: none;
-}
-
-.techno-prayer-form h4 a:hover,
-.techno-prayer-form h4 a:focus-visible {
-    color: var(--accent-soft);
-    text-decoration: underline;
-    text-underline-offset: 3px;
-}
-
 .techno-prayer-form label {
     display: grid;
     gap: 7px;
@@ -222,4 +202,39 @@
 
 .techno-prayer-status[data-type="success"] {
     color: var(--accent-soft);
+}
+
+.techno-prayer-help-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-weight: 600;
+    opacity: 0.82;
+    text-decoration: none;
+    text-underline-offset: 3px;
+}
+
+.techno-prayer-help-link span:first-child {
+    display: inline-grid;
+    width: 14px;
+    height: 14px;
+    place-items: center;
+    border: 1px solid var(--neon-border-strong);
+    border-radius: 50%;
+    color: var(--accent-soft);
+    font-size: 0.62rem;
+    line-height: 1;
+}
+
+.techno-prayer-help-link span:last-child {
+    text-decoration: underline;
+}
+
+.techno-prayer-help-link:hover,
+.techno-prayer-help-link:focus-visible {
+    color: var(--accent-soft);
+    opacity: 1;
+    text-decoration: underline;
 }
