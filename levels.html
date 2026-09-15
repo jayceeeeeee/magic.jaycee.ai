@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Path Map | jaycee.ai</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./src/css/global.css">
+  <link rel="stylesheet" href="./src/css/levels.css">
+</head>
+<body data-theme="aurora">
+  <jaycee-banner></jaycee-banner>
+
+  <main class="levels-page">
+    <section class="levels-panel" aria-labelledby="levels-title">
+      <div class="levels-panel-header">
+        <p class="eyebrow levels-command-line">
+          <span>jaycee.ai</span><span aria-hidden="true"> &gt; </span><span>technomancer path map</span>
+        </p>
+        <p class="levels-status" data-level-status>Open grid</p>
+      </div>
+
+      <h1 id="levels-title">Choose your square <span class="cursor" aria-hidden="true">_</span></h1>
+
+      <div class="levels-board" aria-label="Technomancer path levels">
+        <button class="level-cell" type="button" data-cell-action="">
+          <span class="level-cell-title">Pray</span>
+        </button>
+
+        <button class="level-cell" type="button" data-cell-action="">
+          <span class="level-cell-title">Watch</span>
+        </button>
+
+        <button class="level-cell" type="button" data-cell-action="">
+          <span class="level-cell-title">Contribute</span>
+        </button>
+
+        <button class="level-cell" type="button" data-cell-action="">
+          <span class="level-cell-title">Contract</span>
+        </button>
+
+        <button class="level-cell" type="button" data-cell-action="">
+          <span class="level-cell-title">Work</span>
+        </button>
+
+        <button class="level-cell" type="button" data-cell-action="">
+          <span class="level-cell-title">Donate</span>
+        </button>
+
+        <button class="level-cell" type="button" data-cell-action="">
+          <span class="level-cell-title">Promote</span>
+        </button>
+
+        <button class="level-cell" type="button" data-cell-action="">
+          <span class="level-cell-title">Share</span>
+        </button>
+
+        <button class="level-cell" type="button" data-cell-action="">
+          <span class="level-cell-title">Invest</span>
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <jaycee-footer></jaycee-footer>
+
+  <script src="./src/js/shell/jaycee-shell.js"></script>
+  <script src="./src/js/auth/auth.js"></script>
+  <script src="./src/js/levels.js"></script>
+</body>
+</html>
