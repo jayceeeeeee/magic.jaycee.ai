@@ -1,0 +1,58 @@
+.signup-page {
+  width: min(100% - 28px, 560px);
+  min-height: 100vh;
+  display: grid;
+  align-items: start;
+  margin: 0 auto;
+  padding: 112px 0 96px;
+}
+
+.signup-room {
+  display: grid;
+  gap: 18px;
+}
+
+.signup-panel {
+  width: 100%;
+  padding: 16px;
+  border: 1px solid var(--neon-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(var(--accent-rgb), 0.1), transparent 48%),
+    var(--surface);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.signup-panel h1 {
+  margin: 0 0 18px;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.signup-form-shell {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transform: translateY(-8px);
+  transition:
+    max-height 560ms ease,
+    opacity 300ms ease,
+    transform 420ms ease;
+}
+
+.signup-form-shell[hidden] {
+  display: none;
+}
+
+.signup-form-shell.is-revealed {
+  max-height: 620px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 620px) {
+  .signup-page {
+    width: min(100% - 20px, 560px);
+    padding: 118px 0 96px;
+  }
+}

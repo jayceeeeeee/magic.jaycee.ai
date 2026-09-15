@@ -7,7 +7,7 @@
             return;
         }
 
-        window.location.href = window.JayceeAuth?.getAuthUrl?.("login") || "/auth.html?mode=login";
+        window.location.href = window.JayceeAuth?.getLoginUrl?.() || "/login.html";
     }
 
     async function initAccountPage() {

@@ -23,8 +23,8 @@
 
     function initAuthPage() {
         const params = new URLSearchParams(window.location.search);
-        let mode = params.get("mode") === "signup" ? "signup" : "login";
         const form = document.querySelector("[data-auth-form]");
+        let mode = form?.dataset.authMode || (params.get("mode") === "signup" ? "signup" : "login");
         const title = document.querySelector("#auth-title");
         const submit = document.querySelector(".auth-submit");
         const status = document.querySelector("[data-auth-status]");
@@ -37,7 +37,7 @@
 
         function showExistingAccountMessage() {
             status.textContent = "An account with this email already exists.";
-            switcher.innerHTML = 'Already have an account? <a href="?mode=login" data-auth-mode="login">Log in instead</a>.';
+            switcher.innerHTML = 'Already have an account? <a href="/login.html" data-auth-mode="login">Log in instead</a>.';
         }
 
         function renderMode() {
@@ -47,8 +47,9 @@
             submit.textContent = isSignup ? "Sign up" : "Log in";
             password.autocomplete = isSignup ? "new-password" : "current-password";
             form.hidden = false;
+            switcher.hidden = form.dataset.authMode === "login";
             switcher.innerHTML = isSignup
-                ? 'Already have an account? <a href="?mode=login" data-auth-mode="login">Log in</a>'
+                ? 'Already have an account? <a href="/login.html" data-auth-mode="login">Log in</a>'
                 : "";
             status.textContent = "";
         }

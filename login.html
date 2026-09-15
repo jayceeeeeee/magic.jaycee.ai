@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Account - Magic</title>
+  <title>Log in - Jaycee.ai</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -17,7 +17,7 @@
       <p class="auth-eyebrow">Account</p>
       <h1 id="auth-title">Log in</h1>
 
-      <form class="auth-form" data-auth-form>
+      <form class="auth-form" data-auth-form data-auth-mode="login">
         <label>
           <span>Email</span>
           <input type="email" name="email" autocomplete="email" required>
@@ -30,7 +30,7 @@
       </form>
 
       <p class="auth-status" data-auth-status aria-live="polite"></p>
-      <p class="auth-switch" data-auth-switch></p>
+      <p class="auth-switch" data-auth-switch hidden></p>
     </section>
   </main>
 
@@ -38,6 +38,6 @@
 
   <script src="./src/js/shell/jaycee-shell.js"></script>
   <script src="./src/js/auth/auth.js"></script>
-  <script src="./src/js/auth/auth-page.js"></script>
+  <script src="./src/js/auth/login.js"></script>
 </body>
 </html>

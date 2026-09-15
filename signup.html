@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign up - Jaycee.ai</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./src/css/global.css">
+  <link rel="stylesheet" href="./src/css/index.css">
+  <link rel="stylesheet" href="./src/css/signup.css">
+</head>
+<body data-theme="aurora">
+  <jaycee-banner></jaycee-banner>
+
+  <main class="signup-page">
+    <section class="techno-prayer-page-card signup-room" aria-label="Game room signup">
+      <div class="home-console signup-console is-booting" data-signup-console aria-live="polite">
+        <p class="home-command-line"><span>Jaycee.ai</span><span aria-hidden="true"> &gt; </span><span>Game room initialization...</span></p>
+      </div>
+
+      <div class="home-start-panel" data-signup-start-panel>
+        <button class="account-button account-button-primary home-start-button" type="button" data-reveal-signup>Enter the next level</button>
+      </div>
+
+      <div class="signup-form-shell" data-signup-form-shell hidden>
+        <section class="signup-panel" aria-labelledby="signup-title">
+          <p class="auth-eyebrow">Next level</p>
+          <h1 id="signup-title">Create account</h1>
+
+          <form class="auth-form" data-signup-form>
+            <label>
+              <span>Name</span>
+              <input type="text" name="name" autocomplete="name" required>
+            </label>
+            <label>
+              <span>Email</span>
+              <input type="email" name="email" autocomplete="email" required>
+            </label>
+            <label>
+              <span>Password</span>
+              <input type="password" name="password" autocomplete="new-password" minlength="6" required>
+            </label>
+            <button class="account-button account-button-primary auth-submit" type="submit">Enter level 2</button>
+          </form>
+
+          <p class="auth-status" data-auth-status aria-live="polite"></p>
+          <p class="auth-switch">Already have an account? <a href="/login.html">Log in</a></p>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <jaycee-footer></jaycee-footer>
+
+  <script src="./src/js/shell/jaycee-shell.js"></script>
+  <script src="./src/js/auth/auth.js"></script>
+  <script src="./src/js/auth/signup.js"></script>
+</body>
+</html>

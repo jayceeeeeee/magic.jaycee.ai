@@ -1,7 +1,7 @@
 (function () {
     const supabaseUrl = "https://ndtnfwyfdfdcxljvvjfd.supabase.co";
     const supabasePublishableKey = "sb_publishable_lMEHC2xjlGGmTnkI5G-okg_0AVRhiDd";
-    const defaultAuthPath = "/auth.html";
+    const defaultLoginPath = "/login.html";
     const defaultAccountPath = "/account.html";
     const defaultAfterSignInPath = "/";
     let supabaseClientPromise = null;
@@ -45,9 +45,15 @@
         return getCurrentUrl(path);
     }
 
-    function getAuthUrl(mode = "login", path = defaultAuthPath) {
+    function getLoginUrl(path = defaultLoginPath) {
+        return getCurrentUrl(path);
+    }
+
+    function getAuthUrl(mode = "login", path = defaultLoginPath) {
         const url = new URL(path, window.location.origin);
-        url.searchParams.set("mode", mode);
+        if (mode !== "login") {
+            url.searchParams.set("mode", mode);
+        }
         return url.href;
     }
 
@@ -92,7 +98,7 @@
             email,
             password,
             options: {
-                emailRedirectTo: options.emailRedirectTo || getCurrentUrl(defaultAuthPath),
+                emailRedirectTo: options.emailRedirectTo || getCurrentUrl(defaultLoginPath),
                 data: options.data || {},
             },
         });
@@ -133,6 +139,7 @@
         getAfterSignInUrl,
         getAccountUrl,
         getAuthUrl,
+        getLoginUrl,
         getSession,
         refreshHeader,
         signIn,
