@@ -8,57 +8,104 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./src/css/global.css">
+  <link rel="stylesheet" href="./src/css/techno-prayer.css">
+  <link rel="stylesheet" href="./src/css/index.css">
   <link rel="stylesheet" href="./src/css/levels.css">
 </head>
 <body data-theme="aurora">
   <jaycee-banner></jaycee-banner>
 
   <main class="levels-page">
-    <section class="levels-panel" aria-labelledby="levels-title">
-      <div class="levels-panel-header">
-        <p class="eyebrow levels-command-line">
-          <span>jaycee.ai</span><span aria-hidden="true"> &gt; </span><span>technomancer path map</span>
-        </p>
-        <p class="levels-status" data-level-status>Open grid</p>
+    <section class="techno-prayer-page-card levels-room" aria-label="Techno-Temple actions">
+      <div class="home-console levels-console is-booting" data-levels-console aria-live="polite">
+        <p class="home-command-line"><span>Jaycee.ai</span><span aria-hidden="true"> &gt; </span><span>game room initialization...</span></p>
+        <p class="home-level-line" data-console-line="Unknown user..."><span aria-hidden="true">&gt;</span>Unknown user...</p>
+        <p class="home-level-line" data-console-line="What do you want to do in the Techno-Temple?"><span aria-hidden="true">&gt;</span>What do you want to do in the Techno-Temple?<span class="cursor" aria-hidden="true">_</span></p>
       </div>
 
-      <h1 id="levels-title">Choose your square <span class="cursor" aria-hidden="true">_</span></h1>
-
-      <div class="levels-board" aria-label="Technomancer path levels">
-        <button class="level-cell" type="button" data-cell-action="">
+      <div class="levels-board" data-levels-board aria-label="Technomancer path levels" aria-hidden="true">
+        <button class="level-cell" type="button" data-cell-action="pray" data-target-url="/techno-prayer.html" data-required-level="1">
           <span class="level-cell-title">Pray</span>
         </button>
 
-        <button class="level-cell" type="button" data-cell-action="">
+        <button class="level-cell" type="button" data-cell-action="watch" data-required-level="1">
           <span class="level-cell-title">Watch</span>
         </button>
 
-        <button class="level-cell" type="button" data-cell-action="">
+        <button class="level-cell" type="button" data-cell-action="contribute" data-required-level="1">
           <span class="level-cell-title">Contribute</span>
         </button>
 
-        <button class="level-cell" type="button" data-cell-action="">
+        <button class="level-cell" type="button" data-cell-action="contract" data-required-level="2">
           <span class="level-cell-title">Contract</span>
+          <span class="level-cell-lock" aria-hidden="true">
+            <svg class="level-cell-lock-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="5" y="10" width="14" height="10" rx="2"></rect>
+              <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+            </svg>
+            <span>Locked</span>
+          </span>
+          <span class="level-cell-requirement" aria-hidden="true">Level 2</span>
         </button>
 
-        <button class="level-cell" type="button" data-cell-action="">
+        <button class="level-cell" type="button" data-cell-action="work" data-required-level="2">
           <span class="level-cell-title">Work</span>
+          <span class="level-cell-lock" aria-hidden="true">
+            <svg class="level-cell-lock-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="5" y="10" width="14" height="10" rx="2"></rect>
+              <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+            </svg>
+            <span>Locked</span>
+          </span>
+          <span class="level-cell-requirement" aria-hidden="true">Level 2</span>
         </button>
 
-        <button class="level-cell" type="button" data-cell-action="">
+        <button class="level-cell" type="button" data-cell-action="donate" data-required-level="2">
           <span class="level-cell-title">Donate</span>
+          <span class="level-cell-lock" aria-hidden="true">
+            <svg class="level-cell-lock-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="5" y="10" width="14" height="10" rx="2"></rect>
+              <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+            </svg>
+            <span>Locked</span>
+          </span>
+          <span class="level-cell-requirement" aria-hidden="true">Level 2</span>
         </button>
 
-        <button class="level-cell" type="button" data-cell-action="">
+        <button class="level-cell" type="button" data-cell-action="promote" data-required-level="3">
           <span class="level-cell-title">Promote</span>
+          <span class="level-cell-lock" aria-hidden="true">
+            <svg class="level-cell-lock-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="5" y="10" width="14" height="10" rx="2"></rect>
+              <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+            </svg>
+            <span>Locked</span>
+          </span>
+          <span class="level-cell-requirement" aria-hidden="true">Level 3</span>
         </button>
 
-        <button class="level-cell" type="button" data-cell-action="">
+        <button class="level-cell" type="button" data-cell-action="share" data-required-level="3">
           <span class="level-cell-title">Share</span>
+          <span class="level-cell-lock" aria-hidden="true">
+            <svg class="level-cell-lock-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="5" y="10" width="14" height="10" rx="2"></rect>
+              <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+            </svg>
+            <span>Locked</span>
+          </span>
+          <span class="level-cell-requirement" aria-hidden="true">Level 3</span>
         </button>
 
-        <button class="level-cell" type="button" data-cell-action="">
+        <button class="level-cell" type="button" data-cell-action="invest" data-required-level="3">
           <span class="level-cell-title">Invest</span>
+          <span class="level-cell-lock" aria-hidden="true">
+            <svg class="level-cell-lock-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="5" y="10" width="14" height="10" rx="2"></rect>
+              <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+            </svg>
+            <span>Locked</span>
+          </span>
+          <span class="level-cell-requirement" aria-hidden="true">Level 3</span>
         </button>
       </div>
     </section>
