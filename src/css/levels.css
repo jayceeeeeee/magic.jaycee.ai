@@ -6,7 +6,7 @@ body {
 }
 
 .levels-page {
-  width: min(100% - 28px, 760px);
+  width: min(100% - 28px, 520px);
   min-height: 100vh;
   display: grid;
   align-items: center;
@@ -17,7 +17,7 @@ body {
 .levels-panel {
   position: relative;
   width: 100%;
-  padding: clamp(18px, 4vw, 34px);
+  padding: clamp(16px, 3.5vw, 26px);
   border: 1px solid var(--field-border);
   border-radius: 8px;
   background:
@@ -81,9 +81,9 @@ body {
 .levels-panel h1 {
   position: relative;
   z-index: 1;
-  margin: 0 0 22px;
+  margin: 0 0 18px;
   color: var(--text);
-  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  font-size: clamp(1.55rem, 4.4vw, 2.15rem);
   line-height: 1;
   text-transform: uppercase;
   text-shadow: 0 0 14px var(--neon-shadow);
@@ -106,10 +106,14 @@ body {
   z-index: 1;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(7px, 1.6vw, 12px);
-  width: min(100%, 660px);
+  gap: 0;
+  width: 100%;
   aspect-ratio: 1;
   margin: 0 auto;
+  border: 1px solid var(--field-border);
+  border-radius: 6px;
+  background: rgba(var(--accent-rgb), 0.045);
+  overflow: hidden;
 }
 
 .level-cell {
@@ -117,127 +121,47 @@ body {
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto auto 1fr;
-  gap: 7px;
-  padding: clamp(10px, 2vw, 15px);
-  border: 1px solid var(--neon-border-soft);
-  border-radius: 6px;
-  background:
-    var(--button-glow),
-    var(--surface);
+  place-items: center;
+  padding: 8px;
+  border: 0;
+  border-right: 1px solid var(--field-border-soft);
+  border-bottom: 1px solid var(--field-border-soft);
+  border-radius: 0;
+  background: rgba(7, 21, 24, 0.58);
   color: var(--text);
+  font: inherit;
   text-decoration: none;
   overflow: hidden;
-  box-shadow:
-    0 10px 24px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  text-align: center;
+  box-shadow: none;
+  cursor: pointer;
   transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
 }
 
-.level-cell::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(90deg, transparent, rgba(var(--accent-rgb), 0.38), transparent) top / 100% 1px no-repeat,
-    linear-gradient(135deg, rgba(255, 255, 255, 0.065), transparent 42%);
+.level-cell:nth-child(3n) {
+  border-right: 0;
 }
 
-.level-cell-meta,
-.level-cell-title,
-.level-cell-copy {
+.level-cell:nth-child(n + 7) {
+  border-bottom: 0;
+}
+
+.level-cell-title {
   position: relative;
   z-index: 1;
-}
-
-.level-cell-meta {
-  color: var(--accent);
-  font-family: "Share Tech Mono", monospace;
-  font-size: clamp(0.52rem, 1.5vw, 0.68rem);
+  color: inherit;
+  font-size: clamp(0.84rem, 1.55vw, 1.08rem);
+  font-weight: 800;
   line-height: 1;
   text-transform: uppercase;
 }
 
-.level-cell-title {
-  color: inherit;
-  font-size: clamp(0.96rem, 2.4vw, 1.32rem);
-  font-weight: 800;
-  line-height: 0.98;
-  text-transform: uppercase;
-}
-
-.level-cell-copy {
-  align-self: end;
-  color: var(--muted);
-  font-size: clamp(0.68rem, 1.65vw, 0.82rem);
-  line-height: 1.18;
-}
-
-.level-lock {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  z-index: 2;
-  width: 28px;
-  aspect-ratio: 1;
-  display: none;
-  place-items: center;
-  border: 1px solid rgba(var(--accent-rgb), 0.32);
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.58);
-  color: var(--text-soft, var(--text));
-}
-
-.level-lock svg {
-  width: 15px;
-  height: 15px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 2;
-}
-
-.level-cell.is-locked {
-  border-color: var(--field-border-soft);
-  color: var(--muted);
-  background:
-    linear-gradient(135deg, rgba(var(--accent-rgb), 0.035), transparent 52%),
-    var(--surface);
-  box-shadow:
-    0 8px 18px rgba(0, 0, 0, 0.14),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
-}
-
-.level-cell.is-locked .level-cell-meta,
-.level-cell.is-locked .level-cell-title,
-.level-cell.is-locked .level-cell-copy {
-  opacity: 0.62;
-}
-
-.level-cell.is-locked .level-lock {
-  display: grid;
-}
-
-.level-cell:not(.is-locked):hover,
-.level-cell:not(.is-locked):focus-visible {
-  border-color: var(--neon-border-strong);
-  background:
-    var(--active-button-bg),
-    var(--accent);
+.level-cell:hover,
+.level-cell:focus-visible {
+  background: var(--accent);
   color: var(--accent-ink);
-  transform: translateY(-2px);
-  box-shadow:
-    0 14px 30px var(--neon-shadow),
-    inset 0 1px 0 rgba(255, 255, 255, 0.28);
-}
-
-.level-cell:not(.is-locked):hover .level-cell-meta,
-.level-cell:not(.is-locked):focus-visible .level-cell-meta,
-.level-cell:not(.is-locked):hover .level-cell-copy,
-.level-cell:not(.is-locked):focus-visible .level-cell-copy {
-  color: var(--accent-ink);
+  transform: none;
+  box-shadow: none;
 }
 
 .level-cell:focus-visible {
@@ -247,7 +171,7 @@ body {
 
 @media (max-width: 620px) {
   .levels-page {
-    width: min(100% - 20px, 760px);
+    width: min(100% - 20px, 520px);
     align-items: start;
     padding: 118px 0 96px;
   }
@@ -262,34 +186,17 @@ body {
   }
 
   .levels-board {
-    gap: 6px;
+    gap: 0;
   }
 
   .level-cell {
-    gap: 5px;
     padding: 8px;
   }
 
-  .level-cell-copy {
-    display: -webkit-box;
-    overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-  }
-
-  .level-lock {
-    right: 7px;
-    bottom: 7px;
-    width: 24px;
-  }
 }
 
 @media (max-width: 390px) {
   .levels-panel {
     padding: 14px;
-  }
-
-  .level-cell-copy {
-    -webkit-line-clamp: 2;
   }
 }
