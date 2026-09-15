@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Elizabeth | jaycee.ai</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/css/global.css">
+  <style>
+    body[data-theme="aurora"] {
+      --elizabeth-rose: #ff7cb8;
+      --elizabeth-violet: #9274ff;
+      --elizabeth-gold: #ffd56b;
+      --elizabeth-ink: #071113;
+    }
+
+    .elizabeth-page {
+      width: min(100% - 28px, 1120px);
+      min-height: 100vh;
+      display: grid;
+      gap: 46px;
+      margin: 0 auto;
+      padding: 112px 0 104px;
+    }
+
+    .elizabeth-hero {
+      position: relative;
+      min-height: clamp(560px, 78vh, 760px);
+      display: grid;
+      align-items: end;
+      overflow: hidden;
+      border: 1px solid rgba(var(--accent-rgb), 0.24);
+      border-radius: 8px;
+      background:
+        linear-gradient(135deg, rgba(7, 17, 19, 0.16), rgba(7, 17, 19, 0.76) 64%),
+        radial-gradient(circle at 20% 18%, rgba(255, 124, 184, 0.42), transparent 28rem),
+        radial-gradient(circle at 78% 24%, rgba(146, 116, 255, 0.38), transparent 24rem),
+        linear-gradient(145deg, rgba(255, 213, 107, 0.22), rgba(83, 220, 198, 0.14) 48%, rgba(9, 18, 28, 0.96)),
+        url("https://images.unsplash.com/photo-1496307042754-b4aa456c4a2d?auto=format&fit=crop&w=1800&q=82");
+      background-position: center;
+      background-size: cover;
+      box-shadow: 0 26px 70px rgba(0, 0, 0, 0.34);
+      isolation: isolate;
+    }
+
+    .elizabeth-hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+        linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+      background-size: 82px 82px;
+      mask-image: linear-gradient(180deg, transparent, #000 24%, #000 76%, transparent);
+    }
+
+    .elizabeth-hero-content {
+      width: min(100%, 780px);
+      padding: clamp(24px, 6vw, 64px);
+    }
+
+    .elizabeth-kicker,
+    .elizabeth-label {
+      margin: 0;
+      color: var(--elizabeth-gold);
+      font-family: "Share Tech Mono", monospace;
+      font-size: 0.78rem;
+      line-height: 1.2;
+      text-transform: uppercase;
+    }
+
+    .elizabeth-hero h1 {
+      max-width: 11ch;
+      margin: 14px 0 18px;
+      font-size: clamp(4.3rem, 14vw, 9.6rem);
+      line-height: 0.82;
+      text-transform: uppercase;
+    }
+
+    .elizabeth-hero-copy {
+      max-width: 610px;
+      margin: 0;
+      color: rgba(242, 255, 251, 0.88);
+      font-size: clamp(1.18rem, 2.4vw, 1.7rem);
+      font-weight: 600;
+      line-height: 1.18;
+    }
+
+    .elizabeth-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .elizabeth-button {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 16px;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      border-radius: 6px;
+      background: rgba(7, 17, 19, 0.66);
+      color: var(--text);
+      font-size: 0.92rem;
+      font-weight: 700;
+      line-height: 1;
+      text-decoration: none;
+      text-transform: uppercase;
+      backdrop-filter: blur(8px);
+      transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
+    }
+
+    .elizabeth-button.primary {
+      border-color: rgba(255, 213, 107, 0.78);
+      background: linear-gradient(135deg, var(--elizabeth-gold), var(--elizabeth-rose));
+      color: var(--elizabeth-ink);
+      box-shadow: 0 12px 28px rgba(255, 124, 184, 0.22);
+    }
+
+    .elizabeth-button:hover,
+    .elizabeth-button:focus-visible {
+      border-color: var(--elizabeth-gold);
+      transform: translateY(-1px);
+    }
+
+    .elizabeth-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1px;
+      overflow: hidden;
+      border: 1px solid var(--field-border);
+      border-radius: 8px;
+      background: var(--field-border);
+    }
+
+    .elizabeth-stat {
+      min-height: 132px;
+      display: grid;
+      align-content: center;
+      gap: 8px;
+      padding: 22px;
+      background: rgba(7, 21, 24, 0.86);
+    }
+
+    .elizabeth-stat strong {
+      color: var(--text);
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      line-height: 0.9;
+    }
+
+    .elizabeth-stat span {
+      color: var(--muted);
+      font-size: 0.92rem;
+      font-weight: 600;
+      line-height: 1.25;
+      text-transform: uppercase;
+    }
+
+    .elizabeth-section {
+      display: grid;
+      grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+      gap: clamp(24px, 5vw, 56px);
+      align-items: start;
+    }
+
+    .elizabeth-section h2 {
+      margin: 10px 0 0;
+      font-size: clamp(2.4rem, 6vw, 5.2rem);
+      line-height: 0.9;
+      text-transform: uppercase;
+    }
+
+    .elizabeth-copy-stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    .elizabeth-offer {
+      padding: 22px;
+      border: 1px solid rgba(var(--accent-rgb), 0.2);
+      border-radius: 8px;
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 34%),
+        rgba(7, 21, 24, 0.72);
+    }
+
+    .elizabeth-offer h3 {
+      margin: 0 0 8px;
+      color: var(--accent-soft);
+      font-size: 1.34rem;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    .elizabeth-offer p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1.02rem;
+      line-height: 1.45;
+    }
+
+    .elizabeth-close {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: center;
+      padding: clamp(24px, 5vw, 44px);
+      border: 1px solid rgba(255, 213, 107, 0.34);
+      border-radius: 8px;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(255, 124, 184, 0.18), transparent 18rem),
+        linear-gradient(135deg, rgba(255, 213, 107, 0.13), rgba(83, 220, 198, 0.09)),
+        rgba(7, 21, 24, 0.84);
+    }
+
+    .elizabeth-close h2 {
+      margin: 0 0 8px;
+      font-size: clamp(2rem, 5vw, 4rem);
+      line-height: 0.95;
+      text-transform: uppercase;
+    }
+
+    .elizabeth-close p {
+      max-width: 650px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 1.08rem;
+      line-height: 1.42;
+    }
+
+    @media (max-width: 760px) {
+      .elizabeth-page {
+        padding-top: 92px;
+      }
+
+      .elizabeth-hero {
+        min-height: 600px;
+      }
+
+      .elizabeth-strip,
+      .elizabeth-section,
+      .elizabeth-close {
+        grid-template-columns: 1fr;
+      }
+
+      .elizabeth-close .elizabeth-button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body data-theme="aurora">
+  <jaycee-banner></jaycee-banner>
+  <main class="elizabeth-page">
+    <section class="elizabeth-hero" aria-labelledby="elizabeth-title">
+      <div class="elizabeth-hero-content">
+        <p class="elizabeth-kicker">Private creative sales page</p>
+        <h1 id="elizabeth-title">Elizabeth</h1>
+        <p class="elizabeth-hero-copy">
+          A luminous offer page for the message, promise, and invitation that will live here next.
+        </p>
+        <div class="elizabeth-actions">
+          <a class="elizabeth-button primary" href="#offer">Shape the offer</a>
+          <a class="elizabeth-button" href="#details">View the canvas</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="elizabeth-strip" aria-label="Sales page highlights">
+      <div class="elizabeth-stat">
+        <strong>01</strong>
+        <span>Hook with a clear promise</span>
+      </div>
+      <div class="elizabeth-stat">
+        <strong>02</strong>
+        <span>Build desire with story</span>
+      </div>
+      <div class="elizabeth-stat">
+        <strong>03</strong>
+        <span>Invite the next step</span>
+      </div>
+    </section>
+
+    <section class="elizabeth-section" id="offer">
+      <div>
+        <p class="elizabeth-label">Offer architecture</p>
+        <h2>What she gets</h2>
+      </div>
+      <div class="elizabeth-copy-stack">
+        <article class="elizabeth-offer">
+          <h3>The transformation</h3>
+          <p>Use this block for the before-and-after: what changes, why it matters, and how the experience feels.</p>
+        </article>
+        <article class="elizabeth-offer">
+          <h3>The method</h3>
+          <p>Use this block to describe the system, service, ritual, product, or creative process behind the promise.</p>
+        </article>
+        <article class="elizabeth-offer">
+          <h3>The proof</h3>
+          <p>Use this block for testimonials, outcomes, story beats, or credibility notes that make the offer trustworthy.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="elizabeth-close" id="details">
+      <div>
+        <h2>Ready for the real copy.</h2>
+        <p>This page is set up as a flexible sales canvas. Swap in the voice, price, details, images, and call to action whenever the idea arrives.</p>
+      </div>
+      <a class="elizabeth-button primary" href="mailto:hello@jaycee.ai">Start the conversation</a>
+    </section>
+  </main>
+  <jaycee-footer></jaycee-footer>
+  <script src="/src/js/shell/jaycee-shell.js"></script>
+  <script src="/src/js/auth/auth.js"></script>
+</body>
+</html>
