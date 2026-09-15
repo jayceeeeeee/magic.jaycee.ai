@@ -4,13 +4,15 @@ Main Jaycee.ai app.
 
 ## Structure
 
-- `index.html` is the Magic app.
-- `login.html` handles log in. `signup.html` is the invite signup/game-room entry page.
-- `account.html` shows the current user session and logout.
+- `index.html` is the home page.
 - `profile.html` is Cedric's public profile page, migrated from the old card site.
+- `src/html/auth/` contains account pages: login, signup, and account.
+- `src/html/levels.html` contains the square/path map.
+- `src/html/pray/`, `src/html/contract/`, `src/html/work/`, `src/html/donate/`, `src/html/promote/`, `src/html/share/`, and `src/html/invest/` contain square pages.
+- `src/html/bazi.html` contains the BaZi game page.
 - `src/css/global.css` contains app-wide themes, header, footer, auth page, and account page styles.
 - `src/js/shell/` contains the app shell web components and theme handling.
 - `src/js/auth/` contains Supabase auth, login, signup, and account behavior.
 - `src/assets/brand/` contains Jaycee.ai logo assets.
-- `src/profile/` contains profile page CSS, JS, and images.
-- `src/js/` and `src/css/app.css` contain the Magic app logic and game-specific styles.
+- `src/css/profile.css`, `src/js/profile.js`, and `src/assets/profile/` contain profile page files.
+- `src/js/bazi.js` and `src/css/bazi.css` contain the BaZi game logic and styles.

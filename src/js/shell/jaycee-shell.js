@@ -5,8 +5,8 @@
     const logoLabel = "J";
     const routes = {
         home: "/",
-        login: "/login.html",
-        account: "/account.html",
+        login: "/src/html/auth/login.html",
+        account: "/src/html/auth/account.html",
         contact: "/profile.html",
         donate: "https://buy.stripe.com/14A14o70HbZXdtr73FfQI01",
         services: "/profile.html",

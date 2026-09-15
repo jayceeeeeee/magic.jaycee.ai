@@ -189,7 +189,7 @@ const updateAccountStepForSession = async () => {
     ? "You are already logged in. Your character is saved in this browser for now, and this account step is ready for the next phase."
     : "Your birth date, gender, optional name, optional birth time, optional birth place, Four Pillars, and Luck Pillars are saved in this browser. Accounts are invite-only for now.";
   accountCreateLink.hidden = isSignedIn;
-  accountCreateLink.href = "/login.html";
+  accountCreateLink.href = "/src/html/auth/login.html";
   accountCreateLink.textContent = "Log in";
 };
 

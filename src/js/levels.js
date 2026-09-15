@@ -5,34 +5,9 @@
   const consoleEl = document.querySelector("[data-levels-console]");
   const board = document.querySelector("[data-levels-board]");
   const cells = Array.from(document.querySelectorAll("[data-cell-action]"));
-  const loginPath = "/login.html";
-  const signupPath = "/signup.html";
 
   function wait(duration) {
     return new Promise((resolve) => window.setTimeout(resolve, duration));
-  }
-
-  function hasAccountCreateParams() {
-    const params = new URLSearchParams(window.location.search);
-
-    return Boolean(params.get("name")?.trim() && params.get("email")?.trim());
-  }
-
-  function getPlayerName() {
-    const params = new URLSearchParams(window.location.search);
-
-    return params.get("name")?.trim() || "Player";
-  }
-
-  function getSignupUrl() {
-    const url = new URL(signupPath, window.location.origin);
-    const currentParams = new URLSearchParams(window.location.search);
-
-    currentParams.forEach((value, key) => {
-      url.searchParams.set(key, value);
-    });
-
-    return url.href;
   }
 
   function createCursor() {
@@ -125,88 +100,34 @@
     }
   }
 
-  function getConsoleLines(isSignedIn, shouldPromptAccount) {
-    if (isSignedIn) {
-      return [
-        { message: "Player identified..." },
-        { message: "You are at level 2..." },
-        { message: "What do you want to do in the Techno-Temple?" },
-      ];
-    }
-
-    if (shouldPromptAccount) {
-      const playerName = getPlayerName();
-
-      return [
-        { message: "Player identified..." },
-        { message: `${playerName} has entered the Techno-Temple and prayed...` },
-        { message: "Prayer has been granted..." },
-        {
-          message: "Create an account to unlock level 2...",
-          segments: [
-            { text: "Create an account to unlock level 2", href: getSignupUrl() },
-            { text: "..." },
-          ],
-        },
-      ];
-    }
-
+  function getConsoleLines(isSignedIn) {
     return [
-      { message: "Unknown user..." },
-      { message: "You are at level 1..." },
-      { message: "What do you want to do in the Techno-Temple?" },
+      {
+        message: isSignedIn
+          ? "You are logged in."
+          : "You are not logged in.",
+      },
     ];
   }
 
-  function setCellLocked(cell, requiredLevel, unlockLevel, shouldPromptAccount) {
-    const isLocked = requiredLevel > unlockLevel;
+  function unlockCell(cell) {
     const title = cell.querySelector(".level-cell-title")?.textContent?.trim() || "Square";
-    const requirement = cell.querySelector(".level-cell-requirement");
 
-    cell.classList.toggle("is-locked", isLocked);
+    cell.classList.remove("is-locked");
     cell.disabled = false;
-    cell.setAttribute("aria-disabled", isLocked ? "true" : "false");
-    cell.setAttribute("aria-label", isLocked ? `${title}, locked until level ${requiredLevel}` : title);
-
-    if (requirement) {
-      requirement.textContent = `Level ${requiredLevel}`;
-    }
-
-    if (isLocked && requiredLevel === 2 && shouldPromptAccount) {
-      cell.dataset.lockedTargetUrl = getSignupUrl();
-      return;
-    }
-
-    if (isLocked && requiredLevel === 2) {
-      cell.dataset.lockedTargetUrl = loginPath;
-      return;
-    }
-
+    cell.setAttribute("aria-disabled", "false");
+    cell.setAttribute("aria-label", title);
     delete cell.dataset.lockedTargetUrl;
   }
 
-  function renderCells(isSignedIn, shouldPromptAccount) {
-    const unlockLevel = isSignedIn ? 2 : 1;
-
-    cells.forEach((cell) => {
-      const requiredLevel = Number.parseInt(cell.dataset.requiredLevel || "1", 10);
-
-      setCellLocked(cell, requiredLevel, unlockLevel, shouldPromptAccount);
-    });
+  function renderCells() {
+    cells.forEach(unlockCell);
   }
 
   function bindCells() {
     cells.forEach((cell) => {
       cell.addEventListener("click", () => {
-        const lockedTargetUrl = cell.dataset.lockedTargetUrl;
         const targetUrl = cell.dataset.targetUrl;
-
-        if (cell.classList.contains("is-locked")) {
-          if (lockedTargetUrl) {
-            window.location.href = lockedTargetUrl;
-          }
-          return;
-        }
 
         if (targetUrl) {
           window.location.href = targetUrl;
@@ -242,12 +163,11 @@
   }
 
   async function init() {
-    const shouldPromptAccount = hasAccountCreateParams();
     const isSignedIn = await getSignedInState();
 
-    renderCells(isSignedIn, shouldPromptAccount);
+    renderCells();
     bindCells();
-    await renderConsole(getConsoleLines(isSignedIn, shouldPromptAccount));
+    await renderConsole(getConsoleLines(isSignedIn));
     revealBoard();
   }
 

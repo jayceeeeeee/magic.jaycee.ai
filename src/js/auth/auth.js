@@ -1,8 +1,8 @@
 (function () {
     const supabaseUrl = "https://ndtnfwyfdfdcxljvvjfd.supabase.co";
     const supabasePublishableKey = "sb_publishable_lMEHC2xjlGGmTnkI5G-okg_0AVRhiDd";
-    const defaultLoginPath = "/login.html";
-    const defaultAccountPath = "/account.html";
+    const defaultLoginPath = "/src/html/auth/login.html";
+    const defaultAccountPath = "/src/html/auth/account.html";
     const defaultAfterSignInPath = "/";
     let supabaseClientPromise = null;
 

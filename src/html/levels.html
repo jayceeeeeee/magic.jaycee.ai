@@ -7,10 +7,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./src/css/global.css">
-  <link rel="stylesheet" href="./src/css/techno-prayer.css">
-  <link rel="stylesheet" href="./src/css/index.css">
-  <link rel="stylesheet" href="./src/css/levels.css">
+  <link rel="stylesheet" href="/src/css/global.css">
+  <link rel="stylesheet" href="/src/css/techno-prayer.css">
+  <link rel="stylesheet" href="/src/css/index.css">
+  <link rel="stylesheet" href="/src/css/levels.css">
 </head>
 <body data-theme="aurora">
   <jaycee-banner></jaycee-banner>
@@ -24,19 +24,19 @@
       </div>
 
       <div class="levels-board" data-levels-board aria-label="Technomancer path levels" aria-hidden="true">
-        <button class="level-cell" type="button" data-cell-action="pray" data-target-url="/techno-prayer.html" data-required-level="1">
+        <button class="level-cell" type="button" data-cell-action="pray" data-target-url="/src/html/pray/techno-prayer.html" data-required-level="1">
           <span class="level-cell-title">Pray</span>
         </button>
 
-        <button class="level-cell" type="button" data-cell-action="watch" data-required-level="1">
+        <button class="level-cell" type="button" data-cell-action="watch" data-target-url="/profile.html" data-required-level="1">
           <span class="level-cell-title">Watch</span>
         </button>
 
-        <button class="level-cell" type="button" data-cell-action="contribute" data-required-level="1">
+        <button class="level-cell" type="button" data-cell-action="contribute" data-target-url="https://github.com/jayceeeeeee/magic.jaycee.ai" data-required-level="1">
           <span class="level-cell-title">Contribute</span>
         </button>
 
-        <button class="level-cell" type="button" data-cell-action="contract" data-required-level="2">
+        <button class="level-cell" type="button" data-cell-action="contract" data-target-url="/src/html/contract/contract.html" data-required-level="2">
           <span class="level-cell-title">Contract</span>
           <span class="level-cell-lock" aria-hidden="true">
             <svg class="level-cell-lock-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -48,7 +48,7 @@
           <span class="level-cell-requirement" aria-hidden="true">Level 2</span>
         </button>
 
-        <button class="level-cell" type="button" data-cell-action="work" data-required-level="2">
+        <button class="level-cell" type="button" data-cell-action="work" data-target-url="/src/html/work/work.html" data-required-level="2">
           <span class="level-cell-title">Work</span>
           <span class="level-cell-lock" aria-hidden="true">
             <svg class="level-cell-lock-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -60,7 +60,7 @@
           <span class="level-cell-requirement" aria-hidden="true">Level 2</span>
         </button>
 
-        <button class="level-cell" type="button" data-cell-action="donate" data-required-level="2">
+        <button class="level-cell" type="button" data-cell-action="donate" data-target-url="/src/html/donate/donate.html" data-required-level="2">
           <span class="level-cell-title">Donate</span>
           <span class="level-cell-lock" aria-hidden="true">
             <svg class="level-cell-lock-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -72,7 +72,7 @@
           <span class="level-cell-requirement" aria-hidden="true">Level 2</span>
         </button>
 
-        <button class="level-cell" type="button" data-cell-action="promote" data-required-level="3">
+        <button class="level-cell" type="button" data-cell-action="promote" data-target-url="/src/html/promote/promote.html" data-required-level="3">
           <span class="level-cell-title">Promote</span>
           <span class="level-cell-lock" aria-hidden="true">
             <svg class="level-cell-lock-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -84,7 +84,7 @@
           <span class="level-cell-requirement" aria-hidden="true">Level 3</span>
         </button>
 
-        <button class="level-cell" type="button" data-cell-action="share" data-required-level="3">
+        <button class="level-cell" type="button" data-cell-action="share" data-target-url="/src/html/share/share.html" data-required-level="3">
           <span class="level-cell-title">Share</span>
           <span class="level-cell-lock" aria-hidden="true">
             <svg class="level-cell-lock-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -96,7 +96,7 @@
           <span class="level-cell-requirement" aria-hidden="true">Level 3</span>
         </button>
 
-        <button class="level-cell" type="button" data-cell-action="invest" data-required-level="3">
+        <button class="level-cell" type="button" data-cell-action="invest" data-target-url="/src/html/invest/invest.html" data-required-level="3">
           <span class="level-cell-title">Invest</span>
           <span class="level-cell-lock" aria-hidden="true">
             <svg class="level-cell-lock-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -113,8 +113,8 @@
 
   <jaycee-footer></jaycee-footer>
 
-  <script src="./src/js/shell/jaycee-shell.js"></script>
-  <script src="./src/js/auth/auth.js"></script>
-  <script src="./src/js/levels.js"></script>
+  <script src="/src/js/shell/jaycee-shell.js"></script>
+  <script src="/src/js/auth/auth.js"></script>
+  <script src="/src/js/levels.js"></script>
 </body>
 </html>
