@@ -451,19 +451,19 @@ h3 {
 .experience-media-youtube {
     background-image:
         linear-gradient(145deg, rgba(255, 255, 255, 0.08), transparent 48%),
-        url("images/youtube.jaycee.ai.jpg");
+        url("../assets/profile/images/youtube.jaycee.ai.jpg");
 }
 
 .experience-media-notes {
     background-image:
         linear-gradient(145deg, rgba(255, 255, 255, 0.08), transparent 48%),
-        url("images/notes.jaycee.ai.jpg");
+        url("../assets/profile/images/notes.jaycee.ai.jpg");
 }
 
 .experience-media-jaycee {
     background-image:
         linear-gradient(145deg, rgba(255, 255, 255, 0.08), transparent 48%),
-        url("images/jaycee.ai.jpg");
+        url("../assets/profile/images/jaycee.ai.jpg");
 }
 
 .experience-media:hover,
