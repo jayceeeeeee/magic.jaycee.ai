@@ -8,7 +8,7 @@ Main Jaycee.ai app.
 - `profile.html` is Cedric's public profile page, migrated from the old card site.
 - `src/html/auth/` contains account pages: login, signup, and account.
 - `src/html/levels.html` contains the square/path map.
-- `src/html/pray/`, `src/html/contract/`, `src/html/work/`, `src/html/donate/`, `src/html/promote/`, `src/html/share/`, and `src/html/invest/` contain square pages.
+- `src/html/pray/`, `src/html/contract/`, `src/html/work/`, `src/html/promote/`, `src/html/share/`, and `src/html/invest/` contain square pages.
 - `src/html/bazi.html` contains the BaZi game page.
 - `src/css/global.css` contains app-wide themes, header, footer, auth page, and account page styles.
 - `src/js/shell/` contains the app shell web components and theme handling.
