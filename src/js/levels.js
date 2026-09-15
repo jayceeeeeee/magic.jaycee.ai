@@ -5,8 +5,8 @@
   const consoleEl = document.querySelector("[data-levels-console]");
   const board = document.querySelector("[data-levels-board]");
   const cells = Array.from(document.querySelectorAll("[data-cell-action]"));
-  const accountPath = "/account.html";
   const loginPath = "/login.html";
+  const signupPath = "/signup.html";
 
   function wait(duration) {
     return new Promise((resolve) => window.setTimeout(resolve, duration));
@@ -24,8 +24,8 @@
     return params.get("name")?.trim() || "Player";
   }
 
-  function getAccountUrl() {
-    const url = new URL(accountPath, window.location.origin);
+  function getSignupUrl() {
+    const url = new URL(signupPath, window.location.origin);
     const currentParams = new URLSearchParams(window.location.search);
 
     currentParams.forEach((value, key) => {
@@ -129,7 +129,7 @@
     if (isSignedIn) {
       return [
         { message: "Player identified..." },
-        { message: "Level 2 actions unlocked..." },
+        { message: "You are at level 2..." },
         { message: "What do you want to do in the Techno-Temple?" },
       ];
     }
@@ -144,8 +144,8 @@
         {
           message: "Create an account to unlock level 2...",
           segments: [
-            { text: "Create an account", href: getAccountUrl() },
-            { text: " to unlock level 2..." },
+            { text: "Create an account to unlock level 2", href: getSignupUrl() },
+            { text: "..." },
           ],
         },
       ];
@@ -173,7 +173,7 @@
     }
 
     if (isLocked && requiredLevel === 2 && shouldPromptAccount) {
-      cell.dataset.lockedTargetUrl = getAccountUrl();
+      cell.dataset.lockedTargetUrl = getSignupUrl();
       return;
     }
 

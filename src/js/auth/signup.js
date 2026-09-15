@@ -67,8 +67,7 @@
         const messages = [
             "Player identified...",
             `${playerName} has entered the Techno-Temple and prayed...`,
-            "Prayer has been granted according to the laws of the Universe...",
-            "Going onto the next level...",
+            "Prayer has been granted...",
         ];
 
         consoleEl.querySelectorAll("[data-console-line], [data-console-player-line]").forEach((line) => {
@@ -101,8 +100,6 @@
         const submit = form?.querySelector(".auth-submit");
         const nameInput = form?.querySelector('input[name="name"]');
         const emailInput = form?.querySelector('input[name="email"]');
-        const startButton = document.querySelector("[data-reveal-signup]");
-        const startPanel = document.querySelector("[data-signup-start-panel]");
         const formShell = document.querySelector("[data-signup-form-shell]");
 
         if (!form || !status || !submit || !nameInput || !emailInput || !window.JayceeAuth) {
@@ -117,25 +114,19 @@
                 return;
             }
 
-            formShell.hidden = false;
+            formShell.setAttribute("aria-hidden", "false");
 
             requestAnimationFrame(() => {
                 formShell.classList.add("is-revealed");
             });
         }
 
-        startButton?.addEventListener("click", () => {
-            if (startButton.disabled) {
-                return;
-            }
-
-            startButton.disabled = true;
-            startPanel?.setAttribute("hidden", "");
+        bootConsole(playerName).then(() => {
             revealForm();
-            nameInput.focus();
+            window.setTimeout(() => {
+                nameInput.focus({ preventScroll: true });
+            }, 580);
         });
-
-        bootConsole(playerName);
 
         form.addEventListener("submit", async (event) => {
             event.preventDefault();
