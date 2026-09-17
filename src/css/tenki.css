@@ -6,36 +6,41 @@
 .tenki-page {
   min-height: 100svh;
   display: grid;
-  place-items: center;
+  align-items: start;
+  justify-items: center;
   padding: calc(var(--banner-space) + 18px) 18px calc(var(--footer-space) + 18px);
 }
 
 .tenki-console {
   width: min(100%, 520px);
+  min-height: calc(100svh - var(--banner-space) - var(--footer-space) - 36px);
   display: grid;
-  gap: 16px;
-  place-items: center;
+  grid-template-rows: auto 1fr;
+  justify-items: center;
 }
 
 .tenki-title {
   margin: 0;
   color: var(--accent);
   font-family: "Share Tech Mono", monospace;
-  font-size: clamp(1rem, 3vw, 1.35rem);
-  font-weight: 700;
+  font-size: 0.78rem;
+  font-weight: 800;
   letter-spacing: 0.14em;
   line-height: 1;
-  text-transform: lowercase;
-  text-shadow: 0 0 12px var(--neon-shadow);
+  text-transform: uppercase;
+  text-shadow: 0 0 10px var(--neon-shadow);
 }
 
 .tenki-stage {
   --stage-size: min(84vw, 420px);
-  --ring-depth: clamp(54px, 10vw, 72px);
+  --ring-width: clamp(52px, 10vw, 66px);
+  --ring-gap: clamp(18px, 4vw, 26px);
+  --square-size: clamp(128px, 36vw, 174px);
   position: relative;
   width: var(--stage-size);
   aspect-ratio: 1;
   justify-self: center;
+  align-self: center;
   display: grid;
   place-items: center;
   isolation: isolate;
@@ -57,7 +62,7 @@
 .tenki-stage::after {
   content: "";
   position: absolute;
-  inset: var(--ring-depth);
+  inset: var(--ring-width);
   border: 1px solid rgba(255, 255, 255, 0.34);
   border-radius: 50%;
   pointer-events: none;
@@ -84,7 +89,7 @@
   top: 0;
   left: 50%;
   width: 1px;
-  height: var(--ring-depth);
+  height: var(--ring-width);
   background: rgba(255, 255, 255, 0.34);
   transform: translateX(-50%) rotate(var(--divider-angle));
   transform-origin: 50% calc(var(--stage-size) / 2);
@@ -109,7 +114,7 @@
   transform:
     translate(-50%, -50%)
     rotate(var(--label-angle))
-    translateY(calc((var(--stage-size) - var(--ring-depth)) * -0.5))
+    translateY(calc((var(--stage-size) - var(--ring-width)) * -0.5))
     rotate(calc(-1 * var(--label-angle)));
   transform-origin: center;
 }
@@ -160,7 +165,10 @@
 }
 
 .space-grid {
-  width: min(54%, 230px);
+  width: min(
+    var(--square-size),
+    calc(var(--stage-size) - var(--ring-width) - var(--ring-width) - var(--ring-gap) - var(--ring-gap))
+  );
   aspect-ratio: 1;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -199,7 +207,9 @@
 
   .tenki-stage {
     --stage-size: min(88vw, 360px);
-    --ring-depth: clamp(46px, 13vw, 58px);
+    --ring-width: clamp(43px, 12vw, 55px);
+    --ring-gap: clamp(14px, 4vw, 20px);
+    --square-size: clamp(108px, 37vw, 148px);
   }
 
   .time-segment span {
@@ -207,7 +217,4 @@
     min-height: clamp(18px, 5.5vw, 24px);
   }
 
-  .space-grid {
-    width: 55%;
-  }
 }
