@@ -99,8 +99,8 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: clamp(26px, 6vw, 36px);
-  min-height: clamp(20px, 4.5vw, 28px);
+  width: clamp(54px, 14vw, 74px);
+  min-height: clamp(24px, 5vw, 32px);
   display: grid;
   place-items: center;
   border: 0;
@@ -109,59 +109,16 @@
   background: transparent;
   box-shadow: none;
   font-family: "Share Tech Mono", monospace;
-  font-size: clamp(0.8rem, 2.2vw, 1.05rem);
+  font-size: clamp(0.52rem, 1.65vw, 0.7rem);
   font-weight: 700;
+  line-height: 1.08;
+  text-align: center;
   transform:
     translate(-50%, -50%)
     rotate(var(--label-angle))
     translateY(calc((var(--stage-size) - var(--ring-width)) * -0.5))
     rotate(calc(-1 * var(--label-angle)));
   transform-origin: center;
-}
-
-.time-segment-1 {
-  --label-angle: 0deg;
-  --divider-angle: -20deg;
-}
-
-.time-segment-2 {
-  --label-angle: 40deg;
-  --divider-angle: 20deg;
-}
-
-.time-segment-3 {
-  --label-angle: 80deg;
-  --divider-angle: 60deg;
-}
-
-.time-segment-4 {
-  --label-angle: 120deg;
-  --divider-angle: 100deg;
-}
-
-.time-segment-5 {
-  --label-angle: 160deg;
-  --divider-angle: 140deg;
-}
-
-.time-segment-6 {
-  --label-angle: 200deg;
-  --divider-angle: 180deg;
-}
-
-.time-segment-7 {
-  --label-angle: 240deg;
-  --divider-angle: 220deg;
-}
-
-.time-segment-8 {
-  --label-angle: 280deg;
-  --divider-angle: 260deg;
-}
-
-.time-segment-9 {
-  --label-angle: 320deg;
-  --divider-angle: 300deg;
 }
 
 .space-grid {
@@ -182,13 +139,16 @@
 .space-cell {
   display: grid;
   place-items: center;
+  padding: 4px;
   min-width: 0;
   border-right: 1px solid rgba(255, 255, 255, 0.16);
   border-bottom: 1px solid rgba(255, 255, 255, 0.16);
   color: var(--accent-soft);
   font-family: "Share Tech Mono", monospace;
-  font-size: clamp(1.25rem, 3.8vw, 2.15rem);
+  font-size: clamp(0.58rem, 2vw, 0.78rem);
   font-weight: 700;
+  line-height: 1.12;
+  text-align: center;
   text-shadow: 0 0 12px rgba(255, 213, 107, 0.22);
 }
 
@@ -213,8 +173,9 @@
   }
 
   .time-segment span {
-    width: clamp(22px, 7vw, 30px);
-    min-height: clamp(18px, 5.5vw, 24px);
+    width: clamp(44px, 15vw, 58px);
+    min-height: clamp(22px, 6vw, 28px);
+    font-size: clamp(0.46rem, 1.9vw, 0.58rem);
   }
 
 }
