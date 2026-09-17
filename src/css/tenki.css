@@ -1,0 +1,213 @@
+:root {
+  --banner-space: 84px;
+  --footer-space: 68px;
+}
+
+.tenki-page {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: calc(var(--banner-space) + 18px) 18px calc(var(--footer-space) + 18px);
+}
+
+.tenki-console {
+  width: min(100%, 520px);
+  display: grid;
+  gap: 16px;
+  place-items: center;
+}
+
+.tenki-title {
+  margin: 0;
+  color: var(--accent);
+  font-family: "Share Tech Mono", monospace;
+  font-size: clamp(1rem, 3vw, 1.35rem);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-transform: lowercase;
+  text-shadow: 0 0 12px var(--neon-shadow);
+}
+
+.tenki-stage {
+  --stage-size: min(84vw, 420px);
+  --ring-depth: clamp(54px, 10vw, 72px);
+  position: relative;
+  width: var(--stage-size);
+  aspect-ratio: 1;
+  justify-self: center;
+  display: grid;
+  place-items: center;
+  isolation: isolate;
+}
+
+.tenki-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(255, 255, 255, 0.44);
+  border-radius: 50%;
+  background: transparent;
+  box-shadow:
+    0 12px 36px rgba(0, 0, 0, 0.3),
+    0 0 20px rgba(var(--accent-rgb), 0.08);
+  z-index: 0;
+}
+
+.tenki-stage::after {
+  content: "";
+  position: absolute;
+  inset: var(--ring-depth);
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.time-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.time-segment {
+  --label-angle: 0deg;
+  --divider-angle: -20deg;
+  position: absolute;
+  inset: 0;
+}
+
+.time-segment::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 1px;
+  height: var(--ring-depth);
+  background: rgba(255, 255, 255, 0.34);
+  transform: translateX(-50%) rotate(var(--divider-angle));
+  transform-origin: 50% calc(var(--stage-size) / 2);
+}
+
+.time-segment span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: clamp(26px, 6vw, 36px);
+  min-height: clamp(20px, 4.5vw, 28px);
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 0;
+  color: var(--text);
+  background: transparent;
+  box-shadow: none;
+  font-family: "Share Tech Mono", monospace;
+  font-size: clamp(0.8rem, 2.2vw, 1.05rem);
+  font-weight: 700;
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--label-angle))
+    translateY(calc((var(--stage-size) - var(--ring-depth)) * -0.5))
+    rotate(calc(-1 * var(--label-angle)));
+  transform-origin: center;
+}
+
+.time-segment-1 {
+  --label-angle: 0deg;
+  --divider-angle: -20deg;
+}
+
+.time-segment-2 {
+  --label-angle: 40deg;
+  --divider-angle: 20deg;
+}
+
+.time-segment-3 {
+  --label-angle: 80deg;
+  --divider-angle: 60deg;
+}
+
+.time-segment-4 {
+  --label-angle: 120deg;
+  --divider-angle: 100deg;
+}
+
+.time-segment-5 {
+  --label-angle: 160deg;
+  --divider-angle: 140deg;
+}
+
+.time-segment-6 {
+  --label-angle: 200deg;
+  --divider-angle: 180deg;
+}
+
+.time-segment-7 {
+  --label-angle: 240deg;
+  --divider-angle: 220deg;
+}
+
+.time-segment-8 {
+  --label-angle: 280deg;
+  --divider-angle: 260deg;
+}
+
+.time-segment-9 {
+  --label-angle: 320deg;
+  --divider-angle: 300deg;
+}
+
+.space-grid {
+  width: min(54%, 230px);
+  aspect-ratio: 1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--neon-border);
+  background: transparent;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  z-index: 2;
+}
+
+.space-cell {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.16);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--accent-soft);
+  font-family: "Share Tech Mono", monospace;
+  font-size: clamp(1.25rem, 3.8vw, 2.15rem);
+  font-weight: 700;
+  text-shadow: 0 0 12px rgba(255, 213, 107, 0.22);
+}
+
+.space-cell:nth-child(3n) {
+  border-right: 0;
+}
+
+.space-cell:nth-child(n + 7) {
+  border-bottom: 0;
+}
+
+@media (max-width: 620px) {
+  .tenki-page {
+    padding-inline: 12px;
+  }
+
+  .tenki-stage {
+    --stage-size: min(88vw, 360px);
+    --ring-depth: clamp(46px, 13vw, 58px);
+  }
+
+  .time-segment span {
+    width: clamp(22px, 7vw, 30px);
+    min-height: clamp(18px, 5.5vw, 24px);
+  }
+
+  .space-grid {
+    width: 55%;
+  }
+}
