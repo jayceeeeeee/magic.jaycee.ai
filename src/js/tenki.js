@@ -1,5 +1,8 @@
 import { tenkiLayout, tenkiLoShuTable } from "./data/tenkiData.js";
 
+// Rotate the rendered circle by one segment so 9 sits at the top while the stored order remains unchanged.
+const CIRCLE_ROTATION_DEGREES = 40;
+
 const createLookup = (columns) => {
   const lookup = new Map();
 
@@ -34,10 +37,11 @@ const renderCircle = (root, layout, lookup) => {
     const item = lookup.get(number);
     if (!item) return;
 
+    const labelAngle = index * 40 + CIRCLE_ROTATION_DEGREES;
     const segment = document.createElement("div");
     segment.className = "time-segment";
-    segment.style.setProperty("--label-angle", `${index * 40}deg`);
-    segment.style.setProperty("--divider-angle", `${index * 40 - 20}deg`);
+    segment.style.setProperty("--label-angle", `${labelAngle}deg`);
+    segment.style.setProperty("--divider-angle", `${labelAngle - 20}deg`);
     segment.style.setProperty("--segment-color", item.baguaColor);
 
     const label = document.createElement("span");
