@@ -1,17 +1,23 @@
 import { tenkiLayout, tenkiLoShuTable } from "./data/tenkiData.js";
 
-const normalizeDirection = (direction) => direction.toLowerCase().replace(/[^a-z]/g, "");
-
 const createLookup = (columns) => {
   const lookup = new Map();
 
   columns.numbers.forEach((number, index) => {
     lookup.set(number, {
       sefirot: columns.sefirot[index],
-      jayceeNumber: columns.jayceeNumbers[index],
       number,
       direction: columns.directions[index],
-      baguaElement: columns.baguaElements[index]
+      baguaElement: columns.baguaElements[index],
+      baguaColorName: columns.baguaColorNames[index],
+      baguaColor: columns.baguaColors[index],
+      planet: columns.planets[index],
+      trigram: columns.trigrams[index],
+      trigramBinary: columns.trigramBinary[index],
+      trigramBinaryValue: columns.trigramBinaryValue[index],
+      trigramBinaryIncrementedValue: columns.trigramBinaryIncrementedValue[index],
+      trigramPinyin: columns.trigramPinyin[index],
+      trigramHanzi: columns.trigramHanzi[index]
     });
   });
 
@@ -24,7 +30,7 @@ const renderCircle = (root, layout, lookup) => {
 
   ring.replaceChildren();
 
-  layout.circleOrder.forEach((number, index) => {
+  layout.displayOrder.forEach((number, index) => {
     const item = lookup.get(number);
     if (!item) return;
 
@@ -32,10 +38,11 @@ const renderCircle = (root, layout, lookup) => {
     segment.className = "time-segment";
     segment.style.setProperty("--label-angle", `${index * 40}deg`);
     segment.style.setProperty("--divider-angle", `${index * 40 - 20}deg`);
+    segment.style.setProperty("--segment-color", item.baguaColor);
 
     const label = document.createElement("span");
-    label.textContent = item.baguaElement;
-    label.title = `${item.sefirot} - ${item.direction}`;
+    label.textContent = item.planet.split(" ").at(-1);
+    label.title = `${item.sefirot} - ${item.direction} - ${item.baguaElement} - ${item.trigramPinyin}`;
 
     segment.append(label);
     ring.append(segment);
@@ -46,20 +53,17 @@ const renderSquare = (root, layout, lookup) => {
   const grid = root.querySelector("[data-space-grid]");
   if (!grid) return;
 
-  const byDirection = new Map(
-    [...lookup.values()].map((item) => [normalizeDirection(item.direction), item])
-  );
-
   grid.replaceChildren();
 
-  layout.squareDirections.forEach((direction) => {
-    const item = byDirection.get(normalizeDirection(direction));
+  layout.displayOrder.forEach((number) => {
+    const item = lookup.get(number);
     const cell = document.createElement("div");
     cell.className = "space-cell";
 
     if (item) {
-      cell.textContent = item.baguaElement;
-      cell.title = `${item.sefirot} - ${item.direction}`;
+      cell.style.setProperty("--cell-color", item.baguaColor);
+      cell.textContent = item.trigramHanzi;
+      cell.title = `${item.sefirot} - ${item.direction} - ${item.baguaElement} - ${item.trigram || "Center"} ${item.trigramPinyin}`.trim();
     }
 
     grid.append(cell);
