@@ -54,7 +54,7 @@ export const tenkiLoShuTable = {
       "#D5B84C",
       "#4D83AE",
       "#D8D8D3",
-      "#182A46",
+      "#315A8C",
       "#85838B"
     ],
     planets: [
@@ -67,6 +67,17 @@ export const tenkiLoShuTable = {
       "Jupiter \u2643",
       "Saturn \u2644",
       "Uranus \u2645"
+    ],
+    planetImages: [
+      "/src/assets/images/planets/neptune.png",
+      "/src/assets/images/planets/sun.png",
+      "/src/assets/images/planets/moon.png",
+      "/src/assets/images/planets/mars.png",
+      "/src/assets/images/planets/venus.png",
+      "/src/assets/images/planets/mercury.png",
+      "/src/assets/images/planets/jupiter.png",
+      "/src/assets/images/planets/saturn.png",
+      "/src/assets/images/planets/uranus.png"
     ],
     trigrams: [
       "\u2634",

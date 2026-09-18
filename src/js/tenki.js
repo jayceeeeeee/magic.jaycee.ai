@@ -15,6 +15,7 @@ const createLookup = (columns) => {
       baguaColorName: columns.baguaColorNames[index],
       baguaColor: columns.baguaColors[index],
       planet: columns.planets[index],
+      planetImage: columns.planetImages[index],
       trigram: columns.trigrams[index],
       trigramBinary: columns.trigramBinary[index],
       trigramBinaryValue: columns.trigramBinaryValue[index],
@@ -45,9 +46,16 @@ const renderCircle = (root, layout, lookup) => {
     segment.style.setProperty("--segment-color", item.baguaColor);
 
     const label = document.createElement("span");
-    label.textContent = item.planet.split(" ").at(-1);
+    label.className = "planet-token";
     label.title = `${item.sefirot} - ${item.direction} - ${item.baguaElement} - ${item.trigramPinyin}`;
 
+    const image = document.createElement("img");
+    image.src = item.planetImage;
+    image.alt = item.planet.split(" ").at(0);
+    image.loading = "lazy";
+    image.decoding = "async";
+
+    label.append(image);
     segment.append(label);
     ring.append(segment);
   });
