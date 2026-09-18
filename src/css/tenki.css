@@ -319,11 +319,21 @@
 
 @media (max-width: 620px) {
   .tenki-page {
-    padding-inline: 12px;
+    width: min(100% - 20px, 560px);
+    padding-inline: 0;
+  }
+
+  .tenki-console {
+    gap: 18px;
+    padding: 16px;
+  }
+
+  .tenki-command-console {
+    padding: 13px 14px;
   }
 
   .tenki-stage {
-    --stage-size: min(calc(100vw - 76px), 360px);
+    --stage-size: min(calc(100vw - 72px), 340px);
     --ring-width: clamp(43px, 12vw, 55px);
     --ring-gap: clamp(14px, 4vw, 20px);
     --square-size: clamp(108px, 37vw, 148px);
