@@ -4,35 +4,110 @@
 }
 
 .tenki-page {
+  width: min(100% - 28px, 560px);
   min-height: 100svh;
   display: grid;
   align-items: start;
   justify-items: center;
-  padding: calc(var(--banner-space) + 18px) 18px calc(var(--footer-space) + 18px);
+  margin: 0 auto;
+  padding: calc(var(--banner-space) + 28px) 0 calc(var(--footer-space) + 28px);
 }
 
 .tenki-console {
-  width: min(100%, 520px);
-  min-height: calc(100svh - var(--banner-space) - var(--footer-space) - 36px);
+  position: relative;
+  width: 100%;
+  min-height: calc(100svh - var(--banner-space) - var(--footer-space) - 56px);
   display: grid;
+  gap: 22px;
   grid-template-rows: auto 1fr;
   justify-items: center;
+  padding: 24px;
+  border: 1px solid var(--field-border);
+  border-radius: 8px;
+  background:
+    var(--panel-light),
+    var(--panel-aura),
+    var(--card);
+  box-shadow:
+    0 20px 70px rgba(0, 0, 0, 0.52),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
-.tenki-title {
+.tenki-console::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent, var(--neon-line), transparent) top / 100% 2px no-repeat,
+    linear-gradient(120deg, transparent, var(--neon-sheen), transparent);
+}
+
+.tenki-command-console,
+.tenki-stage {
+  position: relative;
+  z-index: 1;
+}
+
+.tenki-command-console {
+  width: 100%;
+  display: grid;
+  gap: 8px;
+  padding: 15px 16px;
+  border: 1px solid var(--field-border-soft);
+  border-radius: 6px;
+  background:
+    linear-gradient(90deg, rgba(var(--accent-rgb), 0.12), transparent 62%),
+    rgba(0, 0, 0, 0.18);
+  color: var(--text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.tenki-command-line,
+.tenki-status-line {
   margin: 0;
-  color: var(--accent);
   font-family: "Share Tech Mono", monospace;
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  line-height: 1;
+  line-height: 1.35;
+}
+
+.tenki-command-line {
+  display: flex;
+  flex-wrap: wrap;
+  color: var(--accent);
+  font-size: 0.9rem;
   text-transform: uppercase;
-  text-shadow: 0 0 10px var(--neon-shadow);
+  text-shadow: 0 0 12px rgba(var(--accent-rgb), 0.18);
+}
+
+.tenki-command-line span:nth-child(2) {
+  margin: 0 7px;
+  color: var(--accent);
+}
+
+.tenki-status-line {
+  color: var(--accent-soft);
+}
+
+.tenki-status-line > span:first-child {
+  margin-right: 7px;
+  color: var(--accent);
+}
+
+.cursor {
+  display: inline-block;
+  color: var(--accent);
+  animation: blink 900ms steps(1) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
 }
 
 .tenki-stage {
-  --stage-size: min(84vw, 420px);
+  --stage-size: min(calc(100vw - 76px), 420px);
   --ring-width: clamp(52px, 10vw, 66px);
   --ring-gap: clamp(18px, 4vw, 26px);
   --square-size: clamp(128px, 36vw, 174px);
@@ -250,16 +325,16 @@
   }
 
   .tenki-stage {
-    --stage-size: min(88vw, 360px);
+    --stage-size: min(calc(100vw - 76px), 360px);
     --ring-width: clamp(43px, 12vw, 55px);
     --ring-gap: clamp(14px, 4vw, 20px);
     --square-size: clamp(108px, 37vw, 148px);
   }
 
   .time-segment span {
-    width: clamp(44px, 15vw, 58px);
+    width: clamp(26px, 8vw, 34px);
     min-height: clamp(22px, 6vw, 28px);
-    font-size: clamp(0.46rem, 1.9vw, 0.58rem);
+    font-size: clamp(0.72rem, 2.6vw, 0.98rem);
   }
 
 }
