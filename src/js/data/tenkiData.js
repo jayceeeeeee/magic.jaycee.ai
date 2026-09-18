@@ -1,5 +1,5 @@
 export const tenkiLoShuTable = {
-  lineCount: 10,
+  lineCount: 9,
   columns: {
     sefirot: [
       "Kether",
@@ -10,8 +10,7 @@ export const tenkiLoShuTable = {
       "Tiphereth",
       "Netzach",
       "Hod",
-      "Yesod",
-      "Malkuth"
+      "Yesod"
     ],
     jayceeNumbers: [
       "1 (linked to 9 in polarity)",
@@ -22,10 +21,9 @@ export const tenkiLoShuTable = {
       "6 (linked to 4)",
       "7 (linked to 3)",
       "8 (linked to 2)",
-      "9 (linked to 1)",
-      "10 (linked to 5 in fractal form)"
+      "9 (linked to 1)"
     ],
-    numbers: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    numbers: [1, 2, 3, 4, 5, 6, 7, 8, 9],
     directions: [
       "Southeast",
       "South",
@@ -35,8 +33,7 @@ export const tenkiLoShuTable = {
       "Northeast",
       "West",
       "North",
-      "Northwest",
-      "Fractal of the Lo-shu - the square itself"
+      "Northwest"
     ],
     baguaElements: [
       "Wind \u{1F32C}\uFE0F",
@@ -47,18 +44,8 @@ export const tenkiLoShuTable = {
       "Mountain \u26F0\uFE0F",
       "Lake, Metal \u{1F305}",
       "Water, Abyss \u{1F4A7}",
-      "Heaven \u{1F308}",
-      "Earth - Malkuth \u{1F30D}"
+      "Heaven \u{1F308}"
     ]
-  }
-};
-
-export const tenkiExtensions = {
-  daat: {
-    sefirot: "Da\u2019at",
-    jayceeNumber: 11,
-    direction: "Spirit",
-    baguaElement: "Spirit \u262F\uFE0E"
   }
 };
 
