@@ -181,31 +181,30 @@
   place-items: center;
   border: 0;
   border-radius: 50%;
-  color: var(--accent);
-  background:
-    linear-gradient(145deg, color-mix(in srgb, var(--segment-color), white 28%), var(--segment-color));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.34),
-    inset 0 -2px 3px rgba(0, 0, 0, 0.18),
-    0 0 14px color-mix(in srgb, var(--segment-color), transparent 36%),
-    0 4px 10px rgba(0, 0, 0, 0.2);
-  font-family: "Noto Sans SC", "Share Tech Mono", sans-serif;
-  font-size: clamp(0.82rem, 2.35vw, 1.12rem);
-  font-weight: 500;
-  line-height: 1;
-  text-align: center;
-  -webkit-text-fill-color: var(--accent);
-  -webkit-text-stroke: 0.28px rgba(245, 255, 250, 0.3);
-  text-shadow:
-    0 -1px 0 rgba(255, 255, 255, 0.18),
-    0 1px 1px rgba(0, 0, 0, 0.58),
-    0 0 8px rgba(var(--accent-rgb), 0.3);
+  background: transparent;
+  box-shadow: none;
   transform:
     translate(-50%, -50%)
     rotate(var(--label-angle))
     translateY(calc((var(--stage-size) - var(--ring-width)) * -0.5))
     rotate(calc(-1 * var(--label-angle)));
   transform-origin: center;
+  overflow: hidden;
+}
+
+.planet-token img {
+  width: 86%;
+  height: 86%;
+  display: block;
+  object-fit: contain;
+  filter:
+    brightness(1.08)
+    saturate(1.08)
+    drop-shadow(0 0 3px rgba(255, 255, 255, 0.2))
+    drop-shadow(0 0 8px color-mix(in srgb, var(--segment-color), transparent 18%))
+    drop-shadow(0 0 14px color-mix(in srgb, var(--segment-color), transparent 58%))
+    drop-shadow(0 2px 3px rgba(0, 0, 0, 0.44));
+  pointer-events: none;
 }
 
 .space-grid {
