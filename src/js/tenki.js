@@ -1,11 +1,12 @@
 // Rotate the rendered circle by one segment so 9 sits at the top while the stored order remains unchanged.
 const CIRCLE_ROTATION_DEGREES = 40;
-const TENKI_TABLE = "tenki_entries";
+const TENKI_TABLE = "tenki_fractals";
 const TENKI_ENTRY_COUNT = 9;
+const TENKI_NUMBER_COLUMNS = Array.from({ length: TENKI_ENTRY_COUNT }, (_, index) => String(index + 1));
+const TENKI_DISPLAY_ORDER_LABEL = "display_order";
 
-const tenkiColumnMap = {
+const tenkiLineLabels = {
   sefirot: "sefirot",
-  numbers: "number",
   directions: "direction",
   baguaElements: "bagua_element",
   baguaColorNames: "bagua_color_name",
@@ -20,19 +21,37 @@ const tenkiColumnMap = {
 };
 
 const createTenkiDataFromRows = (rows) => {
-  const rowsByNumber = [...rows].sort((left, right) => left.number - right.number);
-  const displayOrder = [...rows].sort((left, right) => left.display_order - right.display_order).map((row) => row.number);
+  const rowsByLabel = new Map(rows.map((row) => [row.label, row]));
+  const getLineValues = (label) => {
+    const row = rowsByLabel.get(label);
+
+    if (!row) {
+      throw new Error(`Tenki database is missing "${label}".`);
+    }
+
+    return TENKI_NUMBER_COLUMNS.map((number) => row[number] ?? "");
+  };
+
+  const columns = Object.fromEntries(
+    Object.entries(tenkiLineLabels).map(([columnName, label]) => [
+      columnName,
+      getLineValues(label)
+    ])
+  );
+  const displayOrder = getLineValues(TENKI_DISPLAY_ORDER_LABEL).map(Number);
+
+  if (displayOrder.some((number) => !Number.isInteger(number))) {
+    throw new Error("Tenki display order contains invalid numbers.");
+  }
 
   return {
     layout: { displayOrder },
     table: {
-      lineCount: rowsByNumber.length,
-      columns: Object.fromEntries(
-        Object.entries(tenkiColumnMap).map(([columnName, rowKey]) => [
-          columnName,
-          rowsByNumber.map((row) => row[rowKey])
-        ])
-      )
+      lineCount: TENKI_ENTRY_COUNT,
+      columns: {
+        numbers: TENKI_NUMBER_COLUMNS.map(Number),
+        ...columns
+      }
     }
   };
 };
@@ -46,13 +65,13 @@ const loadTenkiData = async () => {
   const { data, error } = await client
     .from(TENKI_TABLE)
     .select("*")
-    .order("number", { ascending: true });
+    .in("label", [TENKI_DISPLAY_ORDER_LABEL, ...Object.values(tenkiLineLabels)]);
 
   if (error) {
     throw error;
   }
 
-  if (!Array.isArray(data) || data.length !== TENKI_ENTRY_COUNT) {
+  if (!Array.isArray(data) || data.length < Object.keys(tenkiLineLabels).length) {
     throw new Error("Tenki database returned incomplete data.");
   }
 
@@ -103,7 +122,7 @@ const renderCircle = (root, layout, lookup) => {
     const label = document.createElement("span");
     label.className = "planet-token";
     label.title = `${item.sefirot} - ${item.direction} - ${item.baguaElement} - ${item.trigramPinyin}`;
-    label.textContent = item.planet.split(" ").at(-1) || item.planet;
+    label.textContent = item.planet || "";
 
     segment.append(label);
     ring.append(segment);

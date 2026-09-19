@@ -175,8 +175,8 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: clamp(30px, 7vw, 40px);
-  aspect-ratio: 1;
+  width: clamp(48px, 12vw, 64px);
+  min-height: clamp(24px, 6vw, 34px);
   display: grid;
   place-items: center;
   border: 0;
@@ -195,8 +195,10 @@
 .planet-token {
   color: var(--segment-color);
   font-family: "Share Tech Mono", monospace;
-  font-size: clamp(1.28rem, 4.4vw, 1.9rem);
+  font-size: clamp(0.5rem, 1.75vw, 0.72rem);
   line-height: 1;
+  overflow-wrap: anywhere;
+  text-align: center;
   text-shadow:
     0 0 3px rgba(255, 255, 255, 0.2),
     0 0 8px color-mix(in srgb, var(--segment-color), transparent 18%),
