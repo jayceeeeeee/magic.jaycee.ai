@@ -1,7 +1,63 @@
-import { tenkiLayout, tenkiLoShuTable } from "./data/tenkiData.js";
-
 // Rotate the rendered circle by one segment so 9 sits at the top while the stored order remains unchanged.
 const CIRCLE_ROTATION_DEGREES = 40;
+const TENKI_TABLE = "tenki_entries";
+const TENKI_ENTRY_COUNT = 9;
+
+const tenkiColumnMap = {
+  sefirot: "sefirot",
+  numbers: "number",
+  directions: "direction",
+  baguaElements: "bagua_element",
+  baguaColorNames: "bagua_color_name",
+  baguaColors: "bagua_color",
+  planets: "planet",
+  trigrams: "trigram",
+  trigramBinary: "trigram_binary",
+  trigramBinaryValue: "trigram_binary_value",
+  trigramBinaryIncrementedValue: "trigram_binary_incremented_value",
+  trigramPinyin: "trigram_pinyin",
+  trigramHanzi: "trigram_hanzi"
+};
+
+const createTenkiDataFromRows = (rows) => {
+  const rowsByNumber = [...rows].sort((left, right) => left.number - right.number);
+  const displayOrder = [...rows].sort((left, right) => left.display_order - right.display_order).map((row) => row.number);
+
+  return {
+    layout: { displayOrder },
+    table: {
+      lineCount: rowsByNumber.length,
+      columns: Object.fromEntries(
+        Object.entries(tenkiColumnMap).map(([columnName, rowKey]) => [
+          columnName,
+          rowsByNumber.map((row) => row[rowKey])
+        ])
+      )
+    }
+  };
+};
+
+const loadTenkiData = async () => {
+  if (!window.JayceeAuth) {
+    throw new Error("Tenki database client is not available.");
+  }
+
+  const client = await window.JayceeAuth.getSupabaseClient();
+  const { data, error } = await client
+    .from(TENKI_TABLE)
+    .select("*")
+    .order("number", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  if (!Array.isArray(data) || data.length !== TENKI_ENTRY_COUNT) {
+    throw new Error("Tenki database returned incomplete data.");
+  }
+
+  return createTenkiDataFromRows(data);
+};
 
 const createLookup = (columns) => {
   const lookup = new Map();
@@ -15,7 +71,6 @@ const createLookup = (columns) => {
       baguaColorName: columns.baguaColorNames[index],
       baguaColor: columns.baguaColors[index],
       planet: columns.planets[index],
-      planetImage: columns.planetImages[index],
       trigram: columns.trigrams[index],
       trigramBinary: columns.trigramBinary[index],
       trigramBinaryValue: columns.trigramBinaryValue[index],
@@ -48,14 +103,8 @@ const renderCircle = (root, layout, lookup) => {
     const label = document.createElement("span");
     label.className = "planet-token";
     label.title = `${item.sefirot} - ${item.direction} - ${item.baguaElement} - ${item.trigramPinyin}`;
+    label.textContent = item.planet.split(" ").at(-1) || item.planet;
 
-    const image = document.createElement("img");
-    image.src = item.planetImage;
-    image.alt = item.planet.split(" ").at(0);
-    image.loading = "lazy";
-    image.decoding = "async";
-
-    label.append(image);
     segment.append(label);
     ring.append(segment);
   });
@@ -82,14 +131,25 @@ const renderSquare = (root, layout, lookup) => {
   });
 };
 
-const initTenki = () => {
+const initTenki = async () => {
   const root = document.querySelector("[data-tenki]");
   if (!root) return;
 
-  const lookup = createLookup(tenkiLoShuTable.columns);
+  try {
+    const { layout, table } = await loadTenkiData();
+    const lookup = createLookup(table.columns);
 
-  renderCircle(root, tenkiLayout, lookup);
-  renderSquare(root, tenkiLayout, lookup);
+    renderCircle(root, layout, lookup);
+    renderSquare(root, layout, lookup);
+  } catch (error) {
+    const status = root.querySelector(".tenki-status-line");
+
+    if (status) {
+      status.textContent = `> ${error.message || "Unable to load Tenki database."}`;
+    }
+
+    console.error("Unable to load Tenki data from Supabase.", error);
+  }
 };
 
 initTenki();
