@@ -1,6 +1,8 @@
 const RING_SEGMENT_COUNT = 9;
 const SQUARE_GRID_SIZE = 3;
 const TENKI_ORDER = [1, 2, 4, 3, 5, 7, 6, 8, 9];
+const COMMAND_RING_NUMBER = 9;
+const COMMAND_RING_PROMPT = "> ";
 const SQUARE_DIRECTIONS = [
   Math.PI / 4,
   Math.PI / 2,
@@ -26,11 +28,12 @@ const getBinaryLabel = (number) => {
 };
 const DEFAULT_TENKI_ROWS = TENKI_ORDER.map((number) => ({
   number,
-  binary: getBinaryLabel(number)
+  binary: getBinaryLabel(number),
+  isCommandPrompt: number === COMMAND_RING_NUMBER
 }));
 const RING_TEMPLATES = [
   {
-    getLabels: (rows) => rows.map((row) => row.binary || ""),
+    getLabels: (rows) => rows.map((row) => (row.isCommandPrompt ? COMMAND_RING_PROMPT : row.binary || "")),
     tone: "accent"
   },
   {
@@ -52,6 +55,18 @@ const getThemeColor = (name, fallback) => {
   return value || fallback;
 };
 
+const getColorRgb = (color, fallback) => {
+  const hex = color.match(/^#([0-9a-f]{6})$/i);
+  if (!hex) return fallback;
+
+  const value = Number.parseInt(hex[1], 16);
+  const red = (value >> 16) & 255;
+  const green = (value >> 8) & 255;
+  const blue = value & 255;
+
+  return `${red}, ${green}, ${blue}`;
+};
+
 const getCanvasMetrics = (canvas, ringCount) => {
   const rect = canvas.getBoundingClientRect();
   const size = Math.min(rect.width, rect.height);
@@ -69,6 +84,23 @@ const getCanvasMetrics = (canvas, ringCount) => {
     squareSize,
     squareOuterRadius
   };
+};
+
+const getPlayButtonHitArea = (metrics) => {
+  const cellSize = metrics.squareSize / SQUARE_GRID_SIZE;
+
+  return {
+    x: metrics.center,
+    y: metrics.center,
+    radius: cellSize * 0.43
+  };
+};
+
+const isPointInCircle = (point, circle) => {
+  const distanceX = point.x - circle.x;
+  const distanceY = point.y - circle.y;
+
+  return Math.hypot(distanceX, distanceY) <= circle.radius;
 };
 
 const resizeCanvas = (canvas) => {
@@ -100,6 +132,31 @@ const drawCenteredText = (context, text, x, y, size, color) => {
   context.restore();
 };
 
+const drawCommandPrompt = (context, x, y, size, colors, isCursorVisible) => {
+  const parts = [
+    { text: COMMAND_RING_PROMPT, color: colors.text },
+    { text: isCursorVisible ? "_" : " ", color: colors.text }
+  ];
+
+  context.save();
+  context.font = `600 ${size}px "Share Tech Mono", monospace`;
+  context.textAlign = "left";
+  context.textBaseline = "middle";
+
+  const totalWidth = parts.reduce((width, part) => width + context.measureText(part.text).width, 0);
+  let currentX = x - (totalWidth / 2);
+
+  parts.forEach((part) => {
+    context.fillStyle = part.color;
+    context.shadowColor = part.color;
+    context.shadowBlur = 10;
+    context.fillText(part.text, currentX, y);
+    currentX += context.measureText(part.text).width;
+  });
+
+  context.restore();
+};
+
 const getTopCenteredLastSegmentRotation = (count) => {
   const segmentAngle = (Math.PI * 2) / count;
   return -Math.PI / 2 - ((count - 0.5) * segmentAngle);
@@ -113,6 +170,8 @@ const drawRing = (context, metrics, options) => {
     outerRadius,
     stroke,
     textColor,
+    commandColor,
+    isCommandCursorVisible = true,
     rotation = -Math.PI / 2
   } = options;
   const segmentAngle = (Math.PI * 2) / count;
@@ -146,14 +205,23 @@ const drawRing = (context, metrics, options) => {
     context.stroke();
 
     if (label) {
-      drawCenteredText(
-        context,
-        String(label),
-        labelX,
-        labelY,
-        Math.max(11, (outerRadius - innerRadius) * 0.36),
-        textColor
-      );
+      const textSize = Math.max(11, (outerRadius - innerRadius) * 0.36);
+
+      if (label === COMMAND_RING_PROMPT) {
+        drawCommandPrompt(context, labelX, labelY, textSize, {
+          accent: commandColor,
+          text: textColor
+        }, isCommandCursorVisible);
+      } else {
+        drawCenteredText(
+          context,
+          String(label),
+          labelX,
+          labelY,
+          textSize,
+          textColor
+        );
+      }
     }
   });
 
@@ -182,10 +250,38 @@ const drawDirectionalMark = (context, x, y, size, angle, color) => {
   context.restore();
 };
 
-const drawSquare = (context, metrics, colors) => {
+const drawPlayButton = (context, x, y, radius, markSize, colors, isHovered) => {
+  const hoverScale = isHovered ? 1.08 : 1;
+  const displayRadius = radius * hoverScale;
+
+  context.save();
+  context.shadowColor = colors.buttonGlow;
+  context.shadowBlur = isHovered ? 22 : 14;
+  context.fillStyle = isHovered ? colors.buttonFillHover : colors.buttonFill;
+  context.strokeStyle = isHovered ? colors.buttonStrokeHover : colors.buttonStroke;
+  context.lineWidth = Math.max(1, displayRadius * 0.045);
+
+  context.beginPath();
+  context.arc(x, y, displayRadius, 0, Math.PI * 2);
+  context.fill();
+  context.stroke();
+
+  context.shadowBlur = 0;
+  context.strokeStyle = colors.buttonHighlight;
+  context.lineWidth = Math.max(1, displayRadius * 0.025);
+  context.beginPath();
+  context.arc(x, y, displayRadius * 0.78, Math.PI * 1.08, Math.PI * 1.62);
+  context.stroke();
+  context.restore();
+
+  drawDirectionalMark(context, x, y, markSize, Math.PI, colors.text);
+};
+
+const drawSquare = (context, metrics, colors, options = {}) => {
   const start = metrics.center - (metrics.squareSize / 2);
   const cellSize = metrics.squareSize / SQUARE_GRID_SIZE;
   const markSize = cellSize * 0.78;
+  const playButton = getPlayButtonHitArea(metrics);
 
   context.save();
   context.lineWidth = 1;
@@ -219,6 +315,15 @@ const drawSquare = (context, metrics, colors) => {
     }
   });
 
+  drawPlayButton(
+    context,
+    playButton.x,
+    playButton.y,
+    playButton.radius,
+    markSize,
+    colors,
+    options.isPlayButtonHovered
+  );
   context.restore();
 };
 
@@ -231,12 +336,13 @@ const createTenkiState = (orderedRows) => ({
 
 const DEFAULT_TENKI_STATE = createTenkiState(DEFAULT_TENKI_ROWS);
 
-const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
+const drawTenki = (canvas, state = DEFAULT_TENKI_STATE, options = {}) => {
   const context = resizeCanvas(canvas);
   const rect = canvas.getBoundingClientRect();
   const metrics = getCanvasMetrics(canvas, state.rings.length);
   const accent = getThemeColor("--accent", "#74f7d1");
   const accentSoft = getThemeColor("--accent-soft", "#a7ffe7");
+  const accentSoftRgb = getColorRgb(accentSoft, "255, 213, 107");
   const border = "rgba(255, 255, 255, 0.38)";
   const softBorder = "rgba(255, 255, 255, 0.24)";
 
@@ -255,15 +361,25 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
       outerRadius,
       stroke: isSoft ? softBorder : border,
       textColor: isSoft ? accentSoft : accent,
+      commandColor: accentSoft,
+      isCommandCursorVisible: options.isCommandCursorVisible,
       rotation: ring.centerLastSegmentAtTop ? getTopCenteredLastSegmentRotation(ring.count) : undefined
     });
   });
 
   drawSquare(context, metrics, {
     border,
+    buttonFill: `rgba(${accentSoftRgb}, 0.12)`,
+    buttonFillHover: `rgba(${accentSoftRgb}, 0.18)`,
+    buttonGlow: `rgba(${accentSoftRgb}, 0.18)`,
+    buttonHighlight: `rgba(${accentSoftRgb}, 0.28)`,
+    buttonStroke: `rgba(${accentSoftRgb}, 0.5)`,
+    buttonStrokeHover: `rgba(${accentSoftRgb}, 0.78)`,
     glow: "rgba(116, 247, 209, 0.14)",
     squareFill: "rgba(7, 21, 24, 0.18)",
     text: accent
+  }, {
+    isPlayButtonHovered: options.isPlayButtonHovered
   });
 };
 
@@ -271,11 +387,54 @@ const initTenki = () => {
   const canvas = document.querySelector("[data-tenki-canvas]");
   if (!canvas) return;
 
-  const render = () => drawTenki(canvas);
+  let isPlayButtonHovered = false;
+  let isCommandCursorVisible = true;
+  const render = () => drawTenki(canvas, DEFAULT_TENKI_STATE, {
+    isCommandCursorVisible,
+    isPlayButtonHovered
+  });
+  const getPointerPoint = (event) => {
+    const rect = canvas.getBoundingClientRect();
+
+    return {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top
+    };
+  };
+  const updatePlayButtonHover = (event) => {
+    const metrics = getCanvasMetrics(canvas, DEFAULT_TENKI_STATE.rings.length);
+    const nextIsHovered = isPointInCircle(getPointerPoint(event), getPlayButtonHitArea(metrics));
+
+    if (nextIsHovered === isPlayButtonHovered) return;
+
+    isPlayButtonHovered = nextIsHovered;
+    canvas.style.cursor = isPlayButtonHovered ? "pointer" : "";
+    render();
+  };
   const resizeObserver = new ResizeObserver(render);
 
   resizeObserver.observe(canvas);
   window.addEventListener("resize", render);
+  window.setInterval(() => {
+    isCommandCursorVisible = !isCommandCursorVisible;
+    render();
+  }, 600);
+  canvas.addEventListener("pointermove", updatePlayButtonHover);
+  canvas.addEventListener("pointerleave", () => {
+    if (!isPlayButtonHovered) return;
+
+    isPlayButtonHovered = false;
+    canvas.style.cursor = "";
+    render();
+  });
+  canvas.addEventListener("click", (event) => {
+    const metrics = getCanvasMetrics(canvas, DEFAULT_TENKI_STATE.rings.length);
+    const isPlayButtonClicked = isPointInCircle(getPointerPoint(event), getPlayButtonHitArea(metrics));
+
+    if (!isPlayButtonClicked) return;
+
+    canvas.dispatchEvent(new CustomEvent("tenki:play", { bubbles: true }));
+  });
   render();
 };
 
