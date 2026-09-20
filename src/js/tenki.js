@@ -1,7 +1,39 @@
-const SEGMENT_COUNT = 12;
-const SEGMENTS_PER_TURN = 9;
 const TAU = Math.PI * 2;
-const START_ANGLE = -Math.PI / 2;
+const FULL_CIRCLE_DEGREES = 360;
+
+const SPIRAL_CONFIG = {
+  timeCycleLength: 10,
+  segmentsPerLoop: 9,
+  startAngleDegrees: -90,
+  origin: {
+    xRatio: 0.5,
+    yRatio: 0.5
+  },
+  innerRadiusRatio: 0.08,
+  outerMarginRatio: 0.075,
+  minReadableBandWidth: 9
+};
+
+const degreesToRadians = (degrees) => (degrees * Math.PI) / 180;
+
+const getGreatestCommonDivisor = (a, b) => {
+  let left = Math.abs(a);
+  let right = Math.abs(b);
+
+  while (right !== 0) {
+    const remainder = left % right;
+    left = right;
+    right = remainder;
+  }
+
+  return left;
+};
+
+const getLeastCommonMultiple = (a, b) => {
+  if (a === 0 || b === 0) return 0;
+
+  return Math.abs(a * b) / getGreatestCommonDivisor(a, b);
+};
 
 const getCssColor = (name, fallback) => {
   const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -13,7 +45,7 @@ const polarToPoint = (center, radius, angle) => ({
   y: center.y + Math.sin(angle) * radius
 });
 
-const buildSpiralSegment = ({ center, innerStart, bandWidth, pitch, angleStart, angleEnd }) => {
+const buildSpiralSegment = ({ center, innerStart, bandWidth, pitch, spiralStartAngle, angleStart, angleEnd }) => {
   const steps = 18;
   const outerPoints = [];
   const innerPoints = [];
@@ -21,7 +53,7 @@ const buildSpiralSegment = ({ center, innerStart, bandWidth, pitch, angleStart, 
   for (let step = 0; step <= steps; step += 1) {
     const t = step / steps;
     const angle = angleStart + (angleEnd - angleStart) * t;
-    const progress = (angle - START_ANGLE) / TAU;
+    const progress = (angle - spiralStartAngle) / TAU;
     const innerRadius = innerStart + pitch * progress;
     outerPoints.push(polarToPoint(center, innerRadius + bandWidth, angle));
   }
@@ -29,7 +61,7 @@ const buildSpiralSegment = ({ center, innerStart, bandWidth, pitch, angleStart, 
   for (let step = steps; step >= 0; step -= 1) {
     const t = step / steps;
     const angle = angleStart + (angleEnd - angleStart) * t;
-    const progress = (angle - START_ANGLE) / TAU;
+    const progress = (angle - spiralStartAngle) / TAU;
     const innerRadius = innerStart + pitch * progress;
     innerPoints.push(polarToPoint(center, innerRadius, angle));
   }
@@ -50,6 +82,38 @@ const drawSegmentPath = (context, points) => {
   context.closePath();
 };
 
+const formatDegrees = (degrees) => `${Number(degrees.toFixed(3))}deg`;
+
+const drawConfigReadout = ({ context, size, lines }) => {
+  const padding = Math.max(10, size * 0.022);
+  const lineHeight = Math.max(12, size * 0.026);
+  const fontSize = Math.max(9, size * 0.02);
+  const panelWidth = Math.max(150, size * 0.34);
+  const panelHeight = padding * 1.25 + lines.length * lineHeight;
+
+  context.save();
+  context.shadowColor = "rgba(0, 0, 0, 0.26)";
+  context.shadowBlur = 10;
+  context.fillStyle = "rgba(4, 16, 18, 0.62)";
+  context.fillRect(padding, padding, panelWidth, panelHeight);
+
+  context.shadowBlur = 0;
+  context.strokeStyle = "rgba(255, 255, 255, 0.16)";
+  context.lineWidth = 1;
+  context.strokeRect(padding, padding, panelWidth, panelHeight);
+
+  context.fillStyle = "rgba(242, 255, 251, 0.86)";
+  context.font = `600 ${fontSize}px "Share Tech Mono", monospace`;
+  context.textAlign = "left";
+  context.textBaseline = "top";
+
+  lines.forEach((line, index) => {
+    context.fillText(line, padding * 1.6, padding * 1.45 + index * lineHeight);
+  });
+
+  context.restore();
+};
+
 const drawTenkiSpiral = (canvas) => {
   const rect = canvas.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
@@ -63,56 +127,81 @@ const drawTenkiSpiral = (canvas) => {
   context.clearRect(0, 0, size, size);
 
   const accent = getCssColor("--accent", "#53dcc6");
-  const accentSoft = getCssColor("--accent-soft", "#ffd56b");
   const text = getCssColor("--text", "#f2fffb");
-  const center = { x: size / 2, y: size / 2 };
-  const segmentAngle = TAU / SEGMENTS_PER_TURN;
-  const margin = size * 0.08;
-  const innerStart = size * 0.115;
-  const bandWidth = size * 0.105;
-  const turns = (SEGMENT_COUNT + 1) / SEGMENTS_PER_TURN;
-  const maxInnerRadius = size / 2 - margin - bandWidth;
-  const pitch = (maxInnerRadius - innerStart) / turns;
+  const {
+    timeCycleLength,
+    segmentsPerLoop,
+    startAngleDegrees,
+    origin,
+    innerRadiusRatio,
+    outerMarginRatio,
+    minReadableBandWidth
+  } = SPIRAL_CONFIG;
+  const globalTraitCount = getLeastCommonMultiple(segmentsPerLoop, timeCycleLength);
+  const segmentGapDegrees = FULL_CIRCLE_DEGREES / globalTraitCount;
+  const segmentCount = globalTraitCount;
+  const fractalLoops = globalTraitCount / segmentsPerLoop;
+  const center = {
+    x: size * origin.xRatio,
+    y: size * origin.yRatio
+  };
+  const spiralStartAngle = degreesToRadians(startAngleDegrees);
+  const segmentAngleDegrees = (FULL_CIRCLE_DEGREES / segmentsPerLoop) + segmentGapDegrees;
+  const segmentAngle = degreesToRadians(segmentAngleDegrees);
+  const margin = size * outerMarginRatio;
+  const innerStart = size * innerRadiusRatio;
+  const totalAngleSpan = segmentCount * segmentAngle;
+  const totalTurns = totalAngleSpan / TAU;
+  const edgeRadius = Math.min(center.x, center.y, size - center.x, size - center.y);
+  const availableRadius = edgeRadius - margin - innerStart;
+  const bandWidth = availableRadius / (totalTurns + 1);
+  const pitch = bandWidth;
+  const shouldDrawLabels = bandWidth >= minReadableBandWidth;
 
   context.save();
   context.shadowColor = "rgba(83, 220, 198, 0.16)";
   context.shadowBlur = 18;
 
-  for (let index = 0; index < SEGMENT_COUNT; index += 1) {
-    const angleStart = START_ANGLE + index * segmentAngle;
+  for (let index = 0; index < segmentCount; index += 1) {
+    const angleStart = spiralStartAngle + index * segmentAngle;
     const angleEnd = angleStart + segmentAngle;
     const points = buildSpiralSegment({
       center,
       innerStart,
       bandWidth,
       pitch,
+      spiralStartAngle,
       angleStart,
       angleEnd
     });
 
     const gradient = context.createLinearGradient(0, 0, size, size);
-    const alpha = 0.12 + index * 0.008;
+    const alpha = 0.1 + (index / segmentCount) * 0.18;
     gradient.addColorStop(0, `rgba(83, 220, 198, ${alpha})`);
     gradient.addColorStop(1, `rgba(255, 213, 107, ${Math.max(0.06, alpha - 0.04)})`);
 
     drawSegmentPath(context, points);
     context.fillStyle = gradient;
     context.fill();
-    context.strokeStyle = index === 9 ? "rgba(255, 213, 107, 0.66)" : "rgba(255, 255, 255, 0.24)";
-    context.lineWidth = index === 9 ? 1.7 : 1;
+    context.strokeStyle = "rgba(255, 255, 255, 0.21)";
+    context.lineWidth = Math.max(0.25, Math.min(0.85, bandWidth * 0.14));
     context.stroke();
 
+    if (!shouldDrawLabels) {
+      continue;
+    }
+
     const labelAngle = (angleStart + angleEnd) / 2;
-    const labelProgress = (labelAngle - START_ANGLE) / TAU;
+    const labelProgress = (labelAngle - spiralStartAngle) / TAU;
     const labelRadius = innerStart + pitch * labelProgress + bandWidth * 0.5;
     const labelPoint = polarToPoint(center, labelRadius, labelAngle);
 
     context.save();
-    context.fillStyle = index === 9 ? accentSoft : text;
-    context.font = `700 ${Math.max(12, size * 0.038)}px "Share Tech Mono", monospace`;
+    context.fillStyle = text;
+    context.font = `700 ${Math.max(7, Math.min(size * 0.023, bandWidth * 0.82))}px "Share Tech Mono", monospace`;
     context.textAlign = "center";
     context.textBaseline = "middle";
-    context.shadowColor = index === 9 ? "rgba(255, 213, 107, 0.34)" : "rgba(83, 220, 198, 0.22)";
+    context.shadowColor = "rgba(83, 220, 198, 0.22)";
     context.shadowBlur = 8;
     context.fillText(String(index + 1), labelPoint.x, labelPoint.y);
     context.restore();
@@ -131,6 +220,19 @@ const drawTenkiSpiral = (canvas) => {
   context.textAlign = "center";
   context.textBaseline = "middle";
   context.fillText("TENKI", center.x, center.y);
+
+  drawConfigReadout({
+    context,
+    size,
+    lines: [
+      `cycle ${timeCycleLength}`,
+      `base ${segmentsPerLoop}`,
+      `ppcm ${globalTraitCount}`,
+      `fractals ${Number(fractalLoops.toFixed(3))}`,
+      `gap ${formatDegrees(segmentGapDegrees)}`,
+      `step ${formatDegrees(segmentAngleDegrees)}`
+    ]
+  });
 };
 
 const initTenki = () => {
