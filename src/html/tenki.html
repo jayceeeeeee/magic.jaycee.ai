@@ -20,10 +20,8 @@
         <p class="tenki-status-line"><span aria-hidden="true">&gt;</span>...<span class="cursor" aria-hidden="true">_</span></p>
       </div>
 
-      <div class="tenki-stage" aria-label="Nine segment tenki frame">
-        <div class="time-ring" aria-label="Outer time cycle" data-time-ring></div>
-
-        <div class="space-grid" aria-label="Inner nine cell space matrix" data-space-grid></div>
+      <div class="tenki-stage" aria-label="Tenki canvas frame">
+        <canvas class="tenki-canvas" data-tenki-canvas aria-label="Tenki square and rings"></canvas>
       </div>
     </section>
   </main>
@@ -31,7 +29,6 @@
   <jaycee-footer></jaycee-footer>
 
   <script src="/src/js/shell/jaycee-shell.js"></script>
-  <script src="/src/js/auth/auth.js"></script>
   <script type="module" src="/src/js/tenki.js"></script>
 </body>
 </html>
