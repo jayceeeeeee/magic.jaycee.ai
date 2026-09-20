@@ -1,22 +1,44 @@
-const PRIMARY_RING_COUNT = 9;
-const SECONDARY_RING_COUNT = 10;
+const RING_SEGMENT_COUNT = 9;
 const SQUARE_GRID_SIZE = 3;
-const SQUARE_NUMBERS = [1, 2, 4, 3, 5, 7, 6, 8, 9];
-const PRIMARY_RING_NUMBERS = SQUARE_NUMBERS;
-const SECONDARY_RING_NUMBERS = Array.from({ length: SECONDARY_RING_COUNT }, (_, index) => index + 1);
-const RINGS = [
+const TENKI_TABLE = "tenki_fractals";
+const TENKI_ENTRY_COUNT = RING_SEGMENT_COUNT;
+const TENKI_NUMBER_COLUMNS = Array.from({ length: TENKI_ENTRY_COUNT }, (_, index) => String(index + 1));
+const TENKI_SELECT_COLUMNS = [
+  "label",
+  ...TENKI_NUMBER_COLUMNS.map((number) => `"${number}"`)
+].join(",");
+const TENKI_ROW_LABELS = {
+  trigramHanzi: "trigram_hanzi"
+};
+const SQUARE_ORDER = [1, 2, 4, 3, 5, 7, 6, 8, 9];
+const EMPTY_LABELS = Array.from({ length: RING_SEGMENT_COUNT }, () => "");
+const getBinaryLabel = (number) => (number - 1)
+  .toString(2)
+  .padStart(4, "0")
+  .replaceAll("1", ".")
+  .replaceAll("0", " ");
+const DEFAULT_TENKI_ROWS = SQUARE_ORDER.map((number) => ({
+  number,
+  binary: getBinaryLabel(number),
+  trigram_hanzi: ""
+}));
+const RING_TEMPLATES = [
   {
-    count: PRIMARY_RING_COUNT,
-    numbers: PRIMARY_RING_NUMBERS,
-    tone: "accent",
-    centerLastSegmentAtTop: true
+    getLabels: (rows) => rows.map((row) => row.binary || ""),
+    tone: "accent"
   },
   {
-    count: SECONDARY_RING_COUNT,
-    numbers: SECONDARY_RING_NUMBERS,
+    tone: "soft"
+  },
+  {
     tone: "soft"
   }
-];
+].map((ring) => ({
+  count: RING_SEGMENT_COUNT,
+  centerLastSegmentAtTop: true,
+  getLabels: () => EMPTY_LABELS,
+  ...ring
+}));
 
 const getThemeColor = (name, fallback) => {
   const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -79,7 +101,7 @@ const getTopCenteredLastSegmentRotation = (count) => {
 const drawRing = (context, metrics, options) => {
   const {
     count,
-    numbers,
+    labels,
     innerRadius,
     outerRadius,
     stroke,
@@ -101,7 +123,7 @@ const drawRing = (context, metrics, options) => {
   context.arc(metrics.center, metrics.center, outerRadius, 0, Math.PI * 2);
   context.stroke();
 
-  numbers.forEach((number, index) => {
+  labels.forEach((label, index) => {
     const startAngle = rotation + (index * segmentAngle);
     const middleAngle = startAngle + (segmentAngle / 2);
     const dividerX = metrics.center + Math.cos(startAngle) * outerRadius;
@@ -116,20 +138,22 @@ const drawRing = (context, metrics, options) => {
     context.lineTo(dividerX, dividerY);
     context.stroke();
 
-    drawCenteredText(
-      context,
-      String(number),
-      labelX,
-      labelY,
-      Math.max(11, (outerRadius - innerRadius) * 0.36),
-      textColor
-    );
+    if (label) {
+      drawCenteredText(
+        context,
+        String(label),
+        labelX,
+        labelY,
+        Math.max(11, (outerRadius - innerRadius) * 0.36),
+        textColor
+      );
+    }
   });
 
   context.restore();
 };
 
-const drawSquare = (context, metrics, colors) => {
+const drawSquare = (context, metrics, colors, labels) => {
   const start = metrics.center - (metrics.squareSize / 2);
   const cellSize = metrics.squareSize / SQUARE_GRID_SIZE;
 
@@ -154,22 +178,86 @@ const drawSquare = (context, metrics, colors) => {
     context.stroke();
   }
 
-  SQUARE_NUMBERS.forEach((number, index) => {
+  labels.forEach((label, index) => {
     const column = index % SQUARE_GRID_SIZE;
     const row = Math.floor(index / SQUARE_GRID_SIZE);
     const x = start + (column * cellSize) + (cellSize / 2);
     const y = start + (row * cellSize) + (cellSize / 2);
 
-    drawCenteredText(context, number, x, y, Math.max(14, cellSize * 0.28), colors.text);
+    if (label) {
+      drawCenteredText(context, label, x, y, Math.max(14, cellSize * 0.28), colors.text);
+    }
   });
 
   context.restore();
 };
 
-const drawTenki = (canvas) => {
+const getLineValues = (rowsByLabel, label) => {
+  const row = rowsByLabel.get(label);
+
+  if (!row) {
+    throw new Error(`Tenki database is missing "${label}".`);
+  }
+
+  return TENKI_NUMBER_COLUMNS.map((number) => row[number] ?? "");
+};
+
+const normalizeTenkiRows = (rows) => {
+  const rowsByLabel = new Map(rows.map((row) => [row.label, row]));
+  const trigramHanzi = getLineValues(rowsByLabel, TENKI_ROW_LABELS.trigramHanzi);
+
+  const rowsByNumber = new Map(
+    TENKI_NUMBER_COLUMNS.map((number, index) => [
+      Number(number),
+      {
+        number: Number(number),
+        binary: getBinaryLabel(Number(number)),
+        trigram_hanzi: trigramHanzi[index]
+      }
+    ])
+  );
+
+  return SQUARE_ORDER.map((number, index) => rowsByNumber.get(number) || DEFAULT_TENKI_ROWS[index]);
+};
+
+const createTenkiState = (orderedRows) => ({
+  squareLabels: orderedRows.map((row) => row.trigram_hanzi || ""),
+  rings: RING_TEMPLATES.map((ring) => ({
+    ...ring,
+    labels: ring.getLabels(orderedRows)
+  }))
+});
+
+const DEFAULT_TENKI_STATE = createTenkiState(DEFAULT_TENKI_ROWS);
+
+const getTenkiState = (rows) => {
+  const orderedRows = normalizeTenkiRows(rows);
+
+  return createTenkiState(orderedRows);
+};
+
+const fetchTenkiRows = async () => {
+  if (!window.JayceeAuth) {
+    throw new Error("Supabase is not available.");
+  }
+
+  const client = await window.JayceeAuth.getSupabaseClient();
+  const { data, error } = await client
+    .from(TENKI_TABLE)
+    .select(TENKI_SELECT_COLUMNS)
+    .in("label", Object.values(TENKI_ROW_LABELS));
+
+  if (error) {
+    throw error;
+  }
+
+  return Array.isArray(data) ? data : [];
+};
+
+const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
   const context = resizeCanvas(canvas);
   const rect = canvas.getBoundingClientRect();
-  const metrics = getCanvasMetrics(canvas, RINGS.length);
+  const metrics = getCanvasMetrics(canvas, state.rings.length);
   const accent = getThemeColor("--accent", "#74f7d1");
   const accentSoft = getThemeColor("--accent-soft", "#a7ffe7");
   const border = "rgba(255, 255, 255, 0.38)";
@@ -177,15 +265,15 @@ const drawTenki = (canvas) => {
 
   context.clearRect(0, 0, rect.width, rect.height);
 
-  [...RINGS].reverse().forEach((ring, reversedIndex) => {
-    const index = RINGS.length - reversedIndex - 1;
+  [...state.rings].reverse().forEach((ring, reversedIndex) => {
+    const index = state.rings.length - reversedIndex - 1;
     const innerRadius = metrics.squareOuterRadius + (metrics.ringWidth * index);
     const outerRadius = innerRadius + metrics.ringWidth;
     const isSoft = ring.tone === "soft";
 
     drawRing(context, metrics, {
       count: ring.count,
-      numbers: ring.numbers,
+      labels: ring.labels,
       innerRadius,
       outerRadius,
       stroke: isSoft ? softBorder : border,
@@ -199,19 +287,28 @@ const drawTenki = (canvas) => {
     glow: "rgba(116, 247, 209, 0.18)",
     squareFill: "rgba(7, 21, 24, 0.18)",
     text: accent
-  });
+  }, state.squareLabels);
 };
 
-const initTenki = () => {
+const initTenki = async () => {
   const canvas = document.querySelector("[data-tenki-canvas]");
   if (!canvas) return;
 
-  const render = () => drawTenki(canvas);
+  let state = DEFAULT_TENKI_STATE;
+  const render = () => drawTenki(canvas, state);
   const resizeObserver = new ResizeObserver(render);
 
   resizeObserver.observe(canvas);
   window.addEventListener("resize", render);
   render();
+
+  try {
+    const rows = await fetchTenkiRows();
+    state = getTenkiState(rows);
+    render();
+  } catch (error) {
+    console.error("Unable to load Tenki data.", error);
+  }
 };
 
 initTenki();
