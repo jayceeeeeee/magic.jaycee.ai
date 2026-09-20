@@ -3,6 +3,15 @@ const SQUARE_GRID_SIZE = 3;
 const TENKI_ORDER = [1, 2, 4, 3, 5, 7, 6, 8, 9];
 const COMMAND_RING_NUMBER = 9;
 const COMMAND_RING_PROMPT = "> ";
+const COMMAND_RING_INDEX = 0;
+const COMMAND_SEGMENT_INDEX = TENKI_ORDER.indexOf(COMMAND_RING_NUMBER);
+const CONSOLE_TYPING_SPEED = 18;
+const CONSOLE_LINE_PAUSE = 90;
+const TEXT_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='24' viewBox='0 0 16 24'%3E%3Cpath d='M5 3H11M8 3V21M5 21H11' stroke='black' stroke-width='3' stroke-linecap='square'/%3E%3Cpath d='M5 3H11M8 3V21M5 21H11' stroke='white' stroke-width='1.4' stroke-linecap='square'/%3E%3C/svg%3E\") 8 12, text";
+const STYLED_RING_INDEX = 0;
+const STYLED_SEGMENT_INDICES = TENKI_ORDER
+  .map((number, index) => (number === COMMAND_RING_NUMBER ? null : index))
+  .filter((index) => index !== null);
 const SQUARE_DIRECTIONS = [
   Math.PI / 4,
   Math.PI / 2,
@@ -67,6 +76,27 @@ const getColorRgb = (color, fallback) => {
   return `${red}, ${green}, ${blue}`;
 };
 
+const wait = (duration) => new Promise((resolve) => window.setTimeout(resolve, duration));
+
+const typeTenkiConsoleLine = async (line) => {
+  if (!line) return;
+
+  const message = line.dataset.tenkiConsoleLine || "";
+  const prompt = line.querySelector("span[aria-hidden='true']") || document.createElement("span");
+  const text = document.createElement("span");
+
+  prompt.setAttribute("aria-hidden", "true");
+  prompt.textContent = ">";
+  line.replaceChildren(prompt, text);
+
+  await wait(CONSOLE_LINE_PAUSE);
+
+  for (const character of message) {
+    text.textContent += character;
+    await wait(CONSOLE_TYPING_SPEED);
+  }
+};
+
 const getCanvasMetrics = (canvas, ringCount) => {
   const rect = canvas.getBoundingClientRect();
   const size = Math.min(rect.width, rect.height);
@@ -101,6 +131,51 @@ const isPointInCircle = (point, circle) => {
   const distanceY = point.y - circle.y;
 
   return Math.hypot(distanceX, distanceY) <= circle.radius;
+};
+
+const normalizeAngle = (angle) => {
+  const fullCircle = Math.PI * 2;
+
+  return ((angle % fullCircle) + fullCircle) % fullCircle;
+};
+
+const isAngleInRange = (angle, startAngle, endAngle) => {
+  const normalizedAngle = normalizeAngle(angle);
+  const normalizedStart = normalizeAngle(startAngle);
+  const normalizedEnd = normalizeAngle(endAngle);
+
+  if (normalizedStart <= normalizedEnd) {
+    return normalizedAngle >= normalizedStart && normalizedAngle <= normalizedEnd;
+  }
+
+  return normalizedAngle >= normalizedStart || normalizedAngle <= normalizedEnd;
+};
+
+const getRingSegmentHitArea = (metrics, ringIndex, segmentIndex, count) => {
+  const segmentAngle = (Math.PI * 2) / count;
+  const rotation = getTopCenteredLastSegmentRotation(count);
+  const innerRadius = metrics.squareOuterRadius + (metrics.ringWidth * ringIndex);
+  const outerRadius = innerRadius + metrics.ringWidth;
+  const startAngle = rotation + (segmentIndex * segmentAngle);
+
+  return {
+    count,
+    endAngle: startAngle + segmentAngle,
+    innerRadius,
+    outerRadius,
+    startAngle
+  };
+};
+
+const isPointInRingSegment = (point, metrics, segment) => {
+  const distanceX = point.x - metrics.center;
+  const distanceY = point.y - metrics.center;
+  const distance = Math.hypot(distanceX, distanceY);
+  const angle = Math.atan2(distanceY, distanceX);
+
+  return distance >= segment.innerRadius
+    && distance <= segment.outerRadius
+    && isAngleInRange(angle, segment.startAngle, segment.endAngle);
 };
 
 const resizeCanvas = (canvas) => {
@@ -162,6 +237,27 @@ const getTopCenteredLastSegmentRotation = (count) => {
   return -Math.PI / 2 - ((count - 0.5) * segmentAngle);
 };
 
+const drawRingSegmentPanel = (context, metrics, segment, colors) => {
+  context.save();
+  context.fillStyle = colors.fill;
+  context.strokeStyle = colors.stroke;
+  context.lineWidth = 1;
+  context.shadowColor = colors.glow;
+  context.shadowBlur = 10;
+
+  context.beginPath();
+  context.arc(metrics.center, metrics.center, segment.outerRadius, segment.startAngle, segment.endAngle);
+  context.lineTo(
+    metrics.center + Math.cos(segment.endAngle) * segment.innerRadius,
+    metrics.center + Math.sin(segment.endAngle) * segment.innerRadius
+  );
+  context.arc(metrics.center, metrics.center, segment.innerRadius, segment.endAngle, segment.startAngle, true);
+  context.closePath();
+  context.fill();
+  context.stroke();
+  context.restore();
+};
+
 const drawRing = (context, metrics, options) => {
   const {
     count,
@@ -172,6 +268,8 @@ const drawRing = (context, metrics, options) => {
     textColor,
     commandColor,
     isCommandCursorVisible = true,
+    styledSegmentColors,
+    styledSegmentIndices = [],
     rotation = -Math.PI / 2
   } = options;
   const segmentAngle = (Math.PI * 2) / count;
@@ -180,6 +278,23 @@ const drawRing = (context, metrics, options) => {
   context.save();
   context.lineWidth = 1;
   context.strokeStyle = stroke;
+
+  if (styledSegmentColors) {
+    styledSegmentIndices.forEach((segmentIndex) => {
+      drawRingSegmentPanel(
+        context,
+        metrics,
+        {
+          count,
+          endAngle: rotation + ((segmentIndex + 1) * segmentAngle),
+          innerRadius,
+          outerRadius,
+          startAngle: rotation + (segmentIndex * segmentAngle)
+        },
+        styledSegmentColors
+      );
+    });
+  }
 
   context.beginPath();
   context.arc(metrics.center, metrics.center, innerRadius, 0, Math.PI * 2);
@@ -362,7 +477,13 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE, options = {}) => {
       stroke: isSoft ? softBorder : border,
       textColor: isSoft ? accentSoft : accent,
       commandColor: accentSoft,
+      styledSegmentColors: {
+        fill: `rgba(${accentSoftRgb}, 0.1)`,
+        glow: `rgba(${accentSoftRgb}, 0.18)`,
+        stroke: `rgba(${accentSoftRgb}, 0.45)`
+      },
       isCommandCursorVisible: options.isCommandCursorVisible,
+      styledSegmentIndices: index === STYLED_RING_INDEX ? STYLED_SEGMENT_INDICES : [],
       rotation: ring.centerLastSegmentAtTop ? getTopCenteredLastSegmentRotation(ring.count) : undefined
     });
   });
@@ -384,10 +505,13 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE, options = {}) => {
 };
 
 const initTenki = () => {
+  typeTenkiConsoleLine(document.querySelector("[data-tenki-console-line]"));
+
   const canvas = document.querySelector("[data-tenki-canvas]");
   if (!canvas) return;
 
   let isPlayButtonHovered = false;
+  let isCommandSegmentHovered = false;
   let isCommandCursorVisible = true;
   const render = () => drawTenki(canvas, DEFAULT_TENKI_STATE, {
     isCommandCursorVisible,
@@ -401,14 +525,28 @@ const initTenki = () => {
       y: event.clientY - rect.top
     };
   };
-  const updatePlayButtonHover = (event) => {
+  const getCommandSegment = (metrics) => getRingSegmentHitArea(
+    metrics,
+    COMMAND_RING_INDEX,
+    COMMAND_SEGMENT_INDEX,
+    RING_SEGMENT_COUNT
+  );
+  const updateInteractiveHover = (event) => {
     const metrics = getCanvasMetrics(canvas, DEFAULT_TENKI_STATE.rings.length);
-    const nextIsHovered = isPointInCircle(getPointerPoint(event), getPlayButtonHitArea(metrics));
+    const pointerPoint = getPointerPoint(event);
+    const nextIsPlayButtonHovered = isPointInCircle(pointerPoint, getPlayButtonHitArea(metrics));
+    const nextIsCommandSegmentHovered = isPointInRingSegment(pointerPoint, metrics, getCommandSegment(metrics));
 
-    if (nextIsHovered === isPlayButtonHovered) return;
+    if (
+      nextIsPlayButtonHovered === isPlayButtonHovered
+      && nextIsCommandSegmentHovered === isCommandSegmentHovered
+    ) {
+      return;
+    }
 
-    isPlayButtonHovered = nextIsHovered;
-    canvas.style.cursor = isPlayButtonHovered ? "pointer" : "";
+    isPlayButtonHovered = nextIsPlayButtonHovered;
+    isCommandSegmentHovered = nextIsCommandSegmentHovered;
+    canvas.style.cursor = isCommandSegmentHovered ? TEXT_CURSOR : isPlayButtonHovered ? "pointer" : "";
     render();
   };
   const resizeObserver = new ResizeObserver(render);
@@ -419,11 +557,12 @@ const initTenki = () => {
     isCommandCursorVisible = !isCommandCursorVisible;
     render();
   }, 600);
-  canvas.addEventListener("pointermove", updatePlayButtonHover);
+  canvas.addEventListener("pointermove", updateInteractiveHover);
   canvas.addEventListener("pointerleave", () => {
-    if (!isPlayButtonHovered) return;
+    if (!isPlayButtonHovered && !isCommandSegmentHovered) return;
 
     isPlayButtonHovered = false;
+    isCommandSegmentHovered = false;
     canvas.style.cursor = "";
     render();
   });
@@ -433,7 +572,10 @@ const initTenki = () => {
 
     if (!isPlayButtonClicked) return;
 
-    canvas.dispatchEvent(new CustomEvent("tenki:play", { bubbles: true }));
+    canvas.dispatchEvent(new CustomEvent("tenki:play", {
+      bubbles: true,
+      detail: { source: "center-button" }
+    }));
   });
   render();
 };
