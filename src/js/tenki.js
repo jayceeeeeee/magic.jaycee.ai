@@ -52,18 +52,6 @@ const getThemeColor = (name, fallback) => {
   return value || fallback;
 };
 
-const withAlpha = (color, alpha) => {
-  const hex = color.match(/^#([0-9a-f]{6})$/i);
-  if (!hex) return color;
-
-  const value = Number.parseInt(hex[1], 16);
-  const red = (value >> 16) & 255;
-  const green = (value >> 8) & 255;
-  const blue = value & 255;
-
-  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
-};
-
 const getCanvasMetrics = (canvas, ringCount) => {
   const rect = canvas.getBoundingClientRect();
   const size = Math.min(rect.width, rect.height);
@@ -194,35 +182,6 @@ const drawDirectionalMark = (context, x, y, size, angle, color) => {
   context.restore();
 };
 
-const drawPlayButton = (context, x, y, radius, markSize, colors) => {
-  const gradient = context.createRadialGradient(
-    x - (radius * 0.28),
-    y - (radius * 0.28),
-    radius * 0.08,
-    x,
-    y,
-    radius
-  );
-
-  gradient.addColorStop(0, colors.buttonHighlight);
-  gradient.addColorStop(1, colors.buttonFill);
-
-  context.save();
-  context.shadowColor = colors.buttonGlow;
-  context.shadowBlur = 16;
-  context.fillStyle = gradient;
-  context.strokeStyle = colors.text;
-  context.lineWidth = Math.max(1, radius * 0.045);
-
-  context.beginPath();
-  context.arc(x, y, radius, 0, Math.PI * 2);
-  context.fill();
-  context.stroke();
-  context.restore();
-
-  drawDirectionalMark(context, x, y, markSize, Math.PI, colors.text);
-};
-
 const drawSquare = (context, metrics, colors) => {
   const start = metrics.center - (metrics.squareSize / 2);
   const cellSize = metrics.squareSize / SQUARE_GRID_SIZE;
@@ -260,7 +219,6 @@ const drawSquare = (context, metrics, colors) => {
     }
   });
 
-  drawPlayButton(context, metrics.center, metrics.center, cellSize * 0.43, markSize, colors);
   context.restore();
 };
 
@@ -303,9 +261,6 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
 
   drawSquare(context, metrics, {
     border,
-    buttonFill: withAlpha(accentSoft, 0.18),
-    buttonGlow: withAlpha(accentSoft, 0.24),
-    buttonHighlight: withAlpha(accentSoft, 0.4),
     glow: "rgba(116, 247, 209, 0.14)",
     squareFill: "rgba(7, 21, 24, 0.18)",
     text: accent
