@@ -7,7 +7,9 @@ const CONSOLE_TYPING_SPEED = 18;
 const CONSOLE_LINE_PAUSE = 90;
 const SURFACE_FILL_ALPHA = 0.86;
 const STYLED_RING_INDEX = 0;
-const STYLED_SEGMENT_INDICES = Array.from({ length: RING_SEGMENT_COUNT }, (_, index) => index);
+const SPIRAL_SAMPLE_COUNT = 24;
+const SUN_RING_TARGET_COLOR = "#ffd84d";
+const MOON_RING_TARGET_COLOR = "#f8fbff";
 const THEME_PALETTE_MIXES = {
   bottomLeft: 0.08,
   bottomRight: 0.24,
@@ -156,6 +158,63 @@ const getSquareCellPaletteColors = (index, palette) => {
   };
 };
 
+const getSegmentIndices = (count) => Array.from({ length: count }, (_, index) => index);
+
+const getColorBetween = (start, end, amount) => (
+  rgbToHex(mixRgb(hexToRgb(start), hexToRgb(end), amount))
+);
+
+const getSquarePalettePathColor = (progress, palette) => {
+  const cellCount = SQUARE_GRID_SIZE * SQUARE_GRID_SIZE;
+  const scaledProgress = Math.min(Math.max(progress, 0), 1) * cellCount;
+  const cellIndex = Math.min(Math.floor(scaledProgress), cellCount - 1);
+  const cellProgress = scaledProgress - cellIndex;
+  const colors = getSquareCellPaletteColors(cellIndex, palette);
+
+  return getColorBetween(colors.start, colors.end, cellProgress);
+};
+
+const getSquareRingPaletteColors = (segmentIndex, segmentCount, palette) => {
+  const squareCellCount = SQUARE_GRID_SIZE * SQUARE_GRID_SIZE;
+
+  if (segmentCount === squareCellCount) {
+    return getSquareCellPaletteColors(segmentIndex, palette);
+  }
+
+  return {
+    start: getSquarePalettePathColor(segmentIndex / segmentCount, palette),
+    end: getSquarePalettePathColor((segmentIndex + 1) / segmentCount, palette)
+  };
+};
+
+const getTransitionRingPaletteColors = (segmentIndex, segmentCount, startColor, targetColor) => ({
+  start: getColorBetween(startColor, targetColor, segmentIndex / segmentCount),
+  end: getColorBetween(startColor, targetColor, (segmentIndex + 1) / segmentCount)
+});
+
+const getSpiralRingPalettes = (rings, palette) => {
+  let previousEndColor = null;
+
+  return rings.map((ring, index) => {
+    const targetColor = index === 1
+      ? SUN_RING_TARGET_COLOR
+      : index === 2
+        ? MOON_RING_TARGET_COLOR
+        : null;
+    const colors = getSegmentIndices(ring.count).map((segmentIndex) => {
+      if (index === 0 || !previousEndColor || !targetColor) {
+        return getSquareRingPaletteColors(segmentIndex, ring.count, palette);
+      }
+
+      return getTransitionRingPaletteColors(segmentIndex, ring.count, previousEndColor, targetColor);
+    });
+
+    previousEndColor = colors.length ? colors[colors.length - 1].end : previousEndColor;
+
+    return colors;
+  });
+};
+
 const wait = (duration) => new Promise((resolve) => window.setTimeout(resolve, duration));
 
 const typeTenkiConsoleLine = async (line) => {
@@ -183,14 +242,15 @@ const getCanvasMetrics = (canvas, ringCount) => {
   const center = size / 2;
   const padding = Math.max(14, size * 0.035);
   const outerRadius = center - padding;
-  const squareSize = size * 0.36;
+  const squareSize = size * 0.31;
   const squareOuterRadius = (squareSize * Math.SQRT2) / 2;
-  const ringWidth = (outerRadius - squareOuterRadius) / ringCount;
+  const ringWidth = (outerRadius - squareOuterRadius) / (ringCount + 1);
 
   return {
     center,
     outerRadius,
     ringWidth,
+    size,
     squareSize,
     squareOuterRadius
   };
@@ -534,6 +594,212 @@ const drawRingSegmentPanel = (context, metrics, segment, colors) => {
     context.closePath();
     context.stroke();
   }
+
+  context.restore();
+};
+
+const getSpiralRadiusAt = (metrics, ringIndex, angleProgress, side = "inner") => {
+  const sideOffset = side === "outer" ? 1 : 0;
+  return metrics.squareOuterRadius + ((ringIndex + angleProgress + sideOffset) * metrics.ringWidth);
+};
+
+const getSpiralPoint = (metrics, angle, radius) => ({
+  x: metrics.center + (Math.cos(angle) * radius),
+  y: metrics.center + (Math.sin(angle) * radius)
+});
+
+const drawSpiralRingSegmentPanel = (context, metrics, segment, colors) => {
+  const gradient = context.createLinearGradient(
+    metrics.center + Math.cos(segment.startAngle) * segment.innerStartRadius,
+    metrics.center + Math.sin(segment.startAngle) * segment.innerStartRadius,
+    metrics.center + Math.cos(segment.endAngle) * segment.outerEndRadius,
+    metrics.center + Math.sin(segment.endAngle) * segment.outerEndRadius
+  );
+
+  gradient.addColorStop(0, colors.start);
+  gradient.addColorStop(1, colors.end);
+
+  context.save();
+  context.beginPath();
+
+  for (let step = 0; step <= SPIRAL_SAMPLE_COUNT; step += 1) {
+    const progress = step / SPIRAL_SAMPLE_COUNT;
+    const angle = segment.startAngle + ((segment.endAngle - segment.startAngle) * progress);
+    const radius = getSpiralRadiusAt(metrics, segment.ringIndex, segment.startProgress + (segment.segmentProgress * progress), "outer");
+    const point = getSpiralPoint(metrics, angle, radius);
+
+    if (step === 0) {
+      context.moveTo(point.x, point.y);
+    } else {
+      context.lineTo(point.x, point.y);
+    }
+  }
+
+  for (let step = SPIRAL_SAMPLE_COUNT; step >= 0; step -= 1) {
+    const progress = step / SPIRAL_SAMPLE_COUNT;
+    const angle = segment.startAngle + ((segment.endAngle - segment.startAngle) * progress);
+    const radius = getSpiralRadiusAt(metrics, segment.ringIndex, segment.startProgress + (segment.segmentProgress * progress), "inner");
+    const point = getSpiralPoint(metrics, angle, radius);
+
+    context.lineTo(point.x, point.y);
+  }
+
+  context.closePath();
+  context.fillStyle = gradient;
+  context.shadowColor = colors.glow;
+  context.shadowBlur = colors.transparent ? 0 : 8;
+  context.globalAlpha = colors.transparent ? ACTIVE_FILL_ALPHA : (colors.alpha ?? 1);
+  context.fill();
+  context.globalAlpha = 1;
+
+  if (colors.border) {
+    context.shadowColor = colors.borderGlow || colors.border;
+    context.shadowBlur = metrics.ringWidth * 0.18;
+    context.strokeStyle = colors.border;
+    context.lineWidth = Math.max(1, metrics.ringWidth * 0.022);
+    context.stroke();
+  }
+
+  context.restore();
+};
+
+const drawSpiralBorderCurve = (context, metrics, ringIndex, side, startAngle, endAngle, segmentCount) => {
+  context.beginPath();
+
+  for (let step = 0; step <= SPIRAL_SAMPLE_COUNT * segmentCount; step += 1) {
+    const progress = step / (SPIRAL_SAMPLE_COUNT * segmentCount);
+    const angle = startAngle + ((endAngle - startAngle) * progress);
+    const radius = getSpiralRadiusAt(metrics, ringIndex, progress, side);
+    const point = getSpiralPoint(metrics, angle, radius);
+
+    if (step === 0) {
+      context.moveTo(point.x, point.y);
+    } else {
+      context.lineTo(point.x, point.y);
+    }
+  }
+
+  context.stroke();
+};
+
+const drawSpiralRing = (context, metrics, options) => {
+  const {
+    count,
+    labels,
+    ringIndex,
+    stroke,
+    textColor,
+    styledSegmentColors,
+    styledSegmentIndices = [],
+    showBorders = true,
+    rotation = -Math.PI / 2
+  } = options;
+  const segmentAngle = (Math.PI * 2) / count;
+
+  context.save();
+  context.lineWidth = 1;
+  context.strokeStyle = stroke;
+
+  if (styledSegmentColors) {
+    styledSegmentIndices.forEach((segmentIndex) => {
+      const startProgress = segmentIndex / count;
+      const endProgress = (segmentIndex + 1) / count;
+
+      drawSpiralRingSegmentPanel(
+        context,
+        metrics,
+        {
+          count,
+          endAngle: rotation + ((segmentIndex + 1) * segmentAngle),
+          innerStartRadius: getSpiralRadiusAt(metrics, ringIndex, startProgress, "inner"),
+          outerEndRadius: getSpiralRadiusAt(metrics, ringIndex, endProgress, "outer"),
+          ringIndex,
+          segmentProgress: 1 / count,
+          startAngle: rotation + (segmentIndex * segmentAngle),
+          startProgress
+        },
+        typeof styledSegmentColors === "function" ? styledSegmentColors(segmentIndex) : styledSegmentColors
+      );
+    });
+  }
+
+  if (showBorders) {
+    drawSpiralBorderCurve(context, metrics, ringIndex, "inner", rotation, rotation + (Math.PI * 2), count);
+    drawSpiralBorderCurve(context, metrics, ringIndex, "outer", rotation, rotation + (Math.PI * 2), count);
+  }
+
+  labels.forEach((label, index) => {
+    const startAngle = rotation + (index * segmentAngle);
+    const middleAngle = startAngle + (segmentAngle / 2);
+    const startProgress = index / count;
+    const middleProgress = startProgress + (0.5 / count);
+    const dividerInnerRadius = getSpiralRadiusAt(metrics, ringIndex, startProgress, "inner");
+    const dividerOuterRadius = getSpiralRadiusAt(metrics, ringIndex, startProgress, "outer");
+    const labelRadius = getSpiralRadiusAt(metrics, ringIndex, middleProgress, "inner") + (metrics.ringWidth / 2);
+    const dividerX = metrics.center + Math.cos(startAngle) * dividerOuterRadius;
+    const dividerY = metrics.center + Math.sin(startAngle) * dividerOuterRadius;
+    const dividerInnerX = metrics.center + Math.cos(startAngle) * dividerInnerRadius;
+    const dividerInnerY = metrics.center + Math.sin(startAngle) * dividerInnerRadius;
+    const labelX = metrics.center + Math.cos(middleAngle) * labelRadius;
+    const labelY = metrics.center + Math.sin(middleAngle) * labelRadius;
+
+    if (showBorders) {
+      context.beginPath();
+      context.moveTo(dividerInnerX, dividerInnerY);
+      context.lineTo(dividerX, dividerY);
+      context.stroke();
+    }
+
+    if (label) {
+      const textSize = Math.max(11, metrics.ringWidth * 0.36);
+      const isCompactCanvas = metrics.size < 520 || window.matchMedia("(max-width: 640px)").matches;
+      const labelTextSize = Math.max(13, textSize * (isCompactCanvas ? 1.45 : 1.72));
+      const segmentChord = 2 * labelRadius * Math.sin(segmentAngle / 2);
+
+      if (label.name) {
+        const isUranus = label.name === "Uranus";
+
+        if (isUranus) {
+          const promptInset = metrics.ringWidth * 0.06;
+          const promptX = labelX - (Math.cos(middleAngle) * promptInset);
+          const promptY = labelY - (Math.sin(middleAngle) * promptInset);
+
+          drawUranusQuestPrompt(context, promptX, promptY, labelTextSize, segmentChord * (isCompactCanvas ? 0.62 : 0.92), {
+            accent: "rgba(124, 255, 120, 0.92)",
+            alert: "rgba(232, 255, 90, 0.84)",
+            glow: "rgba(124, 255, 120, 0.42)",
+            text: textColor
+          }, {
+            isCompact: isCompactCanvas
+          });
+        } else {
+          drawPlanetGlyph(context, labelX, labelY, labelTextSize, label, {
+            fill: textColor,
+            shadow: "rgba(255, 255, 255, 0.42)",
+            stroke: "rgba(5, 21, 25, 0.7)"
+          });
+        }
+      } else {
+        drawCenteredText(
+          context,
+          String(label),
+          labelX,
+          labelY,
+          labelTextSize,
+          textColor,
+          showBorders ? {} : {
+            fontFamily: "\"Segoe UI Symbol\", \"Noto Sans Symbols\", \"DejaVu Sans\", sans-serif",
+            shadowBlur: 12,
+            shadowColor: "rgba(255, 255, 255, 0.42)",
+            maxWidth: segmentChord * 0.62,
+            strokeColor: "rgba(5, 21, 25, 0.78)",
+            strokeWidth: Math.max(isCompactCanvas ? 0.45 : 0.75, labelTextSize * (isCompactCanvas ? 0.025 : 0.04)),
+            weight: 400
+          }
+        );
+      }
+    }
+  });
 
   context.restore();
 };
@@ -978,6 +1244,7 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
   const accentSoft = getThemeColor("--accent-soft", "#a7ffe7");
   const accentSoftRgb = getColorRgb(accentSoft, "255, 213, 107");
   const palette = getThemePaletteCorners(accent, accentSoft);
+  const ringPalettes = getSpiralRingPalettes(state.rings, palette);
   const borderColors = getThemeBorderColors(accent, accentSoft);
   const motion = 0;
 
@@ -985,25 +1252,30 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
 
   [...state.rings].reverse().forEach((ring, reversedIndex) => {
     const index = state.rings.length - reversedIndex - 1;
-    const innerRadius = metrics.squareOuterRadius + (metrics.ringWidth * index);
-    const outerRadius = innerRadius + metrics.ringWidth;
     const isSoft = ring.tone === "soft";
 
-    drawRing(context, metrics, {
+    drawSpiralRing(context, metrics, {
       count: ring.count,
+      ringIndex: index,
       labels: ring.labels,
-      innerRadius,
-      outerRadius,
       stroke: isSoft ? borderColors.ringSoft : borderColors.ring,
-      textColor: isSoft ? "rgba(47, 42, 79, 0.74)" : accent,
+      textColor: index === 1
+        ? "rgba(75, 48, 0, 0.78)"
+        : index === 2
+          ? "rgba(47, 42, 79, 0.74)"
+          : accent,
       styledSegmentColors: (segmentIndex) => {
         const colors = {
-          ...getSquareCellPaletteColors(segmentIndex, palette),
+          ...ringPalettes[index][segmentIndex],
           alpha: SURFACE_FILL_ALPHA,
-          glow: `rgba(${accentSoftRgb}, 0.14)`
+          glow: index === 1
+            ? "rgba(255, 216, 77, 0.2)"
+            : index === 2
+              ? "rgba(248, 251, 255, 0.18)"
+              : `rgba(${accentSoftRgb}, 0.14)`
         };
 
-        if (segmentIndex === URANUS_SEGMENT_INDEX) {
+        if (index === STYLED_RING_INDEX && segmentIndex === URANUS_SEGMENT_INDEX) {
           colors.border = "rgba(124, 255, 120, 0.92)";
           colors.borderGlow = "rgba(124, 255, 120, 0.42)";
           colors.transparent = true;
@@ -1011,8 +1283,8 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
 
         return colors;
       },
-      showBorders: index !== STYLED_RING_INDEX,
-      styledSegmentIndices: index === STYLED_RING_INDEX ? STYLED_SEGMENT_INDICES : [],
+      showBorders: true,
+      styledSegmentIndices: getSegmentIndices(ring.count),
       rotation: ring.centerLastSegmentAtTop ? getTopCenteredLastSegmentRotation(ring.count) : undefined
     });
   });
