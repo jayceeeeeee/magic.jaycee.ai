@@ -2,7 +2,7 @@ const RING_SEGMENT_COUNT = 9;
 const SQUARE_GRID_SIZE = 3;
 const TENKI_ORDER = [1, 2, 4, 3, 5, 7, 6, 8, 9];
 const COMMAND_RING_NUMBER = 9;
-const COMMAND_RING_PROMPT = "> ";
+const COMMAND_RING_CURSOR_LABEL = "_";
 const COMMAND_RING_INDEX = 0;
 const COMMAND_SEGMENT_INDEX = TENKI_ORDER.indexOf(COMMAND_RING_NUMBER);
 const CONSOLE_TYPING_SPEED = 18;
@@ -42,7 +42,7 @@ const DEFAULT_TENKI_ROWS = TENKI_ORDER.map((number) => ({
 }));
 const RING_TEMPLATES = [
   {
-    getLabels: (rows) => rows.map((row) => (row.isCommandPrompt ? COMMAND_RING_PROMPT : row.binary || "")),
+    getLabels: (rows) => rows.map((row) => (row.isCommandPrompt ? COMMAND_RING_CURSOR_LABEL : row.binary || "")),
     tone: "accent"
   },
   {
@@ -209,7 +209,6 @@ const drawCenteredText = (context, text, x, y, size, color) => {
 
 const drawCommandPrompt = (context, x, y, size, colors, isCursorVisible) => {
   const parts = [
-    { text: COMMAND_RING_PROMPT, color: colors.text },
     { text: isCursorVisible ? "_" : " ", color: colors.text }
   ];
 
@@ -322,7 +321,7 @@ const drawRing = (context, metrics, options) => {
     if (label) {
       const textSize = Math.max(11, (outerRadius - innerRadius) * 0.36);
 
-      if (label === COMMAND_RING_PROMPT) {
+      if (label === COMMAND_RING_CURSOR_LABEL) {
         drawCommandPrompt(context, labelX, labelY, textSize, {
           accent: commandColor,
           text: textColor
