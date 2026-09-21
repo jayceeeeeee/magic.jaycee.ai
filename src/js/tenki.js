@@ -1,9 +1,7 @@
 const RING_SEGMENT_COUNT = 9;
 const SQUARE_GRID_SIZE = 3;
 const TENKI_ORDER = [1, 2, 4, 3, 5, 7, 6, 8, 9];
-const COMMAND_RING_NUMBER = 9;
-const COMMAND_RING_QUEST_LABEL = "NEW_QUEST";
-const COMMAND_SEGMENT_INDEX = TENKI_ORDER.indexOf(COMMAND_RING_NUMBER);
+const URANUS_SEGMENT_INDEX = TENKI_ORDER.indexOf(9);
 const CONSOLE_TYPING_SPEED = 18;
 const CONSOLE_LINE_PAUSE = 90;
 const STYLED_RING_INDEX = 0;
@@ -25,24 +23,25 @@ const TENKI_ELEMENTS = {
   8: "Water",
   9: "Heaven"
 };
-const EMPTY_LABELS = Array.from({ length: RING_SEGMENT_COUNT }, () => "");
-const getBinaryLabel = (number) => {
-  const binary = (number - 1).toString(2).padStart(3, "0");
-
-  if (binary.length > 3) {
-    return "";
-  }
-
-  return Array.from(binary, (bit) => (bit === "1" ? "." : "-")).join("");
+const TENKI_PLANETS = {
+  1: { name: "Neptune" },
+  2: { name: "Sun" },
+  3: { name: "Moon" },
+  4: { name: "Mars" },
+  5: { name: "Venus" },
+  6: { name: "Mercury" },
+  7: { name: "Jupiter" },
+  8: { name: "Saturn" },
+  9: { name: "Uranus" }
 };
+const EMPTY_LABELS = Array.from({ length: RING_SEGMENT_COUNT }, () => "");
 const DEFAULT_TENKI_ROWS = TENKI_ORDER.map((number) => ({
   number,
-  binary: getBinaryLabel(number),
-  isCommandPrompt: number === COMMAND_RING_NUMBER
+  planet: TENKI_PLANETS[number]
 }));
 const RING_TEMPLATES = [
   {
-    getLabels: (rows) => rows.map((row) => (row.isCommandPrompt ? COMMAND_RING_QUEST_LABEL : row.binary || "")),
+    getLabels: (rows) => rows.map((row) => row.planet || ""),
     tone: "accent"
   },
   {
@@ -233,16 +232,17 @@ const resizeCanvas = (canvas) => {
 const drawCenteredText = (context, text, x, y, size, color, options = {}) => {
   context.save();
   const weight = options.weight || 600;
+  const fontFamily = options.fontFamily || "\"Share Tech Mono\", monospace";
   let textSize = size;
 
   context.fillStyle = color;
-  context.font = `${weight} ${textSize}px "Share Tech Mono", monospace`;
+  context.font = `${weight} ${textSize}px ${fontFamily}`;
   if (options.maxWidth) {
     const measuredWidth = context.measureText(text).width;
 
     if (measuredWidth > options.maxWidth) {
       textSize *= options.maxWidth / measuredWidth;
-      context.font = `${weight} ${textSize}px "Share Tech Mono", monospace`;
+      context.font = `${weight} ${textSize}px ${fontFamily}`;
     }
   }
   context.textAlign = "center";
@@ -258,75 +258,187 @@ const drawCenteredText = (context, text, x, y, size, color, options = {}) => {
   context.restore();
 };
 
-const drawRoundedRect = (context, x, y, width, height, radius) => {
-  const corner = Math.min(radius, width / 2, height / 2);
-
-  context.beginPath();
-  context.moveTo(x + corner, y);
-  context.lineTo(x + width - corner, y);
-  context.quadraticCurveTo(x + width, y, x + width, y + corner);
-  context.lineTo(x + width, y + height - corner);
-  context.quadraticCurveTo(x + width, y + height, x + width - corner, y + height);
-  context.lineTo(x + corner, y + height);
-  context.quadraticCurveTo(x, y + height, x, y + height - corner);
-  context.lineTo(x, y + corner);
-  context.quadraticCurveTo(x, y, x + corner, y);
-  context.closePath();
-};
-
-const drawQuestBadge = (context, x, y, size, colors, layout = {}) => {
-  const width = size * 4.18;
-  const height = size * 1.72;
-  const left = -(width / 2);
-  const top = -(height / 2);
-  const notchSize = size * 0.34;
-  const scale = Math.min(
-    1.12,
-    layout.maxWidth ? layout.maxWidth / width : 1.12,
-    layout.maxHeight ? layout.maxHeight / height : 1.12
-  );
+const drawPlanetGlyph = (context, x, y, size, planet, colors) => {
+  const unit = size / 2;
+  const stroke = () => {
+    context.stroke();
+  };
+  const circle = (cx, cy, radius) => {
+    context.beginPath();
+    context.arc(cx, cy, radius, 0, Math.PI * 2);
+    context.stroke();
+  };
+  const line = (startX, startY, endX, endY) => {
+    context.beginPath();
+    context.moveTo(startX, startY);
+    context.lineTo(endX, endY);
+    context.stroke();
+  };
 
   context.save();
   context.translate(x, y);
-  context.scale(scale, scale);
-  context.shadowColor = colors.glow;
-  context.shadowBlur = 18;
-  context.fillStyle = colors.fill;
+  context.lineWidth = Math.max(1, size * 0.052);
+  context.lineCap = "round";
+  context.lineJoin = "round";
   context.strokeStyle = colors.stroke;
-  context.lineWidth = Math.max(1, size * 0.09);
-  drawRoundedRect(context, left, top, width, height, size * 0.18);
-  context.fill();
-  context.stroke();
+  context.fillStyle = colors.fill;
+  context.shadowColor = colors.shadow;
+  context.shadowBlur = size * 0.3;
 
-  context.shadowBlur = 0;
-  context.fillStyle = colors.accent;
-  context.beginPath();
-  context.moveTo(left + width - notchSize, top);
-  context.lineTo(left + width, top);
-  context.lineTo(left + width, top + notchSize);
-  context.closePath();
-  context.fill();
+  switch (planet.name) {
+    case "Neptune":
+      circle(0, 0, unit * 0.62);
+      context.beginPath();
+      context.arc(0, -unit * 0.12, unit * 0.5, Math.PI * 0.14, Math.PI * 0.86);
+      stroke();
+      context.beginPath();
+      context.arc(0, unit * 0.12, unit * 0.42, Math.PI * 1.14, Math.PI * 1.86);
+      stroke();
+      circle(unit * 0.24, -unit * 0.18, unit * 0.08);
+      context.beginPath();
+      context.arc(0, 0, unit * 0.82, Math.PI * 1.08, Math.PI * 1.92);
+      stroke();
+      break;
+    case "Sun":
+      circle(0, 0, unit * 0.38);
+      [
+        [0, -0.78, 0, -0.58],
+        [0.55, -0.55, 0.4, -0.4],
+        [0.78, 0, 0.58, 0],
+        [0.55, 0.55, 0.4, 0.4],
+        [0, 0.78, 0, 0.58],
+        [-0.55, 0.55, -0.4, 0.4],
+        [-0.78, 0, -0.58, 0],
+        [-0.55, -0.55, -0.4, -0.4]
+      ].forEach(([startX, startY, endX, endY]) => {
+        line(unit * startX, unit * startY, unit * endX, unit * endY);
+      });
+      circle(0, 0, unit * 0.08);
+      break;
+    case "Moon":
+      circle(0, 0, unit * 0.58);
+      circle(-unit * 0.22, -unit * 0.2, unit * 0.07);
+      circle(-unit * 0.08, unit * 0.22, unit * 0.1);
+      circle(unit * 0.16, -unit * 0.04, unit * 0.055);
+      break;
+    case "Mars":
+      circle(0, 0, unit * 0.56);
+      circle(-unit * 0.2, -unit * 0.16, unit * 0.08);
+      circle(unit * 0.2, unit * 0.18, unit * 0.1);
+      context.beginPath();
+      context.arc(0, -unit * 0.4, unit * 0.28, Math.PI * 0.16, Math.PI * 0.84);
+      stroke();
+      context.beginPath();
+      context.moveTo(-unit * 0.42, unit * 0.16);
+      context.bezierCurveTo(-unit * 0.18, unit * 0.02, unit * 0.08, unit * 0.34, unit * 0.42, unit * 0.12);
+      stroke();
+      break;
+    case "Venus":
+      circle(0, 0, unit * 0.58);
+      [-0.28, 0, 0.28].forEach((offset, index) => {
+        context.beginPath();
+        context.moveTo(-unit * 0.42, unit * offset);
+        context.bezierCurveTo(
+          -unit * 0.12,
+          unit * (offset + (index === 1 ? -0.08 : 0.08)),
+          unit * 0.12,
+          unit * (offset + (index === 1 ? 0.08 : -0.08)),
+          unit * 0.42,
+          unit * offset
+        );
+        stroke();
+      });
+      break;
+    case "Mercury":
+      circle(0, 0, unit * 0.6);
+      circle(-unit * 0.24, -unit * 0.2, unit * 0.11);
+      circle(unit * 0.18, -unit * 0.18, unit * 0.08);
+      circle(unit * 0.18, unit * 0.18, unit * 0.1);
+      circle(-unit * 0.22, unit * 0.2, unit * 0.07);
+      circle(unit * 0.02, unit * 0.02, unit * 0.055);
+      break;
+    case "Jupiter":
+      circle(0, 0, unit * 0.62);
+      [-0.3, -0.08, 0.14, 0.36].forEach((offset) => {
+        context.beginPath();
+        context.moveTo(-unit * 0.52, unit * offset);
+        context.bezierCurveTo(-unit * 0.18, unit * (offset - 0.08), unit * 0.18, unit * (offset + 0.08), unit * 0.52, unit * offset);
+        stroke();
+      });
+      context.beginPath();
+      context.ellipse(unit * 0.22, unit * 0.16, unit * 0.18, unit * 0.1, -0.18, 0, Math.PI * 2);
+      stroke();
+      break;
+    case "Saturn":
+      circle(0, 0, unit * 0.42);
+      context.save();
+      context.rotate(-0.28);
+      context.scale(1, 0.34);
+      context.beginPath();
+      context.arc(0, 0, unit * 0.84, 0, Math.PI * 2);
+      stroke();
+      context.beginPath();
+      context.arc(0, 0, unit * 0.58, 0, Math.PI * 2);
+      stroke();
+      context.restore();
+      break;
+    case "Uranus":
+      context.strokeStyle = colors.interactiveStroke || colors.stroke;
+      context.fillStyle = colors.interactiveHighlight || colors.fill;
+      context.shadowColor = colors.interactiveGlow || colors.shadow;
+      context.shadowBlur = size * 0.36;
+      context.lineWidth = Math.max(1, size * 0.07);
+      context.beginPath();
+      context.arc(0, 0, unit * 0.78, 0, Math.PI * 2);
+      stroke();
+      context.beginPath();
+      context.arc(0, 0, unit * 0.5, 0, Math.PI * 2);
+      stroke();
+      context.shadowBlur = 0;
+      context.lineWidth = Math.max(1, size * 0.08);
+      line(0, -unit * 0.02, 0, unit * 0.32);
+      context.beginPath();
+      context.arc(0, -unit * 0.34, Math.max(1.6, unit * 0.08), 0, Math.PI * 2);
+      context.fill();
+      break;
+    default:
+      break;
+  }
 
-  context.fillStyle = colors.alert;
-  context.beginPath();
-  context.arc(left + width - (size * 0.27), top + (size * 0.29), size * 0.15, 0, Math.PI * 2);
-  context.fill();
+  context.restore();
+};
 
-  context.shadowBlur = 0;
-  context.font = `700 ${size * 0.72}px "Share Tech Mono", monospace`;
-  context.textAlign = "center";
+const drawUranusQuestPrompt = (context, x, y, size, maxWidth, colors, options = {}) => {
+  const iconSize = size * 1.02;
+  const textSize = size * 0.64;
+  const gap = size * 0.12;
+  const label = "QUEST";
+
+  context.save();
+  context.font = `600 ${textSize}px "Share Tech Mono", monospace`;
+  context.textAlign = "left";
   context.textBaseline = "middle";
-  const prefix = "# ";
-  const label = "QUEST!";
-  const prefixWidth = context.measureText(prefix).width;
-  const labelWidth = context.measureText(label).width;
-  const textX = -(prefixWidth + labelWidth) / 2;
 
-  context.fillStyle = colors.alert;
-  context.fillText(prefix, textX + (prefixWidth / 2), height * 0.04);
+  const textWidth = context.measureText(label).width;
+  const totalWidth = iconSize + gap + textWidth;
+  const scale = Math.min(options.isCompact ? 0.76 : 1, maxWidth ? maxWidth / totalWidth : 1);
+
+  context.translate(x, y);
+  context.scale(scale, scale);
+
+  drawPlanetGlyph(context, -(totalWidth / 2) + (iconSize / 2), 0, iconSize, { name: "Uranus" }, {
+    fill: colors.text,
+    interactiveGlow: colors.glow,
+    interactiveHighlight: colors.alert,
+    interactiveStroke: colors.accent,
+    shadow: colors.glow,
+    stroke: colors.accent
+  });
+
+  context.shadowColor = colors.glow;
+  context.shadowBlur = textSize * 0.24;
   context.fillStyle = colors.accent;
-  context.fillText(label, textX + prefixWidth + (labelWidth / 2), height * 0.04);
-
+  context.fillText(label, -(totalWidth / 2) + iconSize + gap, textSize * 0.04);
   context.restore();
 };
 
@@ -379,6 +491,22 @@ const drawRingSegmentPanel = (context, metrics, segment, colors) => {
     context.stroke();
   }
 
+  if (colors.border) {
+    context.shadowColor = colors.borderGlow || colors.border;
+    context.shadowBlur = (segment.outerRadius - segment.innerRadius) * 0.18;
+    context.strokeStyle = colors.border;
+    context.lineWidth = Math.max(1.2, (segment.outerRadius - segment.innerRadius) * 0.055);
+    context.beginPath();
+    context.arc(metrics.center, metrics.center, segment.outerRadius, segment.startAngle, segment.endAngle);
+    context.lineTo(
+      metrics.center + Math.cos(segment.endAngle) * segment.innerRadius,
+      metrics.center + Math.sin(segment.endAngle) * segment.innerRadius
+    );
+    context.arc(metrics.center, metrics.center, segment.innerRadius, segment.endAngle, segment.startAngle, true);
+    context.closePath();
+    context.stroke();
+  }
+
   context.restore();
 };
 
@@ -390,11 +518,9 @@ const drawRing = (context, metrics, options) => {
     outerRadius,
     stroke,
     textColor,
-    commandColor,
     styledSegmentColors,
     styledSegmentIndices = [],
     showBorders = true,
-    motion = 0,
     rotation = -Math.PI / 2
   } = options;
   const segmentAngle = (Math.PI * 2) / count;
@@ -450,37 +576,49 @@ const drawRing = (context, metrics, options) => {
 
     if (label) {
       const textSize = Math.max(11, (outerRadius - innerRadius) * 0.36);
-      const isCompactCanvas = metrics.size < 520;
-      const binaryTextSize = Math.max(10, textSize * (isCompactCanvas ? 0.82 : 0.94));
+      const isCompactCanvas = metrics.size < 520 || window.matchMedia("(max-width: 640px)").matches;
+      const labelTextSize = Math.max(13, textSize * (isCompactCanvas ? 1.45 : 1.72));
       const segmentChord = 2 * labelRadius * Math.sin(segmentAngle / 2);
 
-      if (label === COMMAND_RING_QUEST_LABEL) {
-        drawQuestBadge(context, labelX, labelY, textSize, {
-          accent: "#7CFF78",
-          alert: "#E8FF5A",
-          fill: "rgba(124, 255, 120, 0.28)",
-          glow: "rgba(124, 255, 120, 0.48)",
-          stroke: "rgba(124, 255, 120, 0.9)",
-          text: "rgba(17, 29, 23, 0.96)"
-        }, {
-          maxHeight: (outerRadius - innerRadius) * 0.78,
-          maxWidth: segmentChord * 0.72
-        });
+      if (label.name) {
+        const isUranus = label.name === "Uranus";
+
+        if (isUranus) {
+          const promptInset = (outerRadius - innerRadius) * 0.06;
+          const promptX = labelX - (Math.cos(middleAngle) * promptInset);
+          const promptY = labelY - (Math.sin(middleAngle) * promptInset);
+
+          drawUranusQuestPrompt(context, promptX, promptY, labelTextSize, segmentChord * (isCompactCanvas ? 0.62 : 0.92), {
+            accent: "rgba(124, 255, 120, 0.92)",
+            alert: "rgba(232, 255, 90, 0.84)",
+            glow: "rgba(124, 255, 120, 0.42)",
+            text: textColor
+          }, {
+            isCompact: isCompactCanvas
+          });
+        } else {
+          drawPlanetGlyph(context, labelX, labelY, labelTextSize, label, {
+            fill: textColor,
+            shadow: "rgba(255, 255, 255, 0.42)",
+            stroke: "rgba(5, 21, 25, 0.7)"
+          });
+        }
       } else {
         drawCenteredText(
           context,
           String(label),
           labelX,
           labelY,
-          binaryTextSize,
+          labelTextSize,
           textColor,
           showBorders ? {} : {
+            fontFamily: "\"Segoe UI Symbol\", \"Noto Sans Symbols\", \"DejaVu Sans\", sans-serif",
             shadowBlur: 12,
             shadowColor: "rgba(255, 255, 255, 0.42)",
             maxWidth: segmentChord * 0.62,
             strokeColor: "rgba(5, 21, 25, 0.78)",
-            strokeWidth: Math.max(isCompactCanvas ? 0.45 : 0.75, binaryTextSize * (isCompactCanvas ? 0.035 : 0.06)),
-            weight: isCompactCanvas ? 300 : 400
+            strokeWidth: Math.max(isCompactCanvas ? 0.45 : 0.75, labelTextSize * (isCompactCanvas ? 0.025 : 0.04)),
+            weight: 400
           }
         );
       }
@@ -514,6 +652,15 @@ const drawInsetSquareCell = (context, x, y, size, colors) => {
   context.strokeStyle = colors.shadow;
   context.lineWidth = Math.max(1, size * 0.025);
   context.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
+
+  if (colors.border) {
+    context.shadowColor = colors.borderGlow || colors.border;
+    context.shadowBlur = size * 0.08;
+    context.strokeStyle = colors.border;
+    context.lineWidth = Math.max(1.5, size * 0.035);
+    context.strokeRect(x + 1, y + 1, size - 2, size - 2);
+  }
+
   context.restore();
 };
 
@@ -646,19 +793,47 @@ const drawElementIcon = (context, x, y, size, element, colors, options = {}) => 
       context.stroke();
       break;
     case "Heaven":
-      context.beginPath();
-      context.arc(0, 0, unit * 0.62, 0, Math.PI * 2);
-      context.stroke();
-      context.save();
-      context.rotate(-0.2);
-      context.scale(1, 0.33);
-      context.beginPath();
-      context.arc(0, 0, unit * 0.86, 0, Math.PI * 2);
-      context.stroke();
-      context.restore();
-      context.beginPath();
-      context.arc(unit * 0.56, -unit * 0.1, unit * 0.09, 0, Math.PI * 2);
-      context.fill();
+      [
+        [-0.42, -0.3, 0.2],
+        [0.3, -0.44, 0.16],
+        [0.46, 0.24, 0.18],
+        [-0.18, 0.44, 0.14]
+      ].forEach(([starX, starY, radius]) => {
+        const centerX = unit * starX;
+        const centerY = unit * starY;
+        const outer = unit * radius;
+        const verticalOuter = outer * 1.22;
+        const inner = outer * 0.32;
+        const verticalInner = inner * 1.12;
+
+        context.beginPath();
+        context.moveTo(centerX, centerY - verticalOuter);
+        context.lineTo(centerX + inner, centerY - verticalInner);
+        context.lineTo(centerX + outer, centerY);
+        context.lineTo(centerX + inner, centerY + verticalInner);
+        context.lineTo(centerX, centerY + verticalOuter);
+        context.lineTo(centerX - inner, centerY + verticalInner);
+        context.lineTo(centerX - outer, centerY);
+        context.lineTo(centerX - inner, centerY - verticalInner);
+        context.closePath();
+        context.fill();
+        context.stroke();
+
+        context.beginPath();
+        context.arc(centerX, centerY, Math.max(1, outer * 0.16), 0, Math.PI * 2);
+        context.fill();
+      });
+      context.globalAlpha = 0.48;
+      [
+        [-0.66, 0.02, 0.08],
+        [0.04, -0.04, 0.06],
+        [0.12, 0.52, 0.055]
+      ].forEach(([dotX, dotY, radius]) => {
+        context.beginPath();
+        context.arc(unit * dotX, unit * dotY, unit * radius, 0, Math.PI * 2);
+        context.fill();
+      });
+      context.globalAlpha = 1;
       break;
     default:
       break;
@@ -750,7 +925,7 @@ const createTenkiState = (orderedRows) => ({
 
 const DEFAULT_TENKI_STATE = createTenkiState(DEFAULT_TENKI_ROWS);
 
-const drawTenki = (canvas, state = DEFAULT_TENKI_STATE, options = {}) => {
+const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
   const context = resizeCanvas(canvas);
   const rect = canvas.getBoundingClientRect();
   const metrics = getCanvasMetrics(canvas, state.rings.length);
@@ -776,19 +951,15 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE, options = {}) => {
       outerRadius,
       stroke: isSoft ? softBorder : border,
       textColor: isSoft ? "rgba(47, 42, 79, 0.74)" : accent,
-      commandColor: accentSoft,
-      motion,
       styledSegmentColors: (segmentIndex) => {
         const colors = {
           ...getSquareCellPaletteColors(segmentIndex),
           glow: `rgba(${accentSoftRgb}, 0.14)`
         };
 
-        if (segmentIndex === COMMAND_SEGMENT_INDEX) {
-          colors.inset = {
-            fill: "rgba(124, 255, 120, 0.035)",
-            shadow: "rgba(17, 29, 23, 0.12)"
-          };
+        if (segmentIndex === URANUS_SEGMENT_INDEX) {
+          colors.border = "rgba(124, 255, 120, 0.92)";
+          colors.borderGlow = "rgba(124, 255, 120, 0.42)";
         }
 
         return colors;
@@ -812,6 +983,8 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE, options = {}) => {
       stroke: "rgba(5, 21, 25, 0.68)"
     },
     inset: {
+      border: "rgba(124, 255, 120, 0.92)",
+      borderGlow: "rgba(124, 255, 120, 0.42)",
       bottomLight: "rgba(255, 255, 255, 0.035)",
       fill: "rgba(124, 255, 120, 0.035)",
       shadow: "rgba(17, 29, 23, 0.12)",
