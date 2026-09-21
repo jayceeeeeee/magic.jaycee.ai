@@ -25,26 +25,26 @@ const TENKI_ELEMENTS = {
   8: "Water",
   9: "Heaven"
 };
-const EMPTY_LABELS = Array.from({ length: RING_SEGMENT_COUNT }, () => "");
-const getBinaryLabel = (number) => {
-  const binary = (number - 1).toString(2).padStart(3, "0");
-
-  if (binary.length > 3) {
-    return "";
-  }
-
-  return binary
-    .replaceAll("1", ".")
-    .replaceAll("0", " ");
+const TRIGRAM_PATTERNS = {
+  1: [true, true, false],
+  2: [true, false, true],
+  3: [false, false, true],
+  4: [false, false, false],
+  6: [true, false, false],
+  7: [false, true, true],
+  8: [false, true, false],
+  9: [true, true, true]
 };
+const TRIGRAM_LABEL_PREFIX = "TRIGRAM:";
+const EMPTY_LABELS = Array.from({ length: RING_SEGMENT_COUNT }, () => "");
 const DEFAULT_TENKI_ROWS = TENKI_ORDER.map((number) => ({
   number,
-  binary: getBinaryLabel(number),
+  trigram: TRIGRAM_PATTERNS[number] ? `${TRIGRAM_LABEL_PREFIX}${number}` : "",
   isCommandPrompt: number === COMMAND_RING_NUMBER
 }));
 const RING_TEMPLATES = [
   {
-    getLabels: (rows) => rows.map((row) => (row.isCommandPrompt ? COMMAND_RING_QUEST_LABEL : row.binary || "")),
+    getLabels: (rows) => rows.map((row) => (row.isCommandPrompt ? COMMAND_RING_QUEST_LABEL : row.trigram || "")),
     tone: "accent"
   },
   {
@@ -321,6 +321,39 @@ const drawQuestBadge = (context, x, y, size, colors, layout = {}) => {
   context.restore();
 };
 
+const drawTrigramGlyph = (context, x, y, size, pattern, colors) => {
+  const lineWidth = Math.max(1, size * 0.075);
+  const width = size * 1.18;
+  const gap = size * 0.2;
+  const segmentGap = size * 0.22;
+
+  context.save();
+  context.translate(x, y);
+  context.lineWidth = lineWidth;
+  context.lineCap = "round";
+  context.strokeStyle = colors.stroke;
+  context.shadowColor = colors.shadow;
+  context.shadowBlur = size * 0.2;
+
+  pattern.forEach((isSolid, index) => {
+    const yOffset = (index - 1) * gap;
+
+    context.beginPath();
+    if (isSolid) {
+      context.moveTo(-width / 2, yOffset);
+      context.lineTo(width / 2, yOffset);
+    } else {
+      context.moveTo(-width / 2, yOffset);
+      context.lineTo(-(segmentGap / 2), yOffset);
+      context.moveTo(segmentGap / 2, yOffset);
+      context.lineTo(width / 2, yOffset);
+    }
+    context.stroke();
+  });
+
+  context.restore();
+};
+
 const getTopCenteredLastSegmentRotation = (count) => {
   const segmentAngle = (Math.PI * 2) / count;
   return -Math.PI / 2 - ((count - 0.5) * segmentAngle);
@@ -441,7 +474,7 @@ const drawRing = (context, metrics, options) => {
 
     if (label) {
       const textSize = Math.max(11, (outerRadius - innerRadius) * 0.36);
-      const binaryTextSize = Math.max(10, textSize * 0.94);
+      const trigramSize = Math.max(10, textSize * 0.92);
       const segmentChord = 2 * labelRadius * Math.sin(segmentAngle / 2);
 
       if (label === COMMAND_RING_QUEST_LABEL) {
@@ -456,19 +489,29 @@ const drawRing = (context, metrics, options) => {
           maxHeight: (outerRadius - innerRadius) * 0.78,
           maxWidth: segmentChord * 0.72
         });
+      } else if (String(label).startsWith(TRIGRAM_LABEL_PREFIX)) {
+        const number = Number(String(label).slice(TRIGRAM_LABEL_PREFIX.length));
+        const pattern = TRIGRAM_PATTERNS[number];
+
+        if (pattern) {
+          drawTrigramGlyph(context, labelX, labelY, trigramSize, pattern, {
+            shadow: "rgba(255, 255, 255, 0.36)",
+            stroke: "rgba(5, 21, 25, 0.72)"
+          });
+        }
       } else {
         drawCenteredText(
           context,
           String(label),
           labelX,
           labelY,
-          binaryTextSize,
+          textSize,
           textColor,
           showBorders ? {} : {
             shadowBlur: 12,
             shadowColor: "rgba(255, 255, 255, 0.42)",
             strokeColor: "rgba(5, 21, 25, 0.78)",
-            strokeWidth: Math.max(1, binaryTextSize * 0.12),
+            strokeWidth: Math.max(1, textSize * 0.12),
             weight: 500
           }
         );
