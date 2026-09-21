@@ -295,9 +295,6 @@ const drawPlanetGlyph = (context, x, y, size, planet, colors) => {
       context.arc(0, unit * 0.12, unit * 0.42, Math.PI * 1.14, Math.PI * 1.86);
       stroke();
       circle(unit * 0.24, -unit * 0.18, unit * 0.08);
-      context.beginPath();
-      context.arc(0, 0, unit * 0.82, Math.PI * 1.08, Math.PI * 1.92);
-      stroke();
       break;
     case "Sun":
       circle(0, 0, unit * 0.38);
