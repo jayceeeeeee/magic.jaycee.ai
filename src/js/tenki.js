@@ -2,21 +2,30 @@ const RING_SEGMENT_COUNT = 9;
 const SQUARE_GRID_SIZE = 3;
 const TENKI_ORDER = [1, 2, 4, 3, 5, 7, 6, 8, 9];
 const COMMAND_RING_NUMBER = 9;
-const COMMAND_RING_CURSOR_LABEL = "_";
+const COMMAND_RING_QUEST_LABEL = "NEW_QUEST";
 const COMMAND_RING_INDEX = 0;
 const COMMAND_SEGMENT_INDEX = TENKI_ORDER.indexOf(COMMAND_RING_NUMBER);
 const CONSOLE_TYPING_SPEED = 18;
 const CONSOLE_LINE_PAUSE = 90;
 const TEXT_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='24' viewBox='0 0 16 24'%3E%3Cpath d='M5 3H11M8 3V21M5 21H11' stroke='black' stroke-width='3' stroke-linecap='square'/%3E%3Cpath d='M5 3H11M8 3V21M5 21H11' stroke='white' stroke-width='1.4' stroke-linecap='square'/%3E%3C/svg%3E\") 8 12, text";
 const STYLED_RING_INDEX = 0;
-const STYLED_SEGMENT_INDICES = TENKI_ORDER
-  .map((number, index) => (number === COMMAND_RING_NUMBER ? null : index))
-  .filter((index) => index !== null);
+const STYLED_SEGMENT_INDICES = Array.from({ length: RING_SEGMENT_COUNT }, (_, index) => index);
 const SQUARE_PALETTE_CORNERS = {
   topLeft: "#35f3c8",
   topRight: "#45a8ff",
   bottomLeft: "#b86cff",
   bottomRight: "#ffb35c"
+};
+const TENKI_ELEMENTS = {
+  1: "Wind",
+  2: "Fire",
+  3: "Thunder",
+  4: "Earth",
+  5: "Dao",
+  6: "Mountain",
+  7: "Lake",
+  8: "Water",
+  9: "Heaven"
 };
 const EMPTY_LABELS = Array.from({ length: RING_SEGMENT_COUNT }, () => "");
 const getBinaryLabel = (number) => {
@@ -37,7 +46,7 @@ const DEFAULT_TENKI_ROWS = TENKI_ORDER.map((number) => ({
 }));
 const RING_TEMPLATES = [
   {
-    getLabels: (rows) => rows.map((row) => (row.isCommandPrompt ? COMMAND_RING_CURSOR_LABEL : row.binary || "")),
+    getLabels: (rows) => rows.map((row) => (row.isCommandPrompt ? COMMAND_RING_QUEST_LABEL : row.binary || "")),
     tone: "accent"
   },
   {
@@ -111,6 +120,16 @@ const getSquarePaletteColor = (column, row) => {
   );
 
   return rgbToHex(mixRgb(top, bottom, y));
+};
+
+const getSquareCellPaletteColors = (index) => {
+  const column = index % SQUARE_GRID_SIZE;
+  const row = Math.floor(index / SQUARE_GRID_SIZE);
+
+  return {
+    end: getSquarePaletteColor(column + 1, row + 1),
+    start: getSquarePaletteColor(column, row)
+  };
 };
 
 const wait = (duration) => new Promise((resolve) => window.setTimeout(resolve, duration));
@@ -215,38 +234,65 @@ const resizeCanvas = (canvas) => {
   return context;
 };
 
-const drawCenteredText = (context, text, x, y, size, color) => {
+const drawCenteredText = (context, text, x, y, size, color, options = {}) => {
   context.save();
   context.fillStyle = color;
   context.font = `600 ${size}px "Share Tech Mono", monospace`;
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.shadowColor = color;
-  context.shadowBlur = 10;
+  context.shadowColor = options.shadowColor || color;
+  context.shadowBlur = options.shadowBlur === undefined ? 10 : options.shadowBlur;
+  if (options.strokeColor) {
+    context.lineWidth = options.strokeWidth || Math.max(2, size * 0.18);
+    context.strokeStyle = options.strokeColor;
+    context.strokeText(text, x, y);
+  }
   context.fillText(text, x, y);
   context.restore();
 };
 
-const drawCommandPrompt = (context, x, y, size, colors, isCursorVisible) => {
-  const parts = [
-    { text: isCursorVisible ? "_" : " ", color: colors.text }
-  ];
+const drawRoundedRect = (context, x, y, width, height, radius) => {
+  const corner = Math.min(radius, width / 2, height / 2);
+
+  context.beginPath();
+  context.moveTo(x + corner, y);
+  context.lineTo(x + width - corner, y);
+  context.quadraticCurveTo(x + width, y, x + width, y + corner);
+  context.lineTo(x + width, y + height - corner);
+  context.quadraticCurveTo(x + width, y + height, x + width - corner, y + height);
+  context.lineTo(x + corner, y + height);
+  context.quadraticCurveTo(x, y + height, x, y + height - corner);
+  context.lineTo(x, y + corner);
+  context.quadraticCurveTo(x, y, x + corner, y);
+  context.closePath();
+};
+
+const drawQuestBadge = (context, x, y, size, colors) => {
+  const width = size * 2.95;
+  const height = size * 1.42;
+  const left = x - (width / 2);
+  const top = y - (height / 2);
 
   context.save();
-  context.font = `600 ${size}px "Share Tech Mono", monospace`;
-  context.textAlign = "left";
+  context.shadowColor = colors.glow;
+  context.shadowBlur = 12;
+  context.fillStyle = colors.fill;
+  context.strokeStyle = colors.stroke;
+  context.lineWidth = Math.max(1, size * 0.07);
+  drawRoundedRect(context, left, top, width, height, size * 0.18);
+  context.fill();
+  context.stroke();
+
+  context.shadowBlur = 0;
+  context.font = `700 ${size * 0.48}px "Share Tech Mono", monospace`;
+  context.textAlign = "center";
   context.textBaseline = "middle";
+  context.fillStyle = colors.text;
+  context.fillText("NEW", x, y - (height * 0.18));
 
-  const totalWidth = parts.reduce((width, part) => width + context.measureText(part.text).width, 0);
-  let currentX = x - (totalWidth / 2);
-
-  parts.forEach((part) => {
-    context.fillStyle = part.color;
-    context.shadowColor = part.color;
-    context.shadowBlur = 10;
-    context.fillText(part.text, currentX, y);
-    currentX += context.measureText(part.text).width;
-  });
+  context.font = `700 ${size * 0.42}px "Share Tech Mono", monospace`;
+  context.fillStyle = colors.accent;
+  context.fillText("Q#!", x, y + (height * 0.22));
 
   context.restore();
 };
@@ -257,12 +303,20 @@ const getTopCenteredLastSegmentRotation = (count) => {
 };
 
 const drawRingSegmentPanel = (context, metrics, segment, colors) => {
+  const gradient = context.createLinearGradient(
+    metrics.center + Math.cos(segment.startAngle) * segment.innerRadius,
+    metrics.center + Math.sin(segment.startAngle) * segment.innerRadius,
+    metrics.center + Math.cos(segment.endAngle) * segment.outerRadius,
+    metrics.center + Math.sin(segment.endAngle) * segment.outerRadius
+  );
+
+  gradient.addColorStop(0, colors.start);
+  gradient.addColorStop(1, colors.end);
+
   context.save();
-  context.fillStyle = colors.fill;
-  context.strokeStyle = colors.stroke;
-  context.lineWidth = 1;
+  context.fillStyle = gradient;
   context.shadowColor = colors.glow;
-  context.shadowBlur = 10;
+  context.shadowBlur = 8;
 
   context.beginPath();
   context.arc(metrics.center, metrics.center, segment.outerRadius, segment.startAngle, segment.endAngle);
@@ -273,7 +327,6 @@ const drawRingSegmentPanel = (context, metrics, segment, colors) => {
   context.arc(metrics.center, metrics.center, segment.innerRadius, segment.endAngle, segment.startAngle, true);
   context.closePath();
   context.fill();
-  context.stroke();
   context.restore();
 };
 
@@ -286,9 +339,9 @@ const drawRing = (context, metrics, options) => {
     stroke,
     textColor,
     commandColor,
-    isCommandCursorVisible = true,
     styledSegmentColors,
     styledSegmentIndices = [],
+    showBorders = true,
     rotation = -Math.PI / 2
   } = options;
   const segmentAngle = (Math.PI * 2) / count;
@@ -310,18 +363,20 @@ const drawRing = (context, metrics, options) => {
           outerRadius,
           startAngle: rotation + (segmentIndex * segmentAngle)
         },
-        styledSegmentColors
+        typeof styledSegmentColors === "function" ? styledSegmentColors(segmentIndex) : styledSegmentColors
       );
     });
   }
 
-  context.beginPath();
-  context.arc(metrics.center, metrics.center, innerRadius, 0, Math.PI * 2);
-  context.stroke();
+  if (showBorders) {
+    context.beginPath();
+    context.arc(metrics.center, metrics.center, innerRadius, 0, Math.PI * 2);
+    context.stroke();
 
-  context.beginPath();
-  context.arc(metrics.center, metrics.center, outerRadius, 0, Math.PI * 2);
-  context.stroke();
+    context.beginPath();
+    context.arc(metrics.center, metrics.center, outerRadius, 0, Math.PI * 2);
+    context.stroke();
+  }
 
   labels.forEach((label, index) => {
     const startAngle = rotation + (index * segmentAngle);
@@ -333,19 +388,24 @@ const drawRing = (context, metrics, options) => {
     const labelX = metrics.center + Math.cos(middleAngle) * labelRadius;
     const labelY = metrics.center + Math.sin(middleAngle) * labelRadius;
 
-    context.beginPath();
-    context.moveTo(dividerInnerX, dividerInnerY);
-    context.lineTo(dividerX, dividerY);
-    context.stroke();
+    if (showBorders) {
+      context.beginPath();
+      context.moveTo(dividerInnerX, dividerInnerY);
+      context.lineTo(dividerX, dividerY);
+      context.stroke();
+    }
 
     if (label) {
       const textSize = Math.max(11, (outerRadius - innerRadius) * 0.36);
 
-      if (label === COMMAND_RING_CURSOR_LABEL) {
-        drawCommandPrompt(context, labelX, labelY, textSize, {
+      if (label === COMMAND_RING_QUEST_LABEL) {
+        drawQuestBadge(context, labelX, labelY, textSize, {
           accent: commandColor,
-          text: textColor
-        }, isCommandCursorVisible);
+          fill: "rgba(5, 21, 25, 0.68)",
+          glow: "rgba(255, 213, 107, 0.24)",
+          stroke: "rgba(255, 213, 107, 0.72)",
+          text: "rgba(255, 255, 255, 0.92)"
+        });
       } else {
         drawCenteredText(
           context,
@@ -353,7 +413,13 @@ const drawRing = (context, metrics, options) => {
           labelX,
           labelY,
           textSize,
-          textColor
+          textColor,
+          showBorders ? {} : {
+            shadowBlur: 12,
+            shadowColor: "rgba(255, 255, 255, 0.42)",
+            strokeColor: "rgba(5, 21, 25, 0.78)",
+            strokeWidth: Math.max(2, textSize * 0.2)
+          }
         );
       }
     }
@@ -370,6 +436,148 @@ const drawGradientSquareCell = (context, x, y, size, colors) => {
 
   context.fillStyle = gradient;
   context.fillRect(x, y, size, size);
+};
+
+const drawElementIcon = (context, x, y, size, element, colors) => {
+  const unit = size / 2;
+
+  context.save();
+  context.translate(x, y);
+  context.lineWidth = Math.max(1, size * 0.055);
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  context.strokeStyle = colors.stroke;
+  context.fillStyle = colors.fill;
+  context.shadowColor = colors.shadow;
+  context.shadowBlur = size * 0.12;
+
+  switch (element) {
+    case "Wind":
+      [-0.36, 0, 0.34].forEach((offset, index) => {
+        context.beginPath();
+        context.moveTo(-unit * 0.78, unit * offset);
+        context.bezierCurveTo(
+          -unit * 0.24,
+          unit * (offset - 0.26),
+          unit * 0.24,
+          unit * (offset + 0.26),
+          unit * (index === 1 ? 0.74 : 0.52),
+          unit * offset
+        );
+        context.stroke();
+      });
+      break;
+    case "Fire":
+      context.lineWidth = Math.max(1, size * 0.07);
+      context.beginPath();
+      context.moveTo(-unit * 0.48, unit * 0.68);
+      context.bezierCurveTo(-unit * 0.18, unit * 0.24, -unit * 0.2, -unit * 0.3, unit * 0.02, -unit * 0.86);
+      context.bezierCurveTo(unit * 0.16, -unit * 0.48, unit * 0.58, -unit * 0.14, unit * 0.44, unit * 0.28);
+      context.bezierCurveTo(unit * 0.34, unit * 0.56, unit * 0.08, unit * 0.74, -unit * 0.2, unit * 0.72);
+      context.stroke();
+      context.beginPath();
+      context.moveTo(unit * 0.02, unit * 0.5);
+      context.bezierCurveTo(-unit * 0.14, unit * 0.18, unit * 0.02, -unit * 0.1, unit * 0.18, -unit * 0.32);
+      context.bezierCurveTo(unit * 0.26, -unit * 0.04, unit * 0.26, unit * 0.28, unit * 0.02, unit * 0.5);
+      context.stroke();
+      break;
+    case "Thunder":
+      context.beginPath();
+      context.moveTo(unit * 0.22, -unit * 0.9);
+      context.lineTo(-unit * 0.32, -unit * 0.05);
+      context.lineTo(unit * 0.06, -unit * 0.05);
+      context.lineTo(-unit * 0.22, unit * 0.9);
+      context.lineTo(unit * 0.48, -unit * 0.22);
+      context.lineTo(unit * 0.12, -unit * 0.22);
+      context.closePath();
+      context.fill();
+      break;
+    case "Earth":
+      context.lineWidth = Math.max(1, size * 0.06);
+      [
+        [-0.58, -0.48, 0.38, -0.48],
+        [-0.72, -0.08, 0.58, -0.08],
+        [-0.5, 0.32, 0.74, 0.32],
+        [-0.66, 0.7, 0.46, 0.7]
+      ].forEach(([startX, startY, endX, endY]) => {
+        context.beginPath();
+        context.moveTo(unit * startX, unit * startY);
+        context.lineTo(unit * endX, unit * endY);
+        context.stroke();
+      });
+      context.beginPath();
+      context.moveTo(-unit * 0.58, -unit * 0.48);
+      context.lineTo(-unit * 0.72, -unit * 0.08);
+      context.moveTo(unit * 0.38, -unit * 0.48);
+      context.lineTo(unit * 0.58, -unit * 0.08);
+      context.moveTo(-unit * 0.5, unit * 0.32);
+      context.lineTo(-unit * 0.66, unit * 0.7);
+      context.moveTo(unit * 0.74, unit * 0.32);
+      context.lineTo(unit * 0.46, unit * 0.7);
+      context.stroke();
+      break;
+    case "Dao":
+      context.beginPath();
+      context.arc(0, 0, unit * 0.78, 0, Math.PI * 2);
+      context.stroke();
+      context.beginPath();
+      context.moveTo(0, -unit * 0.78);
+      context.bezierCurveTo(unit * 0.44, -unit * 0.44, unit * 0.44, 0, 0, 0);
+      context.bezierCurveTo(-unit * 0.44, unit * 0.44, -unit * 0.44, unit * 0.78, 0, unit * 0.78);
+      context.stroke();
+      context.beginPath();
+      context.arc(0, -unit * 0.32, unit * 0.08, 0, Math.PI * 2);
+      context.arc(0, unit * 0.32, unit * 0.08, 0, Math.PI * 2);
+      context.fill();
+      break;
+    case "Mountain":
+      context.beginPath();
+      context.moveTo(-unit * 0.84, unit * 0.68);
+      context.lineTo(-unit * 0.22, -unit * 0.74);
+      context.lineTo(unit * 0.08, -unit * 0.12);
+      context.lineTo(unit * 0.36, -unit * 0.52);
+      context.lineTo(unit * 0.84, unit * 0.68);
+      context.closePath();
+      context.stroke();
+      break;
+    case "Lake":
+      context.beginPath();
+      context.arc(0, -unit * 0.1, unit * 0.62, 0.12 * Math.PI, 0.88 * Math.PI);
+      context.stroke();
+      [-0.22, 0.12, 0.42].forEach((offset) => {
+        context.beginPath();
+        context.moveTo(-unit * 0.62, unit * offset);
+        context.bezierCurveTo(-unit * 0.28, unit * (offset + 0.14), unit * 0.28, unit * (offset - 0.14), unit * 0.62, unit * offset);
+        context.stroke();
+      });
+      break;
+    case "Water":
+      context.beginPath();
+      context.moveTo(0, -unit * 0.88);
+      context.bezierCurveTo(unit * 0.58, -unit * 0.1, unit * 0.56, unit * 0.74, 0, unit * 0.82);
+      context.bezierCurveTo(-unit * 0.56, unit * 0.74, -unit * 0.58, -unit * 0.1, 0, -unit * 0.88);
+      context.stroke();
+      break;
+    case "Heaven":
+      context.beginPath();
+      context.arc(0, 0, unit * 0.62, 0, Math.PI * 2);
+      context.stroke();
+      context.save();
+      context.rotate(-0.2);
+      context.scale(1, 0.33);
+      context.beginPath();
+      context.arc(0, 0, unit * 0.86, 0, Math.PI * 2);
+      context.stroke();
+      context.restore();
+      context.beginPath();
+      context.arc(unit * 0.56, -unit * 0.1, unit * 0.09, 0, Math.PI * 2);
+      context.fill();
+      break;
+    default:
+      break;
+  }
+
+  context.restore();
 };
 
 const drawSquare = (context, metrics, colors) => {
@@ -391,6 +599,22 @@ const drawSquare = (context, metrics, colors) => {
           start: getSquarePaletteColor(column, row),
           end: getSquarePaletteColor(column + 1, row + 1)
         }
+      );
+    }
+  }
+
+  for (let row = 0; row < SQUARE_GRID_SIZE; row += 1) {
+    for (let column = 0; column < SQUARE_GRID_SIZE; column += 1) {
+      const orderIndex = (row * SQUARE_GRID_SIZE) + column;
+      const element = TENKI_ELEMENTS[TENKI_ORDER[orderIndex]];
+
+      drawElementIcon(
+        context,
+        start + (column * cellSize) + (cellSize / 2),
+        start + (row * cellSize) + (cellSize / 2),
+        cellSize * 0.52,
+        element,
+        colors.icon
       );
     }
   }
@@ -449,12 +673,11 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE, options = {}) => {
       stroke: isSoft ? softBorder : border,
       textColor: isSoft ? accentSoft : accent,
       commandColor: accentSoft,
-      styledSegmentColors: {
-        fill: `rgba(${accentSoftRgb}, 0.1)`,
-        glow: `rgba(${accentSoftRgb}, 0.18)`,
-        stroke: `rgba(${accentSoftRgb}, 0.45)`
-      },
-      isCommandCursorVisible: options.isCommandCursorVisible,
+      styledSegmentColors: (segmentIndex) => ({
+        ...getSquareCellPaletteColors(segmentIndex),
+        glow: `rgba(${accentSoftRgb}, 0.14)`
+      }),
+      showBorders: index !== STYLED_RING_INDEX,
       styledSegmentIndices: index === STYLED_RING_INDEX ? STYLED_SEGMENT_INDICES : [],
       rotation: ring.centerLastSegmentAtTop ? getTopCenteredLastSegmentRotation(ring.count) : undefined
     });
@@ -463,7 +686,12 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE, options = {}) => {
   drawSquare(context, metrics, {
     border,
     cellBorder: "rgba(7, 21, 24, 0.26)",
-    glow: "rgba(116, 247, 209, 0.14)"
+    glow: "rgba(116, 247, 209, 0.14)",
+    icon: {
+      fill: "rgba(5, 21, 25, 0.58)",
+      shadow: "rgba(255, 255, 255, 0.18)",
+      stroke: "rgba(5, 21, 25, 0.68)"
+    }
   });
 };
 
@@ -474,10 +702,7 @@ const initTenki = () => {
   if (!canvas) return;
 
   let isCommandSegmentHovered = false;
-  let isCommandCursorVisible = true;
-  const render = () => drawTenki(canvas, DEFAULT_TENKI_STATE, {
-    isCommandCursorVisible
-  });
+  const render = () => drawTenki(canvas, DEFAULT_TENKI_STATE);
   const getPointerPoint = (event) => {
     const rect = canvas.getBoundingClientRect();
 
@@ -507,10 +732,6 @@ const initTenki = () => {
 
   resizeObserver.observe(canvas);
   window.addEventListener("resize", render);
-  window.setInterval(() => {
-    isCommandCursorVisible = !isCommandCursorVisible;
-    render();
-  }, 600);
   canvas.addEventListener("pointermove", updateInteractiveHover);
   canvas.addEventListener("pointerleave", () => {
     if (!isCommandSegmentHovered) return;
