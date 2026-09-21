@@ -265,16 +265,21 @@ const drawRoundedRect = (context, x, y, width, height, radius) => {
   context.closePath();
 };
 
-const drawQuestBadge = (context, x, y, size, colors, motion = 0) => {
+const drawQuestBadge = (context, x, y, size, colors, layout = {}) => {
   const width = size * 4.18;
   const height = size * 1.72;
   const left = -(width / 2);
   const top = -(height / 2);
   const notchSize = size * 0.34;
+  const scale = Math.min(
+    1.12,
+    layout.maxWidth ? layout.maxWidth / width : 1.12,
+    layout.maxHeight ? layout.maxHeight / height : 1.12
+  );
 
   context.save();
   context.translate(x, y);
-  context.scale(1.12, 1.12);
+  context.scale(scale, scale);
   context.shadowColor = colors.glow;
   context.shadowBlur = 18;
   context.fillStyle = colors.fill;
@@ -437,6 +442,7 @@ const drawRing = (context, metrics, options) => {
     if (label) {
       const textSize = Math.max(11, (outerRadius - innerRadius) * 0.36);
       const binaryTextSize = Math.max(10, textSize * 0.94);
+      const segmentChord = 2 * labelRadius * Math.sin(segmentAngle / 2);
 
       if (label === COMMAND_RING_QUEST_LABEL) {
         drawQuestBadge(context, labelX, labelY, textSize, {
@@ -446,7 +452,10 @@ const drawRing = (context, metrics, options) => {
           glow: "rgba(124, 255, 120, 0.48)",
           stroke: "rgba(124, 255, 120, 0.9)",
           text: "rgba(17, 29, 23, 0.96)"
-        }, 0);
+        }, {
+          maxHeight: (outerRadius - innerRadius) * 0.78,
+          maxWidth: segmentChord * 0.72
+        });
       } else {
         drawCenteredText(
           context,
