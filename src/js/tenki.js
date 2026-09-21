@@ -3,11 +3,9 @@ const SQUARE_GRID_SIZE = 3;
 const TENKI_ORDER = [1, 2, 4, 3, 5, 7, 6, 8, 9];
 const COMMAND_RING_NUMBER = 9;
 const COMMAND_RING_QUEST_LABEL = "NEW_QUEST";
-const COMMAND_RING_INDEX = 0;
 const COMMAND_SEGMENT_INDEX = TENKI_ORDER.indexOf(COMMAND_RING_NUMBER);
 const CONSOLE_TYPING_SPEED = 18;
 const CONSOLE_LINE_PAUSE = 90;
-const TEXT_CURSOR = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='24' viewBox='0 0 16 24'%3E%3Cpath d='M5 3H11M8 3V21M5 21H11' stroke='black' stroke-width='3' stroke-linecap='square'/%3E%3Cpath d='M5 3H11M8 3V21M5 21H11' stroke='white' stroke-width='1.4' stroke-linecap='square'/%3E%3C/svg%3E\") 8 12, text";
 const STYLED_RING_INDEX = 0;
 const STYLED_SEGMENT_INDICES = Array.from({ length: RING_SEGMENT_COUNT }, (_, index) => index);
 const SQUARE_PALETTE_CORNERS = {
@@ -237,7 +235,7 @@ const resizeCanvas = (canvas) => {
 const drawCenteredText = (context, text, x, y, size, color, options = {}) => {
   context.save();
   context.fillStyle = color;
-  context.font = `600 ${size}px "Share Tech Mono", monospace`;
+  context.font = `${options.weight || 600} ${size}px "Share Tech Mono", monospace`;
   context.textAlign = "center";
   context.textBaseline = "middle";
   context.shadowColor = options.shadowColor || color;
@@ -267,32 +265,53 @@ const drawRoundedRect = (context, x, y, width, height, radius) => {
   context.closePath();
 };
 
-const drawQuestBadge = (context, x, y, size, colors) => {
-  const width = size * 2.95;
-  const height = size * 1.42;
-  const left = x - (width / 2);
-  const top = y - (height / 2);
+const drawQuestBadge = (context, x, y, size, colors, motion = 0) => {
+  const width = size * 3.74;
+  const height = size * 1.48;
+  const left = -(width / 2);
+  const top = -(height / 2);
+  const notchSize = size * 0.34;
 
   context.save();
+  context.translate(x, y);
+  context.scale(1.08, 1.08);
   context.shadowColor = colors.glow;
-  context.shadowBlur = 12;
+  context.shadowBlur = 18;
   context.fillStyle = colors.fill;
   context.strokeStyle = colors.stroke;
-  context.lineWidth = Math.max(1, size * 0.07);
+  context.lineWidth = Math.max(1, size * 0.09);
   drawRoundedRect(context, left, top, width, height, size * 0.18);
   context.fill();
   context.stroke();
 
   context.shadowBlur = 0;
-  context.font = `700 ${size * 0.48}px "Share Tech Mono", monospace`;
+  context.fillStyle = colors.accent;
+  context.beginPath();
+  context.moveTo(left + width - notchSize, top);
+  context.lineTo(left + width, top);
+  context.lineTo(left + width, top + notchSize);
+  context.closePath();
+  context.fill();
+
+  context.fillStyle = colors.alert;
+  context.beginPath();
+  context.arc(left + width - (size * 0.27), top + (size * 0.29), size * 0.15, 0, Math.PI * 2);
+  context.fill();
+
+  context.shadowBlur = 0;
+  context.font = `700 ${size * 0.62}px "Share Tech Mono", monospace`;
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.fillStyle = colors.text;
-  context.fillText("NEW", x, y - (height * 0.18));
+  const prefix = "# ";
+  const label = "QUEST!";
+  const prefixWidth = context.measureText(prefix).width;
+  const labelWidth = context.measureText(label).width;
+  const textX = -(prefixWidth + labelWidth) / 2;
 
-  context.font = `700 ${size * 0.42}px "Share Tech Mono", monospace`;
+  context.fillStyle = colors.alert;
+  context.fillText(prefix, textX + (prefixWidth / 2), height * 0.04);
   context.fillStyle = colors.accent;
-  context.fillText("Q#!", x, y + (height * 0.22));
+  context.fillText(label, textX + prefixWidth + (labelWidth / 2), height * 0.04);
 
   context.restore();
 };
@@ -327,6 +346,25 @@ const drawRingSegmentPanel = (context, metrics, segment, colors) => {
   context.arc(metrics.center, metrics.center, segment.innerRadius, segment.endAngle, segment.startAngle, true);
   context.closePath();
   context.fill();
+
+  if (colors.inset) {
+    context.shadowBlur = 0;
+    context.fillStyle = colors.inset.fill;
+    context.beginPath();
+    context.arc(metrics.center, metrics.center, segment.outerRadius, segment.startAngle, segment.endAngle);
+    context.lineTo(
+      metrics.center + Math.cos(segment.endAngle) * segment.innerRadius,
+      metrics.center + Math.sin(segment.endAngle) * segment.innerRadius
+    );
+    context.arc(metrics.center, metrics.center, segment.innerRadius, segment.endAngle, segment.startAngle, true);
+    context.closePath();
+    context.fill();
+
+    context.strokeStyle = colors.inset.shadow;
+    context.lineWidth = Math.max(1, (segment.outerRadius - segment.innerRadius) * 0.025);
+    context.stroke();
+  }
+
   context.restore();
 };
 
@@ -342,6 +380,7 @@ const drawRing = (context, metrics, options) => {
     styledSegmentColors,
     styledSegmentIndices = [],
     showBorders = true,
+    motion = 0,
     rotation = -Math.PI / 2
   } = options;
   const segmentAngle = (Math.PI * 2) / count;
@@ -397,28 +436,31 @@ const drawRing = (context, metrics, options) => {
 
     if (label) {
       const textSize = Math.max(11, (outerRadius - innerRadius) * 0.36);
+      const binaryTextSize = Math.max(10, textSize * 0.94);
 
       if (label === COMMAND_RING_QUEST_LABEL) {
         drawQuestBadge(context, labelX, labelY, textSize, {
-          accent: commandColor,
-          fill: "rgba(5, 21, 25, 0.68)",
-          glow: "rgba(255, 213, 107, 0.24)",
-          stroke: "rgba(255, 213, 107, 0.72)",
-          text: "rgba(255, 255, 255, 0.92)"
-        });
+          accent: "#7CFF78",
+          alert: "#E8FF5A",
+          fill: "rgba(124, 255, 120, 0.28)",
+          glow: "rgba(124, 255, 120, 0.48)",
+          stroke: "rgba(124, 255, 120, 0.9)",
+          text: "rgba(17, 29, 23, 0.96)"
+        }, 0);
       } else {
         drawCenteredText(
           context,
           String(label),
           labelX,
           labelY,
-          textSize,
+          binaryTextSize,
           textColor,
           showBorders ? {} : {
             shadowBlur: 12,
             shadowColor: "rgba(255, 255, 255, 0.42)",
             strokeColor: "rgba(5, 21, 25, 0.78)",
-            strokeWidth: Math.max(2, textSize * 0.2)
+            strokeWidth: Math.max(1, binaryTextSize * 0.12),
+            weight: 500
           }
         );
       }
@@ -438,8 +480,26 @@ const drawGradientSquareCell = (context, x, y, size, colors) => {
   context.fillRect(x, y, size, size);
 };
 
-const drawElementIcon = (context, x, y, size, element, colors) => {
+const drawInsetSquareCell = (context, x, y, size, colors) => {
+  const shade = context.createLinearGradient(x, y, x, y + size);
+
+  shade.addColorStop(0, colors.topShade);
+  shade.addColorStop(0.44, colors.fill);
+  shade.addColorStop(1, colors.bottomLight);
+
+  context.save();
+  context.fillStyle = shade;
+  context.fillRect(x, y, size, size);
+
+  context.strokeStyle = colors.shadow;
+  context.lineWidth = Math.max(1, size * 0.025);
+  context.strokeRect(x + 0.5, y + 0.5, size - 1, size - 1);
+  context.restore();
+};
+
+const drawElementIcon = (context, x, y, size, element, colors, options = {}) => {
   const unit = size / 2;
+  const motion = options.motion || 0;
 
   context.save();
   context.translate(x, y);
@@ -517,18 +577,25 @@ const drawElementIcon = (context, x, y, size, element, colors) => {
       context.stroke();
       break;
     case "Dao":
+      context.strokeStyle = colors.interactiveStroke;
+      context.shadowColor = colors.interactiveGlow;
+      context.shadowBlur = size * (0.16 + (motion * 0.12));
+      context.lineWidth = Math.max(1, size * 0.07);
       context.beginPath();
-      context.arc(0, 0, unit * 0.78, 0, Math.PI * 2);
+      context.arc(0, 0, unit * (0.92 + (motion * 0.06)), 0, Math.PI * 2);
       context.stroke();
       context.beginPath();
-      context.moveTo(0, -unit * 0.78);
-      context.bezierCurveTo(unit * 0.44, -unit * 0.44, unit * 0.44, 0, 0, 0);
-      context.bezierCurveTo(-unit * 0.44, unit * 0.44, -unit * 0.44, unit * 0.78, 0, unit * 0.78);
+      context.arc(0, 0, unit * 0.58, 0, Math.PI * 2);
       context.stroke();
       context.beginPath();
-      context.arc(0, -unit * 0.32, unit * 0.08, 0, Math.PI * 2);
-      context.arc(0, unit * 0.32, unit * 0.08, 0, Math.PI * 2);
-      context.fill();
+      context.arc(0, 0, unit * 0.26, 0, Math.PI * 2);
+      context.stroke();
+      context.shadowBlur = 0;
+      context.strokeStyle = colors.interactiveHighlight;
+      context.lineWidth = Math.max(1, size * 0.045);
+      context.beginPath();
+      context.arc(0, 0, unit * 0.76, Math.PI * 1.12, Math.PI * 1.72);
+      context.stroke();
       break;
     case "Mountain":
       context.beginPath();
@@ -580,7 +647,7 @@ const drawElementIcon = (context, x, y, size, element, colors) => {
   context.restore();
 };
 
-const drawSquare = (context, metrics, colors) => {
+const drawSquare = (context, metrics, colors, options = {}) => {
   const start = metrics.center - (metrics.squareSize / 2);
   const cellSize = metrics.squareSize / SQUARE_GRID_SIZE;
 
@@ -590,6 +657,8 @@ const drawSquare = (context, metrics, colors) => {
 
   for (let row = 0; row < SQUARE_GRID_SIZE; row += 1) {
     for (let column = 0; column < SQUARE_GRID_SIZE; column += 1) {
+      const orderIndex = (row * SQUARE_GRID_SIZE) + column;
+
       drawGradientSquareCell(
         context,
         start + (column * cellSize),
@@ -600,6 +669,16 @@ const drawSquare = (context, metrics, colors) => {
           end: getSquarePaletteColor(column + 1, row + 1)
         }
       );
+
+      if (TENKI_ORDER[orderIndex] === 5) {
+        drawInsetSquareCell(
+          context,
+          start + (column * cellSize),
+          start + (row * cellSize),
+          cellSize,
+          colors.inset
+        );
+      }
     }
   }
 
@@ -607,6 +686,7 @@ const drawSquare = (context, metrics, colors) => {
     for (let column = 0; column < SQUARE_GRID_SIZE; column += 1) {
       const orderIndex = (row * SQUARE_GRID_SIZE) + column;
       const element = TENKI_ELEMENTS[TENKI_ORDER[orderIndex]];
+      const isInteractive = element === "Dao";
 
       drawElementIcon(
         context,
@@ -614,7 +694,10 @@ const drawSquare = (context, metrics, colors) => {
         start + (row * cellSize) + (cellSize / 2),
         cellSize * 0.52,
         element,
-        colors.icon
+        colors.icon,
+        {
+          motion: isInteractive ? 0 : options.motion
+        }
       );
     }
   }
@@ -654,8 +737,9 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE, options = {}) => {
   const accent = getThemeColor("--accent", "#74f7d1");
   const accentSoft = getThemeColor("--accent-soft", "#a7ffe7");
   const accentSoftRgb = getColorRgb(accentSoft, "255, 213, 107");
-  const border = "rgba(255, 255, 255, 0.38)";
-  const softBorder = "rgba(255, 255, 255, 0.24)";
+  const border = "rgba(47, 42, 79, 0.42)";
+  const softBorder = "rgba(47, 42, 79, 0.3)";
+  const motion = 0;
 
   context.clearRect(0, 0, rect.width, rect.height);
 
@@ -671,12 +755,24 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE, options = {}) => {
       innerRadius,
       outerRadius,
       stroke: isSoft ? softBorder : border,
-      textColor: isSoft ? accentSoft : accent,
+      textColor: isSoft ? "rgba(47, 42, 79, 0.74)" : accent,
       commandColor: accentSoft,
-      styledSegmentColors: (segmentIndex) => ({
-        ...getSquareCellPaletteColors(segmentIndex),
-        glow: `rgba(${accentSoftRgb}, 0.14)`
-      }),
+      motion,
+      styledSegmentColors: (segmentIndex) => {
+        const colors = {
+          ...getSquareCellPaletteColors(segmentIndex),
+          glow: `rgba(${accentSoftRgb}, 0.14)`
+        };
+
+        if (segmentIndex === COMMAND_SEGMENT_INDEX) {
+          colors.inset = {
+            fill: "rgba(124, 255, 120, 0.035)",
+            shadow: "rgba(17, 29, 23, 0.12)"
+          };
+        }
+
+        return colors;
+      },
       showBorders: index !== STYLED_RING_INDEX,
       styledSegmentIndices: index === STYLED_RING_INDEX ? STYLED_SEGMENT_INDICES : [],
       rotation: ring.centerLastSegmentAtTop ? getTopCenteredLastSegmentRotation(ring.count) : undefined
@@ -684,14 +780,25 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE, options = {}) => {
   });
 
   drawSquare(context, metrics, {
-    border,
-    cellBorder: "rgba(7, 21, 24, 0.26)",
+    border: "rgba(47, 42, 79, 0.14)",
+    cellBorder: "rgba(47, 42, 79, 0.08)",
     glow: "rgba(116, 247, 209, 0.14)",
     icon: {
       fill: "rgba(5, 21, 25, 0.58)",
+      interactiveGlow: "rgba(124, 255, 120, 0.42)",
+      interactiveHighlight: "rgba(232, 255, 90, 0.84)",
+      interactiveStroke: "rgba(124, 255, 120, 0.92)",
       shadow: "rgba(255, 255, 255, 0.18)",
       stroke: "rgba(5, 21, 25, 0.68)"
+    },
+    inset: {
+      bottomLight: "rgba(255, 255, 255, 0.035)",
+      fill: "rgba(124, 255, 120, 0.035)",
+      shadow: "rgba(17, 29, 23, 0.12)",
+      topShade: "rgba(17, 29, 23, 0.055)"
     }
+  }, {
+    motion
   });
 };
 
@@ -701,46 +808,32 @@ const initTenki = () => {
   const canvas = document.querySelector("[data-tenki-canvas]");
   if (!canvas) return;
 
-  let isCommandSegmentHovered = false;
-  const render = () => drawTenki(canvas, DEFAULT_TENKI_STATE);
-  const getPointerPoint = (event) => {
-    const rect = canvas.getBoundingClientRect();
-
-    return {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top
-    };
+  const render = () => {
+    try {
+      drawTenki(canvas, DEFAULT_TENKI_STATE);
+    } catch (error) {
+      console.error("Tenki render failed", error);
+    }
   };
-  const getCommandSegment = (metrics) => getRingSegmentHitArea(
-    metrics,
-    COMMAND_RING_INDEX,
-    COMMAND_SEGMENT_INDEX,
-    RING_SEGMENT_COUNT
-  );
-  const updateInteractiveHover = (event) => {
-    const metrics = getCanvasMetrics(canvas, DEFAULT_TENKI_STATE.rings.length);
-    const pointerPoint = getPointerPoint(event);
-    const nextIsCommandSegmentHovered = isPointInRingSegment(pointerPoint, metrics, getCommandSegment(metrics));
-
-    if (nextIsCommandSegmentHovered === isCommandSegmentHovered) return;
-
-    isCommandSegmentHovered = nextIsCommandSegmentHovered;
-    canvas.style.cursor = isCommandSegmentHovered ? TEXT_CURSOR : "";
-    render();
+  const scheduleRender = () => {
+    window.requestAnimationFrame(() => {
+      render();
+      window.requestAnimationFrame(render);
+    });
   };
-  const resizeObserver = new ResizeObserver(render);
+  const resizeObserver = new ResizeObserver(scheduleRender);
 
   resizeObserver.observe(canvas);
-  window.addEventListener("resize", render);
-  canvas.addEventListener("pointermove", updateInteractiveHover);
-  canvas.addEventListener("pointerleave", () => {
-    if (!isCommandSegmentHovered) return;
-
-    isCommandSegmentHovered = false;
-    canvas.style.cursor = "";
-    render();
-  });
+  if (canvas.parentElement) {
+    resizeObserver.observe(canvas.parentElement);
+  }
+  window.addEventListener("resize", scheduleRender);
+  window.addEventListener("load", scheduleRender);
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(scheduleRender);
+  }
   render();
+  scheduleRender();
 };
 
 initTenki();
