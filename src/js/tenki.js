@@ -2,8 +2,10 @@ const RING_SEGMENT_COUNT = 9;
 const SQUARE_GRID_SIZE = 3;
 const TENKI_ORDER = [1, 2, 4, 3, 5, 7, 6, 8, 9];
 const URANUS_SEGMENT_INDEX = TENKI_ORDER.indexOf(9);
+const ACTIVE_FILL_ALPHA = 0.055;
 const CONSOLE_TYPING_SPEED = 18;
 const CONSOLE_LINE_PAUSE = 90;
+const SURFACE_FILL_ALPHA = 0.86;
 const STYLED_RING_INDEX = 0;
 const STYLED_SEGMENT_INDICES = Array.from({ length: RING_SEGMENT_COUNT }, (_, index) => index);
 const THEME_PALETTE_MIXES = {
@@ -492,15 +494,12 @@ const drawRingSegmentPanel = (context, metrics, segment, colors) => {
   );
   context.arc(metrics.center, metrics.center, segment.innerRadius, segment.endAngle, segment.startAngle, true);
   context.closePath();
-  if (!colors.transparent) {
-    context.fillStyle = gradient;
-    context.shadowColor = colors.glow;
-    context.shadowBlur = 8;
-    context.fill();
-  } else if (colors.veil) {
-    context.fillStyle = colors.veil;
-    context.fill();
-  }
+  context.fillStyle = gradient;
+  context.shadowColor = colors.glow;
+  context.shadowBlur = colors.transparent ? 0 : 8;
+  context.globalAlpha = colors.transparent ? ACTIVE_FILL_ALPHA : (colors.alpha ?? 1);
+  context.fill();
+  context.globalAlpha = 1;
 
   if (colors.inset) {
     context.shadowBlur = 0;
@@ -663,8 +662,11 @@ const drawGradientSquareCell = (context, x, y, size, colors) => {
   gradient.addColorStop(0, colors.start);
   gradient.addColorStop(1, colors.end);
 
+  context.save();
+  context.globalAlpha = colors.alpha ?? 1;
   context.fillStyle = gradient;
   context.fillRect(x, y, size, size);
+  context.restore();
 };
 
 const drawInsetSquareCell = (context, x, y, size, colors) => {
@@ -677,9 +679,6 @@ const drawInsetSquareCell = (context, x, y, size, colors) => {
   context.save();
   if (!colors.transparent) {
     context.fillStyle = shade;
-    context.fillRect(x, y, size, size);
-  } else if (colors.veil) {
-    context.fillStyle = colors.veil;
     context.fillRect(x, y, size, size);
   }
 
@@ -896,10 +895,22 @@ const drawSquare = (context, metrics, colors, options = {}) => {
           cellSize,
           {
             start: getSquarePaletteColor(column, row, colors.palette),
-            end: getSquarePaletteColor(column + 1, row + 1, colors.palette)
+            end: getSquarePaletteColor(column + 1, row + 1, colors.palette),
+            alpha: colors.fillAlpha ?? 1
           }
         );
       } else {
+        drawGradientSquareCell(
+          context,
+          start + (column * cellSize),
+          start + (row * cellSize),
+          cellSize,
+          {
+            start: getSquarePaletteColor(column, row, colors.palette),
+            end: getSquarePaletteColor(column + 1, row + 1, colors.palette),
+            alpha: colors.activeFillAlpha ?? ACTIVE_FILL_ALPHA
+          }
+        );
         drawInsetSquareCell(
           context,
           start + (column * cellSize),
@@ -988,6 +999,7 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
       styledSegmentColors: (segmentIndex) => {
         const colors = {
           ...getSquareCellPaletteColors(segmentIndex, palette),
+          alpha: SURFACE_FILL_ALPHA,
           glow: `rgba(${accentSoftRgb}, 0.14)`
         };
 
@@ -995,7 +1007,6 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
           colors.border = "rgba(124, 255, 120, 0.92)";
           colors.borderGlow = "rgba(124, 255, 120, 0.42)";
           colors.transparent = true;
-          colors.veil = "rgba(0, 0, 0, 0.055)";
         }
 
         return colors;
@@ -1009,6 +1020,8 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
   drawSquare(context, metrics, {
     border: borderColors.square,
     cellBorder: borderColors.squareCell,
+    activeFillAlpha: ACTIVE_FILL_ALPHA,
+    fillAlpha: SURFACE_FILL_ALPHA,
     glow: "rgba(116, 247, 209, 0.14)",
     palette,
     icon: {
@@ -1026,8 +1039,7 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
       fill: "rgba(124, 255, 120, 0.035)",
       shadow: "rgba(17, 29, 23, 0.12)",
       topShade: "rgba(17, 29, 23, 0.055)",
-      transparent: true,
-      veil: "rgba(0, 0, 0, 0.055)"
+      transparent: true
     }
   }, {
     motion
