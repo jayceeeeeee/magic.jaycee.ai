@@ -6,11 +6,11 @@ const CONSOLE_TYPING_SPEED = 18;
 const CONSOLE_LINE_PAUSE = 90;
 const STYLED_RING_INDEX = 0;
 const STYLED_SEGMENT_INDICES = Array.from({ length: RING_SEGMENT_COUNT }, (_, index) => index);
-const SQUARE_PALETTE_CORNERS = {
-  topLeft: "#35f3c8",
-  topRight: "#45a8ff",
-  bottomLeft: "#b86cff",
-  bottomRight: "#ffb35c"
+const THEME_PALETTE_MIXES = {
+  bottomLeft: 0.08,
+  bottomRight: 0.24,
+  topLeft: 0.08,
+  topRight: 0.24
 };
 const TENKI_ELEMENTS = {
   1: "Wind",
@@ -94,36 +94,63 @@ const rgbToHex = ({ red, green, blue }) => {
   return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
 };
 
+const rgbToCss = ({ red, green, blue }, alpha) => (
+  `rgba(${Math.round(red)}, ${Math.round(green)}, ${Math.round(blue)}, ${alpha})`
+);
+
 const mixRgb = (start, end, amount) => ({
   red: start.red + ((end.red - start.red) * amount),
   green: start.green + ((end.green - start.green) * amount),
   blue: start.blue + ((end.blue - start.blue) * amount)
 });
 
-const getSquarePaletteColor = (column, row) => {
+const getThemePaletteCorners = (accent, accentSoft) => {
+  const accentRgb = hexToRgb(accent);
+  const accentSoftRgb = hexToRgb(accentSoft);
+
+  return {
+    bottomLeft: rgbToHex(mixRgb(accentSoftRgb, accentRgb, THEME_PALETTE_MIXES.bottomLeft)),
+    bottomRight: rgbToHex(mixRgb(accentSoftRgb, accentRgb, THEME_PALETTE_MIXES.bottomRight)),
+    topLeft: rgbToHex(mixRgb(accentRgb, accentSoftRgb, THEME_PALETTE_MIXES.topLeft)),
+    topRight: rgbToHex(mixRgb(accentRgb, accentSoftRgb, THEME_PALETTE_MIXES.topRight))
+  };
+};
+
+const getThemeBorderColors = (accent, accentSoft) => {
+  const borderRgb = mixRgb(hexToRgb(accent), hexToRgb(accentSoft), 0.5);
+
+  return {
+    ring: rgbToCss(borderRgb, 0.44),
+    ringSoft: rgbToCss(borderRgb, 0.26),
+    square: rgbToCss(borderRgb, 0.24),
+    squareCell: rgbToCss(borderRgb, 0.14)
+  };
+};
+
+const getSquarePaletteColor = (column, row, palette) => {
   const x = column / SQUARE_GRID_SIZE;
   const y = row / SQUARE_GRID_SIZE;
   const top = mixRgb(
-    hexToRgb(SQUARE_PALETTE_CORNERS.topLeft),
-    hexToRgb(SQUARE_PALETTE_CORNERS.topRight),
+    hexToRgb(palette.topLeft),
+    hexToRgb(palette.topRight),
     x
   );
   const bottom = mixRgb(
-    hexToRgb(SQUARE_PALETTE_CORNERS.bottomLeft),
-    hexToRgb(SQUARE_PALETTE_CORNERS.bottomRight),
+    hexToRgb(palette.bottomLeft),
+    hexToRgb(palette.bottomRight),
     x
   );
 
   return rgbToHex(mixRgb(top, bottom, y));
 };
 
-const getSquareCellPaletteColors = (index) => {
+const getSquareCellPaletteColors = (index, palette) => {
   const column = index % SQUARE_GRID_SIZE;
   const row = Math.floor(index / SQUARE_GRID_SIZE);
 
   return {
-    end: getSquarePaletteColor(column + 1, row + 1),
-    start: getSquarePaletteColor(column, row)
+    end: getSquarePaletteColor(column + 1, row + 1, palette),
+    start: getSquarePaletteColor(column, row, palette)
   };
 };
 
@@ -456,9 +483,6 @@ const drawRingSegmentPanel = (context, metrics, segment, colors) => {
   gradient.addColorStop(1, colors.end);
 
   context.save();
-  context.fillStyle = gradient;
-  context.shadowColor = colors.glow;
-  context.shadowBlur = 8;
 
   context.beginPath();
   context.arc(metrics.center, metrics.center, segment.outerRadius, segment.startAngle, segment.endAngle);
@@ -468,7 +492,15 @@ const drawRingSegmentPanel = (context, metrics, segment, colors) => {
   );
   context.arc(metrics.center, metrics.center, segment.innerRadius, segment.endAngle, segment.startAngle, true);
   context.closePath();
-  context.fill();
+  if (!colors.transparent) {
+    context.fillStyle = gradient;
+    context.shadowColor = colors.glow;
+    context.shadowBlur = 8;
+    context.fill();
+  } else if (colors.veil) {
+    context.fillStyle = colors.veil;
+    context.fill();
+  }
 
   if (colors.inset) {
     context.shadowBlur = 0;
@@ -492,7 +524,7 @@ const drawRingSegmentPanel = (context, metrics, segment, colors) => {
     context.shadowColor = colors.borderGlow || colors.border;
     context.shadowBlur = (segment.outerRadius - segment.innerRadius) * 0.18;
     context.strokeStyle = colors.border;
-    context.lineWidth = Math.max(1.2, (segment.outerRadius - segment.innerRadius) * 0.055);
+    context.lineWidth = Math.max(1, (segment.outerRadius - segment.innerRadius) * 0.022);
     context.beginPath();
     context.arc(metrics.center, metrics.center, segment.outerRadius, segment.startAngle, segment.endAngle);
     context.lineTo(
@@ -643,8 +675,13 @@ const drawInsetSquareCell = (context, x, y, size, colors) => {
   shade.addColorStop(1, colors.bottomLight);
 
   context.save();
-  context.fillStyle = shade;
-  context.fillRect(x, y, size, size);
+  if (!colors.transparent) {
+    context.fillStyle = shade;
+    context.fillRect(x, y, size, size);
+  } else if (colors.veil) {
+    context.fillStyle = colors.veil;
+    context.fillRect(x, y, size, size);
+  }
 
   context.strokeStyle = colors.shadow;
   context.lineWidth = Math.max(1, size * 0.025);
@@ -654,7 +691,7 @@ const drawInsetSquareCell = (context, x, y, size, colors) => {
     context.shadowColor = colors.borderGlow || colors.border;
     context.shadowBlur = size * 0.08;
     context.strokeStyle = colors.border;
-    context.lineWidth = Math.max(1.5, size * 0.035);
+    context.lineWidth = Math.max(1, size * 0.014);
     context.strokeRect(x + 1, y + 1, size - 2, size - 2);
   }
 
@@ -851,18 +888,18 @@ const drawSquare = (context, metrics, colors, options = {}) => {
     for (let column = 0; column < SQUARE_GRID_SIZE; column += 1) {
       const orderIndex = (row * SQUARE_GRID_SIZE) + column;
 
-      drawGradientSquareCell(
-        context,
-        start + (column * cellSize),
-        start + (row * cellSize),
-        cellSize,
-        {
-          start: getSquarePaletteColor(column, row),
-          end: getSquarePaletteColor(column + 1, row + 1)
-        }
-      );
-
-      if (TENKI_ORDER[orderIndex] === 5) {
+      if (TENKI_ORDER[orderIndex] !== 5) {
+        drawGradientSquareCell(
+          context,
+          start + (column * cellSize),
+          start + (row * cellSize),
+          cellSize,
+          {
+            start: getSquarePaletteColor(column, row, colors.palette),
+            end: getSquarePaletteColor(column + 1, row + 1, colors.palette)
+          }
+        );
+      } else {
         drawInsetSquareCell(
           context,
           start + (column * cellSize),
@@ -929,8 +966,8 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
   const accent = getThemeColor("--accent", "#74f7d1");
   const accentSoft = getThemeColor("--accent-soft", "#a7ffe7");
   const accentSoftRgb = getColorRgb(accentSoft, "255, 213, 107");
-  const border = "rgba(47, 42, 79, 0.42)";
-  const softBorder = "rgba(47, 42, 79, 0.3)";
+  const palette = getThemePaletteCorners(accent, accentSoft);
+  const borderColors = getThemeBorderColors(accent, accentSoft);
   const motion = 0;
 
   context.clearRect(0, 0, rect.width, rect.height);
@@ -946,17 +983,19 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
       labels: ring.labels,
       innerRadius,
       outerRadius,
-      stroke: isSoft ? softBorder : border,
+      stroke: isSoft ? borderColors.ringSoft : borderColors.ring,
       textColor: isSoft ? "rgba(47, 42, 79, 0.74)" : accent,
       styledSegmentColors: (segmentIndex) => {
         const colors = {
-          ...getSquareCellPaletteColors(segmentIndex),
+          ...getSquareCellPaletteColors(segmentIndex, palette),
           glow: `rgba(${accentSoftRgb}, 0.14)`
         };
 
         if (segmentIndex === URANUS_SEGMENT_INDEX) {
           colors.border = "rgba(124, 255, 120, 0.92)";
           colors.borderGlow = "rgba(124, 255, 120, 0.42)";
+          colors.transparent = true;
+          colors.veil = "rgba(0, 0, 0, 0.055)";
         }
 
         return colors;
@@ -968,9 +1007,10 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
   });
 
   drawSquare(context, metrics, {
-    border: "rgba(47, 42, 79, 0.14)",
-    cellBorder: "rgba(47, 42, 79, 0.08)",
+    border: borderColors.square,
+    cellBorder: borderColors.squareCell,
     glow: "rgba(116, 247, 209, 0.14)",
+    palette,
     icon: {
       fill: "rgba(5, 21, 25, 0.58)",
       interactiveGlow: "rgba(124, 255, 120, 0.42)",
@@ -985,7 +1025,9 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
       bottomLight: "rgba(255, 255, 255, 0.035)",
       fill: "rgba(124, 255, 120, 0.035)",
       shadow: "rgba(17, 29, 23, 0.12)",
-      topShade: "rgba(17, 29, 23, 0.055)"
+      topShade: "rgba(17, 29, 23, 0.055)",
+      transparent: true,
+      veil: "rgba(0, 0, 0, 0.055)"
     }
   }, {
     motion
