@@ -266,15 +266,15 @@ const drawRoundedRect = (context, x, y, width, height, radius) => {
 };
 
 const drawQuestBadge = (context, x, y, size, colors, motion = 0) => {
-  const width = size * 3.74;
-  const height = size * 1.48;
+  const width = size * 4.18;
+  const height = size * 1.72;
   const left = -(width / 2);
   const top = -(height / 2);
   const notchSize = size * 0.34;
 
   context.save();
   context.translate(x, y);
-  context.scale(1.08, 1.08);
+  context.scale(1.12, 1.12);
   context.shadowColor = colors.glow;
   context.shadowBlur = 18;
   context.fillStyle = colors.fill;
@@ -299,7 +299,7 @@ const drawQuestBadge = (context, x, y, size, colors, motion = 0) => {
   context.fill();
 
   context.shadowBlur = 0;
-  context.font = `700 ${size * 0.62}px "Share Tech Mono", monospace`;
+  context.font = `700 ${size * 0.72}px "Share Tech Mono", monospace`;
   context.textAlign = "center";
   context.textBaseline = "middle";
   const prefix = "# ";
