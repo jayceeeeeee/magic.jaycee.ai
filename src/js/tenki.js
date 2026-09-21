@@ -33,9 +33,7 @@ const getBinaryLabel = (number) => {
     return "";
   }
 
-  return binary
-    .replaceAll("1", ".")
-    .replaceAll("0", " ");
+  return Array.from(binary, (bit) => (bit === "1" ? "." : "-")).join("");
 };
 const DEFAULT_TENKI_ROWS = TENKI_ORDER.map((number) => ({
   number,
@@ -234,14 +232,25 @@ const resizeCanvas = (canvas) => {
 
 const drawCenteredText = (context, text, x, y, size, color, options = {}) => {
   context.save();
+  const weight = options.weight || 600;
+  let textSize = size;
+
   context.fillStyle = color;
-  context.font = `${options.weight || 600} ${size}px "Share Tech Mono", monospace`;
+  context.font = `${weight} ${textSize}px "Share Tech Mono", monospace`;
+  if (options.maxWidth) {
+    const measuredWidth = context.measureText(text).width;
+
+    if (measuredWidth > options.maxWidth) {
+      textSize *= options.maxWidth / measuredWidth;
+      context.font = `${weight} ${textSize}px "Share Tech Mono", monospace`;
+    }
+  }
   context.textAlign = "center";
   context.textBaseline = "middle";
   context.shadowColor = options.shadowColor || color;
   context.shadowBlur = options.shadowBlur === undefined ? 10 : options.shadowBlur;
   if (options.strokeColor) {
-    context.lineWidth = options.strokeWidth || Math.max(2, size * 0.18);
+    context.lineWidth = options.strokeWidth || Math.max(2, textSize * 0.18);
     context.strokeStyle = options.strokeColor;
     context.strokeText(text, x, y);
   }
@@ -441,7 +450,8 @@ const drawRing = (context, metrics, options) => {
 
     if (label) {
       const textSize = Math.max(11, (outerRadius - innerRadius) * 0.36);
-      const binaryTextSize = Math.max(10, textSize * 0.94);
+      const isCompactCanvas = metrics.size < 520;
+      const binaryTextSize = Math.max(10, textSize * (isCompactCanvas ? 0.82 : 0.94));
       const segmentChord = 2 * labelRadius * Math.sin(segmentAngle / 2);
 
       if (label === COMMAND_RING_QUEST_LABEL) {
@@ -467,9 +477,10 @@ const drawRing = (context, metrics, options) => {
           showBorders ? {} : {
             shadowBlur: 12,
             shadowColor: "rgba(255, 255, 255, 0.42)",
+            maxWidth: segmentChord * 0.62,
             strokeColor: "rgba(5, 21, 25, 0.78)",
-            strokeWidth: Math.max(1, binaryTextSize * 0.12),
-            weight: 500
+            strokeWidth: Math.max(isCompactCanvas ? 0.45 : 0.75, binaryTextSize * (isCompactCanvas ? 0.035 : 0.06)),
+            weight: isCompactCanvas ? 300 : 400
           }
         );
       }
