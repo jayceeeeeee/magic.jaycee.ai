@@ -12,17 +12,12 @@ const STYLED_RING_INDEX = 0;
 const STYLED_SEGMENT_INDICES = TENKI_ORDER
   .map((number, index) => (number === COMMAND_RING_NUMBER ? null : index))
   .filter((index) => index !== null);
-const SQUARE_DIRECTIONS = [
-  Math.PI / 4,
-  Math.PI / 2,
-  (Math.PI * 3) / 4,
-  0,
-  null,
-  Math.PI,
-  -Math.PI / 4,
-  -Math.PI / 2,
-  (-Math.PI * 3) / 4
-];
+const SQUARE_PALETTE_CORNERS = {
+  topLeft: "#35f3c8",
+  topRight: "#45a8ff",
+  bottomLeft: "#b86cff",
+  bottomRight: "#ffb35c"
+};
 const EMPTY_LABELS = Array.from({ length: RING_SEGMENT_COUNT }, () => "");
 const getBinaryLabel = (number) => {
   const binary = (number - 1).toString(2).padStart(3, "0");
@@ -76,6 +71,48 @@ const getColorRgb = (color, fallback) => {
   return `${red}, ${green}, ${blue}`;
 };
 
+const hexToRgb = (color) => {
+  const hex = color.match(/^#([0-9a-f]{6})$/i);
+  if (!hex) return { red: 255, green: 255, blue: 255 };
+
+  const value = Number.parseInt(hex[1], 16);
+
+  return {
+    red: (value >> 16) & 255,
+    green: (value >> 8) & 255,
+    blue: value & 255
+  };
+};
+
+const rgbToHex = ({ red, green, blue }) => {
+  const toHex = (channel) => Math.round(channel).toString(16).padStart(2, "0");
+
+  return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
+};
+
+const mixRgb = (start, end, amount) => ({
+  red: start.red + ((end.red - start.red) * amount),
+  green: start.green + ((end.green - start.green) * amount),
+  blue: start.blue + ((end.blue - start.blue) * amount)
+});
+
+const getSquarePaletteColor = (column, row) => {
+  const x = column / SQUARE_GRID_SIZE;
+  const y = row / SQUARE_GRID_SIZE;
+  const top = mixRgb(
+    hexToRgb(SQUARE_PALETTE_CORNERS.topLeft),
+    hexToRgb(SQUARE_PALETTE_CORNERS.topRight),
+    x
+  );
+  const bottom = mixRgb(
+    hexToRgb(SQUARE_PALETTE_CORNERS.bottomLeft),
+    hexToRgb(SQUARE_PALETTE_CORNERS.bottomRight),
+    x
+  );
+
+  return rgbToHex(mixRgb(top, bottom, y));
+};
+
 const wait = (duration) => new Promise((resolve) => window.setTimeout(resolve, duration));
 
 const typeTenkiConsoleLine = async (line) => {
@@ -114,23 +151,6 @@ const getCanvasMetrics = (canvas, ringCount) => {
     squareSize,
     squareOuterRadius
   };
-};
-
-const getPlayButtonHitArea = (metrics) => {
-  const cellSize = metrics.squareSize / SQUARE_GRID_SIZE;
-
-  return {
-    x: metrics.center,
-    y: metrics.center,
-    radius: cellSize * 0.43
-  };
-};
-
-const isPointInCircle = (point, circle) => {
-  const distanceX = point.x - circle.x;
-  const distanceY = point.y - circle.y;
-
-  return Math.hypot(distanceX, distanceY) <= circle.radius;
 };
 
 const normalizeAngle = (angle) => {
@@ -342,74 +362,45 @@ const drawRing = (context, metrics, options) => {
   context.restore();
 };
 
-const drawDirectionalMark = (context, x, y, size, angle, color) => {
-  const tip = size * 0.095;
-  const tail = size * -0.07;
-  const wing = size * 0.145;
+const drawGradientSquareCell = (context, x, y, size, colors) => {
+  const gradient = context.createLinearGradient(x, y, x + size, y + size);
 
-  context.save();
-  context.translate(x, y);
-  context.rotate(angle + Math.PI);
-  context.lineWidth = Math.max(1, size * 0.02);
-  context.lineCap = "round";
-  context.lineJoin = "round";
-  context.strokeStyle = color;
-  context.shadowColor = color;
-  context.shadowBlur = 6;
-  context.beginPath();
-  context.moveTo(tail, -wing);
-  context.lineTo(tip, 0);
-  context.lineTo(tail, wing);
-  context.stroke();
-  context.restore();
+  gradient.addColorStop(0, colors.start);
+  gradient.addColorStop(1, colors.end);
+
+  context.fillStyle = gradient;
+  context.fillRect(x, y, size, size);
 };
 
-const drawPlayButton = (context, x, y, radius, markSize, colors, isHovered) => {
-  const hoverScale = isHovered ? 1.08 : 1;
-  const displayRadius = radius * hoverScale;
-
-  context.save();
-  context.shadowColor = colors.buttonGlow;
-  context.shadowBlur = isHovered ? 22 : 14;
-  context.fillStyle = isHovered ? colors.buttonFillHover : colors.buttonFill;
-  context.strokeStyle = isHovered ? colors.buttonStrokeHover : colors.buttonStroke;
-  context.lineWidth = Math.max(1, displayRadius * 0.045);
-
-  context.beginPath();
-  context.arc(x, y, displayRadius, 0, Math.PI * 2);
-  context.fill();
-  context.stroke();
-
-  context.shadowBlur = 0;
-  context.strokeStyle = colors.buttonHighlight;
-  context.lineWidth = Math.max(1, displayRadius * 0.025);
-  context.beginPath();
-  context.arc(x, y, displayRadius * 0.78, Math.PI * 1.08, Math.PI * 1.62);
-  context.stroke();
-  context.restore();
-
-  drawDirectionalMark(context, x, y, markSize, Math.PI, colors.text);
-};
-
-const drawSquare = (context, metrics, colors, options = {}) => {
+const drawSquare = (context, metrics, colors) => {
   const start = metrics.center - (metrics.squareSize / 2);
   const cellSize = metrics.squareSize / SQUARE_GRID_SIZE;
-  const markSize = cellSize * 0.78;
-  const playButton = getPlayButtonHitArea(metrics);
 
   context.save();
-  context.lineWidth = 1;
-  context.strokeStyle = colors.border;
-  context.fillStyle = colors.squareFill;
   context.shadowColor = colors.glow;
   context.shadowBlur = 18;
-  context.fillRect(start, start, metrics.squareSize, metrics.squareSize);
+
+  for (let row = 0; row < SQUARE_GRID_SIZE; row += 1) {
+    for (let column = 0; column < SQUARE_GRID_SIZE; column += 1) {
+      drawGradientSquareCell(
+        context,
+        start + (column * cellSize),
+        start + (row * cellSize),
+        cellSize,
+        {
+          start: getSquarePaletteColor(column, row),
+          end: getSquarePaletteColor(column + 1, row + 1)
+        }
+      );
+    }
+  }
+
   context.shadowBlur = 0;
-  context.strokeRect(start, start, metrics.squareSize, metrics.squareSize);
+  context.lineWidth = 1;
+  context.strokeStyle = colors.cellBorder;
 
   for (let index = 1; index < SQUARE_GRID_SIZE; index += 1) {
     const offset = start + (cellSize * index);
-
     context.beginPath();
     context.moveTo(offset, start);
     context.lineTo(offset, start + metrics.squareSize);
@@ -418,26 +409,8 @@ const drawSquare = (context, metrics, colors, options = {}) => {
     context.stroke();
   }
 
-  SQUARE_DIRECTIONS.forEach((angle, index) => {
-    const column = index % SQUARE_GRID_SIZE;
-    const row = Math.floor(index / SQUARE_GRID_SIZE);
-    const x = start + (column * cellSize) + (cellSize / 2);
-    const y = start + (row * cellSize) + (cellSize / 2);
-
-    if (angle !== null) {
-      drawDirectionalMark(context, x, y, markSize, angle, colors.text);
-    }
-  });
-
-  drawPlayButton(
-    context,
-    playButton.x,
-    playButton.y,
-    playButton.radius,
-    markSize,
-    colors,
-    options.isPlayButtonHovered
-  );
+  context.strokeStyle = colors.border;
+  context.strokeRect(start, start, metrics.squareSize, metrics.squareSize);
   context.restore();
 };
 
@@ -489,17 +462,8 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE, options = {}) => {
 
   drawSquare(context, metrics, {
     border,
-    buttonFill: `rgba(${accentSoftRgb}, 0.12)`,
-    buttonFillHover: `rgba(${accentSoftRgb}, 0.18)`,
-    buttonGlow: `rgba(${accentSoftRgb}, 0.18)`,
-    buttonHighlight: `rgba(${accentSoftRgb}, 0.28)`,
-    buttonStroke: `rgba(${accentSoftRgb}, 0.5)`,
-    buttonStrokeHover: `rgba(${accentSoftRgb}, 0.78)`,
-    glow: "rgba(116, 247, 209, 0.14)",
-    squareFill: "rgba(7, 21, 24, 0.18)",
-    text: accent
-  }, {
-    isPlayButtonHovered: options.isPlayButtonHovered
+    cellBorder: "rgba(7, 21, 24, 0.26)",
+    glow: "rgba(116, 247, 209, 0.14)"
   });
 };
 
@@ -509,12 +473,10 @@ const initTenki = () => {
   const canvas = document.querySelector("[data-tenki-canvas]");
   if (!canvas) return;
 
-  let isPlayButtonHovered = false;
   let isCommandSegmentHovered = false;
   let isCommandCursorVisible = true;
   const render = () => drawTenki(canvas, DEFAULT_TENKI_STATE, {
-    isCommandCursorVisible,
-    isPlayButtonHovered
+    isCommandCursorVisible
   });
   const getPointerPoint = (event) => {
     const rect = canvas.getBoundingClientRect();
@@ -533,19 +495,12 @@ const initTenki = () => {
   const updateInteractiveHover = (event) => {
     const metrics = getCanvasMetrics(canvas, DEFAULT_TENKI_STATE.rings.length);
     const pointerPoint = getPointerPoint(event);
-    const nextIsPlayButtonHovered = isPointInCircle(pointerPoint, getPlayButtonHitArea(metrics));
     const nextIsCommandSegmentHovered = isPointInRingSegment(pointerPoint, metrics, getCommandSegment(metrics));
 
-    if (
-      nextIsPlayButtonHovered === isPlayButtonHovered
-      && nextIsCommandSegmentHovered === isCommandSegmentHovered
-    ) {
-      return;
-    }
+    if (nextIsCommandSegmentHovered === isCommandSegmentHovered) return;
 
-    isPlayButtonHovered = nextIsPlayButtonHovered;
     isCommandSegmentHovered = nextIsCommandSegmentHovered;
-    canvas.style.cursor = isCommandSegmentHovered ? TEXT_CURSOR : isPlayButtonHovered ? "pointer" : "";
+    canvas.style.cursor = isCommandSegmentHovered ? TEXT_CURSOR : "";
     render();
   };
   const resizeObserver = new ResizeObserver(render);
@@ -558,23 +513,11 @@ const initTenki = () => {
   }, 600);
   canvas.addEventListener("pointermove", updateInteractiveHover);
   canvas.addEventListener("pointerleave", () => {
-    if (!isPlayButtonHovered && !isCommandSegmentHovered) return;
+    if (!isCommandSegmentHovered) return;
 
-    isPlayButtonHovered = false;
     isCommandSegmentHovered = false;
     canvas.style.cursor = "";
     render();
-  });
-  canvas.addEventListener("click", (event) => {
-    const metrics = getCanvasMetrics(canvas, DEFAULT_TENKI_STATE.rings.length);
-    const isPlayButtonClicked = isPointInCircle(getPointerPoint(event), getPlayButtonHitArea(metrics));
-
-    if (!isPlayButtonClicked) return;
-
-    canvas.dispatchEvent(new CustomEvent("tenki:play", {
-      bubbles: true,
-      detail: { source: "center-button" }
-    }));
   });
   render();
 };
