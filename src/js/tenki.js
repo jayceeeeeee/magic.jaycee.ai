@@ -400,6 +400,7 @@ const getSefirotLabelLines = (sefirot) => [
 ];
 
 const ACTIVE_CORE_TEXT_COLOR = "rgba(124, 255, 120, 0.92)";
+const CORE_NUMBER_FONT = "\"Rajdhani\", \"Share Tech Mono\", sans-serif";
 
 const drawPlanetGlyph = (context, x, y, size, planet, colors) => {
   const unit = size / 2;
@@ -956,7 +957,7 @@ const drawRing = (context, metrics, options) => {
           showBorders ? labelTextSize : Math.max(14, (outerRadius - innerRadius) * 0.46),
           !showBorders && Number(label) === 9 ? ACTIVE_CORE_TEXT_COLOR : textColor,
           showBorders ? {} : {
-            fontFamily: "\"Rajdhani\", \"Share Tech Mono\", sans-serif",
+            fontFamily: CORE_NUMBER_FONT,
             shadowBlur: 10,
             shadowColor: Number(label) === 9 ? "rgba(124, 255, 120, 0.38)" : "rgba(255, 255, 255, 0.1)",
             maxWidth: segmentChord * 0.46,
@@ -1194,6 +1195,7 @@ const drawElementIcon = (context, x, y, size, element, colors, options = {}) => 
 const drawSquare = (context, metrics, colors, options = {}) => {
   const start = metrics.center - (metrics.squareSize / 2);
   const cellSize = metrics.squareSize / SQUARE_GRID_SIZE;
+  const numberSize = Math.max(14, metrics.ringWidth * 0.46);
 
   context.save();
   context.shadowColor = colors.glow;
@@ -1242,26 +1244,24 @@ const drawSquare = (context, metrics, colors, options = {}) => {
     for (let column = 0; column < SQUARE_GRID_SIZE; column += 1) {
       const orderIndex = (row * SQUARE_GRID_SIZE) + column;
       const number = TENKI_ORDER[orderIndex];
-      const sefirot = TENKI_SEFIROT[number];
       const centerX = start + (column * cellSize) + (cellSize / 2);
-      const noteY = start + (row * cellSize) + (cellSize * 0.78);
+      const centerY = start + (row * cellSize) + (cellSize / 2);
 
-      drawCenteredLines(
+      drawCenteredText(
         context,
-        [sefirot.english, sefirot.hebrew],
+        String(number),
         centerX,
-        noteY,
-        cellSize * 0.13,
+        centerY,
+        numberSize,
         number === 5 ? ACTIVE_CORE_TEXT_COLOR : colors.sefirot.fill,
         {
-          fontFamily: "\"Rajdhani\", \"Noto Sans Hebrew\", Arial, sans-serif",
-          lineHeight: cellSize * 0.14,
-          maxWidth: cellSize * 0.78,
-          shadowBlur: 8,
+          fontFamily: CORE_NUMBER_FONT,
+          maxWidth: cellSize * 0.46,
+          shadowBlur: 10,
           shadowColor: number === 5 ? "rgba(124, 255, 120, 0.38)" : colors.sefirot.shadow,
           strokeColor: number === 5 ? "rgba(5, 21, 25, 0.32)" : colors.sefirot.stroke,
-          strokeWidth: Math.max(0.7, cellSize * 0.006),
-          weight: 600
+          strokeWidth: Math.max(0.7, numberSize * 0.014),
+          weight: 500
         }
       );
     }
