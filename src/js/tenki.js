@@ -304,6 +304,10 @@ const drawCenteredText = (context, text, x, y, size, color, options = {}) => {
   const fontFamily = options.fontFamily || "\"Share Tech Mono\", monospace";
   let textSize = size;
 
+  context.translate(x, y);
+  if (options.rotation) {
+    context.rotate(options.rotation);
+  }
   context.fillStyle = color;
   context.font = `${weight} ${textSize}px ${fontFamily}`;
   if (options.maxWidth) {
@@ -321,9 +325,9 @@ const drawCenteredText = (context, text, x, y, size, color, options = {}) => {
   if (options.strokeColor) {
     context.lineWidth = options.strokeWidth || Math.max(2, textSize * 0.18);
     context.strokeStyle = options.strokeColor;
-    context.strokeText(text, x, y);
+    context.strokeText(text, 0, 0);
   }
-  context.fillText(text, x, y);
+  context.fillText(text, 0, 0);
   context.restore();
 };
 
@@ -780,6 +784,7 @@ const drawRing = (context, metrics, options) => {
             shadowBlur: 10,
             shadowColor: "rgba(255, 255, 255, 0.1)",
             maxWidth: segmentChord * 0.66,
+            rotation: Math.PI / 2,
             strokeColor: "rgba(255, 255, 255, 0.1)",
             strokeWidth: Math.max(1, labelTextSize * 0.018),
             weight: 500
