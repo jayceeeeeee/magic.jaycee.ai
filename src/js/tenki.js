@@ -1168,6 +1168,55 @@ const drawElementIcon = (context, x, y, size, element, colors, options = {}) => 
   context.restore();
 };
 
+const GLYPH_EXPORT_ITEMS = [
+  ...Object.values(TENKI_PLANETS).map((planet) => ({
+    draw: (context, x, y, size, colors) => drawPlanetGlyph(context, x, y, size, planet, colors)
+  })),
+  ...Object.values(TENKI_ELEMENTS).map((element) => ({
+    draw: (context, x, y, size, colors) => drawElementIcon(context, x, y, size, element, colors)
+  }))
+];
+
+const GLYPH_EXPORT_COLORS = {
+  fill: "#111",
+  interactiveGlow: "rgba(0, 0, 0, 0)",
+  interactiveHighlight: "#111",
+  interactiveStroke: "#111",
+  shadow: "rgba(0, 0, 0, 0)",
+  stroke: "#111"
+};
+
+const drawGlyphExport = (canvas) => {
+  const context = resizeCanvas(canvas);
+  const rect = canvas.getBoundingClientRect();
+  const columns = rect.width < 480 ? 3 : 6;
+  const rows = Math.ceil(GLYPH_EXPORT_ITEMS.length / columns);
+  const cellWidth = rect.width / columns;
+  const cellHeight = rect.height / rows;
+  const glyphSize = Math.min(cellWidth, cellHeight) * 0.64;
+
+  context.clearRect(0, 0, rect.width, rect.height);
+  context.fillStyle = "#fff";
+  context.fillRect(0, 0, rect.width, rect.height);
+
+  GLYPH_EXPORT_ITEMS.forEach((item, index) => {
+    const column = index % columns;
+    const row = Math.floor(index / columns);
+    const x = (column * cellWidth) + (cellWidth / 2);
+    const y = (row * cellHeight) + (cellHeight / 2);
+
+    item.draw(context, x, y, glyphSize, GLYPH_EXPORT_COLORS);
+  });
+};
+
+const downloadGlyphExport = (canvas) => {
+  const link = document.createElement("a");
+
+  link.download = "tenki-glyphs.png";
+  link.href = canvas.toDataURL("image/png");
+  link.click();
+};
+
 const drawSquare = (context, metrics, colors, options = {}) => {
   const start = metrics.center - (metrics.squareSize / 2);
   const cellSize = metrics.squareSize / SQUARE_GRID_SIZE;
@@ -1379,11 +1428,16 @@ const initTenki = () => {
   typeTenkiConsoleLine(document.querySelector("[data-tenki-console-line]"));
 
   const canvas = document.querySelector("[data-tenki-canvas]");
+  const glyphCanvas = document.querySelector("[data-tenki-glyph-canvas]");
+  const glyphDownload = document.querySelector("[data-tenki-glyph-download]");
   if (!canvas) return;
 
   const render = () => {
     try {
       drawTenki(canvas, DEFAULT_TENKI_STATE);
+      if (glyphCanvas) {
+        drawGlyphExport(glyphCanvas);
+      }
     } catch (error) {
       console.error("Tenki render failed", error);
     }
@@ -1401,10 +1455,19 @@ const initTenki = () => {
   if (canvas.parentElement) {
     resizeObserver.observe(canvas.parentElement);
   }
+  if (glyphCanvas) {
+    resizeObserver.observe(glyphCanvas);
+  }
   window.addEventListener("resize", scheduleRender);
   window.addEventListener("load", scheduleRender);
   if (document.fonts && document.fonts.ready) {
     document.fonts.ready.then(scheduleRender);
+  }
+  if (glyphCanvas && glyphDownload) {
+    glyphDownload.addEventListener("click", () => {
+      drawGlyphExport(glyphCanvas);
+      downloadGlyphExport(glyphCanvas);
+    });
   }
   render();
   scheduleRender();

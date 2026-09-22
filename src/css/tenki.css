@@ -19,7 +19,7 @@
   min-height: calc(100svh - var(--banner-space) - var(--footer-space) - 56px);
   display: grid;
   gap: 22px;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto 1fr auto;
   justify-items: center;
   padding: 24px;
   border: 1px solid var(--field-border);
@@ -45,7 +45,8 @@
 }
 
 .tenki-command-console,
-.tenki-stage {
+.tenki-stage,
+.tenki-glyph-export {
   position: relative;
   z-index: 1;
 }
@@ -144,6 +145,46 @@
   z-index: 1;
 }
 
+.tenki-glyph-export {
+  width: 100%;
+  display: grid;
+  gap: 10px;
+}
+
+.tenki-glyph-export-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.tenki-glyph-download {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgba(var(--accent-rgb), 0.34);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.18);
+  color: var(--accent-soft);
+  font: 600 0.78rem "Share Tech Mono", monospace;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.tenki-glyph-download:hover,
+.tenki-glyph-download:focus-visible {
+  border-color: rgba(var(--accent-rgb), 0.68);
+  color: var(--accent);
+  outline: none;
+}
+
+.tenki-glyph-canvas {
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  display: block;
+  border: 1px solid #e2e2e2;
+  border-radius: 4px;
+  background: #fff;
+}
+
 @media (max-width: 620px) {
   .tenki-page {
     width: min(100% - 20px, 560px);
@@ -161,6 +202,10 @@
 
   .tenki-stage {
     padding: 12px;
+  }
+
+  .tenki-glyph-canvas {
+    aspect-ratio: 1 / 2;
   }
 
 }
