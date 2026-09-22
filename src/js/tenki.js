@@ -1,4 +1,6 @@
 const RING_SEGMENT_COUNT = 9;
+const SUN_HOUR_COUNT = 24;
+const MOON_DAY_COUNT = 29;
 const SQUARE_GRID_SIZE = 3;
 const TENKI_ORDER = [1, 2, 4, 3, 5, 7, 6, 8, 9];
 const URANUS_SEGMENT_INDEX = TENKI_ORDER.indexOf(9);
@@ -7,7 +9,7 @@ const CONSOLE_TYPING_SPEED = 18;
 const CONSOLE_LINE_PAUSE = 90;
 const SURFACE_FILL_ALPHA = 0.86;
 const STYLED_RING_INDEX = 0;
-const STYLED_SEGMENT_INDICES = Array.from({ length: RING_SEGMENT_COUNT }, (_, index) => index);
+const getSegmentIndices = (count) => Array.from({ length: count }, (_, index) => index);
 const THEME_PALETTE_MIXES = {
   bottomLeft: 0.08,
   bottomRight: 0.24,
@@ -25,6 +27,28 @@ const TENKI_ELEMENTS = {
   8: "Water",
   9: "Heaven"
 };
+const TENKI_TRIGRAMS = {
+  1: "☴",
+  2: "☲",
+  3: "☳",
+  4: "☷",
+  5: "",
+  6: "☶",
+  7: "☱",
+  8: "☵",
+  9: "☰"
+};
+const TENKI_TRIGRAM_INCREMENTED_VALUES = {
+  1: 4,
+  2: 6,
+  3: 5,
+  4: 1,
+  5: 9,
+  6: 2,
+  7: 7,
+  8: 3,
+  9: 8
+};
 const TENKI_PLANETS = {
   1: { name: "Neptune" },
   2: { name: "Sun" },
@@ -36,26 +60,41 @@ const TENKI_PLANETS = {
   8: { name: "Saturn" },
   9: { name: "Uranus" }
 };
-const EMPTY_LABELS = Array.from({ length: RING_SEGMENT_COUNT }, () => "");
+const getEmptyLabels = (count) => Array.from({ length: count }, () => "");
+const TENKI_RING_TRIGRAMS = Object.entries(TENKI_TRIGRAM_INCREMENTED_VALUES)
+  .reduce((trigrams, [key, value]) => ({
+    ...trigrams,
+    [value]: TENKI_TRIGRAMS[key]
+  }), {});
 const DEFAULT_TENKI_ROWS = TENKI_ORDER.map((number) => ({
   number,
-  planet: TENKI_PLANETS[number]
+  planet: TENKI_PLANETS[number],
+  ringTrigram: TENKI_RING_TRIGRAMS[number] || "",
+  trigram: TENKI_TRIGRAMS[number]
 }));
 const RING_TEMPLATES = [
   {
-    getLabels: (rows) => rows.map((row) => row.planet || ""),
+    count: RING_SEGMENT_COUNT,
+    getLabels: (rows) => rows.map((row, index) => (
+      index === URANUS_SEGMENT_INDEX ? row.planet : row.ringTrigram
+    )),
     tone: "accent"
   },
   {
+    count: 1,
+    palette: "sun",
+    tickCount: SUN_HOUR_COUNT,
     tone: "soft"
   },
   {
+    count: 1,
+    palette: "moon",
+    tickCount: MOON_DAY_COUNT,
     tone: "soft"
   }
 ].map((ring) => ({
-  count: RING_SEGMENT_COUNT,
   centerLastSegmentAtTop: true,
-  getLabels: () => EMPTY_LABELS,
+  getLabels: () => getEmptyLabels(ring.count),
   ...ring
 }));
 
@@ -191,6 +230,7 @@ const getCanvasMetrics = (canvas, ringCount) => {
     center,
     outerRadius,
     ringWidth,
+    size,
     squareSize,
     squareOuterRadius
   };
@@ -473,7 +513,37 @@ const getTopCenteredLastSegmentRotation = (count) => {
   return -Math.PI / 2 - ((count - 0.5) * segmentAngle);
 };
 
+const getCelestialRingColors = (paletteName, segmentIndex) => {
+  const palettes = {
+    moon: [
+      "rgba(246, 248, 244, 0.6)",
+      "rgba(185, 190, 188, 0.52)",
+      "rgba(250, 251, 246, 0.66)"
+    ],
+    sun: [
+      "rgba(255, 226, 92, 0.72)",
+      "rgba(255, 181, 45, 0.58)",
+      "rgba(255, 247, 174, 0.72)"
+    ]
+  };
+  const palette = palettes[paletteName];
+
+  if (!palette) return null;
+
+  return {
+    alpha: 0.72,
+    border: paletteName === "moon" ? "rgba(245, 248, 246, 0.34)" : "",
+    borderGlow: paletteName === "moon" ? "rgba(245, 248, 246, 0.18)" : "",
+    end: palette[(segmentIndex + 1) % palette.length],
+    glow: paletteName === "sun"
+      ? "rgba(255, 213, 74, 0.14)"
+      : "rgba(245, 248, 246, 0.1)",
+    start: palette[segmentIndex % palette.length]
+  };
+};
+
 const drawRingSegmentPanel = (context, metrics, segment, colors) => {
+  const isFullCircle = Math.abs(segment.endAngle - segment.startAngle) >= (Math.PI * 2) - 0.0001;
   const gradient = context.createLinearGradient(
     metrics.center + Math.cos(segment.startAngle) * segment.innerRadius,
     metrics.center + Math.sin(segment.startAngle) * segment.innerRadius,
@@ -488,10 +558,12 @@ const drawRingSegmentPanel = (context, metrics, segment, colors) => {
 
   context.beginPath();
   context.arc(metrics.center, metrics.center, segment.outerRadius, segment.startAngle, segment.endAngle);
-  context.lineTo(
-    metrics.center + Math.cos(segment.endAngle) * segment.innerRadius,
-    metrics.center + Math.sin(segment.endAngle) * segment.innerRadius
-  );
+  if (!isFullCircle) {
+    context.lineTo(
+      metrics.center + Math.cos(segment.endAngle) * segment.innerRadius,
+      metrics.center + Math.sin(segment.endAngle) * segment.innerRadius
+    );
+  }
   context.arc(metrics.center, metrics.center, segment.innerRadius, segment.endAngle, segment.startAngle, true);
   context.closePath();
   context.fillStyle = gradient;
@@ -506,10 +578,12 @@ const drawRingSegmentPanel = (context, metrics, segment, colors) => {
     context.fillStyle = colors.inset.fill;
     context.beginPath();
     context.arc(metrics.center, metrics.center, segment.outerRadius, segment.startAngle, segment.endAngle);
-    context.lineTo(
-      metrics.center + Math.cos(segment.endAngle) * segment.innerRadius,
-      metrics.center + Math.sin(segment.endAngle) * segment.innerRadius
-    );
+    if (!isFullCircle) {
+      context.lineTo(
+        metrics.center + Math.cos(segment.endAngle) * segment.innerRadius,
+        metrics.center + Math.sin(segment.endAngle) * segment.innerRadius
+      );
+    }
     context.arc(metrics.center, metrics.center, segment.innerRadius, segment.endAngle, segment.startAngle, true);
     context.closePath();
     context.fill();
@@ -524,14 +598,62 @@ const drawRingSegmentPanel = (context, metrics, segment, colors) => {
     context.shadowBlur = (segment.outerRadius - segment.innerRadius) * 0.18;
     context.strokeStyle = colors.border;
     context.lineWidth = Math.max(1, (segment.outerRadius - segment.innerRadius) * 0.022);
+    if (isFullCircle) {
+      context.beginPath();
+      context.arc(metrics.center, metrics.center, segment.outerRadius, 0, Math.PI * 2);
+      context.stroke();
+      context.beginPath();
+      context.arc(metrics.center, metrics.center, segment.innerRadius, 0, Math.PI * 2);
+      context.stroke();
+    } else {
+      context.beginPath();
+      context.arc(metrics.center, metrics.center, segment.outerRadius, segment.startAngle, segment.endAngle);
+      context.lineTo(
+        metrics.center + Math.cos(segment.endAngle) * segment.innerRadius,
+        metrics.center + Math.sin(segment.endAngle) * segment.innerRadius
+      );
+      context.arc(metrics.center, metrics.center, segment.innerRadius, segment.endAngle, segment.startAngle, true);
+      context.closePath();
+      context.stroke();
+    }
+  }
+
+  context.restore();
+};
+
+const drawRingTickMarks = (context, metrics, options) => {
+  const {
+    count,
+    innerRadius,
+    outerRadius,
+    stroke,
+    rotation = -Math.PI / 2
+  } = options;
+  const ringWidth = outerRadius - innerRadius;
+  const tickStep = (Math.PI * 2) / count;
+
+  context.save();
+  context.strokeStyle = stroke;
+  context.shadowColor = stroke;
+  context.shadowBlur = ringWidth * 0.06;
+  context.lineCap = "round";
+
+  for (let index = 0; index < count; index += 1) {
+    const angle = rotation + (index * tickStep);
+    const isQuarter = index % 6 === 0;
+    const startRadius = outerRadius;
+    const endRadius = outerRadius - (ringWidth * (isQuarter ? 0.34 : 0.22));
+
+    context.lineWidth = Math.max(1, ringWidth * (isQuarter ? 0.024 : 0.015));
     context.beginPath();
-    context.arc(metrics.center, metrics.center, segment.outerRadius, segment.startAngle, segment.endAngle);
-    context.lineTo(
-      metrics.center + Math.cos(segment.endAngle) * segment.innerRadius,
-      metrics.center + Math.sin(segment.endAngle) * segment.innerRadius
+    context.moveTo(
+      metrics.center + Math.cos(angle) * startRadius,
+      metrics.center + Math.sin(angle) * startRadius
     );
-    context.arc(metrics.center, metrics.center, segment.innerRadius, segment.endAngle, segment.startAngle, true);
-    context.closePath();
+    context.lineTo(
+      metrics.center + Math.cos(angle) * endRadius,
+      metrics.center + Math.sin(angle) * endRadius
+    );
     context.stroke();
   }
 
@@ -544,11 +666,15 @@ const drawRing = (context, metrics, options) => {
     labels,
     innerRadius,
     outerRadius,
+    questTextColor,
     stroke,
     textColor,
     styledSegmentColors,
     styledSegmentIndices = [],
+    tickCount = 0,
+    tickStroke,
     showBorders = true,
+    showDividers = showBorders,
     rotation = -Math.PI / 2
   } = options;
   const segmentAngle = (Math.PI * 2) / count;
@@ -585,6 +711,16 @@ const drawRing = (context, metrics, options) => {
     context.stroke();
   }
 
+  if (tickCount) {
+    drawRingTickMarks(context, metrics, {
+      count: tickCount,
+      innerRadius,
+      outerRadius,
+      rotation: -Math.PI / 2,
+      stroke: tickStroke || stroke
+    });
+  }
+
   labels.forEach((label, index) => {
     const startAngle = rotation + (index * segmentAngle);
     const middleAngle = startAngle + (segmentAngle / 2);
@@ -595,7 +731,7 @@ const drawRing = (context, metrics, options) => {
     const labelX = metrics.center + Math.cos(middleAngle) * labelRadius;
     const labelY = metrics.center + Math.sin(middleAngle) * labelRadius;
 
-    if (showBorders) {
+    if (showDividers) {
       context.beginPath();
       context.moveTo(dividerInnerX, dividerInnerY);
       context.lineTo(dividerX, dividerY);
@@ -620,7 +756,7 @@ const drawRing = (context, metrics, options) => {
             accent: "rgba(124, 255, 120, 0.92)",
             alert: "rgba(232, 255, 90, 0.84)",
             glow: "rgba(124, 255, 120, 0.42)",
-            text: textColor
+            text: questTextColor || textColor
           }, {
             isCompact: isCompactCanvas
           });
@@ -641,12 +777,12 @@ const drawRing = (context, metrics, options) => {
           textColor,
           showBorders ? {} : {
             fontFamily: "\"Segoe UI Symbol\", \"Noto Sans Symbols\", \"DejaVu Sans\", sans-serif",
-            shadowBlur: 12,
-            shadowColor: "rgba(255, 255, 255, 0.42)",
-            maxWidth: segmentChord * 0.62,
-            strokeColor: "rgba(5, 21, 25, 0.78)",
-            strokeWidth: Math.max(isCompactCanvas ? 0.45 : 0.75, labelTextSize * (isCompactCanvas ? 0.025 : 0.04)),
-            weight: 400
+            shadowBlur: 10,
+            shadowColor: "rgba(255, 255, 255, 0.1)",
+            maxWidth: segmentChord * 0.66,
+            strokeColor: "rgba(255, 255, 255, 0.1)",
+            strokeWidth: Math.max(1, labelTextSize * 0.018),
+            weight: 500
           }
         );
       }
@@ -925,20 +1061,42 @@ const drawSquare = (context, metrics, colors, options = {}) => {
   for (let row = 0; row < SQUARE_GRID_SIZE; row += 1) {
     for (let column = 0; column < SQUARE_GRID_SIZE; column += 1) {
       const orderIndex = (row * SQUARE_GRID_SIZE) + column;
-      const element = TENKI_ELEMENTS[TENKI_ORDER[orderIndex]];
-      const isInteractive = element === "Dao";
+      const number = TENKI_ORDER[orderIndex];
+      const element = TENKI_ELEMENTS[number];
+      const centerX = start + (column * cellSize) + (cellSize / 2);
+      const centerY = start + (row * cellSize) + (cellSize / 2);
 
-      drawElementIcon(
-        context,
-        start + (column * cellSize) + (cellSize / 2),
-        start + (row * cellSize) + (cellSize / 2),
-        cellSize * 0.52,
-        element,
-        colors.icon,
-        {
-          motion: isInteractive ? 0 : options.motion
-        }
-      );
+      if (number === 5) {
+        drawElementIcon(
+          context,
+          centerX,
+          centerY,
+          cellSize * 0.52,
+          element,
+          colors.icon,
+          {
+            motion: 0
+          }
+        );
+      } else {
+        drawCenteredText(
+          context,
+          TENKI_TRIGRAMS[number],
+          centerX,
+          centerY,
+          cellSize * 0.36,
+          colors.trigram.fill,
+          {
+            fontFamily: "\"Segoe UI Symbol\", \"Noto Sans Symbols\", \"DejaVu Sans\", sans-serif",
+            maxWidth: cellSize * 0.66,
+            shadowBlur: 10,
+            shadowColor: colors.trigram.shadow,
+            strokeColor: colors.trigram.stroke,
+            strokeWidth: Math.max(1, cellSize * 0.018),
+            weight: 500
+          }
+        );
+      }
     }
   }
 
@@ -994,9 +1152,16 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
       labels: ring.labels,
       innerRadius,
       outerRadius,
+      questTextColor: accent,
       stroke: isSoft ? borderColors.ringSoft : borderColors.ring,
-      textColor: isSoft ? "rgba(47, 42, 79, 0.74)" : accent,
+      textColor: index === STYLED_RING_INDEX ? "rgba(5, 21, 25, 0.44)" : "rgba(47, 42, 79, 0.74)",
       styledSegmentColors: (segmentIndex) => {
+        const celestialColors = getCelestialRingColors(ring.palette, segmentIndex);
+
+        if (celestialColors) {
+          return celestialColors;
+        }
+
         const colors = {
           ...getSquareCellPaletteColors(segmentIndex, palette),
           alpha: SURFACE_FILL_ALPHA,
@@ -1012,7 +1177,10 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
         return colors;
       },
       showBorders: index !== STYLED_RING_INDEX,
-      styledSegmentIndices: index === STYLED_RING_INDEX ? STYLED_SEGMENT_INDICES : [],
+      showDividers: !ring.palette && index !== STYLED_RING_INDEX,
+      styledSegmentIndices: index === STYLED_RING_INDEX || ring.palette ? getSegmentIndices(ring.count) : [],
+      tickCount: ring.tickCount || 0,
+      tickStroke: ring.palette === "moon" ? "rgba(245, 248, 246, 0.38)" : "rgba(255, 247, 174, 0.42)",
       rotation: ring.centerLastSegmentAtTop ? getTopCenteredLastSegmentRotation(ring.count) : undefined
     });
   });
@@ -1031,6 +1199,11 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
       interactiveStroke: "rgba(124, 255, 120, 0.92)",
       shadow: "rgba(255, 255, 255, 0.18)",
       stroke: "rgba(5, 21, 25, 0.68)"
+    },
+    trigram: {
+      fill: "rgba(5, 21, 25, 0.44)",
+      shadow: "rgba(255, 255, 255, 0.1)",
+      stroke: "rgba(255, 255, 255, 0.1)"
     },
     inset: {
       border: "rgba(124, 255, 120, 0.92)",
