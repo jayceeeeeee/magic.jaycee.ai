@@ -1,14 +1,15 @@
+import {
+  CELESTIAL_RING_FRACTALS,
+  MOON_RING_INDEX,
+  SUN_RING_INDEX,
+  getCelestialMarkerConfig,
+  getCelestialRingColors as getFractalCelestialRingColors
+} from "./tenki-fractals.js";
+
 const RING_SEGMENT_COUNT = 9;
-const SUN_HOUR_COUNT = 24;
-const MOON_DAY_COUNT = 29;
 const SQUARE_GRID_SIZE = 3;
 const TENKI_ORDER = [1, 2, 4, 3, 5, 7, 6, 8, 9];
 const URANUS_SEGMENT_INDEX = TENKI_ORDER.indexOf(9);
-const SUN_RING_INDEX = 1;
-const MOON_RING_INDEX = 2;
-const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
-const SYNODIC_MONTH_DAYS = 29.530588853;
-const KNOWN_NEW_MOON_PEAK_UTC = Date.UTC(2000, 0, 6, 18, 14);
 const ACTIVE_FILL_ALPHA = 0.255;
 const CONSOLE_TYPING_SPEED = 18;
 const CONSOLE_LINE_PAUSE = 90;
@@ -100,14 +101,20 @@ const RING_TEMPLATES = [
   },
   {
     count: 1,
+    getTickLabel: CELESTIAL_RING_FRACTALS.sun.getTickLabel,
     palette: "sun",
-    tickCount: SUN_HOUR_COUNT,
+    tickLabelColor: CELESTIAL_RING_FRACTALS.sun.tickLabelColor,
+    tickCount: CELESTIAL_RING_FRACTALS.sun.tickCount,
+    tickStroke: CELESTIAL_RING_FRACTALS.sun.tickStroke,
     tone: "soft"
   },
   {
     count: 1,
+    getTickLabel: CELESTIAL_RING_FRACTALS.moon.getTickLabel,
     palette: "moon",
-    tickCount: MOON_DAY_COUNT,
+    tickLabelColor: CELESTIAL_RING_FRACTALS.moon.tickLabelColor,
+    tickCount: CELESTIAL_RING_FRACTALS.moon.tickCount,
+    tickStroke: CELESTIAL_RING_FRACTALS.moon.tickStroke,
     tone: "soft"
   }
 ].map((ring) => ({
@@ -401,6 +408,7 @@ const getSefirotLabelLines = (sefirot) => [
 
 const ACTIVE_CORE_TEXT_COLOR = "rgba(124, 255, 120, 0.92)";
 const CORE_NUMBER_FONT = "\"Rajdhani\", \"Share Tech Mono\", sans-serif";
+const CORE_TEXT_COLOR = "rgba(5, 21, 25, 0.56)";
 
 const drawPlanetGlyph = (context, x, y, size, planet, colors) => {
   const unit = size / 2;
@@ -588,24 +596,6 @@ const getTopCenteredLastSegmentRotation = (count) => {
   return -Math.PI / 2 - ((count - 0.5) * segmentAngle);
 };
 
-const getSunTimeAngle = (date = new Date()) => {
-  const elapsedSeconds = date.getHours() * 3600
-    + date.getMinutes() * 60
-    + date.getSeconds()
-    + date.getMilliseconds() / 1000;
-  const dayProgress = elapsedSeconds / (24 * 3600);
-
-  return -Math.PI / 2 + (dayProgress * Math.PI * 2);
-};
-
-const getMoonCycleAngle = (date = new Date()) => {
-  const elapsedDays = (date.getTime() - KNOWN_NEW_MOON_PEAK_UTC) / DAY_IN_MILLISECONDS;
-  const cycleAge = ((elapsedDays % SYNODIC_MONTH_DAYS) + SYNODIC_MONTH_DAYS) % SYNODIC_MONTH_DAYS;
-  const cycleProgress = cycleAge / SYNODIC_MONTH_DAYS;
-
-  return -Math.PI / 2 + (cycleProgress * Math.PI * 2);
-};
-
 const drawCelestialPositionMarker = (context, metrics, options) => {
   const {
     angle,
@@ -651,57 +641,17 @@ const drawCelestialPositionMarker = (context, metrics, options) => {
   );
 };
 
-const drawSunPositionMarker = (context, metrics, options) => {
+const drawCelestialRingMarker = (context, metrics, options) => {
+  const {
+    paletteName,
+    timestamp,
+    ...radii
+  } = options;
+
   drawCelestialPositionMarker(context, metrics, {
-    ...options,
-    angle: getSunTimeAngle(options.timestamp),
-    glyph: "☀",
-    glyphColor: "rgba(255, 226, 92, 0.94)",
-    glyphSize: 0.44,
-    shadowColor: "rgba(255, 16, 12, 0.42)",
-    strokeColor: "rgba(219, 66, 61, 0.68)"
+    ...radii,
+    ...getCelestialMarkerConfig(paletteName, timestamp)
   });
-};
-
-const drawMoonPositionMarker = (context, metrics, options) => {
-  drawCelestialPositionMarker(context, metrics, {
-    ...options,
-    angle: getMoonCycleAngle(options.timestamp),
-    glyph: "🌕",
-    glyphColor: "rgba(246, 248, 244, 0.88)",
-    glyphSize: 0.42,
-    shadowColor: "rgba(255, 16, 12, 0.42)",
-    strokeColor: "rgba(219, 66, 61, 0.68)"
-  });
-};
-
-const getCelestialRingColors = (paletteName, segmentIndex) => {
-  const palettes = {
-    moon: [
-      "rgba(246, 248, 244, 0.6)",
-      "rgba(185, 190, 188, 0.52)",
-      "rgba(250, 251, 246, 0.66)"
-    ],
-    sun: [
-      "rgba(255, 226, 92, 0.72)",
-      "rgba(255, 181, 45, 0.58)",
-      "rgba(255, 247, 174, 0.72)"
-    ]
-  };
-  const palette = palettes[paletteName];
-
-  if (!palette) return null;
-
-  return {
-    alpha: 0.72,
-    border: paletteName === "moon" ? "rgba(245, 248, 246, 0.34)" : "",
-    borderGlow: paletteName === "moon" ? "rgba(245, 248, 246, 0.18)" : "",
-    end: palette[(segmentIndex + 1) % palette.length],
-    glow: paletteName === "sun"
-      ? "rgba(255, 213, 74, 0.14)"
-      : "rgba(245, 248, 246, 0.1)",
-    start: palette[segmentIndex % palette.length]
-  };
 };
 
 const drawRingSegmentPanel = (context, metrics, segment, colors) => {
@@ -786,7 +736,9 @@ const drawRingSegmentPanel = (context, metrics, segment, colors) => {
 const drawRingTickMarks = (context, metrics, options) => {
   const {
     count,
+    getTickLabel,
     innerRadius,
+    labelColor,
     outerRadius,
     stroke,
     rotation = -Math.PI / 2
@@ -802,11 +754,12 @@ const drawRingTickMarks = (context, metrics, options) => {
 
   for (let index = 0; index < count; index += 1) {
     const angle = rotation + (index * tickStep);
-    const isQuarter = index % 6 === 0;
+    const isPrimary = index % 2 === 0;
     const startRadius = outerRadius;
-    const endRadius = outerRadius - (ringWidth * (isQuarter ? 0.34 : 0.22));
+    const endRadius = outerRadius - (ringWidth * (isPrimary ? 0.34 : 0.2));
+    const label = getTickLabel ? getTickLabel(index) : "";
 
-    context.lineWidth = Math.max(1, ringWidth * (isQuarter ? 0.024 : 0.015));
+    context.lineWidth = Math.max(1, ringWidth * (isPrimary ? 0.024 : 0.014));
     context.beginPath();
     context.moveTo(
       metrics.center + Math.cos(angle) * startRadius,
@@ -817,6 +770,25 @@ const drawRingTickMarks = (context, metrics, options) => {
       metrics.center + Math.sin(angle) * endRadius
     );
     context.stroke();
+
+    if (label) {
+      const labelRadius = outerRadius - (ringWidth * 0.58);
+
+      drawCenteredText(
+        context,
+        label,
+        metrics.center + Math.cos(angle) * labelRadius,
+        metrics.center + Math.sin(angle) * labelRadius,
+        Math.max(7, ringWidth * 0.135),
+        labelColor || stroke,
+        {
+          fontFamily: "\"Share Tech Mono\", \"Rajdhani\", monospace",
+          maxWidth: ringWidth * 0.7,
+          shadowBlur: 0,
+          weight: 550
+        }
+      );
+    }
   }
 
   context.restore();
@@ -833,7 +805,9 @@ const drawRing = (context, metrics, options) => {
     textColor,
     styledSegmentColors,
     styledSegmentIndices = [],
+    getTickLabel,
     tickCount = 0,
+    tickLabelColor,
     tickStroke,
     showBorders = true,
     showDividers = showBorders,
@@ -876,7 +850,9 @@ const drawRing = (context, metrics, options) => {
   if (tickCount) {
     drawRingTickMarks(context, metrics, {
       count: tickCount,
+      getTickLabel,
       innerRadius,
+      labelColor: tickLabelColor,
       outerRadius,
       rotation: -Math.PI / 2,
       stroke: tickStroke || stroke
@@ -1261,7 +1237,7 @@ const drawSquare = (context, metrics, colors, options = {}) => {
           shadowColor: number === 5 ? "rgba(124, 255, 120, 0.38)" : colors.sefirot.shadow,
           strokeColor: number === 5 ? "rgba(5, 21, 25, 0.32)" : colors.sefirot.stroke,
           strokeWidth: Math.max(0.7, numberSize * 0.014),
-          weight: 500
+          weight: 550
         }
       );
     }
@@ -1321,9 +1297,9 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
       outerRadius,
       questTextColor: accent,
       stroke: isSoft ? borderColors.ringSoft : borderColors.ring,
-      textColor: index === STYLED_RING_INDEX ? "rgba(5, 21, 25, 0.5)" : "rgba(47, 42, 79, 0.74)",
+      textColor: index === STYLED_RING_INDEX ? CORE_TEXT_COLOR : "rgba(47, 42, 79, 0.74)",
       styledSegmentColors: (segmentIndex) => {
-        const celestialColors = getCelestialRingColors(ring.palette, segmentIndex);
+        const celestialColors = getFractalCelestialRingColors(ring.palette, segmentIndex);
 
         if (celestialColors) {
           return celestialColors;
@@ -1346,8 +1322,10 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
       showBorders: index !== STYLED_RING_INDEX,
       showDividers: !ring.palette && index !== STYLED_RING_INDEX,
       styledSegmentIndices: index === STYLED_RING_INDEX || ring.palette ? getSegmentIndices(ring.count) : [],
+      getTickLabel: ring.getTickLabel,
       tickCount: ring.tickCount || 0,
-      tickStroke: ring.palette === "moon" ? "rgba(245, 248, 246, 0.38)" : "rgba(255, 247, 174, 0.42)",
+      tickLabelColor: ring.tickLabelColor,
+      tickStroke: ring.tickStroke,
       rotation: ring.centerLastSegmentAtTop ? getTopCenteredLastSegmentRotation(ring.count) : undefined
     });
   });
@@ -1368,7 +1346,7 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
       stroke: "rgba(5, 21, 25, 0.68)"
     },
     sefirot: {
-      fill: "rgba(5, 21, 25, 0.44)",
+      fill: CORE_TEXT_COLOR,
       shadow: "rgba(255, 255, 255, 0.1)",
       stroke: "rgba(255, 255, 255, 0.1)"
     },
@@ -1385,13 +1363,15 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
     motion
   });
 
-  drawSunPositionMarker(context, metrics, {
+  drawCelestialRingMarker(context, metrics, {
     innerRadius: metrics.squareOuterRadius + (metrics.ringWidth * SUN_RING_INDEX),
-    outerRadius: metrics.squareOuterRadius + (metrics.ringWidth * (SUN_RING_INDEX + 1))
+    outerRadius: metrics.squareOuterRadius + (metrics.ringWidth * (SUN_RING_INDEX + 1)),
+    paletteName: "sun"
   });
-  drawMoonPositionMarker(context, metrics, {
+  drawCelestialRingMarker(context, metrics, {
     innerRadius: metrics.squareOuterRadius + (metrics.ringWidth * MOON_RING_INDEX),
-    outerRadius: metrics.squareOuterRadius + (metrics.ringWidth * (MOON_RING_INDEX + 1))
+    outerRadius: metrics.squareOuterRadius + (metrics.ringWidth * (MOON_RING_INDEX + 1)),
+    paletteName: "moon"
   });
 };
 
