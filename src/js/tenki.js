@@ -4,6 +4,11 @@ const MOON_DAY_COUNT = 29;
 const SQUARE_GRID_SIZE = 3;
 const TENKI_ORDER = [1, 2, 4, 3, 5, 7, 6, 8, 9];
 const URANUS_SEGMENT_INDEX = TENKI_ORDER.indexOf(9);
+const SUN_RING_INDEX = 1;
+const MOON_RING_INDEX = 2;
+const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
+const SYNODIC_MONTH_DAYS = 29.530588853;
+const KNOWN_NEW_MOON_PEAK_UTC = Date.UTC(2000, 0, 6, 18, 14);
 const ACTIVE_FILL_ALPHA = 0.255;
 const CONSOLE_TYPING_SPEED = 18;
 const CONSOLE_LINE_PAUSE = 90;
@@ -49,6 +54,17 @@ const TENKI_TRIGRAM_INCREMENTED_VALUES = {
   8: 3,
   9: 8
 };
+const TENKI_SEFIROT = {
+  1: { english: "Kether", hebrew: "כתר" },
+  2: { english: "Chokmah", hebrew: "חכמה" },
+  3: { english: "Binah", hebrew: "בינה" },
+  4: { english: "Chesed", hebrew: "חסד" },
+  5: { english: "Geburah", hebrew: "גבורה" },
+  6: { english: "Tiferet", hebrew: "תפארת" },
+  7: { english: "Netzach", hebrew: "נצח" },
+  8: { english: "Hod", hebrew: "הוד" },
+  9: { english: "Yesod", hebrew: "יסוד" }
+};
 const TENKI_PLANETS = {
   1: { name: "Neptune" },
   2: { name: "Sun" },
@@ -70,14 +86,16 @@ const DEFAULT_TENKI_ROWS = TENKI_ORDER.map((number) => ({
   number,
   planet: TENKI_PLANETS[number],
   ringTrigram: TENKI_RING_TRIGRAMS[number] || "",
+  sefirot: {
+    ...TENKI_SEFIROT[number],
+    number
+  },
   trigram: TENKI_TRIGRAMS[number]
 }));
 const RING_TEMPLATES = [
   {
     count: RING_SEGMENT_COUNT,
-    getLabels: (rows) => rows.map((row, index) => (
-      index === URANUS_SEGMENT_INDEX ? row.planet : row.ringTrigram
-    )),
+    getLabels: (rows) => rows.map((row) => row.number),
     tone: "accent"
   },
   {
@@ -331,6 +349,58 @@ const drawCenteredText = (context, text, x, y, size, color, options = {}) => {
   context.restore();
 };
 
+const drawCenteredLines = (context, lines, x, y, size, color, options = {}) => {
+  context.save();
+  const weight = options.weight || 600;
+  const fontFamily = options.fontFamily || "\"Rajdhani\", \"Noto Sans Hebrew\", Arial, sans-serif";
+  const lineHeight = options.lineHeight || size * 1.08;
+  let textSize = size;
+
+  context.translate(x, y);
+  if (options.rotation) {
+    context.rotate(options.rotation);
+  }
+
+  context.font = `${weight} ${textSize}px ${fontFamily}`;
+  if (options.maxWidth) {
+    const widestLine = lines.reduce((widest, line) => Math.max(widest, context.measureText(line).width), 0);
+
+    if (widestLine > options.maxWidth) {
+      textSize *= options.maxWidth / widestLine;
+      context.font = `${weight} ${textSize}px ${fontFamily}`;
+    }
+  }
+
+  context.fillStyle = color;
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.shadowColor = options.shadowColor || color;
+  context.shadowBlur = options.shadowBlur === undefined ? 8 : options.shadowBlur;
+
+  const scaledLineHeight = lineHeight * (textSize / size);
+  const firstLineY = -((lines.length - 1) * scaledLineHeight) / 2;
+
+  lines.forEach((line, index) => {
+    const lineY = firstLineY + (index * scaledLineHeight);
+
+    if (options.strokeColor) {
+      context.lineWidth = options.strokeWidth || Math.max(1, textSize * 0.08);
+      context.strokeStyle = options.strokeColor;
+      context.strokeText(line, 0, lineY);
+    }
+    context.fillText(line, 0, lineY);
+  });
+
+  context.restore();
+};
+
+const getSefirotLabelLines = (sefirot) => [
+  `${sefirot.number} - ${sefirot.english}`,
+  sefirot.hebrew
+];
+
+const ACTIVE_CORE_TEXT_COLOR = "rgba(124, 255, 120, 0.92)";
+
 const drawPlanetGlyph = (context, x, y, size, planet, colors) => {
   const unit = size / 2;
   const stroke = () => {
@@ -515,6 +585,93 @@ const drawUranusQuestPrompt = (context, x, y, size, maxWidth, colors, options = 
 const getTopCenteredLastSegmentRotation = (count) => {
   const segmentAngle = (Math.PI * 2) / count;
   return -Math.PI / 2 - ((count - 0.5) * segmentAngle);
+};
+
+const getSunTimeAngle = (date = new Date()) => {
+  const elapsedSeconds = date.getHours() * 3600
+    + date.getMinutes() * 60
+    + date.getSeconds()
+    + date.getMilliseconds() / 1000;
+  const dayProgress = elapsedSeconds / (24 * 3600);
+
+  return -Math.PI / 2 + (dayProgress * Math.PI * 2);
+};
+
+const getMoonCycleAngle = (date = new Date()) => {
+  const elapsedDays = (date.getTime() - KNOWN_NEW_MOON_PEAK_UTC) / DAY_IN_MILLISECONDS;
+  const cycleAge = ((elapsedDays % SYNODIC_MONTH_DAYS) + SYNODIC_MONTH_DAYS) % SYNODIC_MONTH_DAYS;
+  const cycleProgress = cycleAge / SYNODIC_MONTH_DAYS;
+
+  return -Math.PI / 2 + (cycleProgress * Math.PI * 2);
+};
+
+const drawCelestialPositionMarker = (context, metrics, options) => {
+  const {
+    angle,
+    glyph,
+    glyphColor,
+    glyphSize,
+    innerRadius,
+    outerRadius,
+    shadowColor,
+    strokeColor
+  } = options;
+  const radius = innerRadius + ((outerRadius - innerRadius) / 2);
+  const x = metrics.center + Math.cos(angle) * radius;
+  const y = metrics.center + Math.sin(angle) * radius;
+
+  context.save();
+  context.strokeStyle = strokeColor;
+  context.lineWidth = Math.max(2, (outerRadius - innerRadius) * 0.045);
+  context.shadowColor = shadowColor;
+  context.shadowBlur = (outerRadius - innerRadius) * 0.16;
+  context.lineCap = "round";
+  context.beginPath();
+  context.moveTo(x, y);
+  context.lineTo(metrics.center, metrics.center);
+  context.stroke();
+  context.restore();
+
+  drawCenteredText(
+    context,
+    glyph,
+    x,
+    y,
+    Math.max(13, (outerRadius - innerRadius) * glyphSize),
+    glyphColor,
+    {
+      fontFamily: "\"Segoe UI Emoji\", \"Apple Color Emoji\", \"Noto Color Emoji\", \"Segoe UI Symbol\", sans-serif",
+      shadowBlur: 12,
+      shadowColor,
+      strokeColor: "rgba(120, 20, 14, 0.34)",
+      strokeWidth: Math.max(1, (outerRadius - innerRadius) * 0.018),
+      weight: 500
+    }
+  );
+};
+
+const drawSunPositionMarker = (context, metrics, options) => {
+  drawCelestialPositionMarker(context, metrics, {
+    ...options,
+    angle: getSunTimeAngle(options.timestamp),
+    glyph: "☀",
+    glyphColor: "rgba(255, 226, 92, 0.94)",
+    glyphSize: 0.44,
+    shadowColor: "rgba(255, 16, 12, 0.42)",
+    strokeColor: "rgba(219, 66, 61, 0.68)"
+  });
+};
+
+const drawMoonPositionMarker = (context, metrics, options) => {
+  drawCelestialPositionMarker(context, metrics, {
+    ...options,
+    angle: getMoonCycleAngle(options.timestamp),
+    glyph: "🌕",
+    glyphColor: "rgba(246, 248, 244, 0.88)",
+    glyphSize: 0.42,
+    shadowColor: "rgba(255, 16, 12, 0.42)",
+    strokeColor: "rgba(219, 66, 61, 0.68)"
+  });
 };
 
 const getCelestialRingColors = (paletteName, segmentIndex) => {
@@ -748,7 +905,26 @@ const drawRing = (context, metrics, options) => {
       const labelTextSize = Math.max(13, textSize * (isCompactCanvas ? 1.45 : 1.72));
       const segmentChord = 2 * labelRadius * Math.sin(segmentAngle / 2);
 
-      if (label.name) {
+      if (label.english && label.hebrew) {
+        drawCenteredLines(
+          context,
+          getSefirotLabelLines(label),
+          labelX,
+          labelY,
+          Math.max(7, (outerRadius - innerRadius) * (isCompactCanvas ? 0.14 : 0.16)),
+          textColor,
+          {
+            fontFamily: "\"Rajdhani\", \"Noto Sans Hebrew\", Arial, sans-serif",
+            lineHeight: Math.max(8, (outerRadius - innerRadius) * 0.18),
+            maxWidth: segmentChord * 0.66,
+            shadowBlur: 8,
+            shadowColor: "rgba(255, 255, 255, 0.12)",
+            strokeColor: "rgba(255, 255, 255, 0.1)",
+            strokeWidth: Math.max(0.8, (outerRadius - innerRadius) * 0.008),
+            weight: 600
+          }
+        );
+      } else if (label.name) {
         const isUranus = label.name === "Uranus";
 
         if (isUranus) {
@@ -777,16 +953,15 @@ const drawRing = (context, metrics, options) => {
           String(label),
           labelX,
           labelY,
-          labelTextSize,
-          textColor,
+          showBorders ? labelTextSize : Math.max(14, (outerRadius - innerRadius) * 0.46),
+          !showBorders && Number(label) === 9 ? ACTIVE_CORE_TEXT_COLOR : textColor,
           showBorders ? {} : {
-            fontFamily: "\"Segoe UI Symbol\", \"Noto Sans Symbols\", \"DejaVu Sans\", sans-serif",
+            fontFamily: "\"Rajdhani\", \"Share Tech Mono\", sans-serif",
             shadowBlur: 10,
-            shadowColor: "rgba(255, 255, 255, 0.1)",
-            maxWidth: segmentChord * 0.66,
-            rotation: Math.PI / 2,
-            strokeColor: "rgba(255, 255, 255, 0.1)",
-            strokeWidth: Math.max(1, labelTextSize * 0.018),
+            shadowColor: Number(label) === 9 ? "rgba(124, 255, 120, 0.38)" : "rgba(255, 255, 255, 0.1)",
+            maxWidth: segmentChord * 0.46,
+            strokeColor: Number(label) === 9 ? "rgba(5, 21, 25, 0.32)" : "rgba(255, 255, 255, 0.1)",
+            strokeWidth: Math.max(0.7, labelTextSize * 0.014),
             weight: 500
           }
         );
@@ -1067,41 +1242,28 @@ const drawSquare = (context, metrics, colors, options = {}) => {
     for (let column = 0; column < SQUARE_GRID_SIZE; column += 1) {
       const orderIndex = (row * SQUARE_GRID_SIZE) + column;
       const number = TENKI_ORDER[orderIndex];
-      const element = TENKI_ELEMENTS[number];
+      const sefirot = TENKI_SEFIROT[number];
       const centerX = start + (column * cellSize) + (cellSize / 2);
-      const centerY = start + (row * cellSize) + (cellSize / 2);
+      const noteY = start + (row * cellSize) + (cellSize * 0.78);
 
-      if (number === 5) {
-        drawElementIcon(
-          context,
-          centerX,
-          centerY,
-          cellSize * 0.52,
-          element,
-          colors.icon,
-          {
-            motion: 0
-          }
-        );
-      } else {
-        drawCenteredText(
-          context,
-          TENKI_TRIGRAMS[number],
-          centerX,
-          centerY,
-          cellSize * 0.36,
-          colors.trigram.fill,
-          {
-            fontFamily: "\"Segoe UI Symbol\", \"Noto Sans Symbols\", \"DejaVu Sans\", sans-serif",
-            maxWidth: cellSize * 0.66,
-            shadowBlur: 10,
-            shadowColor: colors.trigram.shadow,
-            strokeColor: colors.trigram.stroke,
-            strokeWidth: Math.max(1, cellSize * 0.018),
-            weight: 500
-          }
-        );
-      }
+      drawCenteredLines(
+        context,
+        [sefirot.english, sefirot.hebrew],
+        centerX,
+        noteY,
+        cellSize * 0.13,
+        number === 5 ? ACTIVE_CORE_TEXT_COLOR : colors.sefirot.fill,
+        {
+          fontFamily: "\"Rajdhani\", \"Noto Sans Hebrew\", Arial, sans-serif",
+          lineHeight: cellSize * 0.14,
+          maxWidth: cellSize * 0.78,
+          shadowBlur: 8,
+          shadowColor: number === 5 ? "rgba(124, 255, 120, 0.38)" : colors.sefirot.shadow,
+          strokeColor: number === 5 ? "rgba(5, 21, 25, 0.32)" : colors.sefirot.stroke,
+          strokeWidth: Math.max(0.7, cellSize * 0.006),
+          weight: 600
+        }
+      );
     }
   }
 
@@ -1159,7 +1321,7 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
       outerRadius,
       questTextColor: accent,
       stroke: isSoft ? borderColors.ringSoft : borderColors.ring,
-      textColor: index === STYLED_RING_INDEX ? "rgba(5, 21, 25, 0.44)" : "rgba(47, 42, 79, 0.74)",
+      textColor: index === STYLED_RING_INDEX ? "rgba(5, 21, 25, 0.5)" : "rgba(47, 42, 79, 0.74)",
       styledSegmentColors: (segmentIndex) => {
         const celestialColors = getCelestialRingColors(ring.palette, segmentIndex);
 
@@ -1173,7 +1335,7 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
           glow: `rgba(${accentSoftRgb}, 0.14)`
         };
 
-        if (segmentIndex === URANUS_SEGMENT_INDEX) {
+        if (index === STYLED_RING_INDEX && segmentIndex === URANUS_SEGMENT_INDEX) {
           colors.border = "rgba(124, 255, 120, 0.92)";
           colors.borderGlow = "rgba(124, 255, 120, 0.42)";
           colors.transparent = true;
@@ -1205,7 +1367,7 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
       shadow: "rgba(255, 255, 255, 0.18)",
       stroke: "rgba(5, 21, 25, 0.68)"
     },
-    trigram: {
+    sefirot: {
       fill: "rgba(5, 21, 25, 0.44)",
       shadow: "rgba(255, 255, 255, 0.1)",
       stroke: "rgba(255, 255, 255, 0.1)"
@@ -1221,6 +1383,15 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
     }
   }, {
     motion
+  });
+
+  drawSunPositionMarker(context, metrics, {
+    innerRadius: metrics.squareOuterRadius + (metrics.ringWidth * SUN_RING_INDEX),
+    outerRadius: metrics.squareOuterRadius + (metrics.ringWidth * (SUN_RING_INDEX + 1))
+  });
+  drawMoonPositionMarker(context, metrics, {
+    innerRadius: metrics.squareOuterRadius + (metrics.ringWidth * MOON_RING_INDEX),
+    outerRadius: metrics.squareOuterRadius + (metrics.ringWidth * (MOON_RING_INDEX + 1))
   });
 };
 
@@ -1244,6 +1415,7 @@ const initTenki = () => {
     });
   };
   const resizeObserver = new ResizeObserver(scheduleRender);
+  const clock = window.setInterval(render, 60 * 1000);
 
   resizeObserver.observe(canvas);
   if (canvas.parentElement) {
@@ -1256,6 +1428,10 @@ const initTenki = () => {
   }
   render();
   scheduleRender();
+
+  window.addEventListener("pagehide", () => {
+    window.clearInterval(clock);
+  }, { once: true });
 };
 
 initTenki();
