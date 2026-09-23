@@ -1,4 +1,5 @@
 const RING_SEGMENT_COUNT = 9;
+const RING_SLOT_COUNT = 3;
 const SQUARE_GRID_SIZE = 3;
 const TENKI_ORDER = [1, 2, 4, 3, 5, 7, 6, 8, 9];
 const URANUS_SEGMENT_INDEX = TENKI_ORDER.indexOf(9);
@@ -45,12 +46,6 @@ const RING_TEMPLATES = [
   {
     getLabels: (rows) => rows.map((row) => row.planet || ""),
     tone: "accent"
-  },
-  {
-    tone: "soft"
-  },
-  {
-    tone: "soft"
   }
 ].map((ring) => ({
   count: RING_SEGMENT_COUNT,
@@ -973,7 +968,7 @@ const DEFAULT_TENKI_STATE = createTenkiState(DEFAULT_TENKI_ROWS);
 const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
   const context = resizeCanvas(canvas);
   const rect = canvas.getBoundingClientRect();
-  const metrics = getCanvasMetrics(canvas, state.rings.length);
+  const metrics = getCanvasMetrics(canvas, RING_SLOT_COUNT);
   const accent = getThemeColor("--accent", "#74f7d1");
   const accentSoft = getThemeColor("--accent-soft", "#a7ffe7");
   const accentSoftRgb = getColorRgb(accentSoft, "255, 213, 107");
