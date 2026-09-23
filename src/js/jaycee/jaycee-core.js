@@ -1,12 +1,4 @@
 import {
-  CELESTIAL_RING_FRACTALS,
-  MOON_RING_INDEX,
-  SUN_RING_INDEX,
-  getCelestialMarkerConfig,
-  getCelestialReadout,
-  getCelestialRingColors as getFractalCelestialRingColors
-} from "./jaycee-fractals.js";
-import {
   MAIN_CORE_RING_LANGUAGE,
   MAIN_CORE_SQUARE_LANGUAGE,
   loadJayceeLanguage
@@ -21,6 +13,10 @@ const CONSOLE_TYPING_SPEED = 18;
 const CONSOLE_LINE_PAUSE = 90;
 const SURFACE_FILL_ALPHA = 0.86;
 const STYLED_RING_INDEX = 0;
+const CORE_RING_MAX_RADIAL_SHARE = 0.46;
+const CORE_RING_WIDTH_MAX = 58;
+const CORE_RING_WIDTH_MIN = 18;
+const CORE_RING_WIDTH_RATIO = 0.11;
 const getSegmentIndices = (count) => Array.from({ length: count }, (_, index) => index);
 const THEME_PALETTE_MIXES = {
   bottomLeft: 0.08,
@@ -34,24 +30,6 @@ const RING_TEMPLATES = [
     count: RING_SEGMENT_COUNT,
     getLabels: ({ coreRingLabels }) => coreRingLabels,
     tone: "accent"
-  },
-  {
-    count: 1,
-    getTickLabel: CELESTIAL_RING_FRACTALS.sun.getTickLabel,
-    palette: "sun",
-    tickLabelColor: CELESTIAL_RING_FRACTALS.sun.tickLabelColor,
-    tickCount: CELESTIAL_RING_FRACTALS.sun.tickCount,
-    tickStroke: CELESTIAL_RING_FRACTALS.sun.tickStroke,
-    tone: "soft"
-  },
-  {
-    count: 1,
-    getTickLabel: CELESTIAL_RING_FRACTALS.moon.getTickLabel,
-    palette: "moon",
-    tickLabelColor: CELESTIAL_RING_FRACTALS.moon.tickLabelColor,
-    tickCount: CELESTIAL_RING_FRACTALS.moon.tickCount,
-    tickStroke: CELESTIAL_RING_FRACTALS.moon.tickStroke,
-    tone: "soft"
   }
 ].map((ring) => ({
   centerLastSegmentAtTop: true,
@@ -181,11 +159,19 @@ const getCanvasMetrics = (canvas, ringCount) => {
   const rect = canvas.getBoundingClientRect();
   const size = Math.min(rect.width, rect.height);
   const center = size / 2;
+  const safeRingCount = Math.max(1, ringCount);
   const padding = Math.max(14, size * 0.035);
   const outerRadius = center - padding;
-  const squareSize = size * 0.36;
-  const squareOuterRadius = (squareSize * Math.SQRT2) / 2;
-  const ringWidth = (outerRadius - squareOuterRadius) / ringCount;
+  const preferredRingWidth = Math.min(
+    CORE_RING_WIDTH_MAX,
+    Math.max(CORE_RING_WIDTH_MIN, size * CORE_RING_WIDTH_RATIO)
+  );
+  const ringWidth = Math.min(
+    preferredRingWidth,
+    (outerRadius * CORE_RING_MAX_RADIAL_SHARE) / safeRingCount
+  );
+  const squareOuterRadius = outerRadius - (ringWidth * safeRingCount);
+  const squareSize = (squareOuterRadius * 2) / Math.SQRT2;
 
   return {
     center,
@@ -254,97 +240,6 @@ const CORE_TEXT_COLOR = "rgba(5, 21, 25, 0.56)";
 const getTopCenteredLastSegmentRotation = (count) => {
   const segmentAngle = (Math.PI * 2) / count;
   return -Math.PI / 2 - ((count - 0.5) * segmentAngle);
-};
-
-const drawCelestialPositionMarker = (context, metrics, options) => {
-  const {
-    angle,
-    glyph,
-    glyphColor,
-    glyphSize,
-    innerRadius,
-    outerRadius,
-    shadowColor,
-    strokeColor
-  } = options;
-  const radius = innerRadius + ((outerRadius - innerRadius) / 2);
-  const x = metrics.center + Math.cos(angle) * radius;
-  const y = metrics.center + Math.sin(angle) * radius;
-
-  context.save();
-  context.strokeStyle = strokeColor;
-  context.lineWidth = Math.max(2, (outerRadius - innerRadius) * 0.045);
-  context.shadowColor = shadowColor;
-  context.shadowBlur = (outerRadius - innerRadius) * 0.16;
-  context.lineCap = "round";
-  context.beginPath();
-  context.moveTo(x, y);
-  context.lineTo(metrics.center, metrics.center);
-  context.stroke();
-  context.restore();
-
-  drawCenteredText(
-    context,
-    glyph,
-    x,
-    y,
-    Math.max(13, (outerRadius - innerRadius) * glyphSize),
-    glyphColor,
-    {
-      fontFamily: "\"Segoe UI Emoji\", \"Apple Color Emoji\", \"Noto Color Emoji\", \"Segoe UI Symbol\", sans-serif",
-      shadowBlur: 12,
-      shadowColor,
-      strokeColor: "rgba(120, 20, 14, 0.34)",
-      strokeWidth: Math.max(1, (outerRadius - innerRadius) * 0.018),
-      weight: 500
-    }
-  );
-};
-
-const drawCelestialRingMarker = (context, metrics, options) => {
-  const {
-    paletteName,
-    timestamp,
-    ...radii
-  } = options;
-
-  drawCelestialPositionMarker(context, metrics, {
-    ...radii,
-    ...getCelestialMarkerConfig(paletteName, timestamp)
-  });
-};
-
-const drawCelestialReadout = (context) => {
-  const readout = getCelestialReadout();
-  const lines = [
-    `SUN: ${readout.sunTime}`,
-    `MOON: D${readout.moonDay.toFixed(2)} ${readout.moonIlluminationPercent.toFixed(1)}%`
-  ];
-  const x = 14;
-  const y = 14;
-  const width = 142;
-  const height = 45;
-
-  context.save();
-  context.shadowColor = "rgba(0, 0, 0, 0.18)";
-  context.shadowBlur = 10;
-  context.fillStyle = "rgba(255, 255, 255, 0.68)";
-  context.strokeStyle = "rgba(5, 21, 25, 0.22)";
-  context.lineWidth = 1;
-  context.beginPath();
-  context.roundRect(x, y, width, height, 5);
-  context.fill();
-  context.shadowBlur = 0;
-  context.stroke();
-
-  context.font = `550 11px ${CORE_NUMBER_FONT}`;
-  context.textAlign = "left";
-  context.textBaseline = "middle";
-  context.fillStyle = "rgba(5, 21, 25, 0.66)";
-  lines.forEach((line, index) => {
-    context.fillText(line, x + 10, y + 16 + (index * 16));
-  });
-  context.restore();
 };
 
 const drawRingSegmentPanel = (context, metrics, segment, colors) => {
@@ -646,7 +541,10 @@ const drawSquare = (context, metrics, colors, labels = getEmptyLabels(RING_SEGME
   const start = metrics.center - (metrics.squareSize / 2);
   const cellSize = metrics.squareSize / SQUARE_GRID_SIZE;
   const isCompact = metrics.size < 420;
-  const numberSize = Math.max(isCompact ? 9 : 13, metrics.ringWidth * (isCompact ? 0.28 : 0.38));
+  const numberSize = Math.min(
+    cellSize * 0.24,
+    Math.max(isCompact ? 9 : 13, metrics.ringWidth * (isCompact ? 0.28 : 0.38))
+  );
 
   context.save();
   context.shadowColor = colors.glow;
@@ -777,12 +675,6 @@ const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
       stroke: isSoft ? borderColors.ringSoft : borderColors.ring,
       textColor: index === STYLED_RING_INDEX ? CORE_TEXT_COLOR : "rgba(47, 42, 79, 0.74)",
       styledSegmentColors: (segmentIndex) => {
-        const celestialColors = getFractalCelestialRingColors(ring.palette, segmentIndex);
-
-        if (celestialColors) {
-          return celestialColors;
-        }
-
         const colors = {
           ...getSquareCellPaletteColors(segmentIndex, palette),
           alpha: SURFACE_FILL_ALPHA,
@@ -798,8 +690,8 @@ const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
         return colors;
       },
       showBorders: index !== STYLED_RING_INDEX,
-      showDividers: !ring.palette && index !== STYLED_RING_INDEX,
-      styledSegmentIndices: index === STYLED_RING_INDEX || ring.palette ? getSegmentIndices(ring.count) : [],
+      showDividers: index !== STYLED_RING_INDEX,
+      styledSegmentIndices: index === STYLED_RING_INDEX ? getSegmentIndices(ring.count) : [],
       getTickLabel: ring.getTickLabel,
       tickCount: ring.tickCount || 0,
       tickLabelColor: ring.tickLabelColor,
@@ -830,19 +722,6 @@ const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
       transparent: true
     }
   }, state.coreSquareLabels);
-
-  drawCelestialRingMarker(context, metrics, {
-    innerRadius: metrics.squareOuterRadius + (metrics.ringWidth * SUN_RING_INDEX),
-    outerRadius: metrics.squareOuterRadius + (metrics.ringWidth * (SUN_RING_INDEX + 1)),
-    paletteName: "sun"
-  });
-  drawCelestialRingMarker(context, metrics, {
-    innerRadius: metrics.squareOuterRadius + (metrics.ringWidth * MOON_RING_INDEX),
-    outerRadius: metrics.squareOuterRadius + (metrics.ringWidth * (MOON_RING_INDEX + 1)),
-    paletteName: "moon"
-  });
-
-  drawCelestialReadout(context);
 };
 
 const initJaycee = () => {
