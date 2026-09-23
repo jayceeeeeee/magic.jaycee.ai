@@ -21,6 +21,25 @@ const getMoonTickLabel = (index) => {
   return `${Math.round(illumination * 100)}%`;
 };
 
+const getMoonCycleState = (date = new Date()) => {
+  const elapsedDays = (date.getTime() - KNOWN_NEW_MOON_PEAK_UTC) / DAY_IN_MILLISECONDS;
+  const cycleAge = ((elapsedDays % SYNODIC_MONTH_DAYS) + SYNODIC_MONTH_DAYS) % SYNODIC_MONTH_DAYS;
+  const cycleProgress = cycleAge / SYNODIC_MONTH_DAYS;
+  const illumination = (1 - Math.cos(cycleProgress * Math.PI * 2)) / 2;
+
+  return {
+    cycleAge,
+    cycleProgress,
+    illumination
+  };
+};
+
+const getClockTimeLabel = (date = new Date()) => [
+  date.getHours(),
+  date.getMinutes(),
+  date.getSeconds()
+].map((value) => String(value).padStart(2, "0")).join(":");
+
 export const CELESTIAL_RING_FRACTALS = {
   moon: {
     markerGlyph: "🌕",
@@ -49,11 +68,19 @@ export const getSunTimeAngle = (date = new Date()) => {
 };
 
 export const getMoonCycleAngle = (date = new Date()) => {
-  const elapsedDays = (date.getTime() - KNOWN_NEW_MOON_PEAK_UTC) / DAY_IN_MILLISECONDS;
-  const cycleAge = ((elapsedDays % SYNODIC_MONTH_DAYS) + SYNODIC_MONTH_DAYS) % SYNODIC_MONTH_DAYS;
-  const cycleProgress = cycleAge / SYNODIC_MONTH_DAYS;
+  const { cycleProgress } = getMoonCycleState(date);
 
   return -Math.PI / 2 + (cycleProgress * Math.PI * 2);
+};
+
+export const getCelestialReadout = (date = new Date()) => {
+  const moon = getMoonCycleState(date);
+
+  return {
+    moonDay: moon.cycleAge,
+    moonIlluminationPercent: moon.illumination * 100,
+    sunTime: getClockTimeLabel(date)
+  };
 };
 
 export const getCelestialRingColors = (paletteName, segmentIndex) => {

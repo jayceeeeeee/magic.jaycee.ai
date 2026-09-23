@@ -3,6 +3,7 @@ import {
   MOON_RING_INDEX,
   SUN_RING_INDEX,
   getCelestialMarkerConfig,
+  getCelestialReadout,
   getCelestialRingColors as getFractalCelestialRingColors
 } from "./tenki-fractals.js";
 
@@ -309,6 +310,39 @@ const drawCelestialRingMarker = (context, metrics, options) => {
     ...radii,
     ...getCelestialMarkerConfig(paletteName, timestamp)
   });
+};
+
+const drawCelestialReadout = (context) => {
+  const readout = getCelestialReadout();
+  const lines = [
+    `SUN: ${readout.sunTime}`,
+    `MOON: D${readout.moonDay.toFixed(2)} ${readout.moonIlluminationPercent.toFixed(1)}%`
+  ];
+  const x = 14;
+  const y = 14;
+  const width = 142;
+  const height = 45;
+
+  context.save();
+  context.shadowColor = "rgba(0, 0, 0, 0.18)";
+  context.shadowBlur = 10;
+  context.fillStyle = "rgba(255, 255, 255, 0.68)";
+  context.strokeStyle = "rgba(5, 21, 25, 0.22)";
+  context.lineWidth = 1;
+  context.beginPath();
+  context.roundRect(x, y, width, height, 5);
+  context.fill();
+  context.shadowBlur = 0;
+  context.stroke();
+
+  context.font = `550 11px ${CORE_NUMBER_FONT}`;
+  context.textAlign = "left";
+  context.textBaseline = "middle";
+  context.fillStyle = "rgba(5, 21, 25, 0.66)";
+  lines.forEach((line, index) => {
+    context.fillText(line, x + 10, y + 16 + (index * 16));
+  });
+  context.restore();
 };
 
 const drawRingSegmentPanel = (context, metrics, segment, colors) => {
@@ -792,6 +826,8 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
     outerRadius: metrics.squareOuterRadius + (metrics.ringWidth * (MOON_RING_INDEX + 1)),
     paletteName: "moon"
   });
+
+  drawCelestialReadout(context);
 };
 
 const initTenki = () => {
@@ -814,7 +850,7 @@ const initTenki = () => {
     });
   };
   const resizeObserver = new ResizeObserver(scheduleRender);
-  const clock = window.setInterval(render, 60 * 1000);
+  const clock = window.setInterval(render, 1000);
 
   resizeObserver.observe(canvas);
   if (canvas.parentElement) {
