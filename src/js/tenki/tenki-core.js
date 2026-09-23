@@ -10,6 +10,17 @@ import {
 const RING_SEGMENT_COUNT = 9;
 const SQUARE_GRID_SIZE = 3;
 const TENKI_ORDER = [1, 2, 4, 3, 5, 7, 6, 8, 9];
+const TENKI_CORE_LABELS = {
+  1: "#6D",
+  2: "#B6",
+  3: "#92",
+  4: "#00",
+  5: "",
+  6: "#24",
+  7: "#DB",
+  8: "#49",
+  9: "#FF"
+};
 const ACTIVE_CORE_SEGMENT_INDEX = TENKI_ORDER.indexOf(9);
 const ACTIVE_FILL_ALPHA = 0.255;
 const CONSOLE_TYPING_SPEED = 18;
@@ -24,13 +35,19 @@ const THEME_PALETTE_MIXES = {
   topRight: 0.24
 };
 const getEmptyLabels = (count) => Array.from({ length: count }, () => "");
+const getSquareBinaryLabel = (number) => (number - 1).toString(2)
+  .padStart(3, "0")
+  .replaceAll("0", "□")
+  .replaceAll("1", "■");
 const DEFAULT_TENKI_ROWS = TENKI_ORDER.map((number) => ({
   number
 }));
 const RING_TEMPLATES = [
   {
     count: RING_SEGMENT_COUNT,
-    getLabels: (rows) => rows.map((row) => row.number),
+    getLabels: (rows) => rows.map((row, index) => (
+      index < RING_SEGMENT_COUNT - 1 ? getSquareBinaryLabel(row.number) : ""
+    )),
     tone: "accent"
   },
   {
@@ -567,7 +584,11 @@ const drawRing = (context, metrics, options) => {
     }
 
     if (label) {
-      const labelTextSize = Math.max(14, (outerRadius - innerRadius) * 0.46);
+      const isCoreRing = !showBorders;
+      const isCompact = metrics.size < 420;
+      const labelTextSize = isCoreRing
+        ? Math.max(isCompact ? 8 : 12, (outerRadius - innerRadius) * (isCompact ? 0.28 : 0.38))
+        : Math.max(14, (outerRadius - innerRadius) * 0.46);
       const segmentChord = 2 * labelRadius * Math.sin(segmentAngle / 2);
 
       drawCenteredText(
@@ -581,7 +602,7 @@ const drawRing = (context, metrics, options) => {
           fontFamily: CORE_NUMBER_FONT,
           shadowBlur: 10,
           shadowColor: Number(label) === 9 ? "rgba(124, 255, 120, 0.38)" : "rgba(255, 255, 255, 0.1)",
-          maxWidth: segmentChord * 0.46,
+          maxWidth: segmentChord * (isCompact ? 0.34 : 0.42),
           strokeColor: Number(label) === 9 ? "rgba(5, 21, 25, 0.32)" : "rgba(255, 255, 255, 0.1)",
           strokeWidth: Math.max(0.7, labelTextSize * 0.014),
           weight: 500
@@ -637,7 +658,8 @@ const drawInsetSquareCell = (context, x, y, size, colors) => {
 const drawSquare = (context, metrics, colors) => {
   const start = metrics.center - (metrics.squareSize / 2);
   const cellSize = metrics.squareSize / SQUARE_GRID_SIZE;
-  const numberSize = Math.max(14, metrics.ringWidth * 0.46);
+  const isCompact = metrics.size < 420;
+  const numberSize = Math.max(isCompact ? 9 : 13, metrics.ringWidth * (isCompact ? 0.28 : 0.38));
 
   context.save();
   context.shadowColor = colors.glow;
@@ -686,24 +708,25 @@ const drawSquare = (context, metrics, colors) => {
     for (let column = 0; column < SQUARE_GRID_SIZE; column += 1) {
       const orderIndex = (row * SQUARE_GRID_SIZE) + column;
       const number = TENKI_ORDER[orderIndex];
+      const label = TENKI_CORE_LABELS[number];
       const centerX = start + (column * cellSize) + (cellSize / 2);
       const centerY = start + (row * cellSize) + (cellSize / 2);
 
       drawCenteredText(
         context,
-        String(number),
+        label,
         centerX,
         centerY,
         numberSize,
         number === 5 ? ACTIVE_CORE_TEXT_COLOR : colors.coreText.fill,
         {
           fontFamily: CORE_NUMBER_FONT,
-          maxWidth: cellSize * 0.46,
+          maxWidth: cellSize * 0.76,
           shadowBlur: 10,
           shadowColor: number === 5 ? "rgba(124, 255, 120, 0.38)" : colors.coreText.shadow,
           strokeColor: number === 5 ? "rgba(5, 21, 25, 0.32)" : colors.coreText.stroke,
-          strokeWidth: Math.max(0.7, numberSize * 0.014),
-          weight: 550
+          strokeWidth: Math.max(1.2, numberSize * 0.08),
+          weight: 800
         }
       );
     }
