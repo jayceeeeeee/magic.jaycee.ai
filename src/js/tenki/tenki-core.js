@@ -6,22 +6,16 @@ import {
   getCelestialReadout,
   getCelestialRingColors as getFractalCelestialRingColors
 } from "./tenki-fractals.js";
+import {
+  MAIN_CORE_RING_LANGUAGE,
+  MAIN_CORE_SQUARE_LANGUAGE,
+  loadTenkiLanguage
+} from "./tenki-language.js";
 
 const RING_SEGMENT_COUNT = 9;
 const SQUARE_GRID_SIZE = 3;
-const TENKI_ORDER = [1, 2, 4, 3, 5, 7, 6, 8, 9];
-const TENKI_CORE_LABELS = {
-  1: "#6D",
-  2: "#B6",
-  3: "#92",
-  4: "#00",
-  5: "",
-  6: "#24",
-  7: "#DB",
-  8: "#49",
-  9: "#FF"
-};
-const ACTIVE_CORE_SEGMENT_INDEX = TENKI_ORDER.indexOf(9);
+const JAYCEE_ORDER = [1, 2, 4, 3, 5, 7, 6, 8, 9];
+const ACTIVE_CORE_SEGMENT_INDEX = JAYCEE_ORDER.indexOf(9);
 const ACTIVE_FILL_ALPHA = 0.255;
 const CONSOLE_TYPING_SPEED = 18;
 const CONSOLE_LINE_PAUSE = 90;
@@ -35,19 +29,10 @@ const THEME_PALETTE_MIXES = {
   topRight: 0.24
 };
 const getEmptyLabels = (count) => Array.from({ length: count }, () => "");
-const getSquareBinaryLabel = (number) => (number - 1).toString(2)
-  .padStart(3, "0")
-  .replaceAll("0", "□")
-  .replaceAll("1", "■");
-const DEFAULT_TENKI_ROWS = TENKI_ORDER.map((number) => ({
-  number
-}));
 const RING_TEMPLATES = [
   {
     count: RING_SEGMENT_COUNT,
-    getLabels: (rows) => rows.map((row, index) => (
-      index < RING_SEGMENT_COUNT - 1 ? getSquareBinaryLabel(row.number) : ""
-    )),
+    getLabels: ({ coreRingLabels }) => coreRingLabels,
     tone: "accent"
   },
   {
@@ -512,6 +497,7 @@ const drawRing = (context, metrics, options) => {
     textColor,
     styledSegmentColors,
     styledSegmentIndices = [],
+    activeLabelIndex = -1,
     getTickLabel,
     tickCount = 0,
     tickLabelColor,
@@ -585,6 +571,7 @@ const drawRing = (context, metrics, options) => {
 
     if (label) {
       const isCoreRing = !showBorders;
+      const isActiveLabel = index === activeLabelIndex;
       const isCompact = metrics.size < 420;
       const labelTextSize = isCoreRing
         ? Math.max(isCompact ? 8 : 12, (outerRadius - innerRadius) * (isCompact ? 0.28 : 0.38))
@@ -597,13 +584,13 @@ const drawRing = (context, metrics, options) => {
         labelX,
         labelY,
         showBorders ? Math.max(13, labelTextSize * 0.82) : labelTextSize,
-        !showBorders && Number(label) === 9 ? ACTIVE_CORE_TEXT_COLOR : textColor,
+        isActiveLabel ? ACTIVE_CORE_TEXT_COLOR : textColor,
         showBorders ? {} : {
           fontFamily: CORE_NUMBER_FONT,
           shadowBlur: 10,
-          shadowColor: Number(label) === 9 ? "rgba(124, 255, 120, 0.38)" : "rgba(255, 255, 255, 0.1)",
+          shadowColor: isActiveLabel ? "rgba(124, 255, 120, 0.38)" : "rgba(255, 255, 255, 0.1)",
           maxWidth: segmentChord * (isCompact ? 0.34 : 0.42),
-          strokeColor: Number(label) === 9 ? "rgba(5, 21, 25, 0.32)" : "rgba(255, 255, 255, 0.1)",
+          strokeColor: isActiveLabel ? "rgba(5, 21, 25, 0.32)" : "rgba(255, 255, 255, 0.1)",
           strokeWidth: Math.max(0.7, labelTextSize * 0.014),
           weight: 500
         }
@@ -655,7 +642,7 @@ const drawInsetSquareCell = (context, x, y, size, colors) => {
   context.restore();
 };
 
-const drawSquare = (context, metrics, colors) => {
+const drawSquare = (context, metrics, colors, labels = getEmptyLabels(RING_SEGMENT_COUNT)) => {
   const start = metrics.center - (metrics.squareSize / 2);
   const cellSize = metrics.squareSize / SQUARE_GRID_SIZE;
   const isCompact = metrics.size < 420;
@@ -669,7 +656,7 @@ const drawSquare = (context, metrics, colors) => {
     for (let column = 0; column < SQUARE_GRID_SIZE; column += 1) {
       const orderIndex = (row * SQUARE_GRID_SIZE) + column;
 
-      if (TENKI_ORDER[orderIndex] !== 5) {
+      if (JAYCEE_ORDER[orderIndex] !== 5) {
         drawGradientSquareCell(
           context,
           start + (column * cellSize),
@@ -707,8 +694,8 @@ const drawSquare = (context, metrics, colors) => {
   for (let row = 0; row < SQUARE_GRID_SIZE; row += 1) {
     for (let column = 0; column < SQUARE_GRID_SIZE; column += 1) {
       const orderIndex = (row * SQUARE_GRID_SIZE) + column;
-      const number = TENKI_ORDER[orderIndex];
-      const label = TENKI_CORE_LABELS[number];
+      const number = JAYCEE_ORDER[orderIndex];
+      const label = labels[orderIndex];
       const centerX = start + (column * cellSize) + (cellSize / 2);
       const centerY = start + (row * cellSize) + (cellSize / 2);
 
@@ -751,14 +738,18 @@ const drawSquare = (context, metrics, colors) => {
   context.restore();
 };
 
-const createTenkiState = (orderedRows) => ({
+const createTenkiState = ({
+  coreRingLabels = getEmptyLabels(RING_SEGMENT_COUNT),
+  coreSquareLabels = getEmptyLabels(RING_SEGMENT_COUNT)
+} = {}) => ({
+  coreSquareLabels,
   rings: RING_TEMPLATES.map((ring) => ({
     ...ring,
-    labels: ring.getLabels(orderedRows)
+    labels: ring.getLabels({ coreRingLabels })
   }))
 });
 
-const DEFAULT_TENKI_STATE = createTenkiState(DEFAULT_TENKI_ROWS);
+const DEFAULT_TENKI_STATE = createTenkiState();
 
 const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
   const context = resizeCanvas(canvas);
@@ -778,6 +769,7 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
     const isSoft = ring.tone === "soft";
 
     drawRing(context, metrics, {
+      activeLabelIndex: index === STYLED_RING_INDEX ? ACTIVE_CORE_SEGMENT_INDEX : -1,
       count: ring.count,
       labels: ring.labels,
       innerRadius,
@@ -837,7 +829,7 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
       topShade: "rgba(17, 29, 23, 0.055)",
       transparent: true
     }
-  });
+  }, state.coreSquareLabels);
 
   drawCelestialRingMarker(context, metrics, {
     innerRadius: metrics.squareOuterRadius + (metrics.ringWidth * SUN_RING_INDEX),
@@ -859,9 +851,10 @@ const initTenki = () => {
   const canvas = document.querySelector("[data-tenki-canvas]");
   if (!canvas) return;
 
+  let tenkiState = DEFAULT_TENKI_STATE;
   const render = () => {
     try {
-      drawTenki(canvas, DEFAULT_TENKI_STATE);
+      drawTenki(canvas, tenkiState);
     } catch (error) {
       console.error("Tenki render failed", error);
     }
@@ -886,6 +879,19 @@ const initTenki = () => {
   }
   render();
   scheduleRender();
+
+  loadTenkiLanguage({
+    coreRingLanguage: MAIN_CORE_RING_LANGUAGE,
+    coreSquareLanguage: MAIN_CORE_SQUARE_LANGUAGE,
+    jayceeOrder: JAYCEE_ORDER
+  })
+    .then((language) => {
+      tenkiState = createTenkiState(language);
+      scheduleRender();
+    })
+    .catch((error) => {
+      console.error("Tenki language load failed", error);
+    });
 
   window.addEventListener("pagehide", () => {
     window.clearInterval(clock);
