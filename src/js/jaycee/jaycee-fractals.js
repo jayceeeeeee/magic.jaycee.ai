@@ -16,9 +16,10 @@ const getClockTickLabel = (index) => {
 
 const getMoonTickLabel = (index) => {
   const cycleProgress = index / CELESTIAL_TICK_COUNT;
+  const cycleAge = cycleProgress * SYNODIC_MONTH_DAYS;
   const illumination = (1 - Math.cos(cycleProgress * Math.PI * 2)) / 2;
 
-  return `${Math.round(illumination * 100)}%`;
+  return `D${cycleAge.toFixed(2)} ${Math.round(illumination * 100)}%`;
 };
 
 const getMoonCycleState = (date = new Date()) => {
