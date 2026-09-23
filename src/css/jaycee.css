@@ -3,7 +3,7 @@
   --footer-space: 68px;
 }
 
-.tenki-page {
+.jaycee-page {
   width: min(100% - 28px, 560px);
   min-height: 100svh;
   display: grid;
@@ -13,7 +13,7 @@
   padding: calc(var(--banner-space) + 28px) 0 calc(var(--footer-space) + 28px);
 }
 
-.tenki-console {
+.jaycee-console {
   position: relative;
   width: 100%;
   min-height: calc(100svh - var(--banner-space) - var(--footer-space) - 56px);
@@ -33,7 +33,7 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
-.tenki-console::after {
+.jaycee-console::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -44,13 +44,13 @@
     linear-gradient(120deg, transparent, var(--neon-sheen), transparent);
 }
 
-.tenki-command-console,
-.tenki-stage {
+.jaycee-command-console,
+.jaycee-stage {
   position: relative;
   z-index: 1;
 }
 
-.tenki-command-console {
+.jaycee-command-console {
   width: 100%;
   display: grid;
   gap: 8px;
@@ -64,14 +64,14 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-.tenki-command-line,
-.tenki-status-line {
+.jaycee-command-line,
+.jaycee-status-line {
   margin: 0;
   font-family: "Share Tech Mono", monospace;
   line-height: 1.35;
 }
 
-.tenki-command-line {
+.jaycee-command-line {
   display: flex;
   flex-wrap: wrap;
   color: var(--accent);
@@ -80,16 +80,16 @@
   text-shadow: 0 0 12px rgba(var(--accent-rgb), 0.18);
 }
 
-.tenki-command-line span:nth-child(2) {
+.jaycee-command-line span:nth-child(2) {
   margin: 0 7px;
   color: var(--accent);
 }
 
-.tenki-status-line {
+.jaycee-status-line {
   color: var(--accent-soft);
 }
 
-.tenki-status-line > span:first-child {
+.jaycee-status-line > span:first-child {
   margin-right: 7px;
   color: var(--accent);
 }
@@ -106,7 +106,7 @@
   }
 }
 
-.tenki-stage {
+.jaycee-stage {
   position: relative;
   width: 100%;
   aspect-ratio: 1;
@@ -125,7 +125,7 @@
   isolation: isolate;
 }
 
-.tenki-stage::after {
+.jaycee-stage::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -136,7 +136,7 @@
     linear-gradient(120deg, transparent, var(--neon-sheen), transparent);
 }
 
-.tenki-canvas {
+.jaycee-canvas {
   width: 100%;
   height: 100%;
   display: block;
@@ -145,21 +145,21 @@
 }
 
 @media (max-width: 620px) {
-  .tenki-page {
+  .jaycee-page {
     width: min(100% - 20px, 560px);
     padding-inline: 0;
   }
 
-  .tenki-console {
+  .jaycee-console {
     gap: 18px;
     padding: 16px;
   }
 
-  .tenki-command-console {
+  .jaycee-command-console {
     padding: 13px 14px;
   }
 
-  .tenki-stage {
+  .jaycee-stage {
     padding: 12px;
   }
 

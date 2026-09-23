@@ -5,12 +5,12 @@ import {
   getCelestialMarkerConfig,
   getCelestialReadout,
   getCelestialRingColors as getFractalCelestialRingColors
-} from "./tenki-fractals.js";
+} from "./jaycee-fractals.js";
 import {
   MAIN_CORE_RING_LANGUAGE,
   MAIN_CORE_SQUARE_LANGUAGE,
-  loadTenkiLanguage
-} from "./tenki-language.js";
+  loadJayceeLanguage
+} from "./jaycee-language.js";
 
 const RING_SEGMENT_COUNT = 9;
 const SQUARE_GRID_SIZE = 3;
@@ -158,10 +158,10 @@ const getSquareCellPaletteColors = (index, palette) => {
 
 const wait = (duration) => new Promise((resolve) => window.setTimeout(resolve, duration));
 
-const typeTenkiConsoleLine = async (line) => {
+const typeJayceeConsoleLine = async (line) => {
   if (!line) return;
 
-  const message = line.dataset.tenkiConsoleLine || "";
+  const message = line.dataset.jayceeConsoleLine || "";
   const prompt = line.querySelector("span[aria-hidden='true']") || document.createElement("span");
   const text = document.createElement("span");
 
@@ -738,7 +738,7 @@ const drawSquare = (context, metrics, colors, labels = getEmptyLabels(RING_SEGME
   context.restore();
 };
 
-const createTenkiState = ({
+const createJayceeState = ({
   coreRingLabels = getEmptyLabels(RING_SEGMENT_COUNT),
   coreSquareLabels = getEmptyLabels(RING_SEGMENT_COUNT)
 } = {}) => ({
@@ -749,9 +749,9 @@ const createTenkiState = ({
   }))
 });
 
-const DEFAULT_TENKI_STATE = createTenkiState();
+const DEFAULT_JAYCEE_STATE = createJayceeState();
 
-const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
+const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
   const context = resizeCanvas(canvas);
   const rect = canvas.getBoundingClientRect();
   const metrics = getCanvasMetrics(canvas, state.rings.length);
@@ -845,18 +845,18 @@ const drawTenki = (canvas, state = DEFAULT_TENKI_STATE) => {
   drawCelestialReadout(context);
 };
 
-const initTenki = () => {
-  typeTenkiConsoleLine(document.querySelector("[data-tenki-console-line]"));
+const initJaycee = () => {
+  typeJayceeConsoleLine(document.querySelector("[data-jaycee-console-line]"));
 
-  const canvas = document.querySelector("[data-tenki-canvas]");
+  const canvas = document.querySelector("[data-jaycee-canvas]");
   if (!canvas) return;
 
-  let tenkiState = DEFAULT_TENKI_STATE;
+  let jayceeState = DEFAULT_JAYCEE_STATE;
   const render = () => {
     try {
-      drawTenki(canvas, tenkiState);
+      drawJaycee(canvas, jayceeState);
     } catch (error) {
-      console.error("Tenki render failed", error);
+      console.error("Jaycee render failed", error);
     }
   };
   const scheduleRender = () => {
@@ -880,17 +880,17 @@ const initTenki = () => {
   render();
   scheduleRender();
 
-  loadTenkiLanguage({
+  loadJayceeLanguage({
     coreRingLanguage: MAIN_CORE_RING_LANGUAGE,
     coreSquareLanguage: MAIN_CORE_SQUARE_LANGUAGE,
     jayceeOrder: JAYCEE_ORDER
   })
     .then((language) => {
-      tenkiState = createTenkiState(language);
+      jayceeState = createJayceeState(language);
       scheduleRender();
     })
     .catch((error) => {
-      console.error("Tenki language load failed", error);
+      console.error("Jaycee language load failed", error);
     });
 
   window.addEventListener("pagehide", () => {
@@ -898,4 +898,4 @@ const initTenki = () => {
   }, { once: true });
 };
 
-initTenki();
+initJaycee();

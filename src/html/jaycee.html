@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jaycee | jaycee.ai</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@500;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/css/global.css">
+  <link rel="stylesheet" href="/src/css/jaycee.css">
+</head>
+<body data-theme="aurora">
+  <jaycee-banner></jaycee-banner>
+
+  <main class="jaycee-page">
+    <section class="jaycee-console" aria-label="Jaycee no Kagami" data-jaycee>
+      <div class="jaycee-command-console" aria-live="polite">
+        <p class="jaycee-command-line"><span>Jaycee.ai</span><span aria-hidden="true"> &gt; </span><span>Jaycee no Kagami (&#22825;&#27231;&#12398;&#37857;)</span></p>
+        <p class="jaycee-status-line" data-jaycee-console-line="Initialization..."><span aria-hidden="true">&gt;</span>Initialization...</p>
+      </div>
+
+      <div class="jaycee-stage" aria-label="Jaycee canvas frame">
+        <canvas class="jaycee-canvas" data-jaycee-canvas aria-label="Jaycee square and rings"></canvas>
+      </div>
+    </section>
+  </main>
+
+  <jaycee-footer></jaycee-footer>
+
+  <script src="/src/js/shell/jaycee-shell.js"></script>
+  <script type="module" src="/src/js/jaycee/jaycee-core.js"></script>
+</body>
+</html>

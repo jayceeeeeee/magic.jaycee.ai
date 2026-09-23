@@ -1,7 +1,7 @@
 const SUPABASE_URL = "https://ndtnfwyfdfdcxljvvjfd.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_lMEHC2xjlGGmTnkI5G-okg_0AVRhiDd";
 const SUPABASE_SCRIPT_URL = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
-const TENKI_FRACTALS_TABLE = "tenki_fractals";
+const JAYCEE_FRACTALS_TABLE = "jaycee_fractals";
 const CODE_COLUMNS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 
 export const MAIN_CORE_SQUARE_LANGUAGE = {
@@ -55,7 +55,7 @@ const normalizeLanguageRow = (row) => Object.fromEntries(
 const fetchLanguageRows = async (labels) => {
   const client = await getSupabaseClient();
   const { data, error } = await client
-    .from(TENKI_FRACTALS_TABLE)
+    .from(JAYCEE_FRACTALS_TABLE)
     .select(`label, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
     .in("label", labels);
 
@@ -91,7 +91,7 @@ const getLabels = (languageRow, language, jayceeOrder) => (
     : getJayceeOrderedLabels(languageRow, jayceeOrder)
 );
 
-export const loadTenkiLanguage = async ({
+export const loadJayceeLanguage = async ({
   coreSquareLanguage = MAIN_CORE_SQUARE_LANGUAGE,
   coreRingLanguage = MAIN_CORE_RING_LANGUAGE,
   jayceeOrder
