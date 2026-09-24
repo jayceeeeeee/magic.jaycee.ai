@@ -6,14 +6,29 @@ import {
 
 const JAYCEE_ORDER = [1, 2, 4, 3, 5, 7, 6, 8, 9];
 const JAYCEE_FRACTALS_TABLE = "jaycee_fractals";
+const TECHNO_PRAYERS_TABLE = "techno_prayers";
+const MANIFESTATION_IMAGE_BUCKET = "jaycee-images-manifestation";
 const CODE_COLUMNS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 const DEFAULT_SELECTED_NUMBER = 5;
+const SIGNED_IMAGE_URL_DURATION_SECONDS = 60 * 60;
 
 const getEmptyLabels = () => Array.from({ length: JAYCEE_ORDER.length }, () => "");
 
 const getDisplayValue = (value) => (
   value === null || value === undefined ? "" : String(value).trim()
 );
+const getTodayRange = () => {
+  const start = new Date();
+  const end = new Date();
+
+  start.setHours(0, 0, 0, 0);
+  end.setHours(24, 0, 0, 0);
+
+  return {
+    end: end.toISOString(),
+    start: start.toISOString()
+  };
+};
 
 const getLoginUrl = () => (
   new URL(
@@ -33,6 +48,20 @@ const redirectToLogin = () => {
 
 const setText = (element, value) => {
   if (element) element.textContent = value;
+};
+
+const getStoragePathFromImage = (image) => {
+  if (/^https?:\/\//i.test(image)) {
+    const url = new URL(image);
+    const bucketPrefix = `/storage/v1/object/public/${MANIFESTATION_IMAGE_BUCKET}/`;
+    const prefixIndex = url.pathname.indexOf(bucketPrefix);
+
+    if (prefixIndex === -1) return "";
+
+    return url.pathname.slice(prefixIndex + bucketPrefix.length);
+  }
+
+  return image.replace(new RegExp(`^${MANIFESTATION_IMAGE_BUCKET}/`), "");
 };
 
 const createResonanceItem = (row, selectedNumber) => {
@@ -60,6 +89,54 @@ const fetchUserResonances = async (client, userId) => {
   if (error) throw error;
 
   return data || [];
+};
+
+const fetchTodaysTechnoPrayer = async (client, userId) => {
+  const { start, end } = getTodayRange();
+  const { data, error } = await client
+    .from(TECHNO_PRAYERS_TABLE)
+    .select("image, created_at")
+    .eq("user_id", userId)
+    .gte("created_at", start)
+    .lt("created_at", end)
+    .not("image", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  return data || null;
+};
+
+const getManifestationImageUrl = async (client, imagePath, userId) => {
+  const image = getDisplayValue(imagePath);
+
+  if (!image) return "";
+
+  const rawStoragePath = getStoragePathFromImage(image)
+    .replace(/^\/+/, "")
+    .replace(/\+/g, " ");
+  const storagePath = rawStoragePath.includes("/")
+    ? rawStoragePath
+    : `${userId}/${rawStoragePath}`;
+
+  if (!storagePath) return "";
+
+  const { data, error } = await client.storage
+    .from(MANIFESTATION_IMAGE_BUCKET)
+    .createSignedUrl(storagePath, SIGNED_IMAGE_URL_DURATION_SECONDS);
+
+  if (error) throw error;
+
+  return data?.signedUrl || "";
+};
+
+const applySquareImage = (square, imageUrl) => {
+  if (!imageUrl) return;
+
+  square.style.setProperty("--profile-square-image", `url("${imageUrl}")`);
+  square.classList.add("has-prayer-image");
 };
 
 const getResonancesForNumber = (rows, selectedNumber) => (
@@ -137,9 +214,11 @@ const initJayceeProfile = async () => {
       coreSquareLanguage: MAIN_CORE_SQUARE_LANGUAGE,
       jayceeOrder: JAYCEE_ORDER
     });
+    const todaysPrayer = await fetchTodaysTechnoPrayer(client, user.id);
 
     coreSquareLabels = language.coreSquareLabels || getEmptyLabels();
     rows = await fetchUserResonances(client, user.id);
+    applySquareImage(square, await getManifestationImageUrl(client, todaysPrayer?.image, user.id));
     renderSquare();
     renderResonances();
   } catch (error) {

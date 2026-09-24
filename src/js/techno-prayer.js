@@ -89,17 +89,8 @@
         const client = await window.JayceeAuth.getSupabaseClient();
         const userId = await getCurrentUserId();
         const row = userId ? { ...payload, user_id: userId } : payload;
-        const result = await client.from("techno_prayers").insert(row);
 
-        if (!result.error) {
-            return result;
-        }
-
-        if (userId && /user_id/i.test(result.error.message || "")) {
-            return client.from("techno_prayers").insert(payload);
-        }
-
-        return result;
+        return client.from("techno_prayers").insert(row);
     }
 
     function updateTechnoPrayerContactVisibility() {
