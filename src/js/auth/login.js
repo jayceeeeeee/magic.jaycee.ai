@@ -30,6 +30,7 @@
         const status = document.querySelector("[data-auth-status]");
         const switcher = document.querySelector("[data-auth-switch]");
         const password = form?.elements.password;
+        const redirectPath = params.get("redirect");
 
         if (!form || !title || !submit || !status || !switcher || !password || !window.JayceeAuth) {
             return;
@@ -110,7 +111,9 @@
 
             status.textContent = "You are logged in.";
             window.JayceeAuth.refreshHeader();
-            window.location.href = window.JayceeAuth.getAfterSignInUrl();
+            window.location.href = redirectPath?.startsWith("/") && !redirectPath.startsWith("//")
+                ? window.JayceeAuth.getAfterSignInUrl(redirectPath)
+                : window.JayceeAuth.getAfterSignInUrl();
         });
 
         renderMode();
