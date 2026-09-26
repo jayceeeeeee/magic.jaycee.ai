@@ -92,16 +92,20 @@ const getLabels = (languageRow, language, jayceeOrder) => (
 );
 
 export const loadJayceeLanguage = async ({
-  coreSquareLanguage = MAIN_CORE_SQUARE_LANGUAGE,
+  coreSquareLanguage = null,
   coreRingLanguage = MAIN_CORE_RING_LANGUAGE,
   jayceeOrder
 }) => {
-  const coreSquareLabel = getLanguageLabel(coreSquareLanguage);
-  const coreRingLabel = getLanguageLabel(coreRingLanguage);
-  const languageRows = await fetchLanguageRows([coreSquareLabel, coreRingLabel]);
+  const coreSquareLabel = coreSquareLanguage ? getLanguageLabel(coreSquareLanguage) : "";
+  const coreRingLabel = coreRingLanguage ? getLanguageLabel(coreRingLanguage) : "";
+  const languageRows = await fetchLanguageRows([coreSquareLabel, coreRingLabel].filter(Boolean));
 
   return {
-    coreRingLabels: getLabels(languageRows[coreRingLabel] || emptyLanguageRow(), coreRingLanguage, jayceeOrder),
-    coreSquareLabels: getLabels(languageRows[coreSquareLabel] || emptyLanguageRow(), coreSquareLanguage, jayceeOrder)
+    coreRingLabels: coreRingLanguage
+      ? getLabels(languageRows[coreRingLabel] || emptyLanguageRow(), coreRingLanguage, jayceeOrder)
+      : [],
+    coreSquareLabels: coreSquareLanguage
+      ? getLabels(languageRows[coreSquareLabel] || emptyLanguageRow(), coreSquareLanguage, jayceeOrder)
+      : []
   };
 };

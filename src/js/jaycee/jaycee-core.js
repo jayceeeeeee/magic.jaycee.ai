@@ -1,6 +1,5 @@
 import {
   MAIN_CORE_RING_LANGUAGE,
-  MAIN_CORE_SQUARE_LANGUAGE,
   loadJayceeLanguage
 } from "./jaycee-language.js";
 
@@ -761,7 +760,7 @@ const initJaycee = () => {
 
   loadJayceeLanguage({
     coreRingLanguage: MAIN_CORE_RING_LANGUAGE,
-    coreSquareLanguage: MAIN_CORE_SQUARE_LANGUAGE,
+    coreSquareLanguage: null,
     jayceeOrder: JAYCEE_ORDER
   })
     .then((language) => {

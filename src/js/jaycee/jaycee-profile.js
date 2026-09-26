@@ -1,18 +1,12 @@
-import {
-  MAIN_CORE_RING_LANGUAGE,
-  MAIN_CORE_SQUARE_LANGUAGE,
-  loadJayceeLanguage
-} from "./jaycee-language.js";
-
 const JAYCEE_ORDER = [1, 2, 4, 3, 5, 7, 6, 8, 9];
 const JAYCEE_FRACTALS_TABLE = "jaycee_fractals";
+const FRACTAL_VISIBILITY_COLUMN = "visibility";
+const PUBLIC_VISIBILITY_VALUE = "public";
 const PROFILE_TABLE = "profiles";
 const AVATAR_BUCKET = "avatars";
 const CODE_COLUMNS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 const DEFAULT_SELECTED_NUMBER = 5;
 const SIGNED_IMAGE_URL_DURATION_SECONDS = 60 * 60;
-
-const getEmptyLabels = () => Array.from({ length: JAYCEE_ORDER.length }, () => "");
 
 const getDisplayValue = (value) => (
   value === null || value === undefined ? "" : String(value).trim()
@@ -66,12 +60,17 @@ const createResonanceItem = (row, selectedNumber) => {
   return item;
 };
 
-const fetchUserResonances = async (client, userId) => {
-  const { data, error } = await client
+const fetchUserResonances = async (client, userId, { publicOnly = false } = {}) => {
+  let query = client
     .from(JAYCEE_FRACTALS_TABLE)
     .select(`label, user_id, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
-    .eq("user_id", userId)
-    .order("label", { ascending: true });
+    .eq("user_id", userId);
+
+  if (publicOnly) {
+    query = query.eq(FRACTAL_VISIBILITY_COLUMN, PUBLIC_VISIBILITY_VALUE);
+  }
+
+  const { data, error } = await query.order("label", { ascending: true });
 
   if (error) throw error;
 
@@ -147,17 +146,14 @@ const initJayceeProfile = async () => {
 
   if (!shell || !square || !status || !list) return;
 
-  let coreSquareLabels = getEmptyLabels();
   let rows = [];
   let selectedNumber = DEFAULT_SELECTED_NUMBER;
 
   const renderResonances = () => {
-    const selectedIndex = JAYCEE_ORDER.indexOf(selectedNumber);
-    const selectedLabel = coreSquareLabels[selectedIndex] || "";
     const resonances = getResonancesForNumber(rows, selectedNumber);
 
     setText(selectedNumberEl, selectedNumber);
-    setText(selectedLabelEl, selectedLabel);
+    setText(selectedLabelEl, "");
     list.replaceChildren(...resonances.map((row) => createResonanceItem(row, selectedNumber)));
 
     if (resonances.length) {
@@ -168,14 +164,13 @@ const initJayceeProfile = async () => {
   };
 
   const renderSquare = () => {
-    square.replaceChildren(...JAYCEE_ORDER.map((number, index) => {
+    square.replaceChildren(...JAYCEE_ORDER.map((number) => {
       const button = document.createElement("button");
-      const label = coreSquareLabels[index] || number;
 
       button.className = "profile-square-cell";
       button.type = "button";
       button.dataset.squareNumber = String(number);
-      button.textContent = label;
+      button.textContent = "";
       button.setAttribute("aria-label", `Square ${number}`);
       button.addEventListener("click", () => {
         selectedNumber = number;
@@ -213,14 +208,7 @@ const initJayceeProfile = async () => {
     }
 
     shell.hidden = false;
-    const language = await loadJayceeLanguage({
-      coreRingLanguage: MAIN_CORE_RING_LANGUAGE,
-      coreSquareLanguage: MAIN_CORE_SQUARE_LANGUAGE,
-      jayceeOrder: JAYCEE_ORDER
-    });
-
-    coreSquareLabels = language.coreSquareLabels || getEmptyLabels();
-    rows = await fetchUserResonances(client, profile.id);
+    rows = await fetchUserResonances(client, profile.id, { publicOnly: Boolean(publicUsername) });
     applySquareImage(square, await getAvatarImageUrl(client, profile));
     renderSquare();
     renderResonances();
