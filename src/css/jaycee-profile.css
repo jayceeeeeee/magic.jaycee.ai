@@ -42,9 +42,10 @@
 }
 
 .jaycee-profile-core {
-  min-height: calc(100svh - var(--banner-space) - var(--footer-space) - 48px);
+  height: calc(100svh - var(--banner-space) - var(--footer-space) - 48px);
+  min-height: 460px;
   display: grid;
-  place-items: center;
+  place-items: start center;
   padding: clamp(18px, 4vw, 42px);
 }
 
@@ -141,7 +142,8 @@
 }
 
 .jaycee-profile-resonances {
-  min-height: calc(100svh - var(--banner-space) - var(--footer-space) - 48px);
+  height: calc(100svh - var(--banner-space) - var(--footer-space) - 48px);
+  min-height: 460px;
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   gap: 16px;
@@ -190,6 +192,7 @@
 
 .profile-resonance-list {
   min-height: 0;
+  max-height: 100%;
   display: grid;
   align-content: start;
   gap: 10px;
@@ -231,6 +234,7 @@
 
   .jaycee-profile-core,
   .jaycee-profile-resonances {
+    height: auto;
     min-height: auto;
   }
 
@@ -243,7 +247,7 @@
   }
 
   .profile-resonance-list {
-    max-height: none;
-    overflow: visible;
+    max-height: min(54svh, 520px);
+    overflow: auto;
   }
 }
