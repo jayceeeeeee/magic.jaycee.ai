@@ -6,8 +6,8 @@ import {
 
 const JAYCEE_ORDER = [1, 2, 4, 3, 5, 7, 6, 8, 9];
 const JAYCEE_FRACTALS_TABLE = "jaycee_fractals";
-const TECHNO_PRAYERS_TABLE = "techno_prayers";
-const MANIFESTATION_IMAGE_BUCKET = "jaycee-images-manifestation";
+const PROFILE_TABLE = "profiles";
+const AVATAR_BUCKET = "avatars";
 const CODE_COLUMNS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 const DEFAULT_SELECTED_NUMBER = 5;
 const SIGNED_IMAGE_URL_DURATION_SECONDS = 60 * 60;
@@ -17,19 +17,6 @@ const getEmptyLabels = () => Array.from({ length: JAYCEE_ORDER.length }, () => "
 const getDisplayValue = (value) => (
   value === null || value === undefined ? "" : String(value).trim()
 );
-const getTodayRange = () => {
-  const start = new Date();
-  const end = new Date();
-
-  start.setHours(0, 0, 0, 0);
-  end.setHours(24, 0, 0, 0);
-
-  return {
-    end: end.toISOString(),
-    start: start.toISOString()
-  };
-};
-
 const getLoginUrl = () => (
   new URL(
     window.JayceeAuth?.getLoginUrl
@@ -50,10 +37,10 @@ const setText = (element, value) => {
   if (element) element.textContent = value;
 };
 
-const getStoragePathFromImage = (image) => {
+const getStoragePathFromImage = (image, bucketName) => {
   if (/^https?:\/\//i.test(image)) {
     const url = new URL(image);
-    const bucketPrefix = `/storage/v1/object/public/${MANIFESTATION_IMAGE_BUCKET}/`;
+    const bucketPrefix = `/storage/v1/object/public/${bucketName}/`;
     const prefixIndex = url.pathname.indexOf(bucketPrefix);
 
     if (prefixIndex === -1) return "";
@@ -61,7 +48,7 @@ const getStoragePathFromImage = (image) => {
     return url.pathname.slice(prefixIndex + bucketPrefix.length);
   }
 
-  return image.replace(new RegExp(`^${MANIFESTATION_IMAGE_BUCKET}/`), "");
+  return image.replace(new RegExp(`^${bucketName}/`), "");
 };
 
 const createResonanceItem = (row, selectedNumber) => {
@@ -91,17 +78,11 @@ const fetchUserResonances = async (client, userId) => {
   return data || [];
 };
 
-const fetchTodaysTechnoPrayer = async (client, userId) => {
-  const { start, end } = getTodayRange();
+const fetchProfileByUserId = async (client, userId) => {
   const { data, error } = await client
-    .from(TECHNO_PRAYERS_TABLE)
-    .select("image, created_at")
-    .eq("user_id", userId)
-    .gte("created_at", start)
-    .lt("created_at", end)
-    .not("image", "is", null)
-    .order("created_at", { ascending: false })
-    .limit(1)
+    .from(PROFILE_TABLE)
+    .select("id, username, avatar_path")
+    .eq("id", userId)
     .maybeSingle();
 
   if (error) throw error;
@@ -109,22 +90,34 @@ const fetchTodaysTechnoPrayer = async (client, userId) => {
   return data || null;
 };
 
-const getManifestationImageUrl = async (client, imagePath, userId) => {
-  const image = getDisplayValue(imagePath);
+const fetchProfileByUsername = async (client, username) => {
+  const { data, error } = await client
+    .from(PROFILE_TABLE)
+    .select("id, username, avatar_path")
+    .eq("username", username)
+    .maybeSingle();
 
-  if (!image) return "";
+  if (error) throw error;
 
-  const rawStoragePath = getStoragePathFromImage(image)
+  return data || null;
+};
+
+const getAvatarImageUrl = async (client, profile) => {
+  const image = getDisplayValue(profile?.avatar_path);
+
+  if (!profile?.id || !image) return "";
+
+  const rawStoragePath = getStoragePathFromImage(image, AVATAR_BUCKET)
     .replace(/^\/+/, "")
     .replace(/\+/g, " ");
   const storagePath = rawStoragePath.includes("/")
     ? rawStoragePath
-    : `${userId}/${rawStoragePath}`;
+    : `${profile.id}/${rawStoragePath}`;
 
   if (!storagePath) return "";
 
   const { data, error } = await client.storage
-    .from(MANIFESTATION_IMAGE_BUCKET)
+    .from(AVATAR_BUCKET)
     .createSignedUrl(storagePath, SIGNED_IMAGE_URL_DURATION_SECONDS);
 
   if (error) throw error;
@@ -136,7 +129,7 @@ const applySquareImage = (square, imageUrl) => {
   if (!imageUrl) return;
 
   square.style.setProperty("--profile-square-image", `url("${imageUrl}")`);
-  square.classList.add("has-prayer-image");
+  square.classList.add("has-square-image");
 };
 
 const getResonancesForNumber = (rows, selectedNumber) => (
@@ -150,6 +143,7 @@ const initJayceeProfile = async () => {
   const list = document.querySelector("[data-profile-resonances]");
   const selectedNumberEl = document.querySelector("[data-selected-number]");
   const selectedLabelEl = document.querySelector("[data-selected-label]");
+  const publicUsername = getDisplayValue(shell?.dataset.profileUsername);
 
   if (!shell || !square || !status || !list) return;
 
@@ -199,26 +193,35 @@ const initJayceeProfile = async () => {
   };
 
   try {
+    const client = await window.JayceeAuth.getSupabaseClient();
     const sessionResult = await window.JayceeAuth?.getSession?.();
     const user = sessionResult?.data?.session?.user;
 
-    if (!user) {
+    if (!publicUsername && !user) {
       redirectToLogin();
       return;
     }
 
+    const profile = publicUsername
+      ? await fetchProfileByUsername(client, publicUsername)
+      : await fetchProfileByUserId(client, user.id);
+
+    if (!profile) {
+      shell.hidden = false;
+      status.textContent = "Profile not found.";
+      return;
+    }
+
     shell.hidden = false;
-    const client = await window.JayceeAuth.getSupabaseClient();
     const language = await loadJayceeLanguage({
       coreRingLanguage: MAIN_CORE_RING_LANGUAGE,
       coreSquareLanguage: MAIN_CORE_SQUARE_LANGUAGE,
       jayceeOrder: JAYCEE_ORDER
     });
-    const todaysPrayer = await fetchTodaysTechnoPrayer(client, user.id);
 
     coreSquareLabels = language.coreSquareLabels || getEmptyLabels();
-    rows = await fetchUserResonances(client, user.id);
-    applySquareImage(square, await getManifestationImageUrl(client, todaysPrayer?.image, user.id));
+    rows = await fetchUserResonances(client, profile.id);
+    applySquareImage(square, await getAvatarImageUrl(client, profile));
     renderSquare();
     renderResonances();
   } catch (error) {
