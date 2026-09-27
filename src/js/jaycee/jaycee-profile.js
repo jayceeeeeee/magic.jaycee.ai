@@ -242,12 +242,20 @@ const fetchUserResonances = async (client, profile, { publicOnly = false } = {})
   }));
 };
 
-const fetchDynamicTimeRings = async (client) => {
-  const { data: fractals, error: fractalsError } = await client
+const fetchDynamicTimeRings = async (client, profile) => {
+  let query = client
     .from(JAYCEE_DYNAMIC_FRACTALS_TABLE)
-    .select("id, label, description, dimension, created_at")
+    .select("id, label, description, dimension, user_id, created_at")
     .eq("dimension", TIME_DIMENSION_VALUE)
     .order("created_at", { ascending: true });
+
+  if (profile?.id) {
+    query = query.or(`user_id.is.null,user_id.eq.${profile.id}`);
+  } else {
+    query = query.is("user_id", null);
+  }
+
+  const { data: fractals, error: fractalsError } = await query;
 
   if (fractalsError) throw fractalsError;
   if (!fractals?.length) return [];
@@ -275,6 +283,8 @@ const fetchDynamicTimeRings = async (client) => {
         ...fractal,
         elements: ringElements,
         id: `dynamic-${fractal.id}`,
+        sourceName: fractal.user_id ? (profile?.username || "User") : JAYCEE_RESONANCE_SOURCE,
+        sourceType: fractal.user_id ? "user" : "jaycee",
         sourceId: fractal.id,
         segmentKeys: positions.map(String),
         defaultSegment: String(positions[0])
@@ -393,6 +403,33 @@ const getResonanceGroupsForNumber = (rows, selectedNumber) => (
   ].filter((group) => group.rows.length)
 );
 
+const getRowsAsSourceGroups = (rows) => (
+  [
+    {
+      rows: rows.filter((row) => row.sourceType === "jaycee"),
+      sourceName: JAYCEE_RESONANCE_SOURCE,
+      sourceType: "jaycee"
+    },
+    ...Array.from(
+      rows
+        .filter((row) => row.sourceType !== "jaycee")
+        .reduce((groups, row) => {
+          const sourceName = row.sourceName || "User";
+
+          if (!groups.has(sourceName)) groups.set(sourceName, []);
+          groups.get(sourceName).push(row);
+
+          return groups;
+        }, new Map()),
+      ([sourceName, groupedRows]) => ({
+        rows: groupedRows,
+        sourceName,
+        sourceType: "user"
+      })
+    )
+  ].filter((group) => group.rows.length)
+);
+
 const mergeResonanceGroups = (groups) => {
   const groupedBySource = new Map();
 
@@ -422,11 +459,10 @@ const getDynamicTimeRows = (dynamicRings, selectedTimeSegments) => (
     if (!element) return [];
 
     return [{
-      description: element.description,
       label: ring.label || "Time",
       resonanceValue: getDisplayValue(element.value),
-      sourceName: JAYCEE_RESONANCE_SOURCE,
-      sourceType: "jaycee"
+      sourceName: ring.sourceName || JAYCEE_RESONANCE_SOURCE,
+      sourceType: ring.sourceType || "jaycee"
     }];
   }).filter((row) => row.resonanceValue || getDisplayValue(row.description))
 );
@@ -438,25 +474,13 @@ const getTimeResonanceGroups = (rows, selectedTimeSegments, dynamicRings) => {
     sunNumber
   );
   const dynamicRows = getDynamicTimeRows(dynamicRings, selectedTimeSegments);
-  const dynamicGroups = dynamicRows.length
-    ? [{
-      rows: dynamicRows,
-      sourceName: JAYCEE_RESONANCE_SOURCE,
-      sourceType: "jaycee"
-    }]
-    : [];
+  const dynamicGroups = dynamicRows.length ? getRowsAsSourceGroups(dynamicRows) : [];
 
   return mergeResonanceGroups([...staticTimeGroups, ...dynamicGroups]);
 };
 
 const getTimeSelectionMeta = (dynamicRings, selectedTimeSegments) => {
-  const segments = [`Sun ${selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER}`];
-
-  dynamicRings.forEach((ring) => {
-    segments.push(`${ring.label || "Time"} ${selectedTimeSegments.get(ring.id) || ring.defaultSegment}`);
-  });
-
-  return segments.join(" / ");
+  return `Arc ${selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER}`;
 };
 
 const getEmptyLabels = (count) => Array.from({ length: count }, () => "");
@@ -582,7 +606,7 @@ const initJayceeProfile = async () => {
     const timeGroups = getTimeResonanceGroups(rows, selectedTimeSegments, dynamicRings);
     const draftRows = showDrafts ? getDraftRows(rows) : [];
     const columns = [
-      { groups: spaceGroups, meta: `Square ${selectedSpaceNumber}`, selectedNumber: selectedSpaceNumber, title: "Space" },
+      { groups: spaceGroups, meta: `Sector ${selectedSpaceNumber}`, selectedNumber: selectedSpaceNumber, title: "Space" },
       { groups: timeGroups, meta: getTimeSelectionMeta(dynamicRings, selectedTimeSegments), selectedNumber: selectedSunNumber, title: "Time" }
     ].filter((column) => column.groups.length);
     const resonanceCount = columns.reduce(
@@ -660,7 +684,7 @@ const initJayceeProfile = async () => {
     const profileRows = await fetchUserResonances(client, profile, { publicOnly: Boolean(publicUsername) });
 
     rows = [...jayceeRows, ...profileRows];
-    dynamicRings = await fetchDynamicTimeRings(client);
+    dynamicRings = await fetchDynamicTimeRings(client, profile);
     dynamicRings.forEach((ring) => {
       if (!selectedTimeSegments.has(ring.id)) {
         selectedTimeSegments.set(ring.id, ring.defaultSegment);
