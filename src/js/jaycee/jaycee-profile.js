@@ -606,8 +606,8 @@ const initJayceeProfile = async () => {
     const timeGroups = getTimeResonanceGroups(rows, selectedTimeSegments, dynamicRings);
     const draftRows = showDrafts ? getDraftRows(rows) : [];
     const columns = [
-      { groups: spaceGroups, meta: `Sector ${selectedSpaceNumber}`, selectedNumber: selectedSpaceNumber, title: "Space" },
-      { groups: timeGroups, meta: getTimeSelectionMeta(dynamicRings, selectedTimeSegments), selectedNumber: selectedSunNumber, title: "Time" }
+      { groups: spaceGroups, meta: `Sector ${selectedSpaceNumber}`, selectedNumber: selectedSpaceNumber, title: "Map" },
+      { groups: timeGroups, meta: getTimeSelectionMeta(dynamicRings, selectedTimeSegments), selectedNumber: selectedSunNumber, title: "Realm" }
     ].filter((column) => column.groups.length);
     const resonanceCount = columns.reduce(
       (total, column) => total + column.groups.reduce((groupTotal, group) => groupTotal + group.rows.length, 0),
