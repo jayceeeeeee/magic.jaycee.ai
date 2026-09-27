@@ -132,6 +132,28 @@ const createResonanceColumn = (title, groups, selectedNumber) => {
   return column;
 };
 
+const createDraftsSection = (draftRows) => {
+  const section = document.createElement("section");
+  const heading = document.createElement("h2");
+  const items = document.createElement("div");
+
+  section.className = "profile-resonance-column profile-resonance-drafts";
+  heading.className = "profile-resonance-column-title";
+  heading.textContent = "Drafts";
+  items.className = "profile-draft-list";
+  items.replaceChildren(...draftRows.map((row) => {
+    const item = document.createElement("article");
+
+    item.className = "profile-draft-item";
+    item.textContent = row.label || "Untitled fractal";
+
+    return item;
+  }));
+  section.append(heading, items);
+
+  return section;
+};
+
 const fetchJayceeResonances = async (client) => {
   const { data, error } = await client
     .from(JAYCEE_FRACTALS_TABLE)
@@ -278,7 +300,7 @@ const getResonancesForNumber = (rows, selectedNumber) => (
   rows.filter((row) => getDisplayValue(row[String(selectedNumber)]))
 );
 
-const getRowsForDimensionColumn = (rows, columnName, { includeDrafts = false } = {}) => (
+const getRowsForDimensionColumn = (rows, columnName) => (
   rows.filter((row) => {
     const dimension = getDisplayValue(row.dimension);
 
@@ -286,8 +308,12 @@ const getRowsForDimensionColumn = (rows, columnName, { includeDrafts = false } =
       return dimension === TIME_DIMENSION_VALUE;
     }
 
-    return dimension !== TIME_DIMENSION_VALUE && (includeDrafts || Boolean(dimension));
+    return dimension === SPACE_DIMENSION_VALUE;
   })
+);
+
+const getDraftRows = (rows) => (
+  rows.filter((row) => !getDisplayValue(row.dimension))
 );
 
 const getResonanceGroupsForNumber = (rows, selectedNumber) => (
@@ -355,10 +381,10 @@ const getDynamicTimeRows = (dynamicRings, selectedTimeSegments) => (
   }).filter((row) => row.resonanceValue || getDisplayValue(row.description))
 );
 
-const getTimeResonanceGroups = (rows, selectedTimeSegments, dynamicRings, includeDrafts) => {
+const getTimeResonanceGroups = (rows, selectedTimeSegments, dynamicRings) => {
   const sunNumber = selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER;
   const staticTimeGroups = getResonanceGroupsForNumber(
-    getRowsForDimensionColumn(rows, TIME_DIMENSION_VALUE, { includeDrafts }),
+    getRowsForDimensionColumn(rows, TIME_DIMENSION_VALUE),
     sunNumber
   );
   const dynamicRows = getDynamicTimeRows(dynamicRings, selectedTimeSegments);
@@ -421,6 +447,8 @@ const createProfileCoreState = ({ avatarImage, dynamicRings, selectedSpaceNumber
     }),
     activeSquareNumber: selectedSpaceNumber,
     metrics: PROFILE_CORE_METRICS,
+    squareBorderAlpha: 0.46,
+    squareCellBorderAlpha: 0.34,
     squareBackgroundImage: avatarImage
   };
 };
@@ -444,26 +472,28 @@ const initJayceeProfile = async () => {
   const selectedTimeSegments = new Map([["sun", String(DEFAULT_SUN_TIME_NUMBER)]]);
 
   const renderResonances = () => {
-    const includeDrafts = !publicUsername;
+    const showDrafts = !publicUsername;
     const spaceGroups = getResonanceGroupsForNumber(
-      getRowsForDimensionColumn(rows, SPACE_DIMENSION_VALUE, { includeDrafts }),
+      getRowsForDimensionColumn(rows, SPACE_DIMENSION_VALUE),
       selectedSpaceNumber
     );
     const selectedSunNumber = selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER;
-    const timeGroups = getTimeResonanceGroups(rows, selectedTimeSegments, dynamicRings, includeDrafts);
+    const timeGroups = getTimeResonanceGroups(rows, selectedTimeSegments, dynamicRings);
+    const draftRows = showDrafts ? getDraftRows(rows) : [];
     const columns = [
-      { groups: spaceGroups, selectedNumber: selectedSpaceNumber, title: includeDrafts ? "Space / Drafts" : "Space" },
+      { groups: spaceGroups, selectedNumber: selectedSpaceNumber, title: "Space" },
       { groups: timeGroups, selectedNumber: selectedSunNumber, title: "Time" }
     ].filter((column) => column.groups.length);
     const resonanceCount = columns.reduce(
       (total, column) => total + column.groups.reduce((groupTotal, group) => groupTotal + group.rows.length, 0),
       0
-    );
+    ) + draftRows.length;
 
     setText(selectedNumberEl, selectedSpaceNumber);
     setText(selectedLabelEl, "");
     list.replaceChildren(
-      ...columns.map((column) => createResonanceColumn(column.title, column.groups, column.selectedNumber))
+      ...columns.map((column) => createResonanceColumn(column.title, column.groups, column.selectedNumber)),
+      ...(draftRows.length ? [createDraftsSection(draftRows)] : [])
     );
 
     if (resonanceCount) {

@@ -690,6 +690,7 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
   const accentSoftRgb = getColorRgb(accentSoft, "255, 213, 107");
   const palette = getThemePaletteCorners(accent, accentSoft);
   const borderColors = getThemeBorderColors(accent, accentSoft);
+  const squareLineRgb = mixRgb(hexToRgb(accent), hexToRgb(accentSoft), 0.5);
   context.clearRect(0, 0, rect.width, rect.height);
 
   [...state.rings].reverse().forEach((ring, reversedIndex) => {
@@ -745,9 +746,13 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
   });
 
   drawSquare(context, metrics, {
-    border: borderColors.square,
+    border: state.squareBorderAlpha === undefined
+      ? borderColors.square
+      : rgbToCss(squareLineRgb, state.squareBorderAlpha),
     backgroundImage: state.squareBackgroundImage,
-    cellBorder: borderColors.squareCell,
+    cellBorder: state.squareCellBorderAlpha === undefined
+      ? borderColors.squareCell
+      : rgbToCss(squareLineRgb, state.squareCellBorderAlpha),
     activeFillAlpha: ACTIVE_FILL_ALPHA,
     activeSquareNumber: state.activeSquareNumber || 5,
     fillAlpha: SURFACE_FILL_ALPHA,

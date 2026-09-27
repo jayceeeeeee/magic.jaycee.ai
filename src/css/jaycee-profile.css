@@ -127,6 +127,10 @@
   gap: 11px;
 }
 
+.profile-resonance-drafts {
+  grid-column: 1 / -1;
+}
+
 .profile-resonance-column-title {
   margin: 0;
   color: var(--text);
@@ -148,6 +152,27 @@
 .profile-resonance-group-items {
   display: grid;
   gap: 10px;
+}
+
+.profile-draft-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.profile-draft-item {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--field-border-soft);
+  border-radius: 6px;
+  background:
+    linear-gradient(90deg, rgba(var(--accent-rgb), 0.1), transparent 72%),
+    rgba(0, 0, 0, 0.14);
+  color: var(--text);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.88rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .profile-resonance-item {
