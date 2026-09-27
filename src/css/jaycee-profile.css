@@ -139,6 +139,18 @@
   text-transform: uppercase;
 }
 
+.profile-resonance-column-meta {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.7rem;
+  font-weight: 500;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  text-transform: none;
+}
+
 .profile-resonance-column-content {
   display: grid;
   gap: 16px;

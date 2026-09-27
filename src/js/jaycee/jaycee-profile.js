@@ -49,10 +49,6 @@ const redirectToLogin = () => {
   window.location.href = loginUrl.href;
 };
 
-const setText = (element, value) => {
-  if (element) element.textContent = value;
-};
-
 const getStoragePathFromImage = (image, bucketName) => {
   if (/^https?:\/\//i.test(image)) {
     const url = new URL(image);
@@ -110,14 +106,21 @@ const createResonanceGroup = (sourceName, sourceType, resonances, selectedNumber
   return group;
 };
 
-const createResonanceColumn = (title, groups, selectedNumber) => {
+const createResonanceColumn = (title, groups, selectedNumber, meta = "") => {
   const column = document.createElement("section");
   const heading = document.createElement("h2");
   const content = document.createElement("div");
 
   column.className = "profile-resonance-column";
   heading.className = "profile-resonance-column-title";
-  heading.textContent = title;
+  heading.append(document.createTextNode(title));
+  if (meta) {
+    const metaEl = document.createElement("span");
+
+    metaEl.className = "profile-resonance-column-meta";
+    metaEl.textContent = meta;
+    heading.append(metaEl);
+  }
   content.className = "profile-resonance-column-content";
   content.replaceChildren(
     ...groups.map((group) => createResonanceGroup(
@@ -446,6 +449,16 @@ const getTimeResonanceGroups = (rows, selectedTimeSegments, dynamicRings) => {
   return mergeResonanceGroups([...staticTimeGroups, ...dynamicGroups]);
 };
 
+const getTimeSelectionMeta = (dynamicRings, selectedTimeSegments) => {
+  const segments = [`Sun ${selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER}`];
+
+  dynamicRings.forEach((ring) => {
+    segments.push(`${ring.label || "Time"} ${selectedTimeSegments.get(ring.id) || ring.defaultSegment}`);
+  });
+
+  return segments.join(" / ");
+};
+
 const getEmptyLabels = (count) => Array.from({ length: count }, () => "");
 
 const getActiveSegmentIndex = (segmentKeys, selectedSegment) => (
@@ -505,8 +518,6 @@ const initJayceeProfile = async () => {
   const canvas = document.querySelector("[data-profile-canvas]");
   const status = document.querySelector("[data-profile-status]");
   const list = document.querySelector("[data-profile-resonances]");
-  const selectedNumberEl = document.querySelector("[data-selected-number]");
-  const selectedLabelEl = document.querySelector("[data-selected-label]");
   const publicUsername = getDisplayValue(shell?.dataset.profileUsername);
 
   if (!shell || !canvas || !status || !list) return;
@@ -571,25 +582,23 @@ const initJayceeProfile = async () => {
     const timeGroups = getTimeResonanceGroups(rows, selectedTimeSegments, dynamicRings);
     const draftRows = showDrafts ? getDraftRows(rows) : [];
     const columns = [
-      { groups: spaceGroups, selectedNumber: selectedSpaceNumber, title: "Space" },
-      { groups: timeGroups, selectedNumber: selectedSunNumber, title: "Time" }
+      { groups: spaceGroups, meta: `Square ${selectedSpaceNumber}`, selectedNumber: selectedSpaceNumber, title: "Space" },
+      { groups: timeGroups, meta: getTimeSelectionMeta(dynamicRings, selectedTimeSegments), selectedNumber: selectedSunNumber, title: "Time" }
     ].filter((column) => column.groups.length);
     const resonanceCount = columns.reduce(
       (total, column) => total + column.groups.reduce((groupTotal, group) => groupTotal + group.rows.length, 0),
       0
-    ) + draftRows.length;
+    );
 
-    setText(selectedNumberEl, selectedSpaceNumber);
-    setText(selectedLabelEl, "");
     list.replaceChildren(
-      ...columns.map((column) => createResonanceColumn(column.title, column.groups, column.selectedNumber)),
+      ...columns.map((column) => createResonanceColumn(column.title, column.groups, column.selectedNumber, column.meta)),
       ...(draftRows.length ? [createDraftsSection(draftRows, selectedDraftKey, draftPreviewMode, toggleDraft)] : [])
     );
 
     if (resonanceCount) {
-      status.textContent = `${resonanceCount} resonance${resonanceCount === 1 ? "" : "s"} for the current selection.`;
+      status.textContent = `${resonanceCount} active resonance${resonanceCount === 1 ? "" : "s"} for the current selection.`;
     } else {
-      status.textContent = "No resonances yet for the current selection.";
+      status.textContent = "No active resonances yet for the current selection.";
     }
   };
 
