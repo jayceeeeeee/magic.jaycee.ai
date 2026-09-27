@@ -3,8 +3,7 @@ import {
   createJayceeState,
   drawJaycee,
   getJayceeHit,
-  getTopCenteredLastSegmentRotation,
-  getTopCenteredSegmentRotation
+  getTopCenteredLastSegmentRotation
 } from "./jaycee-core.js";
 
 const JAYCEE_FRACTALS_TABLE = "jaycee_fractals";
@@ -29,6 +28,8 @@ const PROFILE_CORE_METRICS = {
 };
 const PROFILE_RING_ACTIVE_FILL_ALPHA = 0.09;
 const PROFILE_RING_FILL_ALPHA = 0.035;
+
+const getFractalKey = (row) => `${row.sourceType || "source"}:${row.id || row.sourceId || row.label || "fractal"}`;
 
 const getDisplayValue = (value) => (
   value === null || value === undefined ? "" : String(value).trim()
@@ -90,6 +91,40 @@ const createResonanceItem = (row, selectedNumber) => {
   return item;
 };
 
+const createFractalPickerItem = (row, selectedFractalKeys, onToggleFractal) => {
+  const button = document.createElement("button");
+  const fractalKey = getFractalKey(row);
+
+  button.className = "profile-fractal-picker-item";
+  button.type = "button";
+  button.textContent = row.label || "Untitled fractal";
+  button.setAttribute("aria-pressed", String(selectedFractalKeys.has(fractalKey)));
+  button.addEventListener("click", () => onToggleFractal(fractalKey));
+
+  return button;
+};
+
+const createFractalPickerGroup = (sourceName, sourceType, fractals, cta, selectedFractalKeys, onToggleFractal) => {
+  const group = document.createElement("section");
+  const heading = document.createElement("h2");
+  const action = document.createElement("p");
+  const items = document.createElement("div");
+
+  group.className = "profile-resonance-group";
+  group.dataset.resonanceSource = sourceType;
+  heading.className = "profile-resonance-source";
+  heading.textContent = sourceName;
+  action.className = "profile-fractal-picker-cta";
+  action.textContent = cta;
+  items.className = "profile-fractal-picker-list";
+  items.replaceChildren(
+    ...fractals.map((row) => createFractalPickerItem(row, selectedFractalKeys, onToggleFractal))
+  );
+  group.append(heading, action, items);
+
+  return group;
+};
+
 const createResonanceGroup = (sourceName, sourceType, resonances, selectedNumber) => {
   const group = document.createElement("section");
   const heading = document.createElement("h2");
@@ -106,7 +141,7 @@ const createResonanceGroup = (sourceName, sourceType, resonances, selectedNumber
   return group;
 };
 
-const createResonanceColumn = (title, groups, selectedNumber, meta = "") => {
+const createResonanceColumn = (title, groups, selectedNumber, meta = "", pickerOptions = {}) => {
   const column = document.createElement("section");
   const heading = document.createElement("h2");
   const content = document.createElement("div");
@@ -123,11 +158,22 @@ const createResonanceColumn = (title, groups, selectedNumber, meta = "") => {
   }
   content.className = "profile-resonance-column-content";
   content.replaceChildren(
-    ...groups.map((group) => createResonanceGroup(
-      group.sourceName,
-      group.sourceType,
-      group.rows,
-      selectedNumber
+    ...groups.map((group) => (
+      group.sourceType === "user" && pickerOptions.cta
+        ? createFractalPickerGroup(
+          group.sourceName,
+          group.sourceType,
+          group.rows,
+          pickerOptions.cta,
+          pickerOptions.selectedFractalKeys,
+          pickerOptions.onToggleFractal
+        )
+        : createResonanceGroup(
+          group.sourceName,
+          group.sourceType,
+          group.rows,
+          selectedNumber
+        )
     ))
   );
   column.append(heading, content);
@@ -395,7 +441,7 @@ const getResonanceGroupsForNumber = (rows, selectedNumber) => (
           return groups;
         }, new Map()),
       ([sourceName, groupedRows]) => ({
-        rows: getResonancesForNumber(groupedRows, selectedNumber),
+        rows: groupedRows,
         sourceName,
         sourceType: "user"
       })
@@ -459,6 +505,7 @@ const getDynamicTimeRows = (dynamicRings, selectedTimeSegments) => (
     if (!element) return [];
 
     return [{
+      id: ring.sourceId || ring.id,
       label: ring.label || "Time",
       resonanceValue: getDisplayValue(element.value),
       sourceName: ring.sourceName || JAYCEE_RESONANCE_SOURCE,
@@ -506,22 +553,7 @@ const createProfileCoreState = ({ avatarImage, dynamicRings, selectedSpaceNumber
       showDividers: true,
       styledSegmentIndices: sunSegmentKeys.map((_, index) => index),
       tone: "accent"
-    },
-    ...dynamicRings.map((ring) => ({
-      activeSegmentIndex: getActiveSegmentIndex(ring.segmentKeys, selectedTimeSegments.get(ring.id) || ring.defaultSegment),
-      count: ring.segmentKeys.length,
-      fillAlpha: PROFILE_RING_FILL_ALPHA,
-      activeFillAlpha: PROFILE_RING_ACTIVE_FILL_ALPHA,
-      id: ring.id,
-      label: ring.label,
-      labels: getEmptyLabels(ring.segmentKeys.length),
-      rotation: getTopCenteredSegmentRotation(ring.segmentKeys.length, 0),
-      segmentKeys: ring.segmentKeys,
-      showBorders: true,
-      showDividers: true,
-      styledSegmentIndices: ring.segmentKeys.map((_, index) => index),
-      tone: "soft"
-    }))
+    }
   ];
 
   return {
@@ -551,6 +583,7 @@ const initJayceeProfile = async () => {
   let avatarImage = null;
   let coreState = null;
   let selectedSpaceNumber = DEFAULT_SELECTED_NUMBER;
+  const selectedFractalKeys = new Set();
   let selectedDraftKey = null;
   let draftPreviewMode = "closed";
   let draftPreviewTimer = null;
@@ -596,6 +629,16 @@ const initJayceeProfile = async () => {
     }
   };
 
+  const toggleFractal = (fractalKey) => {
+    if (selectedFractalKeys.has(fractalKey)) {
+      selectedFractalKeys.delete(fractalKey);
+    } else {
+      selectedFractalKeys.add(fractalKey);
+    }
+
+    renderResonances();
+  };
+
   const renderResonances = () => {
     const showDrafts = !publicUsername;
     const spaceGroups = getResonanceGroupsForNumber(
@@ -606,24 +649,25 @@ const initJayceeProfile = async () => {
     const timeGroups = getTimeResonanceGroups(rows, selectedTimeSegments, dynamicRings);
     const draftRows = showDrafts ? getDraftRows(rows) : [];
     const columns = [
-      { groups: spaceGroups, meta: `Sector ${selectedSpaceNumber}`, selectedNumber: selectedSpaceNumber, title: "Map" },
-      { groups: timeGroups, meta: getTimeSelectionMeta(dynamicRings, selectedTimeSegments), selectedNumber: selectedSunNumber, title: "Realm" }
+      { cta: "Choose your map", groups: spaceGroups, meta: `Sector ${selectedSpaceNumber}`, selectedNumber: selectedSpaceNumber, title: "Map" },
+      { cta: "Choose your realm", groups: timeGroups, meta: getTimeSelectionMeta(dynamicRings, selectedTimeSegments), selectedNumber: selectedSunNumber, title: "Realm" }
     ].filter((column) => column.groups.length);
-    const resonanceCount = columns.reduce(
-      (total, column) => total + column.groups.reduce((groupTotal, group) => groupTotal + group.rows.length, 0),
-      0
-    );
 
+    status.textContent = "";
     list.replaceChildren(
-      ...columns.map((column) => createResonanceColumn(column.title, column.groups, column.selectedNumber, column.meta)),
+      ...columns.map((column) => createResonanceColumn(
+        column.title,
+        column.groups,
+        column.selectedNumber,
+        column.meta,
+        {
+          cta: column.cta,
+          onToggleFractal: toggleFractal,
+          selectedFractalKeys
+        }
+      )),
       ...(draftRows.length ? [createDraftsSection(draftRows, selectedDraftKey, draftPreviewMode, toggleDraft)] : [])
     );
-
-    if (resonanceCount) {
-      status.textContent = `${resonanceCount} active resonance${resonanceCount === 1 ? "" : "s"} for the current selection.`;
-    } else {
-      status.textContent = "No active resonances yet for the current selection.";
-    }
   };
 
   const renderCore = () => {
