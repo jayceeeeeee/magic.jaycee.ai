@@ -194,10 +194,41 @@
   min-height: 0;
   max-height: 100%;
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   align-content: start;
-  gap: 10px;
+  gap: 14px;
   overflow: auto;
   padding-right: 4px;
+}
+
+.profile-resonance-column {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 11px;
+}
+
+.profile-resonance-column-title {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.12rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.profile-resonance-column-content {
+  display: grid;
+  gap: 16px;
+}
+
+.profile-resonance-group {
+  display: grid;
+  gap: 9px;
+}
+
+.profile-resonance-group-items {
+  display: grid;
+  gap: 10px;
 }
 
 .profile-resonance-item {
@@ -209,6 +240,29 @@
   background:
     linear-gradient(90deg, rgba(var(--accent-rgb), 0.1), transparent 68%),
     rgba(0, 0, 0, 0.16);
+}
+
+.profile-resonance-group[data-resonance-source="jaycee"] .profile-resonance-item {
+  border-color: rgba(var(--accent-rgb), 0.3);
+  background:
+    linear-gradient(90deg, rgba(var(--accent-rgb), 0.16), transparent 72%),
+    rgba(0, 0, 0, 0.14);
+}
+
+.profile-resonance-source {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0;
+  padding: 4px 7px;
+  border: 1px solid rgba(var(--accent-rgb), 0.26);
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.18);
+  color: var(--accent-soft);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.68rem;
+  line-height: 1;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
 }
 
 .profile-resonance-label {

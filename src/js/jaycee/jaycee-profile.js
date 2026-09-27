@@ -2,10 +2,12 @@ const JAYCEE_ORDER = [1, 2, 4, 3, 5, 7, 6, 8, 9];
 const JAYCEE_FRACTALS_TABLE = "jaycee_fractals";
 const FRACTAL_VISIBILITY_COLUMN = "visibility";
 const PUBLIC_VISIBILITY_VALUE = "public";
+const TIME_DIMENSION_VALUE = "time";
 const PROFILE_TABLE = "profiles";
 const AVATAR_BUCKET = "avatars";
 const CODE_COLUMNS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 const DEFAULT_SELECTED_NUMBER = 5;
+const JAYCEE_RESONANCE_SOURCE = "Jaycee";
 const SIGNED_IMAGE_URL_DURATION_SECONDS = 60 * 60;
 
 const getDisplayValue = (value) => (
@@ -60,11 +62,66 @@ const createResonanceItem = (row, selectedNumber) => {
   return item;
 };
 
-const fetchUserResonances = async (client, userId, { publicOnly = false } = {}) => {
+const createResonanceGroup = (sourceName, sourceType, resonances, selectedNumber) => {
+  const group = document.createElement("section");
+  const heading = document.createElement("h2");
+  const items = document.createElement("div");
+
+  group.className = "profile-resonance-group";
+  group.dataset.resonanceSource = sourceType;
+  heading.className = "profile-resonance-source";
+  heading.textContent = sourceName;
+  items.className = "profile-resonance-group-items";
+  items.replaceChildren(...resonances.map((row) => createResonanceItem(row, selectedNumber)));
+  group.append(heading, items);
+
+  return group;
+};
+
+const createResonanceColumn = (title, groups, selectedNumber) => {
+  const column = document.createElement("section");
+  const heading = document.createElement("h2");
+  const content = document.createElement("div");
+
+  column.className = "profile-resonance-column";
+  heading.className = "profile-resonance-column-title";
+  heading.textContent = title;
+  content.className = "profile-resonance-column-content";
+  content.replaceChildren(
+    ...groups.map((group) => createResonanceGroup(
+      group.sourceName,
+      group.sourceType,
+      group.rows,
+      selectedNumber
+    ))
+  );
+  column.append(heading, content);
+
+  return column;
+};
+
+const fetchJayceeResonances = async (client) => {
+  const { data, error } = await client
+    .from(JAYCEE_FRACTALS_TABLE)
+    .select(`label, user_id, dimension, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
+    .is("user_id", null)
+    .eq(FRACTAL_VISIBILITY_COLUMN, PUBLIC_VISIBILITY_VALUE)
+    .order("label", { ascending: true });
+
+  if (error) throw error;
+
+  return (data || []).map((row) => ({
+    ...row,
+    sourceName: JAYCEE_RESONANCE_SOURCE,
+    sourceType: "jaycee"
+  }));
+};
+
+const fetchUserResonances = async (client, profile, { publicOnly = false } = {}) => {
   let query = client
     .from(JAYCEE_FRACTALS_TABLE)
-    .select(`label, user_id, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
-    .eq("user_id", userId);
+    .select(`label, user_id, dimension, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
+    .eq("user_id", profile.id);
 
   if (publicOnly) {
     query = query.eq(FRACTAL_VISIBILITY_COLUMN, PUBLIC_VISIBILITY_VALUE);
@@ -74,7 +131,11 @@ const fetchUserResonances = async (client, userId, { publicOnly = false } = {}) 
 
   if (error) throw error;
 
-  return data || [];
+  return (data || []).map((row) => ({
+    ...row,
+    sourceName: profile.username || "User",
+    sourceType: "user"
+  }));
 };
 
 const fetchProfileByUserId = async (client, userId) => {
@@ -135,6 +196,45 @@ const getResonancesForNumber = (rows, selectedNumber) => (
   rows.filter((row) => getDisplayValue(row[String(selectedNumber)]))
 );
 
+const getRowsForDimensionColumn = (rows, columnName, { includeDrafts = false } = {}) => (
+  rows.filter((row) => {
+    const dimension = getDisplayValue(row.dimension);
+
+    if (columnName === TIME_DIMENSION_VALUE) {
+      return dimension === TIME_DIMENSION_VALUE;
+    }
+
+    return dimension !== TIME_DIMENSION_VALUE && (includeDrafts || Boolean(dimension));
+  })
+);
+
+const getResonanceGroupsForNumber = (rows, selectedNumber) => (
+  [
+    {
+      rows: getResonancesForNumber(rows.filter((row) => row.sourceType === "jaycee"), selectedNumber),
+      sourceName: JAYCEE_RESONANCE_SOURCE,
+      sourceType: "jaycee"
+    },
+    ...Array.from(
+      rows
+        .filter((row) => row.sourceType !== "jaycee")
+        .reduce((groups, row) => {
+          const sourceName = row.sourceName || "User";
+
+          if (!groups.has(sourceName)) groups.set(sourceName, []);
+          groups.get(sourceName).push(row);
+
+          return groups;
+        }, new Map()),
+      ([sourceName, groupedRows]) => ({
+        rows: getResonancesForNumber(groupedRows, selectedNumber),
+        sourceName,
+        sourceType: "user"
+      })
+    )
+  ].filter((group) => group.rows.length)
+);
+
 const initJayceeProfile = async () => {
   const shell = document.querySelector("[data-profile-shell]");
   const square = document.querySelector("[data-profile-square]");
@@ -150,14 +250,32 @@ const initJayceeProfile = async () => {
   let selectedNumber = DEFAULT_SELECTED_NUMBER;
 
   const renderResonances = () => {
-    const resonances = getResonancesForNumber(rows, selectedNumber);
+    const includeDrafts = !publicUsername;
+    const spaceGroups = getResonanceGroupsForNumber(
+      getRowsForDimensionColumn(rows, "space", { includeDrafts }),
+      selectedNumber
+    );
+    const timeGroups = getResonanceGroupsForNumber(
+      getRowsForDimensionColumn(rows, TIME_DIMENSION_VALUE, { includeDrafts }),
+      selectedNumber
+    );
+    const columns = [
+      { groups: spaceGroups, title: includeDrafts ? "Space / Drafts" : "Space" },
+      { groups: timeGroups, title: "Time" }
+    ].filter((column) => column.groups.length);
+    const resonanceCount = columns.reduce(
+      (total, column) => total + column.groups.reduce((groupTotal, group) => groupTotal + group.rows.length, 0),
+      0
+    );
 
     setText(selectedNumberEl, selectedNumber);
     setText(selectedLabelEl, "");
-    list.replaceChildren(...resonances.map((row) => createResonanceItem(row, selectedNumber)));
+    list.replaceChildren(
+      ...columns.map((column) => createResonanceColumn(column.title, column.groups, selectedNumber))
+    );
 
-    if (resonances.length) {
-      status.textContent = `${resonances.length} resonance${resonances.length === 1 ? "" : "s"} for square ${selectedNumber}.`;
+    if (resonanceCount) {
+      status.textContent = `${resonanceCount} resonance${resonanceCount === 1 ? "" : "s"} for square ${selectedNumber}.`;
     } else {
       status.textContent = `No resonances yet for square ${selectedNumber}.`;
     }
@@ -208,7 +326,10 @@ const initJayceeProfile = async () => {
     }
 
     shell.hidden = false;
-    rows = await fetchUserResonances(client, profile.id, { publicOnly: Boolean(publicUsername) });
+    const jayceeRows = await fetchJayceeResonances(client);
+    const profileRows = await fetchUserResonances(client, profile, { publicOnly: Boolean(publicUsername) });
+
+    rows = [...jayceeRows, ...profileRows];
     applySquareImage(square, await getAvatarImageUrl(client, profile));
     renderSquare();
     renderResonances();
