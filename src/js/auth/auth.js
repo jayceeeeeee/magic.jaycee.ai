@@ -65,6 +65,29 @@
         return user?.user_metadata?.name || user?.email || "Account";
     }
 
+    async function getProfileUsername(user) {
+        if (!user?.id) {
+            return "";
+        }
+
+        try {
+            const client = await getSupabaseClient();
+            const { data, error } = await client
+                .from("profiles")
+                .select("username")
+                .eq("id", user.id)
+                .maybeSingle();
+
+            if (error) {
+                return "";
+            }
+
+            return data?.username || "";
+        } catch {
+            return "";
+        }
+    }
+
     function setBannerSignedOut() {
         document.querySelectorAll("jaycee-banner").forEach((banner) => {
             banner.removeAttribute("auth-state");
@@ -73,10 +96,10 @@
         });
     }
 
-    function setBannerSignedIn(user) {
+    function setBannerSignedIn(user, displayName = getDisplayName(user)) {
         document.querySelectorAll("jaycee-banner").forEach((banner) => {
             banner.setAttribute("auth-state", "signed-in");
-            banner.setAttribute("user-name", getDisplayName(user));
+            banner.setAttribute("user-name", displayName);
             banner.connectedCallback();
         });
     }
@@ -86,7 +109,9 @@
         const { data } = await client.auth.getSession();
 
         if (data.session?.user) {
-            setBannerSignedIn(data.session.user);
+            const profileUsername = await getProfileUsername(data.session.user);
+
+            setBannerSignedIn(data.session.user, profileUsername || getDisplayName(data.session.user));
         } else {
             setBannerSignedOut();
         }
@@ -127,7 +152,10 @@
 
         client.auth.onAuthStateChange((_event, session) => {
             if (session?.user) {
-                setBannerSignedIn(session.user);
+                getProfileUsername(session.user)
+                    .then((profileUsername) => {
+                        setBannerSignedIn(session.user, profileUsername || getDisplayName(session.user));
+                    });
             } else {
                 setBannerSignedOut();
             }
