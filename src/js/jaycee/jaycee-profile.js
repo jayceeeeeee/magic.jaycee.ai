@@ -21,6 +21,14 @@ const DEFAULT_SELECTED_NUMBER = 5;
 const DEFAULT_SUN_TIME_NUMBER = 9;
 const JAYCEE_RESONANCE_SOURCE = "Jaycee";
 const SIGNED_IMAGE_URL_DURATION_SECONDS = 60 * 60;
+const PROFILE_CORE_METRICS = {
+  ringMaxRadialShare: 0.3,
+  ringWidthMax: 24,
+  ringWidthMin: 10,
+  ringWidthRatio: 0.052
+};
+const PROFILE_RING_ACTIVE_FILL_ALPHA = 0.09;
+const PROFILE_RING_FILL_ALPHA = 0.035;
 
 const getDisplayValue = (value) => (
   value === null || value === undefined ? "" : String(value).trim()
@@ -378,23 +386,29 @@ const createProfileCoreState = ({ avatarImage, dynamicRings, selectedSpaceNumber
       id: "sun",
       activeSegmentIndex: getActiveSegmentIndex(sunSegmentKeys, selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER),
       count: sunSegmentKeys.length,
+      fillAlpha: PROFILE_RING_FILL_ALPHA,
+      activeFillAlpha: PROFILE_RING_ACTIVE_FILL_ALPHA,
       label: "Sun",
       labels: getEmptyLabels(sunSegmentKeys.length),
       rotation: getTopCenteredLastSegmentRotation(sunSegmentKeys.length),
       segmentKeys: sunSegmentKeys,
-      showBorders: false,
-      showDividers: false,
+      showBorders: true,
+      showDividers: true,
       styledSegmentIndices: sunSegmentKeys.map((_, index) => index),
       tone: "accent"
     },
     ...dynamicRings.map((ring) => ({
       activeSegmentIndex: getActiveSegmentIndex(ring.segmentKeys, selectedTimeSegments.get(ring.id) || ring.defaultSegment),
       count: ring.segmentKeys.length,
+      fillAlpha: PROFILE_RING_FILL_ALPHA,
+      activeFillAlpha: PROFILE_RING_ACTIVE_FILL_ALPHA,
       id: ring.id,
       label: ring.label,
       labels: getEmptyLabels(ring.segmentKeys.length),
       rotation: getTopCenteredSegmentRotation(ring.segmentKeys.length, 0),
       segmentKeys: ring.segmentKeys,
+      showBorders: true,
+      showDividers: true,
       styledSegmentIndices: ring.segmentKeys.map((_, index) => index),
       tone: "soft"
     }))
@@ -406,6 +420,7 @@ const createProfileCoreState = ({ avatarImage, dynamicRings, selectedSpaceNumber
       rings
     }),
     activeSquareNumber: selectedSpaceNumber,
+    metrics: PROFILE_CORE_METRICS,
     squareBackgroundImage: avatarImage
   };
 };

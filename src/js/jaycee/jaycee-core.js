@@ -154,20 +154,24 @@ const typeJayceeConsoleLine = async (line) => {
   }
 };
 
-const getCanvasMetrics = (canvas, ringCount) => {
+const getCanvasMetrics = (canvas, ringCount, options = {}) => {
   const rect = canvas.getBoundingClientRect();
   const size = Math.min(rect.width, rect.height);
   const center = size / 2;
   const safeRingCount = Math.max(1, ringCount);
   const padding = Math.max(14, size * 0.035);
   const outerRadius = center - padding;
+  const ringWidthMax = options.ringWidthMax ?? CORE_RING_WIDTH_MAX;
+  const ringWidthMin = options.ringWidthMin ?? CORE_RING_WIDTH_MIN;
+  const ringWidthRatio = options.ringWidthRatio ?? CORE_RING_WIDTH_RATIO;
+  const ringMaxRadialShare = options.ringMaxRadialShare ?? CORE_RING_MAX_RADIAL_SHARE;
   const preferredRingWidth = Math.min(
-    CORE_RING_WIDTH_MAX,
-    Math.max(CORE_RING_WIDTH_MIN, size * CORE_RING_WIDTH_RATIO)
+    ringWidthMax,
+    Math.max(ringWidthMin, size * ringWidthRatio)
   );
   const ringWidth = Math.min(
     preferredRingWidth,
-    (outerRadius * CORE_RING_MAX_RADIAL_SHARE) / safeRingCount
+    (outerRadius * ringMaxRadialShare) / safeRingCount
   );
   const squareOuterRadius = outerRadius - (ringWidth * safeRingCount);
   const squareSize = (squareOuterRadius * 2) / Math.SQRT2;
@@ -273,7 +277,7 @@ const drawRingSegmentPanel = (context, metrics, segment, colors) => {
   context.fillStyle = gradient;
   context.shadowColor = colors.glow;
   context.shadowBlur = colors.transparent ? 0 : 8;
-  context.globalAlpha = colors.transparent ? ACTIVE_FILL_ALPHA : (colors.alpha ?? 1);
+  context.globalAlpha = colors.transparent ? (colors.transparentAlpha ?? ACTIVE_FILL_ALPHA) : (colors.alpha ?? 1);
   context.fill();
   context.globalAlpha = 1;
 
@@ -680,7 +684,7 @@ const DEFAULT_JAYCEE_STATE = createJayceeState();
 export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
   const context = resizeCanvas(canvas);
   const rect = canvas.getBoundingClientRect();
-  const metrics = getCanvasMetrics(canvas, state.rings.length);
+  const metrics = getCanvasMetrics(canvas, state.rings.length, state.metrics);
   const accent = getThemeColor("--accent", "#74f7d1");
   const accentSoft = getThemeColor("--accent-soft", "#a7ffe7");
   const accentSoftRgb = getColorRgb(accentSoft, "255, 213, 107");
@@ -705,7 +709,7 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
       styledSegmentColors: (segmentIndex) => {
         const colors = {
           ...getSquareCellPaletteColors(segmentIndex, palette),
-          alpha: SURFACE_FILL_ALPHA,
+          alpha: ring.fillAlpha ?? SURFACE_FILL_ALPHA,
           glow: `rgba(${accentSoftRgb}, 0.14)`
         };
 
@@ -717,12 +721,14 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
           colors.border = "rgba(124, 255, 120, 0.92)";
           colors.borderGlow = "rgba(124, 255, 120, 0.42)";
           colors.transparent = true;
+          colors.transparentAlpha = ring.activeFillAlpha ?? ACTIVE_FILL_ALPHA;
         }
 
         if (segmentIndex === ring.activeSegmentIndex) {
           colors.border = "rgba(124, 255, 120, 0.92)";
           colors.borderGlow = "rgba(124, 255, 120, 0.42)";
           colors.transparent = true;
+          colors.transparentAlpha = ring.activeFillAlpha ?? ACTIVE_FILL_ALPHA;
         }
 
         return colors;
@@ -771,7 +777,7 @@ const normalizeAngle = (angle) => {
 
 export const getJayceeHit = (canvas, state = DEFAULT_JAYCEE_STATE, clientX, clientY) => {
   const rect = canvas.getBoundingClientRect();
-  const metrics = getCanvasMetrics(canvas, state.rings.length);
+  const metrics = getCanvasMetrics(canvas, state.rings.length, state.metrics);
   const x = clientX - rect.left;
   const y = clientY - rect.top;
   const squareStart = metrics.center - (metrics.squareSize / 2);
