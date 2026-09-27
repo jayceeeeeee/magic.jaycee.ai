@@ -138,23 +138,34 @@ const DRAFT_PREVIEW_ANIMATION_MS = 220;
 
 const createDraftPreview = (draft, mode) => {
   const preview = document.createElement("div");
-  const grid = document.createElement("div");
+  const table = document.createElement("div");
+  const headerRow = document.createElement("div");
+  const valueRow = document.createElement("div");
 
   preview.className = `profile-draft-preview is-${mode}`;
-  grid.className = "profile-draft-grid";
-  grid.replaceChildren(...JAYCEE_ORDER.map((number) => {
+  table.className = "profile-draft-table";
+  headerRow.className = "profile-draft-table-row profile-draft-table-head";
+  valueRow.className = "profile-draft-table-row profile-draft-table-values";
+  headerRow.replaceChildren(...CODE_COLUMNS.map((number) => {
     const cell = document.createElement("div");
-    const numberEl = document.createElement("span");
-    const valueEl = document.createElement("strong");
 
-    cell.className = "profile-draft-cell";
-    numberEl.textContent = number;
-    valueEl.textContent = getDisplayValue(draft[String(number)]) || "-";
-    cell.append(numberEl, valueEl);
+    cell.className = "profile-draft-table-cell";
+    cell.textContent = number;
 
     return cell;
   }));
-  preview.append(grid);
+  valueRow.replaceChildren(...CODE_COLUMNS.map((number) => {
+    const cell = document.createElement("div");
+    const valueEl = document.createElement("strong");
+
+    cell.className = "profile-draft-table-cell";
+    valueEl.textContent = getDisplayValue(draft[String(number)]) || "-";
+    cell.append(valueEl);
+
+    return cell;
+  }));
+  table.append(headerRow, valueRow);
+  preview.append(table);
 
   return preview;
 };
