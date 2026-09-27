@@ -1,12 +1,24 @@
-const JAYCEE_ORDER = [1, 2, 4, 3, 5, 7, 6, 8, 9];
+import {
+  JAYCEE_ORDER,
+  createJayceeState,
+  drawJaycee,
+  getJayceeHit,
+  getTopCenteredLastSegmentRotation,
+  getTopCenteredSegmentRotation
+} from "./jaycee-core.js";
+
 const JAYCEE_FRACTALS_TABLE = "jaycee_fractals";
+const JAYCEE_DYNAMIC_FRACTALS_TABLE = "jaycee_dynamic_fractals";
+const JAYCEE_DYNAMIC_FRACTAL_ELEMENTS_TABLE = "jaycee_dynamic_fractal_elements";
 const FRACTAL_VISIBILITY_COLUMN = "visibility";
 const PUBLIC_VISIBILITY_VALUE = "public";
+const SPACE_DIMENSION_VALUE = "space";
 const TIME_DIMENSION_VALUE = "time";
 const PROFILE_TABLE = "profiles";
 const AVATAR_BUCKET = "avatars";
 const CODE_COLUMNS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 const DEFAULT_SELECTED_NUMBER = 5;
+const DEFAULT_SUN_TIME_NUMBER = 9;
 const JAYCEE_RESONANCE_SOURCE = "Jaycee";
 const SIGNED_IMAGE_URL_DURATION_SECONDS = 60 * 60;
 
@@ -51,13 +63,25 @@ const createResonanceItem = (row, selectedNumber) => {
   const item = document.createElement("article");
   const label = document.createElement("div");
   const value = document.createElement("div");
+  const description = getDisplayValue(row.description);
+  const resonanceValue = row.resonanceValue === undefined
+    ? getDisplayValue(row[String(selectedNumber)])
+    : getDisplayValue(row.resonanceValue);
 
   item.className = "profile-resonance-item";
   label.className = "profile-resonance-label";
   value.className = "profile-resonance-value";
   label.textContent = row.label || "Resonance";
-  value.textContent = getDisplayValue(row[String(selectedNumber)]);
+  value.textContent = resonanceValue;
   item.append(label, value);
+
+  if (description) {
+    const descriptionEl = document.createElement("p");
+
+    descriptionEl.className = "profile-resonance-description";
+    descriptionEl.textContent = description;
+    item.append(descriptionEl);
+  }
 
   return item;
 };
@@ -138,6 +162,47 @@ const fetchUserResonances = async (client, profile, { publicOnly = false } = {})
   }));
 };
 
+const fetchDynamicTimeRings = async (client) => {
+  const { data: fractals, error: fractalsError } = await client
+    .from(JAYCEE_DYNAMIC_FRACTALS_TABLE)
+    .select("id, label, description, dimension, created_at")
+    .eq("dimension", TIME_DIMENSION_VALUE)
+    .order("created_at", { ascending: true });
+
+  if (fractalsError) throw fractalsError;
+  if (!fractals?.length) return [];
+
+  const { data: elements, error: elementsError } = await client
+    .from(JAYCEE_DYNAMIC_FRACTAL_ELEMENTS_TABLE)
+    .select("id, fractal_id, position, value, description, created_at")
+    .in("fractal_id", fractals.map((fractal) => fractal.id))
+    .order("position", { ascending: true });
+
+  if (elementsError) throw elementsError;
+
+  return fractals
+    .map((fractal) => {
+      const ringElements = (elements || [])
+        .filter((element) => element.fractal_id === fractal.id)
+        .sort((first, second) => Number(first.position) - Number(second.position));
+      const positions = ringElements
+        .map((element) => Number(element.position))
+        .filter((position) => Number.isFinite(position) && position > 0);
+
+      if (!positions.length) return null;
+
+      return {
+        ...fractal,
+        elements: ringElements,
+        id: `dynamic-${fractal.id}`,
+        sourceId: fractal.id,
+        segmentKeys: positions.map(String),
+        defaultSegment: String(positions[0])
+      };
+    })
+    .filter(Boolean);
+};
+
 const fetchProfileByUserId = async (client, userId) => {
   const { data, error } = await client
     .from(PROFILE_TABLE)
@@ -185,12 +250,21 @@ const getAvatarImageUrl = async (client, profile) => {
   return data?.signedUrl || "";
 };
 
-const applySquareImage = (square, imageUrl) => {
-  if (!imageUrl) return;
+const loadImage = (imageUrl) => (
+  new Promise((resolve, reject) => {
+    if (!imageUrl) {
+      resolve(null);
+      return;
+    }
 
-  square.style.setProperty("--profile-square-image", `url("${imageUrl}")`);
-  square.classList.add("has-square-image");
-};
+    const image = new Image();
+
+    image.crossOrigin = "anonymous";
+    image.addEventListener("load", () => resolve(image), { once: true });
+    image.addEventListener("error", () => reject(new Error("Avatar image could not be loaded.")), { once: true });
+    image.src = imageUrl;
+  })
+);
 
 const getResonancesForNumber = (rows, selectedNumber) => (
   rows.filter((row) => getDisplayValue(row[String(selectedNumber)]))
@@ -235,74 +309,186 @@ const getResonanceGroupsForNumber = (rows, selectedNumber) => (
   ].filter((group) => group.rows.length)
 );
 
+const mergeResonanceGroups = (groups) => {
+  const groupedBySource = new Map();
+
+  groups.forEach((group) => {
+    const sourceName = group.sourceName || "User";
+    const sourceKey = group.sourceType === "jaycee" ? "jaycee" : sourceName;
+
+    if (!groupedBySource.has(sourceKey)) {
+      groupedBySource.set(sourceKey, {
+        rows: [],
+        sourceName,
+        sourceType: group.sourceType
+      });
+    }
+
+    groupedBySource.get(sourceKey).rows.push(...group.rows);
+  });
+
+  return Array.from(groupedBySource.values()).filter((group) => group.rows.length);
+};
+
+const getDynamicTimeRows = (dynamicRings, selectedTimeSegments) => (
+  dynamicRings.flatMap((ring) => {
+    const selectedPosition = selectedTimeSegments.get(ring.id) || ring.defaultSegment;
+    const element = ring.elements.find((entry) => String(entry.position) === String(selectedPosition));
+
+    if (!element) return [];
+
+    return [{
+      description: element.description,
+      label: ring.label || "Time",
+      resonanceValue: getDisplayValue(element.value),
+      sourceName: JAYCEE_RESONANCE_SOURCE,
+      sourceType: "jaycee"
+    }];
+  }).filter((row) => row.resonanceValue || getDisplayValue(row.description))
+);
+
+const getTimeResonanceGroups = (rows, selectedTimeSegments, dynamicRings, includeDrafts) => {
+  const sunNumber = selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER;
+  const staticTimeGroups = getResonanceGroupsForNumber(
+    getRowsForDimensionColumn(rows, TIME_DIMENSION_VALUE, { includeDrafts }),
+    sunNumber
+  );
+  const dynamicRows = getDynamicTimeRows(dynamicRings, selectedTimeSegments);
+  const dynamicGroups = dynamicRows.length
+    ? [{
+      rows: dynamicRows,
+      sourceName: JAYCEE_RESONANCE_SOURCE,
+      sourceType: "jaycee"
+    }]
+    : [];
+
+  return mergeResonanceGroups([...staticTimeGroups, ...dynamicGroups]);
+};
+
+const getEmptyLabels = (count) => Array.from({ length: count }, () => "");
+
+const getActiveSegmentIndex = (segmentKeys, selectedSegment) => (
+  Math.max(0, segmentKeys.findIndex((key) => String(key) === String(selectedSegment)))
+);
+
+const createProfileCoreState = ({ avatarImage, dynamicRings, selectedSpaceNumber, selectedTimeSegments }) => {
+  const sunSegmentKeys = JAYCEE_ORDER.map(String);
+  const rings = [
+    {
+      id: "sun",
+      activeSegmentIndex: getActiveSegmentIndex(sunSegmentKeys, selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER),
+      count: sunSegmentKeys.length,
+      label: "Sun",
+      labels: getEmptyLabels(sunSegmentKeys.length),
+      rotation: getTopCenteredLastSegmentRotation(sunSegmentKeys.length),
+      segmentKeys: sunSegmentKeys,
+      showBorders: false,
+      showDividers: false,
+      styledSegmentIndices: sunSegmentKeys.map((_, index) => index),
+      tone: "accent"
+    },
+    ...dynamicRings.map((ring) => ({
+      activeSegmentIndex: getActiveSegmentIndex(ring.segmentKeys, selectedTimeSegments.get(ring.id) || ring.defaultSegment),
+      count: ring.segmentKeys.length,
+      id: ring.id,
+      label: ring.label,
+      labels: getEmptyLabels(ring.segmentKeys.length),
+      rotation: getTopCenteredSegmentRotation(ring.segmentKeys.length, 0),
+      segmentKeys: ring.segmentKeys,
+      styledSegmentIndices: ring.segmentKeys.map((_, index) => index),
+      tone: "soft"
+    }))
+  ];
+
+  return {
+    ...createJayceeState({
+      coreSquareLabels: getEmptyLabels(JAYCEE_ORDER.length),
+      rings
+    }),
+    activeSquareNumber: selectedSpaceNumber,
+    squareBackgroundImage: avatarImage
+  };
+};
+
 const initJayceeProfile = async () => {
   const shell = document.querySelector("[data-profile-shell]");
-  const square = document.querySelector("[data-profile-square]");
+  const canvas = document.querySelector("[data-profile-canvas]");
   const status = document.querySelector("[data-profile-status]");
   const list = document.querySelector("[data-profile-resonances]");
   const selectedNumberEl = document.querySelector("[data-selected-number]");
   const selectedLabelEl = document.querySelector("[data-selected-label]");
   const publicUsername = getDisplayValue(shell?.dataset.profileUsername);
 
-  if (!shell || !square || !status || !list) return;
+  if (!shell || !canvas || !status || !list) return;
 
   let rows = [];
-  let selectedNumber = DEFAULT_SELECTED_NUMBER;
+  let dynamicRings = [];
+  let avatarImage = null;
+  let coreState = null;
+  let selectedSpaceNumber = DEFAULT_SELECTED_NUMBER;
+  const selectedTimeSegments = new Map([["sun", String(DEFAULT_SUN_TIME_NUMBER)]]);
 
   const renderResonances = () => {
     const includeDrafts = !publicUsername;
     const spaceGroups = getResonanceGroupsForNumber(
-      getRowsForDimensionColumn(rows, "space", { includeDrafts }),
-      selectedNumber
+      getRowsForDimensionColumn(rows, SPACE_DIMENSION_VALUE, { includeDrafts }),
+      selectedSpaceNumber
     );
-    const timeGroups = getResonanceGroupsForNumber(
-      getRowsForDimensionColumn(rows, TIME_DIMENSION_VALUE, { includeDrafts }),
-      selectedNumber
-    );
+    const selectedSunNumber = selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER;
+    const timeGroups = getTimeResonanceGroups(rows, selectedTimeSegments, dynamicRings, includeDrafts);
     const columns = [
-      { groups: spaceGroups, title: includeDrafts ? "Space / Drafts" : "Space" },
-      { groups: timeGroups, title: "Time" }
+      { groups: spaceGroups, selectedNumber: selectedSpaceNumber, title: includeDrafts ? "Space / Drafts" : "Space" },
+      { groups: timeGroups, selectedNumber: selectedSunNumber, title: "Time" }
     ].filter((column) => column.groups.length);
     const resonanceCount = columns.reduce(
       (total, column) => total + column.groups.reduce((groupTotal, group) => groupTotal + group.rows.length, 0),
       0
     );
 
-    setText(selectedNumberEl, selectedNumber);
+    setText(selectedNumberEl, selectedSpaceNumber);
     setText(selectedLabelEl, "");
     list.replaceChildren(
-      ...columns.map((column) => createResonanceColumn(column.title, column.groups, selectedNumber))
+      ...columns.map((column) => createResonanceColumn(column.title, column.groups, column.selectedNumber))
     );
 
     if (resonanceCount) {
-      status.textContent = `${resonanceCount} resonance${resonanceCount === 1 ? "" : "s"} for square ${selectedNumber}.`;
+      status.textContent = `${resonanceCount} resonance${resonanceCount === 1 ? "" : "s"} for the current selection.`;
     } else {
-      status.textContent = `No resonances yet for square ${selectedNumber}.`;
+      status.textContent = "No resonances yet for the current selection.";
     }
   };
 
-  const renderSquare = () => {
-    square.replaceChildren(...JAYCEE_ORDER.map((number) => {
-      const button = document.createElement("button");
+  const renderCore = () => {
+    coreState = createProfileCoreState({
+      avatarImage,
+      dynamicRings,
+      selectedSpaceNumber,
+      selectedTimeSegments
+    });
+    drawJaycee(canvas, coreState);
+  };
 
-      button.className = "profile-square-cell";
-      button.type = "button";
-      button.dataset.squareNumber = String(number);
-      button.textContent = "";
-      button.setAttribute("aria-label", `Square ${number}`);
-      button.addEventListener("click", () => {
-        selectedNumber = number;
-        square.querySelector(".is-selected")?.classList.remove("is-selected");
-        button.classList.add("is-selected");
-        renderResonances();
-      });
+  const scheduleRenderCore = () => {
+    window.requestAnimationFrame(renderCore);
+  };
 
-      if (number === selectedNumber) {
-        button.classList.add("is-selected");
-      }
+  const syncProfileView = () => {
+    renderCore();
+    renderResonances();
+  };
 
-      return button;
-    }));
+  const handleCanvasClick = (event) => {
+    const hit = getJayceeHit(canvas, coreState, event.clientX, event.clientY);
+
+    if (!hit) return;
+
+    if (hit.type === "square") {
+      selectedSpaceNumber = hit.number;
+    } else if (hit.type === "ring" && hit.ringId) {
+      selectedTimeSegments.set(hit.ringId, String(hit.segmentKey));
+    }
+
+    syncProfileView();
   };
 
   try {
@@ -330,9 +516,25 @@ const initJayceeProfile = async () => {
     const profileRows = await fetchUserResonances(client, profile, { publicOnly: Boolean(publicUsername) });
 
     rows = [...jayceeRows, ...profileRows];
-    applySquareImage(square, await getAvatarImageUrl(client, profile));
-    renderSquare();
+    dynamicRings = await fetchDynamicTimeRings(client);
+    dynamicRings.forEach((ring) => {
+      if (!selectedTimeSegments.has(ring.id)) {
+        selectedTimeSegments.set(ring.id, ring.defaultSegment);
+      }
+    });
+    avatarImage = await loadImage(await getAvatarImageUrl(client, profile));
+    renderCore();
+    canvas.addEventListener("click", handleCanvasClick);
+    const resizeObserver = new ResizeObserver(scheduleRenderCore);
+
+    resizeObserver.observe(canvas);
+    if (canvas.parentElement) {
+      resizeObserver.observe(canvas.parentElement);
+    }
+    window.addEventListener("resize", scheduleRenderCore);
+    window.addEventListener("load", scheduleRenderCore);
     renderResonances();
+    scheduleRenderCore();
   } catch (error) {
     console.error("Jaycee profile load failed", error);
     shell.hidden = false;

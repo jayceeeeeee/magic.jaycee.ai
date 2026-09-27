@@ -5,7 +5,7 @@ import {
 
 const RING_SEGMENT_COUNT = 9;
 const SQUARE_GRID_SIZE = 3;
-const JAYCEE_ORDER = [1, 2, 4, 3, 5, 7, 6, 8, 9];
+export const JAYCEE_ORDER = [1, 2, 4, 3, 5, 7, 6, 8, 9];
 const ACTIVE_CORE_SEGMENT_INDEX = JAYCEE_ORDER.indexOf(9);
 const ACTIVE_FILL_ALPHA = 0.255;
 const CONSOLE_TYPING_SPEED = 18;
@@ -236,9 +236,14 @@ const ACTIVE_CORE_TEXT_COLOR = "rgba(124, 255, 120, 0.92)";
 const CORE_NUMBER_FONT = "\"Rajdhani\", \"Share Tech Mono\", sans-serif";
 const CORE_TEXT_COLOR = "rgba(5, 21, 25, 0.56)";
 
-const getTopCenteredLastSegmentRotation = (count) => {
+export const getTopCenteredLastSegmentRotation = (count) => {
   const segmentAngle = (Math.PI * 2) / count;
   return -Math.PI / 2 - ((count - 0.5) * segmentAngle);
+};
+
+export const getTopCenteredSegmentRotation = (count, centeredIndex = 0) => {
+  const segmentAngle = (Math.PI * 2) / count;
+  return -Math.PI / 2 - ((centeredIndex + 0.5) * segmentAngle);
 };
 
 const drawRingSegmentPanel = (context, metrics, segment, colors) => {
@@ -536,6 +541,17 @@ const drawInsetSquareCell = (context, x, y, size, colors) => {
   context.restore();
 };
 
+const drawCoverImage = (context, image, x, y, width, height) => {
+  const imageRatio = image.naturalWidth / image.naturalHeight;
+  const targetRatio = width / height;
+  const drawWidth = imageRatio > targetRatio ? height * imageRatio : width;
+  const drawHeight = imageRatio > targetRatio ? height : width / imageRatio;
+  const drawX = x + ((width - drawWidth) / 2);
+  const drawY = y + ((height - drawHeight) / 2);
+
+  context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+};
+
 const drawSquare = (context, metrics, colors, labels = getEmptyLabels(RING_SEGMENT_COUNT)) => {
   const start = metrics.center - (metrics.squareSize / 2);
   const cellSize = metrics.squareSize / SQUARE_GRID_SIZE;
@@ -549,11 +565,20 @@ const drawSquare = (context, metrics, colors, labels = getEmptyLabels(RING_SEGME
   context.shadowColor = colors.glow;
   context.shadowBlur = 18;
 
+  if (colors.backgroundImage) {
+    context.save();
+    context.beginPath();
+    context.rect(start, start, metrics.squareSize, metrics.squareSize);
+    context.clip();
+    drawCoverImage(context, colors.backgroundImage, start, start, metrics.squareSize, metrics.squareSize);
+    context.restore();
+  }
+
   for (let row = 0; row < SQUARE_GRID_SIZE; row += 1) {
     for (let column = 0; column < SQUARE_GRID_SIZE; column += 1) {
       const orderIndex = (row * SQUARE_GRID_SIZE) + column;
 
-      if (JAYCEE_ORDER[orderIndex] !== 5) {
+      if (JAYCEE_ORDER[orderIndex] !== colors.activeSquareNumber) {
         drawGradientSquareCell(
           context,
           start + (column * cellSize),
@@ -562,7 +587,7 @@ const drawSquare = (context, metrics, colors, labels = getEmptyLabels(RING_SEGME
           {
             start: getSquarePaletteColor(column, row, colors.palette),
             end: getSquarePaletteColor(column + 1, row + 1, colors.palette),
-            alpha: colors.fillAlpha ?? 1
+            alpha: colors.backgroundImage ? 0.08 : (colors.fillAlpha ?? 1)
           }
         );
       } else {
@@ -574,7 +599,7 @@ const drawSquare = (context, metrics, colors, labels = getEmptyLabels(RING_SEGME
           {
             start: getSquarePaletteColor(column, row, colors.palette),
             end: getSquarePaletteColor(column + 1, row + 1, colors.palette),
-            alpha: colors.activeFillAlpha ?? ACTIVE_FILL_ALPHA
+            alpha: colors.backgroundImage ? 0.1 : (colors.activeFillAlpha ?? ACTIVE_FILL_ALPHA)
           }
         );
         drawInsetSquareCell(
@@ -596,23 +621,25 @@ const drawSquare = (context, metrics, colors, labels = getEmptyLabels(RING_SEGME
       const centerX = start + (column * cellSize) + (cellSize / 2);
       const centerY = start + (row * cellSize) + (cellSize / 2);
 
-      drawCenteredText(
-        context,
-        label,
-        centerX,
-        centerY,
-        numberSize,
-        number === 5 ? ACTIVE_CORE_TEXT_COLOR : colors.coreText.fill,
-        {
-          fontFamily: CORE_NUMBER_FONT,
-          maxWidth: cellSize * 0.76,
-          shadowBlur: 10,
-          shadowColor: number === 5 ? "rgba(124, 255, 120, 0.38)" : colors.coreText.shadow,
-          strokeColor: number === 5 ? "rgba(5, 21, 25, 0.32)" : colors.coreText.stroke,
-          strokeWidth: Math.max(1.2, numberSize * 0.08),
-          weight: 800
-        }
-      );
+      if (label) {
+        drawCenteredText(
+          context,
+          label,
+          centerX,
+          centerY,
+          numberSize,
+          number === colors.activeSquareNumber ? ACTIVE_CORE_TEXT_COLOR : colors.coreText.fill,
+          {
+            fontFamily: CORE_NUMBER_FONT,
+            maxWidth: cellSize * 0.76,
+            shadowBlur: 10,
+            shadowColor: number === colors.activeSquareNumber ? "rgba(124, 255, 120, 0.38)" : colors.coreText.shadow,
+            strokeColor: number === colors.activeSquareNumber ? "rgba(5, 21, 25, 0.32)" : colors.coreText.stroke,
+            strokeWidth: Math.max(1.2, numberSize * 0.08),
+            weight: 800
+          }
+        );
+      }
     }
   }
 
@@ -635,20 +662,22 @@ const drawSquare = (context, metrics, colors, labels = getEmptyLabels(RING_SEGME
   context.restore();
 };
 
-const createJayceeState = ({
+export const createJayceeState = ({
   coreRingLabels = getEmptyLabels(RING_SEGMENT_COUNT),
-  coreSquareLabels = getEmptyLabels(RING_SEGMENT_COUNT)
+  coreSquareLabels = getEmptyLabels(RING_SEGMENT_COUNT),
+  rings
 } = {}) => ({
   coreSquareLabels,
-  rings: RING_TEMPLATES.map((ring) => ({
+  rings: (rings || RING_TEMPLATES).map((ring) => ({
     ...ring,
-    labels: ring.getLabels({ coreRingLabels })
+    count: ring.count || ring.segmentKeys?.length || RING_SEGMENT_COUNT,
+    labels: ring.labels || ring.getLabels?.({ coreRingLabels }) || getEmptyLabels(ring.count || RING_SEGMENT_COUNT)
   }))
 });
 
 const DEFAULT_JAYCEE_STATE = createJayceeState();
 
-const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
+export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
   const context = resizeCanvas(canvas);
   const rect = canvas.getBoundingClientRect();
   const metrics = getCanvasMetrics(canvas, state.rings.length);
@@ -680,7 +709,17 @@ const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
           glow: `rgba(${accentSoftRgb}, 0.14)`
         };
 
-        if (index === STYLED_RING_INDEX && segmentIndex === ACTIVE_CORE_SEGMENT_INDEX) {
+        if (
+          index === STYLED_RING_INDEX
+          && ring.activeSegmentIndex === undefined
+          && segmentIndex === ACTIVE_CORE_SEGMENT_INDEX
+        ) {
+          colors.border = "rgba(124, 255, 120, 0.92)";
+          colors.borderGlow = "rgba(124, 255, 120, 0.42)";
+          colors.transparent = true;
+        }
+
+        if (segmentIndex === ring.activeSegmentIndex) {
           colors.border = "rgba(124, 255, 120, 0.92)";
           colors.borderGlow = "rgba(124, 255, 120, 0.42)";
           colors.transparent = true;
@@ -688,21 +727,23 @@ const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
 
         return colors;
       },
-      showBorders: index !== STYLED_RING_INDEX,
-      showDividers: index !== STYLED_RING_INDEX,
-      styledSegmentIndices: index === STYLED_RING_INDEX ? getSegmentIndices(ring.count) : [],
+      showBorders: ring.showBorders ?? index !== STYLED_RING_INDEX,
+      showDividers: ring.showDividers ?? index !== STYLED_RING_INDEX,
+      styledSegmentIndices: ring.styledSegmentIndices || (index === STYLED_RING_INDEX ? getSegmentIndices(ring.count) : []),
       getTickLabel: ring.getTickLabel,
       tickCount: ring.tickCount || 0,
       tickLabelColor: ring.tickLabelColor,
       tickStroke: ring.tickStroke,
-      rotation: ring.centerLastSegmentAtTop ? getTopCenteredLastSegmentRotation(ring.count) : undefined
+      rotation: ring.rotation ?? (ring.centerLastSegmentAtTop ? getTopCenteredLastSegmentRotation(ring.count) : undefined)
     });
   });
 
   drawSquare(context, metrics, {
     border: borderColors.square,
+    backgroundImage: state.squareBackgroundImage,
     cellBorder: borderColors.squareCell,
     activeFillAlpha: ACTIVE_FILL_ALPHA,
+    activeSquareNumber: state.activeSquareNumber || 5,
     fillAlpha: SURFACE_FILL_ALPHA,
     glow: "rgba(116, 247, 209, 0.14)",
     palette,
@@ -721,6 +762,61 @@ const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
       transparent: true
     }
   }, state.coreSquareLabels);
+};
+
+const normalizeAngle = (angle) => {
+  const fullCircle = Math.PI * 2;
+  return ((angle % fullCircle) + fullCircle) % fullCircle;
+};
+
+export const getJayceeHit = (canvas, state = DEFAULT_JAYCEE_STATE, clientX, clientY) => {
+  const rect = canvas.getBoundingClientRect();
+  const metrics = getCanvasMetrics(canvas, state.rings.length);
+  const x = clientX - rect.left;
+  const y = clientY - rect.top;
+  const squareStart = metrics.center - (metrics.squareSize / 2);
+
+  if (
+    x >= squareStart
+    && x <= squareStart + metrics.squareSize
+    && y >= squareStart
+    && y <= squareStart + metrics.squareSize
+  ) {
+    const cellSize = metrics.squareSize / SQUARE_GRID_SIZE;
+    const column = Math.min(SQUARE_GRID_SIZE - 1, Math.max(0, Math.floor((x - squareStart) / cellSize)));
+    const row = Math.min(SQUARE_GRID_SIZE - 1, Math.max(0, Math.floor((y - squareStart) / cellSize)));
+    const orderIndex = (row * SQUARE_GRID_SIZE) + column;
+
+    return {
+      number: JAYCEE_ORDER[orderIndex],
+      type: "square"
+    };
+  }
+
+  const distance = Math.hypot(x - metrics.center, y - metrics.center);
+  const angle = Math.atan2(y - metrics.center, x - metrics.center);
+
+  for (let index = state.rings.length - 1; index >= 0; index -= 1) {
+    const ring = state.rings[index];
+    const innerRadius = metrics.squareOuterRadius + (metrics.ringWidth * index);
+    const outerRadius = innerRadius + metrics.ringWidth;
+
+    if (distance < innerRadius || distance > outerRadius) continue;
+
+    const rotation = ring.rotation ?? (ring.centerLastSegmentAtTop ? getTopCenteredLastSegmentRotation(ring.count) : -Math.PI / 2);
+    const segmentAngle = (Math.PI * 2) / ring.count;
+    const segmentIndex = Math.floor(normalizeAngle(angle - rotation) / segmentAngle);
+
+    return {
+      ring,
+      ringId: ring.id,
+      segmentIndex,
+      segmentKey: ring.segmentKeys?.[segmentIndex] || String(segmentIndex + 1),
+      type: "ring"
+    };
+  }
+
+  return null;
 };
 
 const initJaycee = () => {
@@ -776,4 +872,6 @@ const initJaycee = () => {
   }, { once: true });
 };
 
-initJaycee();
+if (document.querySelector("[data-jaycee-canvas]")) {
+  initJaycee();
+}
