@@ -132,24 +132,60 @@ const createResonanceColumn = (title, groups, selectedNumber) => {
   return column;
 };
 
-const createDraftsSection = (draftRows) => {
+const getDraftKey = (row) => row.id || row.label || "";
+
+const DRAFT_PREVIEW_ANIMATION_MS = 220;
+
+const createDraftPreview = (draft, mode) => {
+  const preview = document.createElement("div");
+  const grid = document.createElement("div");
+
+  preview.className = `profile-draft-preview is-${mode}`;
+  grid.className = "profile-draft-grid";
+  grid.replaceChildren(...JAYCEE_ORDER.map((number) => {
+    const cell = document.createElement("div");
+    const numberEl = document.createElement("span");
+    const valueEl = document.createElement("strong");
+
+    cell.className = "profile-draft-cell";
+    numberEl.textContent = number;
+    valueEl.textContent = getDisplayValue(draft[String(number)]) || "-";
+    cell.append(numberEl, valueEl);
+
+    return cell;
+  }));
+  preview.append(grid);
+
+  return preview;
+};
+
+const createDraftsSection = (draftRows, selectedDraftKey, draftPreviewMode, onToggleDraft) => {
   const section = document.createElement("section");
   const heading = document.createElement("h2");
   const items = document.createElement("div");
+  const selectedDraft = draftRows.find((row) => getDraftKey(row) === selectedDraftKey);
 
   section.className = "profile-resonance-column profile-resonance-drafts";
   heading.className = "profile-resonance-column-title";
   heading.textContent = "Drafts";
   items.className = "profile-draft-list";
   items.replaceChildren(...draftRows.map((row) => {
-    const item = document.createElement("article");
+    const item = document.createElement("button");
+    const draftKey = getDraftKey(row);
 
     item.className = "profile-draft-item";
+    item.type = "button";
     item.textContent = row.label || "Untitled fractal";
+    item.setAttribute("aria-pressed", String(draftKey === selectedDraftKey));
+    item.addEventListener("click", () => onToggleDraft(draftKey));
 
     return item;
   }));
-  section.append(heading, items);
+  section.append(
+    heading,
+    ...(selectedDraft ? [createDraftPreview(selectedDraft, draftPreviewMode)] : []),
+    items
+  );
 
   return section;
 };
@@ -157,7 +193,7 @@ const createDraftsSection = (draftRows) => {
 const fetchJayceeResonances = async (client) => {
   const { data, error } = await client
     .from(JAYCEE_FRACTALS_TABLE)
-    .select(`label, user_id, dimension, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
+    .select(`id, label, user_id, dimension, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
     .is("user_id", null)
     .eq(FRACTAL_VISIBILITY_COLUMN, PUBLIC_VISIBILITY_VALUE)
     .order("label", { ascending: true });
@@ -174,7 +210,7 @@ const fetchJayceeResonances = async (client) => {
 const fetchUserResonances = async (client, profile, { publicOnly = false } = {}) => {
   let query = client
     .from(JAYCEE_FRACTALS_TABLE)
-    .select(`label, user_id, dimension, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
+    .select(`id, label, user_id, dimension, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
     .eq("user_id", profile.id);
 
   if (publicOnly) {
@@ -469,7 +505,50 @@ const initJayceeProfile = async () => {
   let avatarImage = null;
   let coreState = null;
   let selectedSpaceNumber = DEFAULT_SELECTED_NUMBER;
+  let selectedDraftKey = null;
+  let draftPreviewMode = "closed";
+  let draftPreviewTimer = null;
   const selectedTimeSegments = new Map([["sun", String(DEFAULT_SUN_TIME_NUMBER)]]);
+
+  const scheduleDraftPreviewMode = (mode, callback) => {
+    if (draftPreviewTimer) {
+      window.clearTimeout(draftPreviewTimer);
+    }
+
+    draftPreviewTimer = window.setTimeout(() => {
+      draftPreviewMode = mode;
+      draftPreviewTimer = null;
+      if (callback) callback();
+      renderResonances();
+    }, DRAFT_PREVIEW_ANIMATION_MS);
+  };
+
+  const toggleDraft = (draftKey) => {
+    const sameDraft = selectedDraftKey === draftKey;
+    const hadOpenDraft = Boolean(selectedDraftKey) && draftPreviewMode !== "closing";
+
+    if (sameDraft) {
+      draftPreviewMode = "closing";
+      renderResonances();
+      scheduleDraftPreviewMode("closed", () => {
+        selectedDraftKey = null;
+      });
+      return;
+    }
+
+    if (draftPreviewTimer) {
+      window.clearTimeout(draftPreviewTimer);
+      draftPreviewTimer = null;
+    }
+
+    selectedDraftKey = draftKey;
+    draftPreviewMode = hadOpenDraft ? "static" : "opening";
+    renderResonances();
+
+    if (!hadOpenDraft) {
+      scheduleDraftPreviewMode("static");
+    }
+  };
 
   const renderResonances = () => {
     const showDrafts = !publicUsername;
@@ -493,7 +572,7 @@ const initJayceeProfile = async () => {
     setText(selectedLabelEl, "");
     list.replaceChildren(
       ...columns.map((column) => createResonanceColumn(column.title, column.groups, column.selectedNumber)),
-      ...(draftRows.length ? [createDraftsSection(draftRows)] : [])
+      ...(draftRows.length ? [createDraftsSection(draftRows, selectedDraftKey, draftPreviewMode, toggleDraft)] : [])
     );
 
     if (resonanceCount) {
