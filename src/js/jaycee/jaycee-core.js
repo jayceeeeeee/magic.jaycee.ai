@@ -946,6 +946,9 @@ export const getJayceeHit = (canvas, state = DEFAULT_JAYCEE_STATE, clientX, clie
 
   for (let index = state.rings.length - 1; index >= 0; index -= 1) {
     const ring = state.rings[index];
+
+    if (ring.interactive === false) continue;
+
     const innerRadius = metrics.squareOuterRadius + (metrics.ringWidth * index);
     const outerRadius = innerRadius + metrics.ringWidth;
 

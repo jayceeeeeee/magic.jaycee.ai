@@ -694,6 +694,28 @@ const getActiveSegmentIndex = (segmentKeys, selectedSegment) => (
   Math.max(0, segmentKeys.findIndex((key) => String(key) === String(selectedSegment)))
 );
 
+const getGreatestCommonDivisor = (left, right) => {
+  let a = Math.abs(left);
+  let b = Math.abs(right);
+
+  while (b) {
+    const remainder = a % b;
+
+    a = b;
+    b = remainder;
+  }
+
+  return a || 1;
+};
+
+const getLeastCommonMultiple = (left, right) => (
+  Math.abs(left * right) / getGreatestCommonDivisor(left, right)
+);
+
+const getSegmentKeys = (count) => (
+  Array.from({ length: count }, (_, index) => String(index + 1))
+);
+
 const filterUserGroupsByFractal = (groups, selectedFractalKey) => (
   groups
     .map((group) => {
@@ -737,7 +759,7 @@ const createFractalSelect = (labelText, defaultText, choices, selectedValue, onC
 const formatCurrentDateTime = (date = new Date()) => {
   const pad = (value, length = 2) => String(value).padStart(length, "0");
 
-  return `Time ${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+  return `Present: ${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 };
 
 const createCurrentTimeElement = () => {
@@ -806,6 +828,24 @@ const createProfileCoreState = ({
       showBorders: true,
       showDividers: true,
       styledSegmentIndices: [activeSegmentIndex],
+      tone: "accent"
+    });
+
+    const ppcmSegmentCount = getLeastCommonMultiple(sunSegmentKeys.length, segmentKeys.length);
+    const ppcmSegmentKeys = getSegmentKeys(ppcmSegmentCount);
+
+    rings.push({
+      id: `${selectedDynamicPortalRing.id}-ppcm`,
+      count: ppcmSegmentCount,
+      fillAlpha: 0,
+      interactive: false,
+      label: "PPCM",
+      labels: getEmptyLabels(ppcmSegmentCount),
+      rotation: getTopCenteredSegmentRotation(ppcmSegmentCount, 0),
+      segmentKeys: ppcmSegmentKeys,
+      showBorders: true,
+      showDividers: true,
+      styledSegmentIndices: [],
       tone: "accent"
     });
   }
