@@ -3,7 +3,8 @@ import {
   createJayceeState,
   drawJaycee,
   getJayceeHit,
-  getTopCenteredLastSegmentRotation
+  getTopCenteredLastSegmentRotation,
+  getTopCenteredSegmentRotation
 } from "./jaycee-core.js";
 
 const JAYCEE_FRACTALS_TABLE = "jaycee_fractals";
@@ -28,8 +29,16 @@ const PROFILE_CORE_METRICS = {
 };
 const PROFILE_RING_ACTIVE_FILL_ALPHA = 0.09;
 const PROFILE_RING_FILL_ALPHA = 0.26;
+const PROFILE_CLOCK_REFRESH_MS = 1000;
 
 const getFractalKey = (row) => `${row.sourceType || "source"}:${row.id || row.sourceId || row.label || "fractal"}`;
+
+const getDynamicRingKey = (ring) => getFractalKey({
+  id: ring.sourceId || ring.id,
+  label: ring.label,
+  sourceId: ring.sourceId,
+  sourceType: ring.sourceType
+});
 
 const getDisplayValue = (value) => (
   value === null || value === undefined ? "" : String(value).trim()
@@ -655,6 +664,14 @@ const getDynamicTimeChoiceRows = (dynamicRings) => (
     }))
 );
 
+const getSelectedDynamicPortalRing = (dynamicRings, selectedPortalFractalKey) => {
+  if (!selectedPortalFractalKey) return null;
+
+  return dynamicRings.find((ring) => (
+    ring.sourceType === "user" && getDynamicRingKey(ring) === selectedPortalFractalKey
+  )) || null;
+};
+
 const getTimeResonanceGroups = (rows, selectedTimeSegments, dynamicRings) => {
   const sunNumber = selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER;
   const staticTimeGroups = getResonanceGroupsForNumber(
@@ -717,17 +734,35 @@ const createFractalSelect = (labelText, defaultText, choices, selectedValue, onC
   return label;
 };
 
+const formatCurrentDateTime = (date = new Date()) => {
+  const pad = (value, length = 2) => String(value).padStart(length, "0");
+
+  return `Time ${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+};
+
+const createCurrentTimeElement = () => {
+  const clock = document.createElement("p");
+
+  clock.className = "profile-current-time";
+  clock.dataset.profileCurrentTime = "";
+  clock.textContent = formatCurrentDateTime();
+
+  return clock;
+};
+
 const createProfileCoreState = ({
   avatarImage,
   dynamicRings,
   isCorePage,
   ringBackgroundImage,
+  selectedPortalFractalKey,
   selectedSpaceNumber,
   selectedTimeSegments
 }) => {
   const sunSegmentKeys = JAYCEE_ORDER.map(String);
   const sunSegmentColors = getSunRingSegmentColors();
   const hasRingBackground = Boolean(ringBackgroundImage);
+  const selectedDynamicPortalRing = getSelectedDynamicPortalRing(dynamicRings, selectedPortalFractalKey);
   const rings = [
     {
       id: "sun",
@@ -750,6 +785,30 @@ const createProfileCoreState = ({
       tone: "accent"
     }
   ];
+
+  if (selectedDynamicPortalRing?.segmentKeys?.length) {
+    const segmentKeys = selectedDynamicPortalRing.segmentKeys.map(String);
+    const selectedSegment = selectedTimeSegments.get(selectedDynamicPortalRing.id)
+      || selectedDynamicPortalRing.defaultSegment
+      || segmentKeys[0];
+    const activeSegmentIndex = getActiveSegmentIndex(segmentKeys, selectedSegment);
+
+    rings.push({
+      id: selectedDynamicPortalRing.id,
+      activeFillAlpha: PROFILE_RING_ACTIVE_FILL_ALPHA,
+      activeSegmentIndex,
+      count: segmentKeys.length,
+      fillAlpha: 0,
+      label: selectedDynamicPortalRing.label || "Portal",
+      labels: getEmptyLabels(segmentKeys.length),
+      rotation: getTopCenteredSegmentRotation(segmentKeys.length, 0),
+      segmentKeys,
+      showBorders: true,
+      showDividers: true,
+      styledSegmentIndices: [activeSegmentIndex],
+      tone: "accent"
+    });
+  }
 
   return {
     ...createJayceeState({
@@ -787,7 +846,29 @@ const initJayceeProfile = async () => {
   let selectedDraftKey = null;
   let draftPreviewMode = "closed";
   let draftPreviewTimer = null;
+  let currentTimeTimer = null;
   const selectedTimeSegments = new Map([["sun", String(DEFAULT_SUN_TIME_NUMBER)]]);
+
+  const stopCurrentTimeClock = () => {
+    if (!currentTimeTimer) return;
+
+    window.clearInterval(currentTimeTimer);
+    currentTimeTimer = null;
+  };
+
+  const updateCurrentTimeClock = () => {
+    const clock = document.querySelector("[data-profile-current-time]");
+
+    if (!clock) return;
+    clock.textContent = formatCurrentDateTime();
+  };
+
+  const startCurrentTimeClock = () => {
+    updateCurrentTimeClock();
+
+    if (currentTimeTimer) return;
+    currentTimeTimer = window.setInterval(updateCurrentTimeClock, PROFILE_CLOCK_REFRESH_MS);
+  };
 
   const scheduleDraftPreviewMode = (mode, callback) => {
     if (draftPreviewTimer) {
@@ -839,9 +920,10 @@ const initJayceeProfile = async () => {
       ...getDynamicTimeChoiceRows(dynamicRings)
     ];
 
-    if (!corePanel || isCorePage || (!mapChoices.length && !portalChoices.length)) {
+    if (!corePanel || isCorePage) {
       existingSelectors?.remove();
       corePanel?.classList.remove("has-fractal-selectors");
+      stopCurrentTimeClock();
       return;
     }
 
@@ -852,19 +934,17 @@ const initJayceeProfile = async () => {
     selectors.className = "profile-fractal-selectors";
     selectors.dataset.profileFractalSelectors = "";
     selectors.replaceChildren(
-      ...(mapChoices.length
-        ? [createFractalSelect("Choose your map", "Body", mapChoices, selectedMapFractalKey, (value) => {
-          selectedMapFractalKey = value;
-          renderResonances();
-        })]
-        : []),
-      ...(portalChoices.length
-        ? [createFractalSelect("Choose your portal", "Sun", portalChoices, selectedPortalFractalKey, (value) => {
-          selectedPortalFractalKey = value;
-          renderResonances();
-        })]
-        : [])
+      createFractalSelect("Choose your map", "Body", mapChoices, selectedMapFractalKey, (value) => {
+        selectedMapFractalKey = value;
+        renderResonances();
+      }),
+      createFractalSelect("Choose your portal", "Sun", portalChoices, selectedPortalFractalKey, (value) => {
+        selectedPortalFractalKey = value;
+        syncProfileView();
+      }),
+      createCurrentTimeElement()
     );
+    startCurrentTimeClock();
 
     if (!existingSelectors) {
       corePanel.insertBefore(selectors, canvas);
@@ -909,6 +989,7 @@ const initJayceeProfile = async () => {
       dynamicRings,
       isCorePage,
       ringBackgroundImage,
+      selectedPortalFractalKey,
       selectedSpaceNumber,
       selectedTimeSegments
     });

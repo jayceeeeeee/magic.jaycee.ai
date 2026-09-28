@@ -67,11 +67,11 @@
 }
 
 .jaycee-profile-core.has-fractal-selectors .jaycee-profile-canvas {
-  width: min(100%, clamp(300px, calc(100svh - var(--banner-space) - var(--footer-space) - 212px), 500px));
+  width: min(100%, clamp(290px, calc(100svh - var(--banner-space) - var(--footer-space) - 238px), 500px));
 }
 
 .jaycee-profile-core.has-theme-controls.has-fractal-selectors .jaycee-profile-canvas {
-  width: min(100%, clamp(280px, calc(100svh - var(--banner-space) - var(--footer-space) - 276px), 460px));
+  width: min(100%, clamp(270px, calc(100svh - var(--banner-space) - var(--footer-space) - 306px), 460px));
 }
 
 .profile-theme-controls {
@@ -182,6 +182,16 @@
 .profile-fractal-select select:focus {
   border-color: var(--neon-border-strong);
   box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
+}
+
+.profile-current-time {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.72rem;
+  line-height: 1.1;
+  text-transform: uppercase;
 }
 
 .jaycee-profile-resonances {
