@@ -21,10 +21,10 @@ const DEFAULT_SUN_TIME_NUMBER = 9;
 const JAYCEE_RESONANCE_SOURCE = "Jaycee";
 const SIGNED_IMAGE_URL_DURATION_SECONDS = 60 * 60;
 const PROFILE_CORE_METRICS = {
-  ringMaxRadialShare: 0.3,
-  ringWidthMax: 24,
-  ringWidthMin: 10,
-  ringWidthRatio: 0.052
+  ringMaxRadialShare: 0.34,
+  ringWidthMax: 32,
+  ringWidthMin: 14,
+  ringWidthRatio: 0.072
 };
 const PROFILE_RING_ACTIVE_FILL_ALPHA = 0.09;
 const PROFILE_RING_FILL_ALPHA = 0.035;
