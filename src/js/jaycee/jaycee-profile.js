@@ -14,7 +14,7 @@ const PUBLIC_VISIBILITY_VALUE = "public";
 const SPACE_DIMENSION_VALUE = "space";
 const TIME_DIMENSION_VALUE = "time";
 const PROFILE_TABLE = "profiles";
-const AVATAR_BUCKET = "avatars";
+const USER_IMAGES_BUCKET = "users";
 const CODE_COLUMNS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 const DEFAULT_SELECTED_NUMBER = 5;
 const DEFAULT_SUN_TIME_NUMBER = 9;
@@ -27,7 +27,7 @@ const PROFILE_CORE_METRICS = {
   ringWidthRatio: 0.072
 };
 const PROFILE_RING_ACTIVE_FILL_ALPHA = 0.09;
-const PROFILE_RING_FILL_ALPHA = 0.75;
+const PROFILE_RING_FILL_ALPHA = 0.26;
 
 const getFractalKey = (row) => `${row.sourceType || "source"}:${row.id || row.sourceId || row.label || "fractal"}`;
 
@@ -70,22 +70,26 @@ const getProfileColorValue = (value) => (
   isHexColor(value) ? getDisplayValue(value) : ""
 );
 
-const getSunRingSegmentColors = (primaryColor, secondaryColor) => {
-  const primary = getProfileColorValue(primaryColor);
-  const secondary = getProfileColorValue(secondaryColor);
+const getCssColorValue = (name, fallback) => {
+  const value = getComputedStyle(document.body).getPropertyValue(name).trim();
 
-  if (!primary || !secondary) return null;
+  return isHexColor(value) ? value : fallback;
+};
+
+const getSunRingSegmentColors = () => {
+  const primary = getCssColorValue("--accent", "#53dcc6");
+  const secondary = getCssColorValue("--accent-soft", "#ffd56b");
 
   return Array.from({ length: JAYCEE_ORDER.length }, (_, index) => {
     const alternation = index % 2 === 0 ? 0 : 0.08;
 
     return {
-      centerStop: 0.36,
-      end: mixHexColors(primary, secondary, 0.78 + alternation),
+      centerStop: 0.18,
+      end: mixHexColors(primary, secondary, 0.64 + alternation),
       gradientMode: "radial",
-      middle: mixHexColors(primary, secondary, 0.42 + alternation),
-      middleStop: 0.76,
-      start: mixHexColors(primary, "#ffffff", 0.72)
+      middle: mixHexColors(primary, secondary, 0.32 + alternation),
+      middleStop: 0.48,
+      start: mixHexColors(primary, "#ffffff", 0.28)
     };
   });
 };
@@ -495,7 +499,7 @@ const fetchDynamicTimeRings = async (client, profile) => {
 const fetchProfileByUserId = async (client, userId) => {
   const { data, error } = await client
     .from(PROFILE_TABLE)
-    .select("id, username, avatar_path, theme, primary_color, secondary_color")
+    .select("id, username, avatar_path, background_path, theme, primary_color, secondary_color")
     .eq("id", userId)
     .maybeSingle();
 
@@ -507,7 +511,7 @@ const fetchProfileByUserId = async (client, userId) => {
 const fetchProfileByUsername = async (client, username) => {
   const { data, error } = await client
     .from(PROFILE_TABLE)
-    .select("id, username, avatar_path, theme, primary_color, secondary_color")
+    .select("id, username, avatar_path, background_path, theme, primary_color, secondary_color")
     .eq("username", username)
     .maybeSingle();
 
@@ -516,12 +520,12 @@ const fetchProfileByUsername = async (client, username) => {
   return data || null;
 };
 
-const getAvatarImageUrl = async (client, profile) => {
-  const image = getDisplayValue(profile?.avatar_path);
+const getUserImageUrl = async (client, profile, path) => {
+  const image = getDisplayValue(path);
 
   if (!profile?.id || !image) return "";
 
-  const rawStoragePath = getStoragePathFromImage(image, AVATAR_BUCKET)
+  const rawStoragePath = getStoragePathFromImage(image, USER_IMAGES_BUCKET)
     .replace(/^\/+/, "")
     .replace(/\+/g, " ");
   const storagePath = rawStoragePath.includes("/")
@@ -531,13 +535,21 @@ const getAvatarImageUrl = async (client, profile) => {
   if (!storagePath) return "";
 
   const { data, error } = await client.storage
-    .from(AVATAR_BUCKET)
+    .from(USER_IMAGES_BUCKET)
     .createSignedUrl(storagePath, SIGNED_IMAGE_URL_DURATION_SECONDS);
 
   if (error) throw error;
 
   return data?.signedUrl || "";
 };
+
+const getAvatarImageUrl = async (client, profile) => (
+  getUserImageUrl(client, profile, profile?.avatar_path)
+);
+
+const getBackgroundImageUrl = async (client, profile) => (
+  getUserImageUrl(client, profile, profile?.background_path)
+);
 
 const loadImage = (imageUrl) => (
   new Promise((resolve, reject) => {
@@ -554,6 +566,15 @@ const loadImage = (imageUrl) => (
     image.src = imageUrl;
   })
 );
+
+const loadOptionalImage = async (imageUrl) => {
+  try {
+    return await loadImage(imageUrl);
+  } catch (error) {
+    console.warn("Optional Jaycee image could not be loaded", error);
+    return null;
+  }
+};
 
 const getResonancesForNumber = (rows, selectedNumber) => (
   rows.filter((row) => getDisplayValue(row[String(selectedNumber)]))
@@ -693,27 +714,30 @@ const createProfileCoreState = ({
   avatarImage,
   dynamicRings,
   isCorePage,
+  ringBackgroundImage,
   selectedSpaceNumber,
-  selectedTimeSegments,
-  themeSettings
+  selectedTimeSegments
 }) => {
   const sunSegmentKeys = JAYCEE_ORDER.map(String);
-  const sunSegmentColors = getSunRingSegmentColors(themeSettings?.primary_color, themeSettings?.secondary_color);
+  const sunSegmentColors = getSunRingSegmentColors();
+  const hasRingBackground = Boolean(ringBackgroundImage);
   const rings = [
     {
       id: "sun",
       activeSegmentIndex: getActiveSegmentIndex(sunSegmentKeys, selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER),
       count: sunSegmentKeys.length,
-      fillAlpha: sunSegmentColors ? PROFILE_RING_FILL_ALPHA : 0,
+      backgroundImage: ringBackgroundImage,
+      backgroundImageAlpha: 0.9,
+      fillAlpha: !hasRingBackground && sunSegmentColors ? PROFILE_RING_FILL_ALPHA : 0,
       activeFillAlpha: PROFILE_RING_ACTIVE_FILL_ALPHA,
       label: "Sun",
       labels: getEmptyLabels(sunSegmentKeys.length),
       rotation: getTopCenteredLastSegmentRotation(sunSegmentKeys.length),
-      segmentColors: sunSegmentColors,
+      segmentColors: hasRingBackground ? null : sunSegmentColors,
       segmentKeys: sunSegmentKeys,
       showBorders: true,
       showDividers: true,
-      styledSegmentIndices: sunSegmentColors
+      styledSegmentIndices: !hasRingBackground && sunSegmentColors
         ? sunSegmentKeys.map((_, index) => index)
         : [getActiveSegmentIndex(sunSegmentKeys, selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER)],
       tone: "accent"
@@ -728,7 +752,7 @@ const createProfileCoreState = ({
     activeSquareNumber: selectedSpaceNumber,
     metrics: PROFILE_CORE_METRICS,
     squareBorderAlpha: 0.46,
-    squareFillAlpha: isCorePage ? 0 : undefined,
+    squareFillAlpha: isCorePage ? PROFILE_RING_FILL_ALPHA : undefined,
     squareCellBorderAlpha: 0.34,
     squareBackgroundImage: avatarImage
   };
@@ -747,6 +771,7 @@ const initJayceeProfile = async () => {
   let rows = [];
   let dynamicRings = [];
   let avatarImage = null;
+  let ringBackgroundImage = null;
   let coreState = null;
   let themeSettings = getThemeSettingsFromProfile(null);
   let selectedSpaceNumber = DEFAULT_SELECTED_NUMBER;
@@ -842,9 +867,9 @@ const initJayceeProfile = async () => {
       avatarImage,
       dynamicRings,
       isCorePage,
+      ringBackgroundImage,
       selectedSpaceNumber,
-      selectedTimeSegments,
-      themeSettings
+      selectedTimeSegments
     });
     drawJaycee(canvas, coreState);
   };
@@ -918,7 +943,8 @@ const initJayceeProfile = async () => {
         selectedTimeSegments.set(ring.id, ring.defaultSegment);
       }
     });
-    avatarImage = isCorePage ? null : await loadImage(await getAvatarImageUrl(client, profile));
+    avatarImage = isCorePage ? null : await loadOptionalImage(await getAvatarImageUrl(client, profile));
+    ringBackgroundImage = isCorePage ? null : await loadOptionalImage(await getBackgroundImageUrl(client, profile));
     renderCore();
     canvas.addEventListener("click", handleCanvasClick);
     const resizeObserver = new ResizeObserver(scheduleRenderCore);

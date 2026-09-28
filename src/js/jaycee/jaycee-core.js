@@ -348,6 +348,38 @@ const drawRingSegmentPanel = (context, metrics, segment, colors) => {
   context.restore();
 };
 
+const drawCoverImage = (context, image, x, y, width, height) => {
+  const imageRatio = image.naturalWidth / image.naturalHeight;
+  const targetRatio = width / height;
+  const drawWidth = imageRatio > targetRatio ? height * imageRatio : width;
+  const drawHeight = imageRatio > targetRatio ? height : width / imageRatio;
+  const drawX = x + ((width - drawWidth) / 2);
+  const drawY = y + ((height - drawHeight) / 2);
+
+  context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+};
+
+const drawRingImage = (context, metrics, image, innerRadius, outerRadius, alpha = 1) => {
+  if (!image) return;
+
+  context.save();
+  context.beginPath();
+  context.arc(metrics.center, metrics.center, outerRadius, 0, Math.PI * 2);
+  context.arc(metrics.center, metrics.center, innerRadius, Math.PI * 2, 0, true);
+  context.closePath();
+  context.clip();
+  context.globalAlpha = alpha;
+  drawCoverImage(
+    context,
+    image,
+    metrics.center - outerRadius,
+    metrics.center - outerRadius,
+    outerRadius * 2,
+    outerRadius * 2
+  );
+  context.restore();
+};
+
 const drawRingTickMarks = (context, metrics, options) => {
   const {
     count,
@@ -417,6 +449,8 @@ const drawRing = (context, metrics, options) => {
     outerRadius,
     stroke,
     textColor,
+    backgroundImage,
+    backgroundImageAlpha = 1,
     styledSegmentColors,
     styledSegmentIndices = [],
     activeLabelIndex = -1,
@@ -434,6 +468,8 @@ const drawRing = (context, metrics, options) => {
   context.save();
   context.lineWidth = 1;
   context.strokeStyle = stroke;
+
+  drawRingImage(context, metrics, backgroundImage, innerRadius, outerRadius, backgroundImageAlpha);
 
   if (styledSegmentColors) {
     styledSegmentIndices.forEach((segmentIndex) => {
@@ -562,17 +598,6 @@ const drawInsetSquareCell = (context, x, y, size, colors) => {
   }
 
   context.restore();
-};
-
-const drawCoverImage = (context, image, x, y, width, height) => {
-  const imageRatio = image.naturalWidth / image.naturalHeight;
-  const targetRatio = width / height;
-  const drawWidth = imageRatio > targetRatio ? height * imageRatio : width;
-  const drawHeight = imageRatio > targetRatio ? height : width / imageRatio;
-  const drawX = x + ((width - drawWidth) / 2);
-  const drawY = y + ((height - drawHeight) / 2);
-
-  context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
 };
 
 const drawSquare = (context, metrics, colors, labels = getEmptyLabels(RING_SEGMENT_COUNT)) => {
@@ -722,6 +747,8 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
       activeLabelIndex: index === STYLED_RING_INDEX ? ACTIVE_CORE_SEGMENT_INDEX : -1,
       count: ring.count,
       labels: ring.labels,
+      backgroundImage: ring.backgroundImage,
+      backgroundImageAlpha: ring.backgroundImageAlpha,
       innerRadius,
       outerRadius,
       stroke: isSoft ? borderColors.ringSoft : borderColors.ring,
