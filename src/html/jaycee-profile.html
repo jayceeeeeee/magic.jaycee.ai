@@ -15,6 +15,21 @@
 
   <main class="jaycee-profile-page" data-profile-shell hidden>
     <section class="jaycee-profile-core" aria-label="Jaycee profile core">
+      <form class="profile-theme-controls" data-profile-theme-controls hidden>
+        <label>
+          <span>Theme</span>
+          <select name="theme" data-profile-theme-select></select>
+        </label>
+        <label>
+          <span>Primary</span>
+          <input name="primary_color" type="color" value="#53dcc6" data-profile-primary-color>
+        </label>
+        <label>
+          <span>Secondary</span>
+          <input name="secondary_color" type="color" value="#ffd56b" data-profile-secondary-color>
+        </label>
+        <p data-profile-theme-status></p>
+      </form>
       <canvas class="jaycee-profile-canvas" data-profile-canvas aria-label="Jaycee profile core"></canvas>
     </section>
 
@@ -32,6 +47,7 @@
   <jaycee-footer></jaycee-footer>
 
   <script src="/src/js/shell/jaycee-shell.js"></script>
+  <script src="/src/js/theme/jaycee-themes.js"></script>
   <script src="/src/js/auth/auth.js"></script>
   <script type="module" src="/src/js/jaycee/jaycee-profile.js"></script>
 </body>

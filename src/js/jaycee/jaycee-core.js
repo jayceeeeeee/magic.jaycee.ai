@@ -252,14 +252,30 @@ export const getTopCenteredSegmentRotation = (count, centeredIndex = 0) => {
 
 const drawRingSegmentPanel = (context, metrics, segment, colors) => {
   const isFullCircle = Math.abs(segment.endAngle - segment.startAngle) >= (Math.PI * 2) - 0.0001;
-  const gradient = context.createLinearGradient(
-    metrics.center + Math.cos(segment.startAngle) * segment.innerRadius,
-    metrics.center + Math.sin(segment.startAngle) * segment.innerRadius,
-    metrics.center + Math.cos(segment.endAngle) * segment.outerRadius,
-    metrics.center + Math.sin(segment.endAngle) * segment.outerRadius
-  );
+  const middleAngle = segment.startAngle + ((segment.endAngle - segment.startAngle) / 2);
+  const middleRadius = segment.innerRadius + ((segment.outerRadius - segment.innerRadius) / 2);
+  const segmentCenterX = metrics.center + (Math.cos(middleAngle) * middleRadius);
+  const segmentCenterY = metrics.center + (Math.sin(middleAngle) * middleRadius);
+  const gradient = colors.gradientMode === "radial"
+    ? context.createRadialGradient(
+      segmentCenterX,
+      segmentCenterY,
+      0,
+      segmentCenterX,
+      segmentCenterY,
+      Math.max(1, (segment.outerRadius - segment.innerRadius) * 0.92)
+    )
+    : context.createLinearGradient(
+      metrics.center + Math.cos(segment.startAngle) * segment.innerRadius,
+      metrics.center + Math.sin(segment.startAngle) * segment.innerRadius,
+      metrics.center + Math.cos(segment.endAngle) * segment.outerRadius,
+      metrics.center + Math.sin(segment.endAngle) * segment.outerRadius
+    );
 
   gradient.addColorStop(0, colors.start);
+  if (colors.middle) {
+    gradient.addColorStop(0.52, colors.middle);
+  }
   gradient.addColorStop(1, colors.end);
 
   context.save();
@@ -709,7 +725,7 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
       textColor: index === STYLED_RING_INDEX ? CORE_TEXT_COLOR : "rgba(47, 42, 79, 0.74)",
       styledSegmentColors: (segmentIndex) => {
         const colors = {
-          ...getSquareCellPaletteColors(segmentIndex, palette),
+          ...(ring.segmentColors?.[segmentIndex] || getSquareCellPaletteColors(segmentIndex, palette)),
           alpha: ring.fillAlpha ?? SURFACE_FILL_ALPHA,
           glow: `rgba(${accentSoftRgb}, 0.14)`
         };
@@ -728,8 +744,6 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
         if (segmentIndex === ring.activeSegmentIndex) {
           colors.border = "rgba(124, 255, 120, 0.92)";
           colors.borderGlow = "rgba(124, 255, 120, 0.42)";
-          colors.transparent = true;
-          colors.transparentAlpha = ring.activeFillAlpha ?? ACTIVE_FILL_ALPHA;
         }
 
         return colors;

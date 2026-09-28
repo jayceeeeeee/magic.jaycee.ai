@@ -18,7 +18,7 @@ const AVATAR_BUCKET = "avatars";
 const CODE_COLUMNS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 const DEFAULT_SELECTED_NUMBER = 5;
 const DEFAULT_SUN_TIME_NUMBER = 9;
-const JAYCEE_RESONANCE_SOURCE = "Jaycee";
+const JAYCEE_RESONANCE_SOURCE = "Jaycee Core";
 const SIGNED_IMAGE_URL_DURATION_SECONDS = 60 * 60;
 const PROFILE_CORE_METRICS = {
   ringMaxRadialShare: 0.34,
@@ -27,13 +27,164 @@ const PROFILE_CORE_METRICS = {
   ringWidthRatio: 0.072
 };
 const PROFILE_RING_ACTIVE_FILL_ALPHA = 0.09;
-const PROFILE_RING_FILL_ALPHA = 0.035;
+const PROFILE_RING_FILL_ALPHA = 0.58;
 
 const getFractalKey = (row) => `${row.sourceType || "source"}:${row.id || row.sourceId || row.label || "fractal"}`;
 
 const getDisplayValue = (value) => (
   value === null || value === undefined ? "" : String(value).trim()
 );
+
+const isHexColor = (value) => /^#[0-9a-f]{6}$/i.test(getDisplayValue(value));
+
+const hexToRgbParts = (color) => {
+  const value = Number.parseInt(color.slice(1), 16);
+
+  return {
+    blue: value & 255,
+    green: (value >> 8) & 255,
+    red: (value >> 16) & 255
+  };
+};
+
+const rgbPartsToHex = ({ red, green, blue }) => (
+  `#${[red, green, blue].map((channel) => Math.round(channel).toString(16).padStart(2, "0")).join("")}`
+);
+
+const mixHexColors = (start, end, amount) => {
+  const startRgb = hexToRgbParts(start);
+  const endRgb = hexToRgbParts(end);
+
+  return rgbPartsToHex({
+    blue: startRgb.blue + ((endRgb.blue - startRgb.blue) * amount),
+    green: startRgb.green + ((endRgb.green - startRgb.green) * amount),
+    red: startRgb.red + ((endRgb.red - startRgb.red) * amount)
+  });
+};
+
+const getProfileThemeValue = (profile) => (
+  window.JayceeThemes?.normalizeTheme?.(getDisplayValue(profile?.theme)) || "aurora"
+);
+
+const getProfileColorValue = (value) => (
+  isHexColor(value) ? getDisplayValue(value) : ""
+);
+
+const getSunRingSegmentColors = (primaryColor, secondaryColor) => {
+  const primary = getProfileColorValue(primaryColor);
+  const secondary = getProfileColorValue(secondaryColor);
+
+  if (!primary || !secondary) return null;
+
+  return Array.from({ length: JAYCEE_ORDER.length }, (_, index) => {
+    const alternation = index % 2 === 0 ? 0 : 0.08;
+
+    return {
+      end: mixHexColors(primary, secondary, 0.78 + alternation),
+      gradientMode: "radial",
+      middle: mixHexColors(primary, secondary, 0.42 + alternation),
+      start: mixHexColors(primary, "#ffffff", 0.72)
+    };
+  });
+};
+
+const applyProfileTheme = (profile) => {
+  const theme = getProfileThemeValue(profile);
+
+  document.body.dataset.theme = theme;
+};
+
+const getThemeSettingsFromProfile = (profile) => ({
+  primary_color: getProfileColorValue(profile?.primary_color),
+  secondary_color: getProfileColorValue(profile?.secondary_color),
+  theme: getProfileThemeValue(profile)
+});
+
+const getColorInputValue = (color, fallback) => (
+  getProfileColorValue(color) || fallback
+);
+
+const setThemeStatus = (statusEl, message, isError = false) => {
+  if (!statusEl) return;
+
+  statusEl.textContent = message;
+  statusEl.dataset.state = isError ? "error" : "ready";
+};
+
+const initProfileThemeControls = ({ client, onThemeChange, profile, themeSettings }) => {
+  const controls = document.querySelector("[data-profile-theme-controls]");
+  const themeSelect = document.querySelector("[data-profile-theme-select]");
+  const primaryInput = document.querySelector("[data-profile-primary-color]");
+  const secondaryInput = document.querySelector("[data-profile-secondary-color]");
+  const status = document.querySelector("[data-profile-theme-status]");
+  let saveTimer = null;
+
+  if (!controls || !themeSelect || !primaryInput || !secondaryInput || !profile?.id) return;
+
+  controls.hidden = false;
+  controls.closest(".jaycee-profile-core")?.classList.add("has-theme-controls");
+  themeSelect.replaceChildren(...(window.JayceeThemes?.options || [{ label: "Aurora", value: "aurora" }]).map((theme) => {
+    const option = document.createElement("option");
+
+    option.value = theme.value;
+    option.textContent = theme.label;
+
+    return option;
+  }));
+  themeSelect.value = themeSettings.theme;
+  primaryInput.value = getColorInputValue(themeSettings.primary_color, "#53dcc6");
+  secondaryInput.value = getColorInputValue(themeSettings.secondary_color, "#ffd56b");
+
+  const saveTheme = async () => {
+    setThemeStatus(status, "Saving...");
+
+    const { error } = await client
+      .from(PROFILE_TABLE)
+      .update({
+        primary_color: themeSettings.primary_color || null,
+        secondary_color: themeSettings.secondary_color || null,
+        theme: themeSettings.theme
+      })
+      .eq("id", profile.id);
+
+    if (error) throw error;
+
+    setThemeStatus(status, "Saved.");
+    window.JayceeAuth?.refreshHeader?.();
+  };
+
+  const scheduleSave = () => {
+    if (saveTimer) {
+      window.clearTimeout(saveTimer);
+    }
+
+    saveTimer = window.setTimeout(async () => {
+      saveTimer = null;
+
+      try {
+        await saveTheme();
+      } catch (error) {
+        console.error("Jaycee profile theme save failed", error);
+        setThemeStatus(status, error?.message || "Theme could not be saved.", true);
+      }
+    }, 320);
+  };
+
+  const syncTheme = ({ includeColors = false } = {}) => {
+    themeSettings.theme = window.JayceeThemes?.normalizeTheme?.(themeSelect.value) || "aurora";
+    if (includeColors) {
+      themeSettings.primary_color = getProfileColorValue(primaryInput.value);
+      themeSettings.secondary_color = getProfileColorValue(secondaryInput.value);
+    }
+    applyProfileTheme(themeSettings);
+    onThemeChange();
+    scheduleSave();
+  };
+
+  themeSelect.addEventListener("change", syncTheme);
+  primaryInput.addEventListener("input", () => syncTheme({ includeColors: true }));
+  secondaryInput.addEventListener("input", () => syncTheme({ includeColors: true }));
+};
 const getLoginUrl = () => (
   new URL(
     window.JayceeAuth?.getLoginUrl
@@ -342,7 +493,7 @@ const fetchDynamicTimeRings = async (client, profile) => {
 const fetchProfileByUserId = async (client, userId) => {
   const { data, error } = await client
     .from(PROFILE_TABLE)
-    .select("id, username, avatar_path")
+    .select("id, username, avatar_path, theme, primary_color, secondary_color")
     .eq("id", userId)
     .maybeSingle();
 
@@ -354,7 +505,7 @@ const fetchProfileByUserId = async (client, userId) => {
 const fetchProfileByUsername = async (client, username) => {
   const { data, error } = await client
     .from(PROFILE_TABLE)
-    .select("id, username, avatar_path")
+    .select("id, username, avatar_path, theme, primary_color, secondary_color")
     .eq("username", username)
     .maybeSingle();
 
@@ -536,22 +687,26 @@ const getActiveSegmentIndex = (segmentKeys, selectedSegment) => (
   Math.max(0, segmentKeys.findIndex((key) => String(key) === String(selectedSegment)))
 );
 
-const createProfileCoreState = ({ avatarImage, dynamicRings, selectedSpaceNumber, selectedTimeSegments }) => {
+const createProfileCoreState = ({ avatarImage, dynamicRings, selectedSpaceNumber, selectedTimeSegments, themeSettings }) => {
   const sunSegmentKeys = JAYCEE_ORDER.map(String);
+  const sunSegmentColors = getSunRingSegmentColors(themeSettings?.primary_color, themeSettings?.secondary_color);
   const rings = [
     {
       id: "sun",
       activeSegmentIndex: getActiveSegmentIndex(sunSegmentKeys, selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER),
       count: sunSegmentKeys.length,
-      fillAlpha: PROFILE_RING_FILL_ALPHA,
+      fillAlpha: sunSegmentColors ? PROFILE_RING_FILL_ALPHA : 0,
       activeFillAlpha: PROFILE_RING_ACTIVE_FILL_ALPHA,
       label: "Sun",
       labels: getEmptyLabels(sunSegmentKeys.length),
       rotation: getTopCenteredLastSegmentRotation(sunSegmentKeys.length),
+      segmentColors: sunSegmentColors,
       segmentKeys: sunSegmentKeys,
       showBorders: true,
       showDividers: true,
-      styledSegmentIndices: sunSegmentKeys.map((_, index) => index),
+      styledSegmentIndices: sunSegmentColors
+        ? sunSegmentKeys.map((_, index) => index)
+        : [getActiveSegmentIndex(sunSegmentKeys, selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER)],
       tone: "accent"
     }
   ];
@@ -582,6 +737,7 @@ const initJayceeProfile = async () => {
   let dynamicRings = [];
   let avatarImage = null;
   let coreState = null;
+  let themeSettings = getThemeSettingsFromProfile(null);
   let selectedSpaceNumber = DEFAULT_SELECTED_NUMBER;
   const selectedFractalKeys = new Set();
   let selectedDraftKey = null;
@@ -675,7 +831,8 @@ const initJayceeProfile = async () => {
       avatarImage,
       dynamicRings,
       selectedSpaceNumber,
-      selectedTimeSegments
+      selectedTimeSegments,
+      themeSettings
     });
     drawJaycee(canvas, coreState);
   };
@@ -724,6 +881,17 @@ const initJayceeProfile = async () => {
     }
 
     shell.hidden = false;
+    themeSettings = getThemeSettingsFromProfile(profile);
+    if (!publicUsername) {
+      applyProfileTheme(themeSettings);
+      initProfileThemeControls({
+        client,
+        onThemeChange: renderCore,
+        profile,
+        themeSettings
+      });
+    }
+
     const jayceeRows = await fetchJayceeResonances(client);
     const profileRows = await fetchUserResonances(client, profile, { publicOnly: Boolean(publicUsername) });
 

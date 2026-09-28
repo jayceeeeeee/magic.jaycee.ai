@@ -45,7 +45,9 @@
   height: calc(100svh - var(--banner-space) - var(--footer-space) - 48px);
   min-height: 460px;
   display: grid;
-  place-items: start center;
+  align-content: start;
+  justify-items: center;
+  gap: 16px;
   padding: clamp(18px, 4vw, 42px);
 }
 
@@ -58,6 +60,79 @@
   display: block;
   cursor: pointer;
   outline: none;
+}
+
+.jaycee-profile-core.has-theme-controls .jaycee-profile-canvas {
+  width: min(100%, clamp(300px, calc(100svh - var(--banner-space) - var(--footer-space) - 220px), 500px));
+}
+
+.profile-theme-controls {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 540px);
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) repeat(2, minmax(74px, 0.55fr));
+  gap: 10px;
+}
+
+.profile-theme-controls label {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.profile-theme-controls span {
+  color: var(--muted);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.68rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.profile-theme-controls select,
+.profile-theme-controls input {
+  min-width: 0;
+  min-height: 36px;
+  border: 1px solid var(--field-border-soft);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  outline: none;
+}
+
+.profile-theme-controls select {
+  padding: 7px 9px;
+}
+
+.profile-theme-controls input[type="color"] {
+  width: 100%;
+  padding: 4px;
+  cursor: pointer;
+}
+
+.profile-theme-controls select:focus,
+.profile-theme-controls input:focus {
+  border-color: var(--neon-border-strong);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
+}
+
+.profile-theme-controls p {
+  grid-column: 1 / -1;
+  min-height: 1.1em;
+  margin: 0;
+  color: var(--accent-soft);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.72rem;
+  line-height: 1.2;
+}
+
+.profile-theme-controls p[data-state="error"] {
+  color: #ff8d8d;
+}
+
+.profile-theme-controls p:empty {
+  display: none;
 }
 
 .jaycee-profile-resonances {
@@ -422,6 +497,10 @@
 
   .jaycee-profile-core {
     padding: 18px;
+  }
+
+  .profile-theme-controls {
+    grid-template-columns: 1fr;
   }
 
   .jaycee-profile-canvas {
