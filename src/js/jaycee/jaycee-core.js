@@ -452,6 +452,40 @@ const drawRingTickMarks = (context, metrics, options) => {
   context.restore();
 };
 
+const drawRingPresentMarker = (context, metrics, options) => {
+  const {
+    angle,
+    color = "rgba(255, 38, 38, 0.98)",
+    innerRadius,
+    outerRadius
+  } = options;
+  const ringWidth = outerRadius - innerRadius;
+  const innerX = metrics.center + (Math.cos(angle) * innerRadius);
+  const innerY = metrics.center + (Math.sin(angle) * innerRadius);
+  const outerX = metrics.center + (Math.cos(angle) * outerRadius);
+  const outerY = metrics.center + (Math.sin(angle) * outerRadius);
+
+  context.save();
+  context.lineCap = "round";
+  context.shadowColor = "rgba(0, 0, 0, 0.72)";
+  context.shadowBlur = ringWidth * 0.18;
+  context.strokeStyle = "rgba(255, 255, 255, 0.9)";
+  context.lineWidth = Math.max(3, ringWidth * 0.13);
+  context.beginPath();
+  context.moveTo(innerX, innerY);
+  context.lineTo(outerX, outerY);
+  context.stroke();
+  context.shadowColor = "rgba(255, 38, 38, 0.76)";
+  context.shadowBlur = ringWidth * 0.18;
+  context.strokeStyle = color;
+  context.lineWidth = Math.max(1.7, ringWidth * 0.075);
+  context.beginPath();
+  context.moveTo(innerX, innerY);
+  context.lineTo(outerX, outerY);
+  context.stroke();
+  context.restore();
+};
+
 const drawRing = (context, metrics, options) => {
   const {
     count,
@@ -469,6 +503,8 @@ const drawRing = (context, metrics, options) => {
     tickCount = 0,
     tickLabelColor,
     tickStroke,
+    presentMarkerAngle,
+    presentMarkerColor,
     showBorders = true,
     showDividers = showBorders,
     rotation = -Math.PI / 2
@@ -600,6 +636,15 @@ const drawRing = (context, metrics, options) => {
 
   if (hasBackgroundImage) {
     drawStyledSegments();
+  }
+
+  if (Number.isFinite(presentMarkerAngle)) {
+    drawRingPresentMarker(context, metrics, {
+      angle: presentMarkerAngle,
+      color: presentMarkerColor,
+      innerRadius,
+      outerRadius
+    });
   }
 
   context.restore();
@@ -875,6 +920,8 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
       showDividers: ring.showDividers ?? index !== STYLED_RING_INDEX,
       styledSegmentIndices: ring.styledSegmentIndices || (index === STYLED_RING_INDEX ? getSegmentIndices(ring.count) : []),
       getTickLabel: ring.getTickLabel,
+      presentMarkerAngle: ring.presentMarkerAngle,
+      presentMarkerColor: ring.presentMarkerColor,
       tickCount: ring.tickCount || 0,
       tickLabelColor: ring.tickLabelColor,
       tickStroke: ring.tickStroke,

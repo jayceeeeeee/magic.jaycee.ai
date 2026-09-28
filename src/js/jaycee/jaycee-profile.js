@@ -20,6 +20,7 @@ const CODE_COLUMNS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 const DEFAULT_SELECTED_NUMBER = 5;
 const DEFAULT_SUN_TIME_NUMBER = 9;
 const JAYCEE_RESONANCE_SOURCE = "Jaycee Core";
+const TIME_CYCLE_COLUMNS = "start_at, length";
 const SIGNED_IMAGE_URL_DURATION_SECONDS = 60 * 60;
 const PROFILE_CORE_METRICS = {
   ringMaxRadialShare: 0.34,
@@ -43,6 +44,36 @@ const getDynamicRingKey = (ring) => getFractalKey({
 const getDisplayValue = (value) => (
   value === null || value === undefined ? "" : String(value).trim()
 );
+
+const parseBrowserGregorianDate = (value) => {
+  const text = getDisplayValue(value);
+  const match = text.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3})\d*)?)?)?/
+  );
+
+  if (match) {
+    const [, year, month, day, hours = "0", minutes = "0", seconds = "0", milliseconds = "0"] = match;
+
+    return new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hours),
+      Number(minutes),
+      Number(seconds),
+      Number(milliseconds.padEnd(3, "0"))
+    ).getTime();
+  }
+
+  return Date.parse(text);
+};
+
+const hasTimeCycle = (fractal) => {
+  const startAt = parseBrowserGregorianDate(fractal?.start_at);
+  const length = Number(fractal?.length);
+
+  return Number.isFinite(startAt) && Number.isFinite(length) && length > 0;
+};
 
 const isHexColor = (value) => /^#[0-9a-f]{6}$/i.test(getDisplayValue(value));
 
@@ -374,7 +405,7 @@ const createDraftsSection = (draftRows, selectedDraftKey, draftPreviewMode, onTo
 const fetchJayceeResonances = async (client) => {
   const { data, error } = await client
     .from(JAYCEE_FRACTALS_TABLE)
-    .select(`id, label, user_id, dimension, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
+    .select(`id, label, user_id, dimension, ${TIME_CYCLE_COLUMNS}, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
     .is("user_id", null)
     .eq(FRACTAL_VISIBILITY_COLUMN, PUBLIC_VISIBILITY_VALUE)
     .order("label", { ascending: true });
@@ -391,7 +422,7 @@ const fetchJayceeResonances = async (client) => {
 const fetchUserResonances = async (client, profile, { publicOnly = false } = {}) => {
   let query = client
     .from(JAYCEE_FRACTALS_TABLE)
-    .select(`id, label, user_id, dimension, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
+    .select(`id, label, user_id, dimension, ${TIME_CYCLE_COLUMNS}, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
     .eq("user_id", profile.id);
 
   if (publicOnly) {
@@ -412,7 +443,7 @@ const fetchUserResonances = async (client, profile, { publicOnly = false } = {})
 const fetchDynamicTimeRings = async (client, profile) => {
   let query = client
     .from(JAYCEE_DYNAMIC_FRACTALS_TABLE)
-    .select("id, label, description, dimension, user_id, created_at")
+    .select(`id, label, description, dimension, user_id, created_at, ${TIME_CYCLE_COLUMNS}`)
     .eq("dimension", TIME_DIMENSION_VALUE)
     .order("created_at", { ascending: true });
 
@@ -716,6 +747,29 @@ const getSegmentKeys = (count) => (
   Array.from({ length: count }, (_, index) => String(index + 1))
 );
 
+const getTimeCyclePresentAngle = (fractal, now = Date.now()) => {
+  if (!hasTimeCycle(fractal)) return null;
+
+  const startAt = parseBrowserGregorianDate(fractal.start_at);
+  const cycleMs = Number(fractal.length) * 1000;
+  const elapsed = ((now - startAt) % cycleMs + cycleMs) % cycleMs;
+  const progress = elapsed / cycleMs;
+
+  return (-Math.PI / 2) + (progress * Math.PI * 2);
+};
+
+const getSunCycleFractal = (rows) => {
+  const jayceeTimeRows = rows.filter((row) => (
+    row.sourceType === "jaycee"
+    && getDisplayValue(row.dimension).toLowerCase() === TIME_DIMENSION_VALUE
+    && hasTimeCycle(row)
+  ));
+
+  return jayceeTimeRows.find((row) => getDisplayValue(row.label).toLowerCase() === "sun")
+    || jayceeTimeRows[0]
+    || null;
+};
+
 const filterUserGroupsByFractal = (groups, selectedFractalKey) => (
   groups
     .map((group) => {
@@ -777,6 +831,7 @@ const createProfileCoreState = ({
   dynamicRings,
   isCorePage,
   ringBackgroundImage,
+  rows,
   selectedPortalFractalKey,
   selectedSpaceNumber,
   selectedTimeSegments
@@ -784,6 +839,8 @@ const createProfileCoreState = ({
   const sunSegmentKeys = JAYCEE_ORDER.map(String);
   const sunSegmentColors = getSunRingSegmentColors();
   const hasRingBackground = Boolean(ringBackgroundImage);
+  const now = Date.now();
+  const sunCycleFractal = getSunCycleFractal(rows);
   const selectedDynamicPortalRing = getSelectedDynamicPortalRing(dynamicRings, selectedPortalFractalKey);
   const rings = [
     {
@@ -796,6 +853,7 @@ const createProfileCoreState = ({
       activeFillAlpha: PROFILE_RING_ACTIVE_FILL_ALPHA,
       label: "Sun",
       labels: getEmptyLabels(sunSegmentKeys.length),
+      presentMarkerAngle: getTimeCyclePresentAngle(sunCycleFractal, now),
       rotation: getTopCenteredLastSegmentRotation(sunSegmentKeys.length),
       segmentColors: hasRingBackground ? null : sunSegmentColors,
       segmentKeys: sunSegmentKeys,
@@ -823,6 +881,7 @@ const createProfileCoreState = ({
       fillAlpha: 0,
       label: selectedDynamicPortalRing.label || "Portal",
       labels: getEmptyLabels(segmentKeys.length),
+      presentMarkerAngle: getTimeCyclePresentAngle(selectedDynamicPortalRing, now),
       rotation: getTopCenteredSegmentRotation(segmentKeys.length, 0),
       segmentKeys,
       showBorders: true,
@@ -899,8 +958,10 @@ const initJayceeProfile = async () => {
   const updateCurrentTimeClock = () => {
     const clock = document.querySelector("[data-profile-current-time]");
 
-    if (!clock) return;
-    clock.textContent = formatCurrentDateTime();
+    if (clock) {
+      clock.textContent = formatCurrentDateTime();
+    }
+    scheduleRenderCore();
   };
 
   const startCurrentTimeClock = () => {
@@ -1029,6 +1090,7 @@ const initJayceeProfile = async () => {
       dynamicRings,
       isCorePage,
       ringBackgroundImage,
+      rows,
       selectedPortalFractalKey,
       selectedSpaceNumber,
       selectedTimeSegments
