@@ -68,7 +68,9 @@ const hexToRgb = (color) => {
 };
 
 const rgbToHex = ({ red, green, blue }) => {
-  const toHex = (channel) => Math.round(channel).toString(16).padStart(2, "0");
+  const toHex = (channel) => (
+    Math.min(255, Math.max(0, Math.round(channel))).toString(16).padStart(2, "0")
+  );
 
   return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
 };

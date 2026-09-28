@@ -87,8 +87,10 @@ const hexToRgbParts = (color) => {
   };
 };
 
+const clampColorChannel = (value) => Math.min(255, Math.max(0, Math.round(value)));
+
 const rgbPartsToHex = ({ red, green, blue }) => (
-  `#${[red, green, blue].map((channel) => Math.round(channel).toString(16).padStart(2, "0")).join("")}`
+  `#${[red, green, blue].map((channel) => clampColorChannel(channel).toString(16).padStart(2, "0")).join("")}`
 );
 
 const mixHexColors = (start, end, amount) => {
@@ -725,24 +727,6 @@ const getActiveSegmentIndex = (segmentKeys, selectedSegment) => (
   Math.max(0, segmentKeys.findIndex((key) => String(key) === String(selectedSegment)))
 );
 
-const getGreatestCommonDivisor = (left, right) => {
-  let a = Math.abs(left);
-  let b = Math.abs(right);
-
-  while (b) {
-    const remainder = a % b;
-
-    a = b;
-    b = remainder;
-  }
-
-  return a || 1;
-};
-
-const getLeastCommonMultiple = (left, right) => (
-  Math.abs(left * right) / getGreatestCommonDivisor(left, right)
-);
-
 const getSegmentKeys = (count) => (
   Array.from({ length: count }, (_, index) => String(index + 1))
 );
@@ -756,6 +740,12 @@ const getTimeCyclePresentAngle = (fractal, now = Date.now()) => {
   const progress = elapsed / cycleMs;
 
   return (-Math.PI / 2) + (progress * Math.PI * 2);
+};
+
+const getGeometricSegmentNumberFromIndex = (segmentIndex, count, topSegmentIndex = 0) => {
+  if (!Number.isFinite(segmentIndex) || !Number.isFinite(count) || count <= 0) return 1;
+
+  return ((segmentIndex - topSegmentIndex + count) % count) + 1;
 };
 
 const getSunCycleFractal = (rows) => {
@@ -841,11 +831,17 @@ const createProfileCoreState = ({
   const hasRingBackground = Boolean(ringBackgroundImage);
   const now = Date.now();
   const sunCycleFractal = getSunCycleFractal(rows);
+  const sunPresentMarkerAngle = getTimeCyclePresentAngle(sunCycleFractal, now);
+  const sunRotation = getTopCenteredLastSegmentRotation(sunSegmentKeys.length);
+  const sunActiveSegmentIndex = getActiveSegmentIndex(
+    sunSegmentKeys,
+    selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER
+  );
   const selectedDynamicPortalRing = getSelectedDynamicPortalRing(dynamicRings, selectedPortalFractalKey);
   const rings = [
     {
       id: "sun",
-      activeSegmentIndex: getActiveSegmentIndex(sunSegmentKeys, selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER),
+      activeSegmentIndex: sunActiveSegmentIndex,
       count: sunSegmentKeys.length,
       backgroundImage: ringBackgroundImage,
       backgroundImageAlpha: 0.9,
@@ -853,15 +849,15 @@ const createProfileCoreState = ({
       activeFillAlpha: PROFILE_RING_ACTIVE_FILL_ALPHA,
       label: "Sun",
       labels: getEmptyLabels(sunSegmentKeys.length),
-      presentMarkerAngle: getTimeCyclePresentAngle(sunCycleFractal, now),
-      rotation: getTopCenteredLastSegmentRotation(sunSegmentKeys.length),
+      presentMarkerAngle: sunPresentMarkerAngle,
+      rotation: sunRotation,
       segmentColors: hasRingBackground ? null : sunSegmentColors,
       segmentKeys: sunSegmentKeys,
       showBorders: true,
       showDividers: true,
       styledSegmentIndices: !hasRingBackground && sunSegmentColors
         ? sunSegmentKeys.map((_, index) => index)
-        : [getActiveSegmentIndex(sunSegmentKeys, selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER)],
+        : [sunActiveSegmentIndex],
       tone: "accent"
     }
   ];
@@ -872,6 +868,8 @@ const createProfileCoreState = ({
       || selectedDynamicPortalRing.defaultSegment
       || segmentKeys[0];
     const activeSegmentIndex = getActiveSegmentIndex(segmentKeys, selectedSegment);
+    const portalPresentMarkerAngle = getTimeCyclePresentAngle(selectedDynamicPortalRing, now);
+    const portalRotation = getTopCenteredSegmentRotation(segmentKeys.length, 0);
 
     rings.push({
       id: selectedDynamicPortalRing.id,
@@ -881,8 +879,8 @@ const createProfileCoreState = ({
       fillAlpha: 0,
       label: selectedDynamicPortalRing.label || "Portal",
       labels: getEmptyLabels(segmentKeys.length),
-      presentMarkerAngle: getTimeCyclePresentAngle(selectedDynamicPortalRing, now),
-      rotation: getTopCenteredSegmentRotation(segmentKeys.length, 0),
+      presentMarkerAngle: portalPresentMarkerAngle,
+      rotation: portalRotation,
       segmentKeys,
       showBorders: true,
       showDividers: true,
@@ -890,21 +888,36 @@ const createProfileCoreState = ({
       tone: "accent"
     });
 
-    const ppcmSegmentCount = getLeastCommonMultiple(sunSegmentKeys.length, segmentKeys.length);
+    const ppcmSegmentCount = sunSegmentKeys.length * segmentKeys.length;
     const ppcmSegmentKeys = getSegmentKeys(ppcmSegmentCount);
+    const ppcmRotation = getTopCenteredSegmentRotation(ppcmSegmentCount, 0);
+    const sunSelectedSegmentNumber = getGeometricSegmentNumberFromIndex(
+      sunActiveSegmentIndex,
+      sunSegmentKeys.length,
+      sunSegmentKeys.length - 1
+    );
+    const portalSelectedSegmentNumber = getGeometricSegmentNumberFromIndex(
+      activeSegmentIndex,
+      segmentKeys.length,
+      0
+    );
+    const ppcmActiveSegmentIndex = ((sunSelectedSegmentNumber - 1) * segmentKeys.length)
+      + portalSelectedSegmentNumber
+      - 1;
 
     rings.push({
       id: `${selectedDynamicPortalRing.id}-ppcm`,
+      activeSegmentIndex: ppcmActiveSegmentIndex,
       count: ppcmSegmentCount,
       fillAlpha: 0,
       interactive: false,
       label: "PPCM",
       labels: getEmptyLabels(ppcmSegmentCount),
-      rotation: getTopCenteredSegmentRotation(ppcmSegmentCount, 0),
+      rotation: ppcmRotation,
       segmentKeys: ppcmSegmentKeys,
       showBorders: true,
       showDividers: true,
-      styledSegmentIndices: [],
+      styledSegmentIndices: ppcmActiveSegmentIndex >= 0 ? [ppcmActiveSegmentIndex] : [],
       tone: "accent"
     });
   }
