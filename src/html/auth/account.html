@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Account - Magic</title>
+  <title>Redirecting | jaycee.ai</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -14,23 +14,10 @@
 
   <main class="auth-page">
     <section class="auth-panel" aria-labelledby="account-title">
-      <p class="auth-eyebrow">Account</p>
-      <h1 id="account-title">Your account</h1>
-
-      <dl class="account-details">
-        <div>
-          <dt>Email</dt>
-          <dd data-account-email>Loading...</dd>
-        </div>
-        <div>
-          <dt>Status</dt>
-          <dd data-account-status>Checking session...</dd>
-        </div>
-      </dl>
-
-      <a class="account-button account-button-ghost auth-submit" href="/profile.html">View public profile</a>
-      <button class="account-button account-button-primary auth-submit" type="button" data-logout data-auth-redirect="/src/html/auth/login.html">Log out</button>
-      <p class="auth-status" data-auth-status aria-live="polite"></p>
+      <p class="auth-eyebrow">Profile</p>
+      <h1 id="account-title">Opening Jaycee profile</h1>
+      <p class="auth-status">Account now lives in your Jaycee profile.</p>
+      <a class="account-button account-button-primary auth-submit" href="/src/html/jaycee-profile.html">Edit profile</a>
     </section>
   </main>
 
@@ -39,6 +26,8 @@
   <script src="/src/js/shell/jaycee-shell.js"></script>
   <script src="/src/js/theme/jaycee-themes.js"></script>
   <script src="/src/js/auth/auth.js"></script>
-  <script src="/src/js/auth/account.js"></script>
+  <script>
+    window.location.replace("/src/html/jaycee-profile.html");
+  </script>
 </body>
 </html>

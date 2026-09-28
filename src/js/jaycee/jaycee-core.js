@@ -273,8 +273,11 @@ const drawRingSegmentPanel = (context, metrics, segment, colors) => {
     );
 
   gradient.addColorStop(0, colors.start);
+  if (colors.centerStop) {
+    gradient.addColorStop(colors.centerStop, colors.start);
+  }
   if (colors.middle) {
-    gradient.addColorStop(0.52, colors.middle);
+    gradient.addColorStop(colors.middleStop || 0.52, colors.middle);
   }
   gradient.addColorStop(1, colors.end);
 
@@ -769,7 +772,7 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
       : rgbToCss(squareLineRgb, state.squareCellBorderAlpha),
     activeFillAlpha: ACTIVE_FILL_ALPHA,
     activeSquareNumber: state.activeSquareNumber || 5,
-    fillAlpha: SURFACE_FILL_ALPHA,
+    fillAlpha: state.squareFillAlpha ?? SURFACE_FILL_ALPHA,
     glow: "rgba(116, 247, 209, 0.14)",
     palette,
     coreText: {

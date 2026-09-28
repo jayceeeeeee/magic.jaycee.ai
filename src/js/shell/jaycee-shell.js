@@ -6,7 +6,7 @@
     const routes = {
         home: "/",
         login: "/src/html/auth/login.html",
-        account: "/src/html/auth/account.html",
+        editProfile: "/src/html/jaycee-profile.html",
         contact: "/profile.html",
         donate: "https://buy.stripe.com/14A14o70HbZXdtr73FfQI01",
         services: "/profile.html",
@@ -37,11 +37,12 @@
             }
 
             const userName = this.getAttribute("user-name") || "";
+            const publicProfileUrl = this.getAttribute("public-profile-url") || "";
             const isSignedIn = this.getAttribute("auth-state") === "signed-in" || userName.length > 0;
-            const accountText = escapeHtml(userName || "Account");
+            const accountText = escapeHtml(userName || "Profile");
 
             this.innerHTML = `
-                <header class="site-header">
+                <header class="site-header${isSignedIn ? " has-account-menu" : ""}">
                     <div class="site-header-inner">
                         <a class="site-brand" href="${routes.home}">
                             <span class="site-logo-image site-logo-themed" aria-label="${logoLabel}"></span>
@@ -57,13 +58,23 @@
                             <img src="${yoganandaImageSrc}" alt="Paramahansa Yogananda">
                         </div>
                         <button class="account-menu-button" type="button" aria-label="Open account menu" aria-expanded="false">
-                            <span></span>
-                            <span></span>
-                            <span></span>
+                            ${isSignedIn
+                                ? `<span class="account-menu-label">${accountText}</span>`
+                                : `
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                `}
                         </button>
                         <nav class="account-nav" aria-label="Account">
                             ${isSignedIn
-                                ? `<a class="account-button account-button-primary" href="${routes.account}">${accountText}</a>`
+                                ? `
+                                    <button class="account-button account-button-ghost" type="button" data-header-logout>Log out</button>
+                                    <a class="account-button account-button-primary" href="${routes.editProfile}">Edit profile</a>
+                                    ${publicProfileUrl
+                                        ? `<a class="account-button account-button-ghost" href="${publicProfileUrl}">Public profile</a>`
+                                        : ""}
+                                `
                                 : `
                                     <a class="account-button account-button-ghost" href="${routes.login}">Log in</a>
                                 `}
@@ -91,12 +102,24 @@
                 menuButton.setAttribute("aria-label", isOpen ? "Close account menu" : "Open account menu");
             });
 
-            this.querySelectorAll(".account-nav a").forEach((link) => {
-                link.addEventListener("click", () => {
+            this.querySelectorAll(".account-nav a, .account-nav button").forEach((item) => {
+                item.addEventListener("click", () => {
                     header.classList.remove("is-menu-open");
                     menuButton.setAttribute("aria-expanded", "false");
                     menuButton.setAttribute("aria-label", "Open account menu");
                 });
+            });
+
+            this.querySelector("[data-header-logout]")?.addEventListener("click", async (event) => {
+                const button = event.currentTarget;
+
+                button.disabled = true;
+                await window.JayceeAuth?.signOut?.();
+                if (window.location.pathname === routes.editProfile) {
+                    window.location.href = routes.login;
+                    return;
+                }
+                button.disabled = false;
             });
 
             requestAnimationFrame(updateTempleTextMotion);

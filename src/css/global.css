@@ -421,6 +421,29 @@ body::after {
     box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.24);
 }
 
+.site-header.has-account-menu .account-menu-button {
+    width: auto;
+    min-width: 34px;
+    padding: 0 10px;
+    display: inline-flex;
+}
+
+.site-header.has-account-menu .account-menu-button .account-menu-label {
+    width: auto;
+    height: auto;
+    overflow: hidden;
+    background: none;
+    box-shadow: none;
+    color: currentColor;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1;
+    max-width: 128px;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
 .site-header .account-menu-button:hover,
 .site-header .account-menu-button:focus-visible,
 .site-header .account-menu-button:active,
@@ -454,6 +477,27 @@ body::after {
     flex: 0 0 auto;
 }
 
+.site-header.has-account-menu .account-nav {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: max(16px, calc((100vw - 1120px) / 2));
+    display: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    min-width: 148px;
+    padding: 8px;
+    border: 1px solid var(--field-border);
+    border-radius: 8px;
+    background: var(--banner-bg);
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(8px);
+}
+
+.site-header.has-account-menu.is-menu-open .account-nav {
+    display: flex;
+}
+
 .account-button {
     min-height: 34px;
     display: inline-flex;
@@ -478,6 +522,12 @@ body::after {
 .account-button:focus-visible {
     border-color: var(--neon-border-strong);
     transform: translateY(-1px);
+}
+
+.account-button:disabled {
+    cursor: wait;
+    opacity: 0.62;
+    transform: none;
 }
 
 .account-button-ghost {
@@ -730,6 +780,16 @@ body::after {
 
     .site-header .account-menu-button {
         display: inline-flex;
+    }
+
+    .site-header.has-account-menu .account-menu-button {
+        max-width: 34vw;
+        padding: 0 9px;
+    }
+
+    .site-header.has-account-menu .account-menu-button .account-menu-label {
+        max-width: 96px;
+        font-size: 0.72rem;
     }
 
     .account-nav {

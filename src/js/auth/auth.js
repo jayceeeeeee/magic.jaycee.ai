@@ -2,8 +2,8 @@
     const supabaseUrl = "https://ndtnfwyfdfdcxljvvjfd.supabase.co";
     const supabasePublishableKey = "sb_publishable_lMEHC2xjlGGmTnkI5G-okg_0AVRhiDd";
     const defaultLoginPath = "/src/html/auth/login.html";
-    const defaultAccountPath = "/src/html/auth/account.html";
-    const defaultAfterSignInPath = "/";
+    const defaultAccountPath = "/src/html/jaycee-profile.html";
+    const defaultAfterSignInPath = "/src/html/jaycee-profile.html";
     const themeConfig = window.JayceeThemes || {
         normalizeTheme: () => "aurora",
     };
@@ -68,6 +68,12 @@
         return user?.user_metadata?.name || user?.email || "Account";
     }
 
+    function getPublicProfileUrl(username) {
+        const value = getDisplayValue(username);
+
+        return value ? `/src/html/jaycee-${encodeURIComponent(value)}.html` : "";
+    }
+
     function getDisplayValue(value) {
         return value === null || value === undefined ? "" : String(value).trim();
     }
@@ -108,14 +114,20 @@
     function setBannerSignedOut() {
         document.querySelectorAll("jaycee-banner").forEach((banner) => {
             banner.removeAttribute("auth-state");
+            banner.removeAttribute("public-profile-url");
             banner.removeAttribute("user-name");
             banner.connectedCallback();
         });
     }
 
-    function setBannerSignedIn(user, displayName = getDisplayName(user)) {
+    function setBannerSignedIn(user, displayName = getDisplayName(user), publicProfileUrl = "") {
         document.querySelectorAll("jaycee-banner").forEach((banner) => {
             banner.setAttribute("auth-state", "signed-in");
+            if (publicProfileUrl) {
+                banner.setAttribute("public-profile-url", publicProfileUrl);
+            } else {
+                banner.removeAttribute("public-profile-url");
+            }
             banner.setAttribute("user-name", displayName);
             banner.connectedCallback();
         });
@@ -129,7 +141,11 @@
             const profile = await getProfileSettings(data.session.user);
 
             applyTheme(profile);
-            setBannerSignedIn(data.session.user, profile?.username || getDisplayName(data.session.user));
+            setBannerSignedIn(
+                data.session.user,
+                profile?.username || getDisplayName(data.session.user),
+                getPublicProfileUrl(profile?.username)
+            );
         } else {
             applyTheme(null);
             setBannerSignedOut();
@@ -174,7 +190,11 @@
                 getProfileSettings(session.user)
                     .then((profile) => {
                         applyTheme(profile);
-                        setBannerSignedIn(session.user, profile?.username || getDisplayName(session.user));
+                        setBannerSignedIn(
+                            session.user,
+                            profile?.username || getDisplayName(session.user),
+                            getPublicProfileUrl(profile?.username)
+                        );
                     });
             } else {
                 applyTheme(null);

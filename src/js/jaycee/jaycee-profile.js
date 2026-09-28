@@ -27,7 +27,7 @@ const PROFILE_CORE_METRICS = {
   ringWidthRatio: 0.072
 };
 const PROFILE_RING_ACTIVE_FILL_ALPHA = 0.09;
-const PROFILE_RING_FILL_ALPHA = 0.58;
+const PROFILE_RING_FILL_ALPHA = 0.75;
 
 const getFractalKey = (row) => `${row.sourceType || "source"}:${row.id || row.sourceId || row.label || "fractal"}`;
 
@@ -80,9 +80,11 @@ const getSunRingSegmentColors = (primaryColor, secondaryColor) => {
     const alternation = index % 2 === 0 ? 0 : 0.08;
 
     return {
+      centerStop: 0.36,
       end: mixHexColors(primary, secondary, 0.78 + alternation),
       gradientMode: "radial",
       middle: mixHexColors(primary, secondary, 0.42 + alternation),
+      middleStop: 0.76,
       start: mixHexColors(primary, "#ffffff", 0.72)
     };
   });
@@ -687,7 +689,14 @@ const getActiveSegmentIndex = (segmentKeys, selectedSegment) => (
   Math.max(0, segmentKeys.findIndex((key) => String(key) === String(selectedSegment)))
 );
 
-const createProfileCoreState = ({ avatarImage, dynamicRings, selectedSpaceNumber, selectedTimeSegments, themeSettings }) => {
+const createProfileCoreState = ({
+  avatarImage,
+  dynamicRings,
+  isCorePage,
+  selectedSpaceNumber,
+  selectedTimeSegments,
+  themeSettings
+}) => {
   const sunSegmentKeys = JAYCEE_ORDER.map(String);
   const sunSegmentColors = getSunRingSegmentColors(themeSettings?.primary_color, themeSettings?.secondary_color);
   const rings = [
@@ -719,6 +728,7 @@ const createProfileCoreState = ({ avatarImage, dynamicRings, selectedSpaceNumber
     activeSquareNumber: selectedSpaceNumber,
     metrics: PROFILE_CORE_METRICS,
     squareBorderAlpha: 0.46,
+    squareFillAlpha: isCorePage ? 0 : undefined,
     squareCellBorderAlpha: 0.34,
     squareBackgroundImage: avatarImage
   };
@@ -730,6 +740,7 @@ const initJayceeProfile = async () => {
   const status = document.querySelector("[data-profile-status]");
   const list = document.querySelector("[data-profile-resonances]");
   const publicUsername = getDisplayValue(shell?.dataset.profileUsername);
+  const isCorePage = shell?.dataset.profileMode === "core";
 
   if (!shell || !canvas || !status || !list) return;
 
@@ -796,7 +807,7 @@ const initJayceeProfile = async () => {
   };
 
   const renderResonances = () => {
-    const showDrafts = !publicUsername;
+    const showDrafts = !publicUsername && !isCorePage;
     const spaceGroups = getResonanceGroupsForNumber(
       getRowsForDimensionColumn(rows, SPACE_DIMENSION_VALUE),
       selectedSpaceNumber
@@ -830,6 +841,7 @@ const initJayceeProfile = async () => {
     coreState = createProfileCoreState({
       avatarImage,
       dynamicRings,
+      isCorePage,
       selectedSpaceNumber,
       selectedTimeSegments,
       themeSettings
@@ -865,16 +877,18 @@ const initJayceeProfile = async () => {
     const sessionResult = await window.JayceeAuth?.getSession?.();
     const user = sessionResult?.data?.session?.user;
 
-    if (!publicUsername && !user) {
+    if (!publicUsername && !isCorePage && !user) {
       redirectToLogin();
       return;
     }
 
-    const profile = publicUsername
-      ? await fetchProfileByUsername(client, publicUsername)
-      : await fetchProfileByUserId(client, user.id);
+    const profile = isCorePage
+      ? null
+      : publicUsername
+        ? await fetchProfileByUsername(client, publicUsername)
+        : await fetchProfileByUserId(client, user.id);
 
-    if (!profile) {
+    if (!isCorePage && !profile) {
       shell.hidden = false;
       status.textContent = "Profile not found.";
       return;
@@ -882,7 +896,7 @@ const initJayceeProfile = async () => {
 
     shell.hidden = false;
     themeSettings = getThemeSettingsFromProfile(profile);
-    if (!publicUsername) {
+    if (!publicUsername && !isCorePage) {
       applyProfileTheme(themeSettings);
       initProfileThemeControls({
         client,
@@ -893,7 +907,9 @@ const initJayceeProfile = async () => {
     }
 
     const jayceeRows = await fetchJayceeResonances(client);
-    const profileRows = await fetchUserResonances(client, profile, { publicOnly: Boolean(publicUsername) });
+    const profileRows = isCorePage
+      ? []
+      : await fetchUserResonances(client, profile, { publicOnly: Boolean(publicUsername) });
 
     rows = [...jayceeRows, ...profileRows];
     dynamicRings = await fetchDynamicTimeRings(client, profile);
@@ -902,7 +918,7 @@ const initJayceeProfile = async () => {
         selectedTimeSegments.set(ring.id, ring.defaultSegment);
       }
     });
-    avatarImage = await loadImage(await getAvatarImageUrl(client, profile));
+    avatarImage = isCorePage ? null : await loadImage(await getAvatarImageUrl(client, profile));
     renderCore();
     canvas.addEventListener("click", handleCanvasClick);
     const resizeObserver = new ResizeObserver(scheduleRenderCore);
