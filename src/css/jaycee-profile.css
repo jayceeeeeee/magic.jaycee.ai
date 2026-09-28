@@ -429,15 +429,8 @@
   display: grid;
   gap: 6px;
   padding: 12px 13px;
-  border: 1px solid var(--field-border-soft);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
   border-radius: 7px;
-  background:
-    linear-gradient(90deg, rgba(var(--accent-rgb), 0.1), transparent 68%),
-    rgba(0, 0, 0, 0.16);
-}
-
-.profile-resonance-group[data-resonance-source="jaycee"] .profile-resonance-item {
-  border-color: rgba(var(--accent-rgb), 0.3);
   background:
     linear-gradient(90deg, rgba(var(--accent-rgb), 0.16), transparent 72%),
     rgba(0, 0, 0, 0.14);

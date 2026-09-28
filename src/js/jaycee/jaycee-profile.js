@@ -692,14 +692,17 @@ const filterUserGroupsByFractal = (groups, selectedFractalKey) => (
     .filter((group) => group.rows.length)
 );
 
-const createFractalSelect = (labelText, choices, selectedValue, onChange) => {
+const createFractalSelect = (labelText, defaultText, choices, selectedValue, onChange) => {
   const label = document.createElement("label");
   const text = document.createElement("span");
   const select = document.createElement("select");
+  const defaultOption = document.createElement("option");
 
   label.className = "profile-fractal-select";
   text.textContent = labelText;
-  select.replaceChildren(...choices.map((choice) => {
+  defaultOption.value = "";
+  defaultOption.textContent = defaultText;
+  select.replaceChildren(defaultOption, ...choices.map((choice) => {
     const option = document.createElement("option");
 
     option.value = getFractalKey(choice);
@@ -707,7 +710,7 @@ const createFractalSelect = (labelText, choices, selectedValue, onChange) => {
 
     return option;
   }));
-  select.value = selectedValue || "";
+  select.value = choices.some((choice) => getFractalKey(choice) === selectedValue) ? selectedValue : "";
   select.addEventListener("change", () => onChange(select.value));
   label.append(text, select);
 
@@ -844,27 +847,19 @@ const initJayceeProfile = async () => {
 
     corePanel.classList.add("has-fractal-selectors");
 
-    if (!selectedMapFractalKey && mapChoices.length) {
-      selectedMapFractalKey = getFractalKey(mapChoices[0]);
-    }
-
-    if (!selectedPortalFractalKey && portalChoices.length) {
-      selectedPortalFractalKey = getFractalKey(portalChoices[0]);
-    }
-
     const selectors = existingSelectors || document.createElement("div");
 
     selectors.className = "profile-fractal-selectors";
     selectors.dataset.profileFractalSelectors = "";
     selectors.replaceChildren(
       ...(mapChoices.length
-        ? [createFractalSelect("Choose your map", mapChoices, selectedMapFractalKey, (value) => {
+        ? [createFractalSelect("Choose your map", "Body", mapChoices, selectedMapFractalKey, (value) => {
           selectedMapFractalKey = value;
           renderResonances();
         })]
         : []),
       ...(portalChoices.length
-        ? [createFractalSelect("Choose your portal", portalChoices, selectedPortalFractalKey, (value) => {
+        ? [createFractalSelect("Choose your portal", "Sun", portalChoices, selectedPortalFractalKey, (value) => {
           selectedPortalFractalKey = value;
           renderResonances();
         })]
