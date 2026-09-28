@@ -464,10 +464,17 @@ const drawRing = (context, metrics, options) => {
   } = options;
   const segmentAngle = (Math.PI * 2) / count;
   const labelRadius = innerRadius + ((outerRadius - innerRadius) / 2);
+  const ringWidth = outerRadius - innerRadius;
+  const hasBackgroundImage = Boolean(backgroundImage);
+  const ringStroke = hasBackgroundImage ? "rgba(255, 255, 255, 0.54)" : stroke;
+  const dividerStroke = hasBackgroundImage ? "rgba(255, 255, 255, 0.7)" : stroke;
+  const dividerShadow = hasBackgroundImage ? "rgba(0, 0, 0, 0.62)" : "transparent";
 
   context.save();
-  context.lineWidth = 1;
-  context.strokeStyle = stroke;
+  context.lineWidth = hasBackgroundImage ? Math.max(1.2, ringWidth * 0.028) : 1;
+  context.strokeStyle = ringStroke;
+  context.shadowColor = dividerShadow;
+  context.shadowBlur = hasBackgroundImage ? ringWidth * 0.08 : 0;
 
   drawRingImage(context, metrics, backgroundImage, innerRadius, outerRadius, backgroundImageAlpha);
 
@@ -521,6 +528,10 @@ const drawRing = (context, metrics, options) => {
     const labelY = metrics.center + Math.sin(middleAngle) * labelRadius;
 
     if (showDividers) {
+      context.strokeStyle = dividerStroke;
+      context.lineWidth = hasBackgroundImage ? Math.max(1.2, ringWidth * 0.032) : 1;
+      context.shadowColor = dividerShadow;
+      context.shadowBlur = hasBackgroundImage ? ringWidth * 0.1 : 0;
       context.beginPath();
       context.moveTo(dividerInnerX, dividerInnerY);
       context.lineTo(dividerX, dividerY);

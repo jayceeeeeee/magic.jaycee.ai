@@ -248,40 +248,6 @@ const createResonanceItem = (row, selectedNumber) => {
   return item;
 };
 
-const createFractalPickerItem = (row, selectedFractalKeys, onToggleFractal) => {
-  const button = document.createElement("button");
-  const fractalKey = getFractalKey(row);
-
-  button.className = "profile-fractal-picker-item";
-  button.type = "button";
-  button.textContent = row.label || "Untitled fractal";
-  button.setAttribute("aria-pressed", String(selectedFractalKeys.has(fractalKey)));
-  button.addEventListener("click", () => onToggleFractal(fractalKey));
-
-  return button;
-};
-
-const createFractalPickerGroup = (sourceName, sourceType, fractals, cta, selectedFractalKeys, onToggleFractal) => {
-  const group = document.createElement("section");
-  const heading = document.createElement("h2");
-  const action = document.createElement("p");
-  const items = document.createElement("div");
-
-  group.className = "profile-resonance-group";
-  group.dataset.resonanceSource = sourceType;
-  heading.className = "profile-resonance-source";
-  heading.textContent = sourceName;
-  action.className = "profile-fractal-picker-cta";
-  action.textContent = cta;
-  items.className = "profile-fractal-picker-list";
-  items.replaceChildren(
-    ...fractals.map((row) => createFractalPickerItem(row, selectedFractalKeys, onToggleFractal))
-  );
-  group.append(heading, action, items);
-
-  return group;
-};
-
 const createResonanceGroup = (sourceName, sourceType, resonances, selectedNumber) => {
   const group = document.createElement("section");
   const heading = document.createElement("h2");
@@ -298,7 +264,7 @@ const createResonanceGroup = (sourceName, sourceType, resonances, selectedNumber
   return group;
 };
 
-const createResonanceColumn = (title, groups, selectedNumber, meta = "", pickerOptions = {}) => {
+const createResonanceColumn = (title, groups, selectedNumber, meta = "") => {
   const column = document.createElement("section");
   const heading = document.createElement("h2");
   const content = document.createElement("div");
@@ -315,22 +281,11 @@ const createResonanceColumn = (title, groups, selectedNumber, meta = "", pickerO
   }
   content.className = "profile-resonance-column-content";
   content.replaceChildren(
-    ...groups.map((group) => (
-      group.sourceType === "user" && pickerOptions.cta
-        ? createFractalPickerGroup(
-          group.sourceName,
-          group.sourceType,
-          group.rows,
-          pickerOptions.cta,
-          pickerOptions.selectedFractalKeys,
-          pickerOptions.onToggleFractal
-        )
-        : createResonanceGroup(
-          group.sourceName,
-          group.sourceType,
-          group.rows,
-          selectedNumber
-        )
+    ...groups.map((group) => createResonanceGroup(
+      group.sourceName,
+      group.sourceType,
+      group.rows,
+      selectedNumber
     ))
   );
   column.append(heading, content);
@@ -688,6 +643,18 @@ const getDynamicTimeRows = (dynamicRings, selectedTimeSegments) => (
   }).filter((row) => row.resonanceValue || getDisplayValue(row.description))
 );
 
+const getDynamicTimeChoiceRows = (dynamicRings) => (
+  dynamicRings
+    .filter((ring) => ring.sourceType === "user")
+    .map((ring) => ({
+      id: ring.sourceId || ring.id,
+      label: ring.label || "Time",
+      sourceId: ring.sourceId,
+      sourceName: ring.sourceName,
+      sourceType: ring.sourceType
+    }))
+);
+
 const getTimeResonanceGroups = (rows, selectedTimeSegments, dynamicRings) => {
   const sunNumber = selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER;
   const staticTimeGroups = getResonanceGroupsForNumber(
@@ -709,6 +676,43 @@ const getEmptyLabels = (count) => Array.from({ length: count }, () => "");
 const getActiveSegmentIndex = (segmentKeys, selectedSegment) => (
   Math.max(0, segmentKeys.findIndex((key) => String(key) === String(selectedSegment)))
 );
+
+const filterUserGroupsByFractal = (groups, selectedFractalKey) => (
+  groups
+    .map((group) => {
+      if (group.sourceType !== "user") return group;
+
+      return {
+        ...group,
+        rows: selectedFractalKey
+          ? group.rows.filter((row) => getFractalKey(row) === selectedFractalKey)
+          : []
+      };
+    })
+    .filter((group) => group.rows.length)
+);
+
+const createFractalSelect = (labelText, choices, selectedValue, onChange) => {
+  const label = document.createElement("label");
+  const text = document.createElement("span");
+  const select = document.createElement("select");
+
+  label.className = "profile-fractal-select";
+  text.textContent = labelText;
+  select.replaceChildren(...choices.map((choice) => {
+    const option = document.createElement("option");
+
+    option.value = getFractalKey(choice);
+    option.textContent = choice.label || "Untitled fractal";
+
+    return option;
+  }));
+  select.value = selectedValue || "";
+  select.addEventListener("change", () => onChange(select.value));
+  label.append(text, select);
+
+  return label;
+};
 
 const createProfileCoreState = ({
   avatarImage,
@@ -775,7 +779,8 @@ const initJayceeProfile = async () => {
   let coreState = null;
   let themeSettings = getThemeSettingsFromProfile(null);
   let selectedSpaceNumber = DEFAULT_SELECTED_NUMBER;
-  const selectedFractalKeys = new Set();
+  let selectedMapFractalKey = "";
+  let selectedPortalFractalKey = "";
   let selectedDraftKey = null;
   let draftPreviewMode = "closed";
   let draftPreviewTimer = null;
@@ -821,28 +826,74 @@ const initJayceeProfile = async () => {
     }
   };
 
-  const toggleFractal = (fractalKey) => {
-    if (selectedFractalKeys.has(fractalKey)) {
-      selectedFractalKeys.delete(fractalKey);
-    } else {
-      selectedFractalKeys.add(fractalKey);
+  const renderFractalSelectors = () => {
+    const corePanel = canvas.closest(".jaycee-profile-core");
+    const existingSelectors = corePanel?.querySelector("[data-profile-fractal-selectors]");
+    const mapChoices = getRowsForDimensionColumn(rows, SPACE_DIMENSION_VALUE)
+      .filter((row) => row.sourceType === "user");
+    const portalChoices = [
+      ...getRowsForDimensionColumn(rows, TIME_DIMENSION_VALUE).filter((row) => row.sourceType === "user"),
+      ...getDynamicTimeChoiceRows(dynamicRings)
+    ];
+
+    if (!corePanel || isCorePage || (!mapChoices.length && !portalChoices.length)) {
+      existingSelectors?.remove();
+      corePanel?.classList.remove("has-fractal-selectors");
+      return;
     }
 
-    renderResonances();
+    corePanel.classList.add("has-fractal-selectors");
+
+    if (!selectedMapFractalKey && mapChoices.length) {
+      selectedMapFractalKey = getFractalKey(mapChoices[0]);
+    }
+
+    if (!selectedPortalFractalKey && portalChoices.length) {
+      selectedPortalFractalKey = getFractalKey(portalChoices[0]);
+    }
+
+    const selectors = existingSelectors || document.createElement("div");
+
+    selectors.className = "profile-fractal-selectors";
+    selectors.dataset.profileFractalSelectors = "";
+    selectors.replaceChildren(
+      ...(mapChoices.length
+        ? [createFractalSelect("Choose your map", mapChoices, selectedMapFractalKey, (value) => {
+          selectedMapFractalKey = value;
+          renderResonances();
+        })]
+        : []),
+      ...(portalChoices.length
+        ? [createFractalSelect("Choose your portal", portalChoices, selectedPortalFractalKey, (value) => {
+          selectedPortalFractalKey = value;
+          renderResonances();
+        })]
+        : [])
+    );
+
+    if (!existingSelectors) {
+      corePanel.insertBefore(selectors, canvas);
+    }
   };
 
   const renderResonances = () => {
     const showDrafts = !publicUsername && !isCorePage;
-    const spaceGroups = getResonanceGroupsForNumber(
-      getRowsForDimensionColumn(rows, SPACE_DIMENSION_VALUE),
-      selectedSpaceNumber
+    const spaceGroups = filterUserGroupsByFractal(
+      getResonanceGroupsForNumber(
+        getRowsForDimensionColumn(rows, SPACE_DIMENSION_VALUE),
+        selectedSpaceNumber
+      ),
+      selectedMapFractalKey
     );
     const selectedSunNumber = selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER;
-    const timeGroups = getTimeResonanceGroups(rows, selectedTimeSegments, dynamicRings);
+    const timeGroups = filterUserGroupsByFractal(
+      getTimeResonanceGroups(rows, selectedTimeSegments, dynamicRings),
+      selectedPortalFractalKey
+    );
     const draftRows = showDrafts ? getDraftRows(rows) : [];
     const columns = [
-      { cta: "Choose your map", groups: spaceGroups, meta: `Sector ${selectedSpaceNumber}`, selectedNumber: selectedSpaceNumber, title: "Map" },
-      { cta: "Choose your realm", groups: timeGroups, meta: getTimeSelectionMeta(dynamicRings, selectedTimeSegments), selectedNumber: selectedSunNumber, title: "Realm" }
+      { groups: spaceGroups, meta: `Sector ${selectedSpaceNumber}`, selectedNumber: selectedSpaceNumber, title: "Map" },
+      { groups: timeGroups, meta: getTimeSelectionMeta(dynamicRings, selectedTimeSegments), selectedNumber: selectedSunNumber, title: "Portal" }
     ].filter((column) => column.groups.length);
 
     status.textContent = "";
@@ -851,12 +902,7 @@ const initJayceeProfile = async () => {
         column.title,
         column.groups,
         column.selectedNumber,
-        column.meta,
-        {
-          cta: column.cta,
-          onToggleFractal: toggleFractal,
-          selectedFractalKeys
-        }
+        column.meta
       )),
       ...(draftRows.length ? [createDraftsSection(draftRows, selectedDraftKey, draftPreviewMode, toggleDraft)] : [])
     );
@@ -955,6 +1001,7 @@ const initJayceeProfile = async () => {
     }
     window.addEventListener("resize", scheduleRenderCore);
     window.addEventListener("load", scheduleRenderCore);
+    renderFractalSelectors();
     renderResonances();
     scheduleRenderCore();
   } catch (error) {
