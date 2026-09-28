@@ -321,28 +321,39 @@ const drawRingSegmentPanel = (context, metrics, segment, colors) => {
   }
 
   if (colors.border) {
-    context.shadowColor = colors.borderGlow || colors.border;
-    context.shadowBlur = (segment.outerRadius - segment.innerRadius) * 0.18;
-    context.strokeStyle = colors.border;
-    context.lineWidth = Math.max(1, (segment.outerRadius - segment.innerRadius) * 0.022);
-    if (isFullCircle) {
-      context.beginPath();
-      context.arc(metrics.center, metrics.center, segment.outerRadius, 0, Math.PI * 2);
-      context.stroke();
-      context.beginPath();
-      context.arc(metrics.center, metrics.center, segment.innerRadius, 0, Math.PI * 2);
-      context.stroke();
-    } else {
-      context.beginPath();
-      context.arc(metrics.center, metrics.center, segment.outerRadius, segment.startAngle, segment.endAngle);
-      context.lineTo(
-        metrics.center + Math.cos(segment.endAngle) * segment.innerRadius,
-        metrics.center + Math.sin(segment.endAngle) * segment.innerRadius
-      );
-      context.arc(metrics.center, metrics.center, segment.innerRadius, segment.endAngle, segment.startAngle, true);
-      context.closePath();
-      context.stroke();
+    const strokeSegmentBorder = () => {
+      if (isFullCircle) {
+        context.beginPath();
+        context.arc(metrics.center, metrics.center, segment.outerRadius, 0, Math.PI * 2);
+        context.stroke();
+        context.beginPath();
+        context.arc(metrics.center, metrics.center, segment.innerRadius, 0, Math.PI * 2);
+        context.stroke();
+      } else {
+        context.beginPath();
+        context.arc(metrics.center, metrics.center, segment.outerRadius, segment.startAngle, segment.endAngle);
+        context.lineTo(
+          metrics.center + Math.cos(segment.endAngle) * segment.innerRadius,
+          metrics.center + Math.sin(segment.endAngle) * segment.innerRadius
+        );
+        context.arc(metrics.center, metrics.center, segment.innerRadius, segment.endAngle, segment.startAngle, true);
+        context.closePath();
+        context.stroke();
+      }
+    };
+    if (colors.borderUnderlay) {
+      context.shadowColor = colors.borderUnderlayGlow || colors.borderUnderlay;
+      context.shadowBlur = (segment.outerRadius - segment.innerRadius) * 0.28;
+      context.strokeStyle = colors.borderUnderlay;
+      context.lineWidth = Math.max(2.4, (segment.outerRadius - segment.innerRadius) * 0.075);
+      strokeSegmentBorder();
     }
+
+    context.shadowColor = colors.borderGlow || colors.border;
+    context.shadowBlur = (segment.outerRadius - segment.innerRadius) * 0.28;
+    context.strokeStyle = colors.border;
+    context.lineWidth = Math.max(1.6, (segment.outerRadius - segment.innerRadius) * 0.038);
+    strokeSegmentBorder();
   }
 
   context.restore();
@@ -466,19 +477,28 @@ const drawRing = (context, metrics, options) => {
   const labelRadius = innerRadius + ((outerRadius - innerRadius) / 2);
   const ringWidth = outerRadius - innerRadius;
   const hasBackgroundImage = Boolean(backgroundImage);
-  const ringStroke = hasBackgroundImage ? "rgba(255, 255, 255, 0.54)" : stroke;
-  const dividerStroke = hasBackgroundImage ? "rgba(255, 255, 255, 0.7)" : stroke;
-  const dividerShadow = hasBackgroundImage ? "rgba(0, 0, 0, 0.62)" : "transparent";
+  const ringStroke = hasBackgroundImage ? "rgba(255, 255, 255, 0.96)" : stroke;
+  const dividerStroke = hasBackgroundImage ? "rgba(255, 255, 255, 0.98)" : stroke;
+  const dividerUnderlay = "rgba(0, 0, 0, 0.82)";
 
-  context.save();
-  context.lineWidth = hasBackgroundImage ? Math.max(1.2, ringWidth * 0.028) : 1;
-  context.strokeStyle = ringStroke;
-  context.shadowColor = dividerShadow;
-  context.shadowBlur = hasBackgroundImage ? ringWidth * 0.08 : 0;
+  const strokeWithUnderlay = (drawPath, foreground, underlayWidth, foregroundWidth) => {
+    if (hasBackgroundImage) {
+      context.shadowColor = "rgba(0, 0, 0, 0.75)";
+      context.shadowBlur = ringWidth * 0.1;
+      context.strokeStyle = dividerUnderlay;
+      context.lineWidth = underlayWidth;
+      drawPath();
+    }
 
-  drawRingImage(context, metrics, backgroundImage, innerRadius, outerRadius, backgroundImageAlpha);
+    context.shadowColor = hasBackgroundImage ? "rgba(0, 0, 0, 0.38)" : "transparent";
+    context.shadowBlur = hasBackgroundImage ? ringWidth * 0.04 : 0;
+    context.strokeStyle = foreground;
+    context.lineWidth = foregroundWidth;
+    drawPath();
+  };
+  const drawStyledSegments = () => {
+    if (!styledSegmentColors) return;
 
-  if (styledSegmentColors) {
     styledSegmentIndices.forEach((segmentIndex) => {
       drawRingSegmentPanel(
         context,
@@ -493,16 +513,29 @@ const drawRing = (context, metrics, options) => {
         typeof styledSegmentColors === "function" ? styledSegmentColors(segmentIndex) : styledSegmentColors
       );
     });
+  };
+
+  context.save();
+  context.lineWidth = 1;
+  context.strokeStyle = ringStroke;
+  context.shadowColor = "transparent";
+  context.shadowBlur = 0;
+
+  drawRingImage(context, metrics, backgroundImage, innerRadius, outerRadius, backgroundImageAlpha);
+
+  if (!hasBackgroundImage) {
+    drawStyledSegments();
   }
 
   if (showBorders) {
-    context.beginPath();
-    context.arc(metrics.center, metrics.center, innerRadius, 0, Math.PI * 2);
-    context.stroke();
-
-    context.beginPath();
-    context.arc(metrics.center, metrics.center, outerRadius, 0, Math.PI * 2);
-    context.stroke();
+    strokeWithUnderlay(() => {
+      context.beginPath();
+      context.arc(metrics.center, metrics.center, innerRadius, 0, Math.PI * 2);
+      context.stroke();
+      context.beginPath();
+      context.arc(metrics.center, metrics.center, outerRadius, 0, Math.PI * 2);
+      context.stroke();
+    }, ringStroke, Math.max(2.4, ringWidth * 0.06), 1);
   }
 
   if (tickCount) {
@@ -528,14 +561,12 @@ const drawRing = (context, metrics, options) => {
     const labelY = metrics.center + Math.sin(middleAngle) * labelRadius;
 
     if (showDividers) {
-      context.strokeStyle = dividerStroke;
-      context.lineWidth = hasBackgroundImage ? Math.max(1.2, ringWidth * 0.032) : 1;
-      context.shadowColor = dividerShadow;
-      context.shadowBlur = hasBackgroundImage ? ringWidth * 0.1 : 0;
-      context.beginPath();
-      context.moveTo(dividerInnerX, dividerInnerY);
-      context.lineTo(dividerX, dividerY);
-      context.stroke();
+      strokeWithUnderlay(() => {
+        context.beginPath();
+        context.moveTo(dividerInnerX, dividerInnerY);
+        context.lineTo(dividerX, dividerY);
+        context.stroke();
+      }, dividerStroke, Math.max(2.2, ringWidth * 0.052), 1);
     }
 
     if (label) {
@@ -566,6 +597,10 @@ const drawRing = (context, metrics, options) => {
       );
     }
   });
+
+  if (hasBackgroundImage) {
+    drawStyledSegments();
+  }
 
   context.restore();
 };
@@ -619,6 +654,24 @@ const drawSquare = (context, metrics, colors, labels = getEmptyLabels(RING_SEGME
     cellSize * 0.24,
     Math.max(isCompact ? 9 : 13, metrics.ringWidth * (isCompact ? 0.28 : 0.38))
   );
+  const hasBackgroundImage = Boolean(colors.backgroundImage);
+  let activeCell = null;
+
+  const strokeSquareLine = (drawPath, foreground, underlayWidth = 2.4) => {
+    if (hasBackgroundImage) {
+      context.shadowColor = "rgba(0, 0, 0, 0.72)";
+      context.shadowBlur = cellSize * 0.08;
+      context.strokeStyle = "rgba(0, 0, 0, 0.82)";
+      context.lineWidth = underlayWidth;
+      drawPath();
+    }
+
+    context.shadowColor = hasBackgroundImage ? "rgba(0, 0, 0, 0.34)" : "transparent";
+    context.shadowBlur = hasBackgroundImage ? cellSize * 0.035 : 0;
+    context.strokeStyle = foreground;
+    context.lineWidth = 1;
+    drawPath();
+  };
 
   context.save();
   context.shadowColor = colors.glow;
@@ -650,10 +703,14 @@ const drawSquare = (context, metrics, colors, labels = getEmptyLabels(RING_SEGME
           }
         );
       } else {
+        activeCell = {
+          x: start + (column * cellSize),
+          y: start + (row * cellSize)
+        };
         drawGradientSquareCell(
           context,
-          start + (column * cellSize),
-          start + (row * cellSize),
+          activeCell.x,
+          activeCell.y,
           cellSize,
           {
             start: getSquarePaletteColor(column, row, colors.palette),
@@ -661,13 +718,16 @@ const drawSquare = (context, metrics, colors, labels = getEmptyLabels(RING_SEGME
             alpha: colors.backgroundImage ? 0.1 : (colors.activeFillAlpha ?? ACTIVE_FILL_ALPHA)
           }
         );
-        drawInsetSquareCell(
-          context,
-          start + (column * cellSize),
-          start + (row * cellSize),
-          cellSize,
-          colors.inset
-        );
+
+        if (!hasBackgroundImage) {
+          drawInsetSquareCell(
+            context,
+            activeCell.x,
+            activeCell.y,
+            cellSize,
+            colors.inset
+          );
+        }
       }
     }
   }
@@ -703,21 +763,39 @@ const drawSquare = (context, metrics, colors, labels = getEmptyLabels(RING_SEGME
   }
 
   context.shadowBlur = 0;
-  context.lineWidth = 1;
-  context.strokeStyle = colors.cellBorder;
 
   for (let index = 1; index < SQUARE_GRID_SIZE; index += 1) {
     const offset = start + (cellSize * index);
-    context.beginPath();
-    context.moveTo(offset, start);
-    context.lineTo(offset, start + metrics.squareSize);
-    context.moveTo(start, offset);
-    context.lineTo(start + metrics.squareSize, offset);
-    context.stroke();
+
+    strokeSquareLine(() => {
+      context.beginPath();
+      context.moveTo(offset, start);
+      context.lineTo(offset, start + metrics.squareSize);
+      context.moveTo(start, offset);
+      context.lineTo(start + metrics.squareSize, offset);
+      context.stroke();
+    }, hasBackgroundImage ? "rgba(255, 255, 255, 0.96)" : colors.cellBorder);
   }
 
-  context.strokeStyle = colors.border;
-  context.strokeRect(start, start, metrics.squareSize, metrics.squareSize);
+  strokeSquareLine(() => {
+    context.strokeRect(start, start, metrics.squareSize, metrics.squareSize);
+  }, hasBackgroundImage ? "rgba(255, 255, 255, 0.98)" : colors.border, 3);
+
+  if (hasBackgroundImage && activeCell) {
+    drawInsetSquareCell(
+      context,
+      activeCell.x,
+      activeCell.y,
+      cellSize,
+      {
+        ...colors.inset,
+        border: "rgba(0, 255, 72, 1)",
+        borderGlow: "rgba(0, 255, 72, 0.95)",
+        shadow: "rgba(0, 18, 4, 0.96)"
+      }
+    );
+  }
+
   context.restore();
 };
 
@@ -776,15 +854,19 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
           && ring.activeSegmentIndex === undefined
           && segmentIndex === ACTIVE_CORE_SEGMENT_INDEX
         ) {
-          colors.border = "rgba(124, 255, 120, 0.92)";
-          colors.borderGlow = "rgba(124, 255, 120, 0.42)";
+          colors.border = "rgba(0, 255, 72, 1)";
+          colors.borderGlow = "rgba(0, 255, 72, 0.95)";
+          colors.borderUnderlay = "rgba(0, 18, 4, 0.96)";
+          colors.borderUnderlayGlow = "rgba(0, 0, 0, 0.95)";
           colors.transparent = true;
           colors.transparentAlpha = ring.activeFillAlpha ?? ACTIVE_FILL_ALPHA;
         }
 
         if (segmentIndex === ring.activeSegmentIndex) {
-          colors.border = "rgba(124, 255, 120, 0.92)";
-          colors.borderGlow = "rgba(124, 255, 120, 0.42)";
+          colors.border = "rgba(0, 255, 72, 1)";
+          colors.borderGlow = "rgba(0, 255, 72, 0.95)";
+          colors.borderUnderlay = "rgba(0, 18, 4, 0.96)";
+          colors.borderUnderlayGlow = "rgba(0, 0, 0, 0.95)";
         }
 
         return colors;
