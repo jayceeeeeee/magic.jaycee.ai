@@ -6,22 +6,43 @@ import {
   getTopCenteredLastSegmentRotation,
   getTopCenteredSegmentRotation
 } from "./jaycee-core.js";
+import {
+  DEFAULT_SELECTED_NUMBER,
+  DEFAULT_SUN_TIME_NUMBER,
+  PROFILE_TABLE,
+  SPACE_DIMENSION_VALUE,
+  TIME_DIMENSION_VALUE,
+  fetchDynamicTimeRings,
+  fetchJayceeResonances,
+  fetchProfileByUserId,
+  fetchProfileByUsername,
+  fetchPublicProfiles,
+  fetchUserResonances,
+  getAvatarImageUrl,
+  getBackgroundImageUrl,
+  getDisplayValue,
+  getFractalKey,
+  getProfileColorValue,
+  getThemeSettingsFromProfile,
+  hasTimeCycle,
+  isHexColor,
+  loadOptionalImage,
+  parseBrowserGregorianDate
+} from "./jaycee-data.js";
+import {
+  DRAFT_PREVIEW_ANIMATION_MS,
+  createDraftsSection,
+  createResonanceColumn,
+  filterUserGroupsByFractal,
+  getDraftRows,
+  getDynamicTimeChoiceRows,
+  getResonanceGroupsForNumber,
+  getRowsForDimensionColumn,
+  getSelectedDynamicPortalRing,
+  getTimeResonanceGroups,
+  getTimeSelectionMeta
+} from "./jaycee-dashboard.js";
 
-const JAYCEE_FRACTALS_TABLE = "jaycee_fractals";
-const JAYCEE_DYNAMIC_FRACTALS_TABLE = "jaycee_dynamic_fractals";
-const JAYCEE_DYNAMIC_FRACTAL_ELEMENTS_TABLE = "jaycee_dynamic_fractal_elements";
-const FRACTAL_VISIBILITY_COLUMN = "visibility";
-const PUBLIC_VISIBILITY_VALUE = "public";
-const SPACE_DIMENSION_VALUE = "space";
-const TIME_DIMENSION_VALUE = "time";
-const PROFILE_TABLE = "profiles";
-const USER_IMAGES_BUCKET = "users";
-const CODE_COLUMNS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
-const DEFAULT_SELECTED_NUMBER = 5;
-const DEFAULT_SUN_TIME_NUMBER = 9;
-const JAYCEE_RESONANCE_SOURCE = "Jaycee Core";
-const TIME_CYCLE_COLUMNS = "start_at, length";
-const SIGNED_IMAGE_URL_DURATION_SECONDS = 60 * 60;
 const PROFILE_CORE_METRICS = {
   ringMaxRadialShare: 0.34,
   ringWidthMax: 32,
@@ -31,51 +52,6 @@ const PROFILE_CORE_METRICS = {
 const PROFILE_RING_ACTIVE_FILL_ALPHA = 0.09;
 const PROFILE_RING_FILL_ALPHA = 0.26;
 const PROFILE_CLOCK_REFRESH_MS = 1000;
-
-const getFractalKey = (row) => `${row.sourceType || "source"}:${row.id || row.sourceId || row.label || "fractal"}`;
-
-const getDynamicRingKey = (ring) => getFractalKey({
-  id: ring.sourceId || ring.id,
-  label: ring.label,
-  sourceId: ring.sourceId,
-  sourceType: ring.sourceType
-});
-
-const getDisplayValue = (value) => (
-  value === null || value === undefined ? "" : String(value).trim()
-);
-
-const parseBrowserGregorianDate = (value) => {
-  const text = getDisplayValue(value);
-  const match = text.match(
-    /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3})\d*)?)?)?/
-  );
-
-  if (match) {
-    const [, year, month, day, hours = "0", minutes = "0", seconds = "0", milliseconds = "0"] = match;
-
-    return new Date(
-      Number(year),
-      Number(month) - 1,
-      Number(day),
-      Number(hours),
-      Number(minutes),
-      Number(seconds),
-      Number(milliseconds.padEnd(3, "0"))
-    ).getTime();
-  }
-
-  return Date.parse(text);
-};
-
-const hasTimeCycle = (fractal) => {
-  const startAt = parseBrowserGregorianDate(fractal?.start_at);
-  const length = Number(fractal?.length);
-
-  return Number.isFinite(startAt) && Number.isFinite(length) && length > 0;
-};
-
-const isHexColor = (value) => /^#[0-9a-f]{6}$/i.test(getDisplayValue(value));
 
 const hexToRgbParts = (color) => {
   const value = Number.parseInt(color.slice(1), 16);
@@ -104,14 +80,6 @@ const mixHexColors = (start, end, amount) => {
   });
 };
 
-const getProfileThemeValue = (profile) => (
-  window.JayceeThemes?.normalizeTheme?.(getDisplayValue(profile?.theme)) || "aurora"
-);
-
-const getProfileColorValue = (value) => (
-  isHexColor(value) ? getDisplayValue(value) : ""
-);
-
 const getCssColorValue = (name, fallback) => {
   const value = getComputedStyle(document.body).getPropertyValue(name).trim();
 
@@ -137,16 +105,10 @@ const getSunRingSegmentColors = () => {
 };
 
 const applyProfileTheme = (profile) => {
-  const theme = getProfileThemeValue(profile);
+  const theme = getThemeSettingsFromProfile(profile).theme;
 
   document.body.dataset.theme = theme;
 };
-
-const getThemeSettingsFromProfile = (profile) => ({
-  primary_color: getProfileColorValue(profile?.primary_color),
-  secondary_color: getProfileColorValue(profile?.secondary_color),
-  theme: getProfileThemeValue(profile)
-});
 
 const getColorInputValue = (color, fallback) => (
   getProfileColorValue(color) || fallback
@@ -249,491 +211,6 @@ const redirectToLogin = () => {
   window.location.href = loginUrl.href;
 };
 
-const getStoragePathFromImage = (image, bucketName) => {
-  if (/^https?:\/\//i.test(image)) {
-    const url = new URL(image);
-    const bucketPrefix = `/storage/v1/object/public/${bucketName}/`;
-    const prefixIndex = url.pathname.indexOf(bucketPrefix);
-
-    if (prefixIndex === -1) return "";
-
-    return url.pathname.slice(prefixIndex + bucketPrefix.length);
-  }
-
-  return image.replace(new RegExp(`^${bucketName}/`), "");
-};
-
-const createResonanceItem = (row, selectedNumber) => {
-  const item = document.createElement("article");
-  const label = document.createElement("div");
-  const value = document.createElement("div");
-  const description = getDisplayValue(row.description);
-  const resonanceValue = row.resonanceValue === undefined
-    ? getDisplayValue(row[String(selectedNumber)])
-    : getDisplayValue(row.resonanceValue);
-
-  item.className = "profile-resonance-item";
-  label.className = "profile-resonance-label";
-  value.className = "profile-resonance-value";
-  label.textContent = row.label || "Resonance";
-  value.textContent = resonanceValue;
-  item.append(label, value);
-
-  if (description) {
-    const descriptionEl = document.createElement("p");
-
-    descriptionEl.className = "profile-resonance-description";
-    descriptionEl.textContent = description;
-    item.append(descriptionEl);
-  }
-
-  return item;
-};
-
-const createResonanceGroup = (sourceName, sourceType, resonances, selectedNumber) => {
-  const group = document.createElement("section");
-  const heading = document.createElement("h2");
-  const items = document.createElement("div");
-
-  group.className = "profile-resonance-group";
-  group.dataset.resonanceSource = sourceType;
-  heading.className = "profile-resonance-source";
-  heading.textContent = sourceName;
-  items.className = "profile-resonance-group-items";
-  items.replaceChildren(...resonances.map((row) => createResonanceItem(row, selectedNumber)));
-  group.append(heading, items);
-
-  return group;
-};
-
-const createResonanceColumn = (title, groups, selectedNumber, meta = "") => {
-  const column = document.createElement("section");
-  const heading = document.createElement("h2");
-  const content = document.createElement("div");
-
-  column.className = "profile-resonance-column";
-  heading.className = "profile-resonance-column-title";
-  heading.append(document.createTextNode(title));
-  if (meta) {
-    const metaEl = document.createElement("span");
-
-    metaEl.className = "profile-resonance-column-meta";
-    metaEl.textContent = meta;
-    heading.append(metaEl);
-  }
-  content.className = "profile-resonance-column-content";
-  content.replaceChildren(
-    ...groups.map((group) => createResonanceGroup(
-      group.sourceName,
-      group.sourceType,
-      group.rows,
-      selectedNumber
-    ))
-  );
-  column.append(heading, content);
-
-  return column;
-};
-
-const getDraftKey = (row) => row.id || row.label || "";
-
-const DRAFT_PREVIEW_ANIMATION_MS = 220;
-
-const createDraftPreview = (draft, mode) => {
-  const preview = document.createElement("div");
-  const table = document.createElement("div");
-  const headerRow = document.createElement("div");
-  const valueRow = document.createElement("div");
-
-  preview.className = `profile-draft-preview is-${mode}`;
-  table.className = "profile-draft-table";
-  headerRow.className = "profile-draft-table-row profile-draft-table-head";
-  valueRow.className = "profile-draft-table-row profile-draft-table-values";
-  headerRow.replaceChildren(...CODE_COLUMNS.map((number) => {
-    const cell = document.createElement("div");
-
-    cell.className = "profile-draft-table-cell";
-    cell.textContent = number;
-
-    return cell;
-  }));
-  valueRow.replaceChildren(...CODE_COLUMNS.map((number) => {
-    const cell = document.createElement("div");
-    const valueEl = document.createElement("strong");
-
-    cell.className = "profile-draft-table-cell";
-    valueEl.textContent = getDisplayValue(draft[String(number)]) || "-";
-    cell.append(valueEl);
-
-    return cell;
-  }));
-  table.append(headerRow, valueRow);
-  preview.append(table);
-
-  return preview;
-};
-
-const createDraftsSection = (draftRows, selectedDraftKey, draftPreviewMode, onToggleDraft) => {
-  const section = document.createElement("section");
-  const heading = document.createElement("h2");
-  const items = document.createElement("div");
-  const selectedDraft = draftRows.find((row) => getDraftKey(row) === selectedDraftKey);
-
-  section.className = "profile-resonance-column profile-resonance-drafts";
-  heading.className = "profile-resonance-column-title";
-  heading.textContent = "Drafts";
-  items.className = "profile-draft-list";
-  items.replaceChildren(...draftRows.map((row) => {
-    const item = document.createElement("button");
-    const draftKey = getDraftKey(row);
-
-    item.className = "profile-draft-item";
-    item.type = "button";
-    item.textContent = row.label || "Untitled fractal";
-    item.setAttribute("aria-pressed", String(draftKey === selectedDraftKey));
-    item.addEventListener("click", () => onToggleDraft(draftKey));
-
-    return item;
-  }));
-  section.append(
-    heading,
-    ...(selectedDraft ? [createDraftPreview(selectedDraft, draftPreviewMode)] : []),
-    items
-  );
-
-  return section;
-};
-
-const fetchJayceeResonances = async (client) => {
-  const { data, error } = await client
-    .from(JAYCEE_FRACTALS_TABLE)
-    .select(`id, label, user_id, dimension, ${TIME_CYCLE_COLUMNS}, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
-    .is("user_id", null)
-    .eq(FRACTAL_VISIBILITY_COLUMN, PUBLIC_VISIBILITY_VALUE)
-    .order("label", { ascending: true });
-
-  if (error) throw error;
-
-  return (data || []).map((row) => ({
-    ...row,
-    sourceName: JAYCEE_RESONANCE_SOURCE,
-    sourceType: "jaycee"
-  }));
-};
-
-const fetchUserResonances = async (client, profile, { publicOnly = false } = {}) => {
-  let query = client
-    .from(JAYCEE_FRACTALS_TABLE)
-    .select(`id, label, user_id, dimension, ${TIME_CYCLE_COLUMNS}, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
-    .eq("user_id", profile.id);
-
-  if (publicOnly) {
-    query = query.eq(FRACTAL_VISIBILITY_COLUMN, PUBLIC_VISIBILITY_VALUE);
-  }
-
-  const { data, error } = await query.order("label", { ascending: true });
-
-  if (error) throw error;
-
-  return (data || []).map((row) => ({
-    ...row,
-    sourceName: profile.username || "User",
-    sourceType: "user"
-  }));
-};
-
-const fetchDynamicTimeRings = async (client, profile) => {
-  let query = client
-    .from(JAYCEE_DYNAMIC_FRACTALS_TABLE)
-    .select(`id, label, description, dimension, user_id, created_at, ${TIME_CYCLE_COLUMNS}`)
-    .eq("dimension", TIME_DIMENSION_VALUE)
-    .order("created_at", { ascending: true });
-
-  if (profile?.id) {
-    query = query.or(`user_id.is.null,user_id.eq.${profile.id}`);
-  } else {
-    query = query.is("user_id", null);
-  }
-
-  const { data: fractals, error: fractalsError } = await query;
-
-  if (fractalsError) throw fractalsError;
-  if (!fractals?.length) return [];
-
-  const { data: elements, error: elementsError } = await client
-    .from(JAYCEE_DYNAMIC_FRACTAL_ELEMENTS_TABLE)
-    .select("id, fractal_id, position, value, description, created_at")
-    .in("fractal_id", fractals.map((fractal) => fractal.id))
-    .order("position", { ascending: true });
-
-  if (elementsError) throw elementsError;
-
-  return fractals
-    .map((fractal) => {
-      const ringElements = (elements || [])
-        .filter((element) => element.fractal_id === fractal.id)
-        .sort((first, second) => Number(first.position) - Number(second.position));
-      const positions = ringElements
-        .map((element) => Number(element.position))
-        .filter((position) => Number.isFinite(position) && position > 0);
-
-      if (!positions.length) return null;
-
-      return {
-        ...fractal,
-        elements: ringElements,
-        id: `dynamic-${fractal.id}`,
-        sourceName: fractal.user_id ? (profile?.username || "User") : JAYCEE_RESONANCE_SOURCE,
-        sourceType: fractal.user_id ? "user" : "jaycee",
-        sourceId: fractal.id,
-        segmentKeys: positions.map(String),
-        defaultSegment: String(positions[0])
-      };
-    })
-    .filter(Boolean);
-};
-
-const fetchProfileByUserId = async (client, userId) => {
-  const { data, error } = await client
-    .from(PROFILE_TABLE)
-    .select("id, username, avatar_path, background_path, theme, primary_color, secondary_color")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (error) throw error;
-
-  return data || null;
-};
-
-const fetchProfileByUsername = async (client, username) => {
-  const { data, error } = await client
-    .from(PROFILE_TABLE)
-    .select("id, username, avatar_path, background_path, theme, primary_color, secondary_color")
-    .eq("username", username)
-    .maybeSingle();
-
-  if (error) throw error;
-
-  return data || null;
-};
-
-const fetchPublicProfiles = async (client, limit = 10) => {
-  const { data, error } = await client
-    .from(PROFILE_TABLE)
-    .select("id, username")
-    .not("username", "is", null)
-    .order("username", { ascending: true })
-    .limit(limit);
-
-  if (error) throw error;
-
-  return (data || []).filter((profile) => getDisplayValue(profile.username));
-};
-
-const getUserImageUrl = async (client, profile, path) => {
-  const image = getDisplayValue(path);
-
-  if (!profile?.id || !image) return "";
-
-  const rawStoragePath = getStoragePathFromImage(image, USER_IMAGES_BUCKET)
-    .replace(/^\/+/, "")
-    .replace(/\+/g, " ");
-  const storagePath = rawStoragePath.includes("/")
-    ? rawStoragePath
-    : `${profile.id}/${rawStoragePath}`;
-
-  if (!storagePath) return "";
-
-  const { data, error } = await client.storage
-    .from(USER_IMAGES_BUCKET)
-    .createSignedUrl(storagePath, SIGNED_IMAGE_URL_DURATION_SECONDS);
-
-  if (error) throw error;
-
-  return data?.signedUrl || "";
-};
-
-const getAvatarImageUrl = async (client, profile) => (
-  getUserImageUrl(client, profile, profile?.avatar_path)
-);
-
-const getBackgroundImageUrl = async (client, profile) => (
-  getUserImageUrl(client, profile, profile?.background_path)
-);
-
-const loadImage = (imageUrl) => (
-  new Promise((resolve, reject) => {
-    if (!imageUrl) {
-      resolve(null);
-      return;
-    }
-
-    const image = new Image();
-
-    image.crossOrigin = "anonymous";
-    image.addEventListener("load", () => resolve(image), { once: true });
-    image.addEventListener("error", () => reject(new Error("Avatar image could not be loaded.")), { once: true });
-    image.src = imageUrl;
-  })
-);
-
-const loadOptionalImage = async (imageUrl) => {
-  try {
-    return await loadImage(imageUrl);
-  } catch (error) {
-    console.warn("Optional Jaycee image could not be loaded", error);
-    return null;
-  }
-};
-
-const getResonancesForNumber = (rows, selectedNumber) => (
-  rows.filter((row) => getDisplayValue(row[String(selectedNumber)]))
-);
-
-const getRowsForDimensionColumn = (rows, columnName) => (
-  rows.filter((row) => {
-    const dimension = getDisplayValue(row.dimension);
-
-    if (columnName === TIME_DIMENSION_VALUE) {
-      return dimension === TIME_DIMENSION_VALUE;
-    }
-
-    return dimension === SPACE_DIMENSION_VALUE;
-  })
-);
-
-const getDraftRows = (rows) => (
-  rows.filter((row) => !getDisplayValue(row.dimension))
-);
-
-const getResonanceGroupsForNumber = (rows, selectedNumber) => (
-  [
-    {
-      rows: getResonancesForNumber(rows.filter((row) => row.sourceType === "jaycee"), selectedNumber),
-      sourceName: JAYCEE_RESONANCE_SOURCE,
-      sourceType: "jaycee"
-    },
-    ...Array.from(
-      rows
-        .filter((row) => row.sourceType !== "jaycee")
-        .reduce((groups, row) => {
-          const sourceName = row.sourceName || "User";
-
-          if (!groups.has(sourceName)) groups.set(sourceName, []);
-          groups.get(sourceName).push(row);
-
-          return groups;
-        }, new Map()),
-      ([sourceName, groupedRows]) => ({
-        rows: groupedRows,
-        sourceName,
-        sourceType: "user"
-      })
-    )
-  ].filter((group) => group.rows.length)
-);
-
-const getRowsAsSourceGroups = (rows) => (
-  [
-    {
-      rows: rows.filter((row) => row.sourceType === "jaycee"),
-      sourceName: JAYCEE_RESONANCE_SOURCE,
-      sourceType: "jaycee"
-    },
-    ...Array.from(
-      rows
-        .filter((row) => row.sourceType !== "jaycee")
-        .reduce((groups, row) => {
-          const sourceName = row.sourceName || "User";
-
-          if (!groups.has(sourceName)) groups.set(sourceName, []);
-          groups.get(sourceName).push(row);
-
-          return groups;
-        }, new Map()),
-      ([sourceName, groupedRows]) => ({
-        rows: groupedRows,
-        sourceName,
-        sourceType: "user"
-      })
-    )
-  ].filter((group) => group.rows.length)
-);
-
-const mergeResonanceGroups = (groups) => {
-  const groupedBySource = new Map();
-
-  groups.forEach((group) => {
-    const sourceName = group.sourceName || "User";
-    const sourceKey = group.sourceType === "jaycee" ? "jaycee" : sourceName;
-
-    if (!groupedBySource.has(sourceKey)) {
-      groupedBySource.set(sourceKey, {
-        rows: [],
-        sourceName,
-        sourceType: group.sourceType
-      });
-    }
-
-    groupedBySource.get(sourceKey).rows.push(...group.rows);
-  });
-
-  return Array.from(groupedBySource.values()).filter((group) => group.rows.length);
-};
-
-const getDynamicTimeRows = (dynamicRings, selectedTimeSegments) => (
-  dynamicRings.flatMap((ring) => {
-    const selectedPosition = selectedTimeSegments.get(ring.id) || ring.defaultSegment;
-    const element = ring.elements.find((entry) => String(entry.position) === String(selectedPosition));
-
-    if (!element) return [];
-
-    return [{
-      id: ring.sourceId || ring.id,
-      label: ring.label || "Time",
-      resonanceValue: getDisplayValue(element.value),
-      sourceName: ring.sourceName || JAYCEE_RESONANCE_SOURCE,
-      sourceType: ring.sourceType || "jaycee"
-    }];
-  }).filter((row) => row.resonanceValue || getDisplayValue(row.description))
-);
-
-const getDynamicTimeChoiceRows = (dynamicRings) => (
-  dynamicRings
-    .filter((ring) => ring.sourceType === "user")
-    .map((ring) => ({
-      id: ring.sourceId || ring.id,
-      label: ring.label || "Time",
-      sourceId: ring.sourceId,
-      sourceName: ring.sourceName,
-      sourceType: ring.sourceType
-    }))
-);
-
-const getSelectedDynamicPortalRing = (dynamicRings, selectedPortalFractalKey) => {
-  if (!selectedPortalFractalKey) return null;
-
-  return dynamicRings.find((ring) => (
-    ring.sourceType === "user" && getDynamicRingKey(ring) === selectedPortalFractalKey
-  )) || null;
-};
-
-const getTimeResonanceGroups = (rows, selectedTimeSegments, dynamicRings) => {
-  const sunNumber = selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER;
-  const staticTimeGroups = getResonanceGroupsForNumber(
-    getRowsForDimensionColumn(rows, TIME_DIMENSION_VALUE),
-    sunNumber
-  );
-  const dynamicRows = getDynamicTimeRows(dynamicRings, selectedTimeSegments);
-  const dynamicGroups = dynamicRows.length ? getRowsAsSourceGroups(dynamicRows) : [];
-
-  return mergeResonanceGroups([...staticTimeGroups, ...dynamicGroups]);
-};
-
-const getTimeSelectionMeta = (dynamicRings, selectedTimeSegments) => {
-  return `Arc ${selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER}`;
-};
-
 const getEmptyLabels = (count) => Array.from({ length: count }, () => "");
 
 const getActiveSegmentIndex = (segmentKeys, selectedSegment) => (
@@ -801,21 +278,6 @@ const getSunCycleFractal = (rows) => {
     || jayceeTimeRows[0]
     || null;
 };
-
-const filterUserGroupsByFractal = (groups, selectedFractalKey) => (
-  groups
-    .map((group) => {
-      if (group.sourceType !== "user") return group;
-
-      return {
-        ...group,
-        rows: selectedFractalKey
-          ? group.rows.filter((row) => getFractalKey(row) === selectedFractalKey)
-          : []
-      };
-    })
-    .filter((group) => group.rows.length)
-);
 
 const createFractalSelect = (labelText, defaultText, choices, selectedValue, onChange) => {
   const label = document.createElement("label");
