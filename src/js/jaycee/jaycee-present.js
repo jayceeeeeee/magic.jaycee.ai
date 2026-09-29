@@ -1,3 +1,3 @@
-import { startJayceeProfilePage } from "./jaycee-profile.js";
+import { startJayceePage } from "./jaycee-core-runtime.js";
 
-startJayceeProfilePage();
+startJayceePage();
