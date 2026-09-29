@@ -1118,11 +1118,11 @@ const initJayceeProfile = async () => {
     selectors.className = "profile-fractal-selectors";
     selectors.dataset.profileFractalSelectors = "";
     selectors.replaceChildren(
-      createFractalSelect("Choose your map", "Body", mapChoices, selectedMapFractalKey, (value) => {
+      createFractalSelect("Choose a map", "Body", mapChoices, selectedMapFractalKey, (value) => {
         selectedMapFractalKey = value;
         renderResonances();
       }),
-      createFractalSelect("Choose your portal", "Sun", portalChoices, selectedPortalFractalKey, (value) => {
+      createFractalSelect("Enter a portal", "Sun", portalChoices, selectedPortalFractalKey, (value) => {
         selectedPortalFractalKey = value;
         syncProfileView();
       }),
