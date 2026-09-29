@@ -517,6 +517,19 @@ const fetchProfileByUsername = async (client, username) => {
   return data || null;
 };
 
+const fetchPublicProfiles = async (client, limit = 10) => {
+  const { data, error } = await client
+    .from(PROFILE_TABLE)
+    .select("id, username")
+    .not("username", "is", null)
+    .order("username", { ascending: true })
+    .limit(limit);
+
+  if (error) throw error;
+
+  return (data || []).filter((profile) => getDisplayValue(profile.username));
+};
+
 const getUserImageUrl = async (client, profile, path) => {
   const image = getDisplayValue(path);
 
@@ -845,22 +858,55 @@ const createCurrentTimeElement = () => {
   return clock;
 };
 
+const createGameSelect = (profiles, selectedUsername = "") => {
+  const label = document.createElement("label");
+  const text = document.createElement("span");
+  const select = document.createElement("select");
+  const defaultOption = document.createElement("option");
+
+  label.className = "profile-fractal-select";
+  text.textContent = "Choose a game";
+  defaultOption.value = "";
+  defaultOption.textContent = "jaycee";
+  select.replaceChildren(defaultOption, ...profiles.map((profile) => {
+    const option = document.createElement("option");
+    const username = getDisplayValue(profile.username);
+
+    option.value = username;
+    option.textContent = username;
+
+    return option;
+  }));
+  select.value = selectedUsername;
+  select.addEventListener("change", () => {
+    const username = getDisplayValue(select.value);
+
+    if (!username) return;
+    window.location.href = `/src/html/jaycee-${encodeURIComponent(username)}.html`;
+  });
+  label.append(text, select);
+
+  return label;
+};
+
 const createProfileCoreState = ({
   avatarImage,
   dynamicRings,
   isCorePage,
+  hasUserProfile,
   ringBackgroundImage,
   rows,
   selectedPortalFractalKey,
   selectedSpaceNumber,
-  selectedTimeSegments
+  selectedTimeSegments,
+  showPresent
 }) => {
   const sunSegmentKeys = JAYCEE_ORDER.map(String);
   const sunSegmentColors = getSunRingSegmentColors();
   const hasRingBackground = Boolean(ringBackgroundImage);
   const now = Date.now();
   const sunCycleFractal = getSunCycleFractal(rows);
-  const sunPresentMarkerAngle = getTimeCyclePresentAngle(sunCycleFractal, now);
+  const sunPresentMarkerAngle = showPresent ? getTimeCyclePresentAngle(sunCycleFractal, now) : null;
   const sunRotation = getTopCenteredLastSegmentRotation(sunSegmentKeys.length);
   const sunActiveSegmentIndex = getActiveSegmentIndex(
     sunSegmentKeys,
@@ -897,7 +943,7 @@ const createProfileCoreState = ({
       || selectedDynamicPortalRing.defaultSegment
       || segmentKeys[0];
     const activeSegmentIndex = getActiveSegmentIndex(segmentKeys, selectedSegment);
-    const portalPresentMarkerAngle = getTimeCyclePresentAngle(selectedDynamicPortalRing, now);
+    const portalPresentMarkerAngle = showPresent ? getTimeCyclePresentAngle(selectedDynamicPortalRing, now) : null;
     const portalRotation = getTopCenteredSegmentRotation(segmentKeys.length, 0);
 
     rings.push({
@@ -968,11 +1014,13 @@ const createProfileCoreState = ({
     const ppcmPresentSegmentIndex = fasterPresent.segmentNumber && slowerPresent.segmentNumber
       ? ((slowerPresent.segmentNumber - 1) * fasterPresent.segmentCount) + fasterPresent.segmentNumber - 1
       : -1;
-    const ppcmPresentMarkerAngle = getCenteredSegmentAngle(
-      ppcmPresentSegmentIndex,
-      ppcmSegmentCount,
-      ppcmRotation
-    );
+    const ppcmPresentMarkerAngle = showPresent
+      ? getCenteredSegmentAngle(
+        ppcmPresentSegmentIndex,
+        ppcmSegmentCount,
+        ppcmRotation
+      )
+      : null;
 
     rings.push({
       id: `${selectedDynamicPortalRing.id}-ppcm`,
@@ -1000,24 +1048,30 @@ const createProfileCoreState = ({
     activeSquareNumber: selectedSpaceNumber,
     metrics: PROFILE_CORE_METRICS,
     squareBorderAlpha: 0.46,
-    squareFillAlpha: isCorePage ? PROFILE_RING_FILL_ALPHA : undefined,
+    squareFillAlpha: hasUserProfile ? undefined : PROFILE_RING_FILL_ALPHA,
     squareCellBorderAlpha: 0.34,
     squareBackgroundImage: avatarImage
   };
 };
 
-const initJayceeProfile = async () => {
+export const initJayceeProfile = async () => {
   const shell = document.querySelector("[data-profile-shell]");
   const canvas = document.querySelector("[data-profile-canvas]");
   const status = document.querySelector("[data-profile-status]");
   const list = document.querySelector("[data-profile-resonances]");
   const publicUsername = getDisplayValue(shell?.dataset.profileUsername);
-  const isCorePage = shell?.dataset.profileMode === "core";
+  const pageMode = getDisplayValue(shell?.dataset.profileMode) || (publicUsername ? "public" : "profile");
+  const isCorePage = pageMode === "core";
+  const isPresentPage = pageMode === "present";
+  const isEditableProfilePage = pageMode === "profile" && !publicUsername;
+  const hasUserProfile = Boolean(publicUsername) || isEditableProfilePage;
+  const showPresent = !isCorePage;
 
   if (!shell || !canvas || !status || !list) return;
 
   let rows = [];
   let dynamicRings = [];
+  let publicProfiles = [];
   let avatarImage = null;
   let ringBackgroundImage = null;
   let coreState = null;
@@ -1094,6 +1148,32 @@ const initJayceeProfile = async () => {
     }
   };
 
+  const renderPresentControls = () => {
+    const corePanel = canvas.closest(".jaycee-profile-core");
+    const existingControls = corePanel?.querySelector("[data-profile-present-controls]");
+
+    if (!corePanel || !isPresentPage) {
+      existingControls?.remove();
+      corePanel?.classList.remove("has-fractal-selectors");
+      return;
+    }
+
+    const controls = existingControls || document.createElement("div");
+
+    corePanel.classList.add("has-fractal-selectors");
+    controls.className = "profile-fractal-selectors";
+    controls.dataset.profilePresentControls = "";
+    controls.replaceChildren(
+      createGameSelect(publicProfiles),
+      createCurrentTimeElement()
+    );
+    startCurrentTimeClock();
+
+    if (!existingControls) {
+      corePanel.insertBefore(controls, canvas);
+    }
+  };
+
   const renderFractalSelectors = () => {
     const corePanel = canvas.closest(".jaycee-profile-core");
     const existingSelectors = corePanel?.querySelector("[data-profile-fractal-selectors]");
@@ -1104,10 +1184,8 @@ const initJayceeProfile = async () => {
       ...getDynamicTimeChoiceRows(dynamicRings)
     ];
 
-    if (!corePanel || isCorePage) {
+    if (!corePanel || isCorePage || isPresentPage) {
       existingSelectors?.remove();
-      corePanel?.classList.remove("has-fractal-selectors");
-      stopCurrentTimeClock();
       return;
     }
 
@@ -1136,7 +1214,7 @@ const initJayceeProfile = async () => {
   };
 
   const renderResonances = () => {
-    const showDrafts = !publicUsername && !isCorePage;
+    const showDrafts = isEditableProfilePage;
     const spaceGroups = filterUserGroupsByFractal(
       getResonanceGroupsForNumber(
         getRowsForDimensionColumn(rows, SPACE_DIMENSION_VALUE),
@@ -1171,12 +1249,14 @@ const initJayceeProfile = async () => {
     coreState = createProfileCoreState({
       avatarImage,
       dynamicRings,
+      hasUserProfile,
       isCorePage,
       ringBackgroundImage,
       rows,
       selectedPortalFractalKey,
       selectedSpaceNumber,
-      selectedTimeSegments
+      selectedTimeSegments,
+      showPresent
     });
     drawJaycee(canvas, coreState);
   };
@@ -1209,18 +1289,18 @@ const initJayceeProfile = async () => {
     const sessionResult = await window.JayceeAuth?.getSession?.();
     const user = sessionResult?.data?.session?.user;
 
-    if (!publicUsername && !isCorePage && !user) {
+    if (isEditableProfilePage && !user) {
       redirectToLogin();
       return;
     }
 
-    const profile = isCorePage
+    const profile = !hasUserProfile
       ? null
       : publicUsername
         ? await fetchProfileByUsername(client, publicUsername)
         : await fetchProfileByUserId(client, user.id);
 
-    if (!isCorePage && !profile) {
+    if (hasUserProfile && !profile) {
       shell.hidden = false;
       status.textContent = "Profile not found.";
       return;
@@ -1228,7 +1308,7 @@ const initJayceeProfile = async () => {
 
     shell.hidden = false;
     themeSettings = getThemeSettingsFromProfile(profile);
-    if (!publicUsername && !isCorePage) {
+    if (isEditableProfilePage) {
       applyProfileTheme(themeSettings);
       initProfileThemeControls({
         client,
@@ -1239,7 +1319,7 @@ const initJayceeProfile = async () => {
     }
 
     const jayceeRows = await fetchJayceeResonances(client);
-    const profileRows = isCorePage
+    const profileRows = !hasUserProfile
       ? []
       : await fetchUserResonances(client, profile, { publicOnly: Boolean(publicUsername) });
 
@@ -1250,8 +1330,9 @@ const initJayceeProfile = async () => {
         selectedTimeSegments.set(ring.id, ring.defaultSegment);
       }
     });
-    avatarImage = isCorePage ? null : await loadOptionalImage(await getAvatarImageUrl(client, profile));
-    ringBackgroundImage = isCorePage ? null : await loadOptionalImage(await getBackgroundImageUrl(client, profile));
+    publicProfiles = isPresentPage ? await fetchPublicProfiles(client) : [];
+    avatarImage = !hasUserProfile ? null : await loadOptionalImage(await getAvatarImageUrl(client, profile));
+    ringBackgroundImage = !hasUserProfile ? null : await loadOptionalImage(await getBackgroundImageUrl(client, profile));
     renderCore();
     canvas.addEventListener("click", handleCanvasClick);
     const resizeObserver = new ResizeObserver(scheduleRenderCore);
@@ -1262,6 +1343,7 @@ const initJayceeProfile = async () => {
     }
     window.addEventListener("resize", scheduleRenderCore);
     window.addEventListener("load", scheduleRenderCore);
+    renderPresentControls();
     renderFractalSelectors();
     renderResonances();
     scheduleRenderCore();
@@ -1272,8 +1354,10 @@ const initJayceeProfile = async () => {
   }
 };
 
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initJayceeProfile, { once: true });
-} else {
-  initJayceeProfile();
-}
+export const startJayceeProfilePage = () => {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initJayceeProfile, { once: true });
+  } else {
+    initJayceeProfile();
+  }
+};
