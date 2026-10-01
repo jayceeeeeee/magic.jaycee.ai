@@ -45,8 +45,7 @@ import {
   getRowsForDimensionColumn,
   getSelectedDynamicMapSquare,
   getSelectedDynamicPortalRing,
-  getTimeResonanceGroups,
-  getTimeSelectionMeta
+  getTimeResonanceGroups
 } from "./jaycee-dashboard.js";
 
 const PROFILE_CORE_METRICS = {
@@ -820,13 +819,11 @@ export const initJayceePage = async () => {
     const columns = [
       {
         groups: spaceGroups,
-        meta: selectedMapDetails?.kind === "dynamic"
-          ? `Cell ${selectedMapPosition}`
-          : `Sector ${selectedStaticMapNumber}`,
-        selectedNumber: selectedMapDetails?.kind === "dynamic" ? selectedMapPosition : selectedStaticMapNumber,
+        meta: "",
+        selectedNumber: selectedSpaceNumber,
         title: "Map"
       },
-      { groups: timeGroups, meta: getTimeSelectionMeta(dynamicRings, selectedTimeSegments), selectedNumber: selectedSunNumber, title: "Portal" }
+      { groups: timeGroups, meta: "", selectedNumber: selectedSunNumber, title: "Portal" }
     ].filter((column) => column.groups.length);
 
     status.textContent = selectedMapResult.error;
