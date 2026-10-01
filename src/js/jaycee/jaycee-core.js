@@ -466,6 +466,7 @@ const drawRingPresentMarker = (context, metrics, options) => {
   const {
     angle,
     color = "rgba(255, 38, 38, 0.98)",
+    glowColor = color,
     innerRadius,
     outerRadius
   } = options;
@@ -485,7 +486,7 @@ const drawRingPresentMarker = (context, metrics, options) => {
   context.moveTo(innerX, innerY);
   context.lineTo(outerX, outerY);
   context.stroke();
-  context.shadowColor = "rgba(255, 38, 38, 0.76)";
+  context.shadowColor = glowColor;
   context.shadowBlur = ringWidth * 0.18;
   context.strokeStyle = color;
   context.lineWidth = Math.max(1.7, ringWidth * 0.075);
@@ -515,8 +516,12 @@ const drawRing = (context, metrics, options) => {
     tickStroke,
     presentMarkerAngle,
     presentMarkerColor,
+    secondaryPresentMarkerAngle,
+    secondaryPresentMarkerColor,
     showBorders = true,
     showDividers = showBorders,
+    subActiveParentSegmentIndex = -1,
+    subActiveSegmentIndex = -1,
     subDividerStroke,
     subSegmentCount = 0,
     rotation = -Math.PI / 2
@@ -628,6 +633,40 @@ const drawRing = (context, metrics, options) => {
     }
 
     context.restore();
+
+    if (
+      subActiveParentSegmentIndex >= 0
+      && subActiveParentSegmentIndex < count
+      && subActiveSegmentIndex >= 0
+      && subActiveSegmentIndex < subSegmentCount
+    ) {
+      const startAngle = rotation
+        + (subActiveParentSegmentIndex * segmentAngle)
+        + (subActiveSegmentIndex * subSegmentAngle);
+
+      drawRingSegmentPanel(
+        context,
+        metrics,
+        {
+          count: count * subSegmentCount,
+          endAngle: startAngle + subSegmentAngle,
+          innerRadius,
+          outerRadius,
+          startAngle
+        },
+        {
+          border: "rgba(0, 255, 72, 1)",
+          borderGlow: "rgba(0, 255, 72, 0.95)",
+          borderUnderlay: "rgba(0, 18, 4, 0.96)",
+          borderUnderlayGlow: "rgba(0, 0, 0, 0.95)",
+          end: "#7cff78",
+          glow: "rgba(124, 255, 120, 0.26)",
+          start: "#7cff78",
+          transparent: true,
+          transparentAlpha: ACTIVE_FILL_ALPHA
+        }
+      );
+    }
   }
 
   labels.forEach((label, index) => {
@@ -691,6 +730,16 @@ const drawRing = (context, metrics, options) => {
     });
   }
 
+  if (Number.isFinite(secondaryPresentMarkerAngle)) {
+    drawRingPresentMarker(context, metrics, {
+      angle: secondaryPresentMarkerAngle,
+      color: secondaryPresentMarkerColor,
+      glowColor: "rgba(255, 215, 77, 0.76)",
+      innerRadius,
+      outerRadius
+    });
+  }
+
   context.restore();
 };
 
@@ -742,6 +791,20 @@ const getMapSquareLabelSize = (cellSize, metrics) => {
     cellSize * 0.24,
     Math.max(isCompact ? 8 : 11, metrics.ringWidth * (isCompact ? 0.23 : 0.3))
   );
+};
+
+const isMapCenterPositionSelected = (metrics, selectedPosition) => {
+  const position = Number(selectedPosition);
+
+  if (!Number.isFinite(position) || metrics.mapSquareGridSize <= 1) return false;
+
+  const selectedIndex = position - 1;
+  const row = Math.floor(selectedIndex / metrics.mapSquareGridSize);
+  const column = selectedIndex % metrics.mapSquareGridSize;
+  const centerStart = (metrics.mapSquareGridSize - metrics.mapSquareCoreSpan) / 2;
+  const centerEnd = centerStart + metrics.mapSquareCoreSpan;
+
+  return row >= centerStart && row < centerEnd && column >= centerStart && column < centerEnd;
 };
 
 const drawMapSquare = (context, metrics, colors, mapSquare) => {
@@ -1053,6 +1116,21 @@ const drawSquare = (context, metrics, colors, labels = getEmptyLabels(RING_SEGME
     context.strokeRect(start, start, metrics.squareSize, metrics.squareSize);
   }, hasBackgroundImage ? "rgba(255, 255, 255, 0.98)" : colors.border, 3);
 
+  if (colors.showMapCenterSelection) {
+    context.save();
+    context.shadowColor = "transparent";
+    context.shadowBlur = 0;
+    context.strokeStyle = "rgba(0, 18, 4, 0.48)";
+    context.lineWidth = Math.max(1.6, metrics.squareSize * 0.007);
+    context.strokeRect(start + 1, start + 1, metrics.squareSize - 2, metrics.squareSize - 2);
+    context.shadowColor = "rgba(0, 255, 72, 0.36)";
+    context.shadowBlur = metrics.squareSize * 0.012;
+    context.strokeStyle = "rgba(0, 255, 72, 1)";
+    context.lineWidth = Math.max(1.2, metrics.squareSize * 0.005);
+    context.strokeRect(start + 2, start + 2, metrics.squareSize - 4, metrics.squareSize - 4);
+    context.restore();
+  }
+
   if (hasBackgroundImage && activeCell) {
     drawInsetSquareCell(
       context,
@@ -1150,10 +1228,14 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
       showDividers: ring.showDividers ?? index !== STYLED_RING_INDEX,
       styledSegmentIndices: ring.styledSegmentIndices || (index === STYLED_RING_INDEX ? getSegmentIndices(ring.count) : []),
       subDividerStroke: rgbToCss(squareLineRgb, state.squareCellBorderAlpha === undefined ? 0.12 : state.squareCellBorderAlpha * 0.62),
+      subActiveParentSegmentIndex: ring.subActiveParentSegmentIndex,
+      subActiveSegmentIndex: ring.subActiveSegmentIndex,
       subSegmentCount: ring.subSegmentCount || 0,
       getTickLabel: ring.getTickLabel,
       presentMarkerAngle: ring.presentMarkerAngle,
       presentMarkerColor: ring.presentMarkerColor,
+      secondaryPresentMarkerAngle: ring.secondaryPresentMarkerAngle,
+      secondaryPresentMarkerColor: ring.secondaryPresentMarkerColor,
       tickCount: ring.tickCount || 0,
       tickLabelColor: ring.tickLabelColor,
       tickStroke: ring.tickStroke,
@@ -1201,6 +1283,7 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
     activeSquareNumber: state.activeSquareNumber || 5,
     fillAlpha: state.squareFillAlpha ?? SURFACE_FILL_ALPHA,
     glow: "rgba(116, 247, 209, 0.14)",
+    showMapCenterSelection: isMapCenterPositionSelected(metrics, state.mapSquare?.selectedPosition),
     palette,
     coreText: {
       fill: CORE_TEXT_COLOR,

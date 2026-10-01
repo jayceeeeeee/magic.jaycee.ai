@@ -222,6 +222,12 @@ const getActiveSegmentIndex = (segmentKeys, selectedSegment) => (
   Math.max(0, segmentKeys.findIndex((key) => String(key) === String(selectedSegment)))
 );
 
+const getGeometricSegmentNumberFromIndex = (segmentIndex, count, topSegmentIndex = 0) => {
+  if (!Number.isFinite(segmentIndex) || !Number.isFinite(count) || count <= 0) return 1;
+
+  return ((segmentIndex - topSegmentIndex + count) % count) + 1;
+};
+
 const getDefaultMapPosition = (gridSize) => {
   const safeGridSize = Math.max(1, Number(gridSize) || 1);
   const coreSpan = safeGridSize % 2 === 0 ? 2 : 1;
@@ -381,6 +387,35 @@ const getTimeCyclePresentAngle = (fractal, now = Date.now()) => {
   return (-Math.PI / 2) + (progress * Math.PI * 2);
 };
 
+const getSegmentIndexFromAngle = (angle, count, rotation) => {
+  if (!Number.isFinite(angle) || !Number.isFinite(count) || count <= 0) return -1;
+
+  const fullCircle = Math.PI * 2;
+  const segmentAngle = fullCircle / count;
+  const normalizedAngle = ((angle - rotation) % fullCircle + fullCircle) % fullCircle;
+
+  return Math.floor(normalizedAngle / segmentAngle);
+};
+
+const getNestedPresentMarkerAngle = ({
+  parentCount,
+  parentPresentAngle,
+  parentRotation,
+  subCount,
+  subPresentAngle,
+  subRotation
+}) => {
+  const parentIndex = getSegmentIndexFromAngle(parentPresentAngle, parentCount, parentRotation);
+  const subIndex = getSegmentIndexFromAngle(subPresentAngle, subCount, subRotation);
+
+  if (parentIndex < 0 || subIndex < 0) return null;
+
+  const parentSegmentAngle = (Math.PI * 2) / parentCount;
+  const subSegmentAngle = parentSegmentAngle / subCount;
+
+  return parentRotation + (parentIndex * parentSegmentAngle) + ((subIndex + 0.5) * subSegmentAngle);
+};
+
 const getSunCycleFractal = (rows) => {
   const jayceeTimeRows = rows.filter((row) => (
     row.sourceType === "jaycee"
@@ -533,6 +568,21 @@ const createProfileCoreState = ({
     const activeSegmentIndex = getActiveSegmentIndex(segmentKeys, selectedSegment);
     const portalPresentMarkerAngle = showPresent ? getTimeCyclePresentAngle(selectedDynamicPortalRing, now) : null;
     const portalRotation = getTopCenteredSegmentRotation(segmentKeys.length, 0);
+    const ppcmActiveSubSegmentIndex = getGeometricSegmentNumberFromIndex(
+      sunActiveSegmentIndex,
+      sunSegmentKeys.length,
+      sunSegmentKeys.length - 1
+    ) - 1;
+    const ppcmPresentMarkerAngle = showPresent
+      ? getNestedPresentMarkerAngle({
+        parentCount: segmentKeys.length,
+        parentPresentAngle: portalPresentMarkerAngle,
+        parentRotation: portalRotation,
+        subCount: sunSegmentKeys.length,
+        subPresentAngle: sunPresentMarkerAngle,
+        subRotation: sunRotation
+      })
+      : null;
 
     rings.push({
       id: selectedDynamicPortalRing.id,
@@ -546,9 +596,13 @@ const createProfileCoreState = ({
       labels: getEmptyLabels(segmentKeys.length),
       presentMarkerAngle: portalPresentMarkerAngle,
       rotation: portalRotation,
+      secondaryPresentMarkerAngle: ppcmPresentMarkerAngle,
+      secondaryPresentMarkerColor: "rgba(255, 215, 77, 0.98)",
       segmentKeys,
       showBorders: true,
       showDividers: true,
+      subActiveParentSegmentIndex: activeSegmentIndex,
+      subActiveSegmentIndex: ppcmActiveSubSegmentIndex,
       styledSegmentIndices: [activeSegmentIndex],
       subSegmentCount: sunSegmentKeys.length,
       tone: "accent"
