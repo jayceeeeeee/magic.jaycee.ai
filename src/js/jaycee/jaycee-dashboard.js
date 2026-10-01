@@ -6,6 +6,7 @@ import {
   TIME_DIMENSION_VALUE,
   getDisplayValue,
   getDynamicRingKey,
+  getDynamicSquareKey,
   getFractalKey
 } from "./jaycee-data.js";
 
@@ -279,6 +280,26 @@ export const getSelectedDynamicPortalRing = (dynamicRings, selectedPortalFractal
 
   return dynamicRings.find((ring) => (
     ring.sourceType === "user" && getDynamicRingKey(ring) === selectedPortalFractalKey
+  )) || null;
+};
+
+export const getDynamicSpaceChoiceRows = (dynamicSquares) => (
+  dynamicSquares
+    .filter((square) => square.sourceType === "user")
+    .map((square) => ({
+      id: square.sourceId || square.id,
+      label: square.label || "Map",
+      sourceId: square.sourceId,
+      sourceName: square.sourceName,
+      sourceType: square.sourceType
+    }))
+);
+
+export const getSelectedDynamicMapSquare = (dynamicSquares, selectedMapFractalKey) => {
+  if (!selectedMapFractalKey) return null;
+
+  return dynamicSquares.find((square) => (
+    square.sourceType === "user" && getDynamicSquareKey(square) === selectedMapFractalKey
   )) || null;
 };
 

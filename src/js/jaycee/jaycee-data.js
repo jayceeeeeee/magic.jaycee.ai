@@ -24,6 +24,13 @@ export const getDynamicRingKey = (ring) => getFractalKey({
   sourceType: ring.sourceType
 });
 
+export const getDynamicSquareKey = (square) => getFractalKey({
+  id: square.sourceId || square.id,
+  label: square.label,
+  sourceId: square.sourceId,
+  sourceType: square.sourceType
+});
+
 export const getDisplayValue = (value) => (
   value === null || value === undefined ? "" : String(value).trim()
 );
@@ -161,6 +168,55 @@ export const fetchDynamicTimeRings = async (client, profile) => {
       };
     })
     .filter(Boolean);
+};
+
+export const fetchDynamicSpaceSquares = async (client, profile) => {
+  let query = client
+    .from(JAYCEE_DYNAMIC_FRACTALS_TABLE)
+    .select("id, label, description, dimension, user_id, created_at")
+    .eq("dimension", SPACE_DIMENSION_VALUE)
+    .order("created_at", { ascending: true });
+
+  if (profile?.id) {
+    query = query.or(`user_id.is.null,user_id.eq.${profile.id}`);
+  } else {
+    query = query.is("user_id", null);
+  }
+
+  const { data: fractals, error: fractalsError } = await query;
+
+  if (fractalsError) throw fractalsError;
+  if (!fractals?.length) return [];
+
+  const { data: elements, error: elementsError } = await client
+    .from(JAYCEE_DYNAMIC_FRACTAL_ELEMENTS_TABLE)
+    .select("id, fractal_id, position, value, description, created_at")
+    .in("fractal_id", fractals.map((fractal) => fractal.id))
+    .order("position", { ascending: true });
+
+  if (elementsError) throw elementsError;
+
+  return fractals
+    .map((fractal) => {
+      const squareElements = (elements || [])
+        .filter((element) => element.fractal_id === fractal.id)
+        .sort((first, second) => Number(first.position) - Number(second.position));
+      const gridSize = Math.sqrt(squareElements.length);
+      const isSquare = Number.isInteger(gridSize) && gridSize > 0;
+
+      return {
+        ...fractal,
+        elements: squareElements,
+        id: `dynamic-${fractal.id}`,
+        invalidReason: isSquare
+          ? ""
+          : `${fractal.label || "Dynamic map"} must have a square number of positions.`,
+        gridSize: isSquare ? gridSize : 0,
+        sourceName: fractal.user_id ? (profile?.username || "User") : JAYCEE_RESONANCE_SOURCE,
+        sourceType: fractal.user_id ? "user" : "jaycee",
+        sourceId: fractal.id
+      };
+    });
 };
 
 export const fetchProfileByUserId = async (client, userId) => {

@@ -12,6 +12,7 @@ import {
   PROFILE_TABLE,
   SPACE_DIMENSION_VALUE,
   TIME_DIMENSION_VALUE,
+  fetchDynamicSpaceSquares,
   fetchDynamicTimeRings,
   fetchJayceeResonances,
   fetchProfileByUserId,
@@ -35,9 +36,11 @@ import {
   createResonanceColumn,
   filterUserGroupsByFractal,
   getDraftRows,
+  getDynamicSpaceChoiceRows,
   getDynamicTimeChoiceRows,
   getResonanceGroupsForNumber,
   getRowsForDimensionColumn,
+  getSelectedDynamicMapSquare,
   getSelectedDynamicPortalRing,
   getTimeResonanceGroups,
   getTimeSelectionMeta
@@ -221,6 +224,48 @@ const getSegmentKeys = (count) => (
   Array.from({ length: count }, (_, index) => String(index + 1))
 );
 
+const getStaticMapSquareLabels = (row) => (
+  JAYCEE_ORDER.map((number) => getDisplayValue(row[String(number)]) || String(number))
+);
+
+const getDynamicMapSquareLabels = (square) => (
+  square.elements.map((element) => getDisplayValue(element.value) || String(element.position))
+);
+
+const getSelectedMapSquare = ({ dynamicSquares, rows, selectedMapFractalKey }) => {
+  if (!selectedMapFractalKey) return { error: "", mapSquare: null };
+
+  const dynamicSquare = getSelectedDynamicMapSquare(dynamicSquares, selectedMapFractalKey);
+
+  if (dynamicSquare) {
+    if (dynamicSquare.invalidReason) {
+      return { error: dynamicSquare.invalidReason, mapSquare: null };
+    }
+
+    return {
+      error: "",
+      mapSquare: {
+        gridSize: dynamicSquare.gridSize,
+        labels: getDynamicMapSquareLabels(dynamicSquare)
+      }
+    };
+  }
+
+  const staticSquare = rows.find((row) => (
+    row.sourceType === "user" && getFractalKey(row) === selectedMapFractalKey
+  ));
+
+  if (!staticSquare) return { error: "", mapSquare: null };
+
+  return {
+    error: "",
+    mapSquare: {
+      gridSize: 3,
+      labels: getStaticMapSquareLabels(staticSquare)
+    }
+  };
+};
+
 const getTimeCycleElapsedSeconds = (fractal, now = Date.now()) => {
   if (!hasTimeCycle(fractal)) return null;
 
@@ -354,10 +399,12 @@ const createGameSelect = (profiles, selectedUsername = "") => {
 const createProfileCoreState = ({
   avatarImage,
   dynamicRings,
+  dynamicSquares,
   isCorePage,
   hasUserProfile,
   ringBackgroundImage,
   rows,
+  selectedMapFractalKey,
   selectedPortalFractalKey,
   selectedSpaceNumber,
   selectedTimeSegments,
@@ -375,6 +422,7 @@ const createProfileCoreState = ({
     selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER
   );
   const selectedDynamicPortalRing = getSelectedDynamicPortalRing(dynamicRings, selectedPortalFractalKey);
+  const { mapSquare } = getSelectedMapSquare({ dynamicSquares, rows, selectedMapFractalKey });
   const rings = [
     {
       id: "sun",
@@ -512,6 +560,7 @@ const createProfileCoreState = ({
     squareBorderAlpha: 0.46,
     squareFillAlpha: hasUserProfile ? undefined : PROFILE_RING_FILL_ALPHA,
     squareCellBorderAlpha: 0.34,
+    mapSquare,
     squareBackgroundImage: avatarImage
   };
 };
@@ -533,6 +582,7 @@ export const initJayceePage = async () => {
 
   let rows = [];
   let dynamicRings = [];
+  let dynamicSquares = [];
   let publicProfiles = [];
   let avatarImage = null;
   let ringBackgroundImage = null;
@@ -641,6 +691,10 @@ export const initJayceePage = async () => {
     const existingSelectors = corePanel?.querySelector("[data-profile-fractal-selectors]");
     const mapChoices = getRowsForDimensionColumn(rows, SPACE_DIMENSION_VALUE)
       .filter((row) => row.sourceType === "user");
+    const mapSelectorChoices = [
+      ...mapChoices,
+      ...getDynamicSpaceChoiceRows(dynamicSquares)
+    ];
     const portalChoices = [
       ...getRowsForDimensionColumn(rows, TIME_DIMENSION_VALUE).filter((row) => row.sourceType === "user"),
       ...getDynamicTimeChoiceRows(dynamicRings)
@@ -658,9 +712,9 @@ export const initJayceePage = async () => {
     selectors.className = "profile-fractal-selectors";
     selectors.dataset.profileFractalSelectors = "";
     selectors.replaceChildren(
-      createFractalSelect("Choose a map", "Body", mapChoices, selectedMapFractalKey, (value) => {
+      createFractalSelect("Choose a map", "Body", mapSelectorChoices, selectedMapFractalKey, (value) => {
         selectedMapFractalKey = value;
-        renderResonances();
+        syncProfileView();
       }),
       createFractalSelect("Enter a portal", "Sun", portalChoices, selectedPortalFractalKey, (value) => {
         selectedPortalFractalKey = value;
@@ -676,6 +730,7 @@ export const initJayceePage = async () => {
   };
 
   const renderResonances = () => {
+    const selectedMapResult = getSelectedMapSquare({ dynamicSquares, rows, selectedMapFractalKey });
     const showDrafts = isEditableProfilePage;
     const spaceGroups = filterUserGroupsByFractal(
       getResonanceGroupsForNumber(
@@ -695,7 +750,7 @@ export const initJayceePage = async () => {
       { groups: timeGroups, meta: getTimeSelectionMeta(dynamicRings, selectedTimeSegments), selectedNumber: selectedSunNumber, title: "Portal" }
     ].filter((column) => column.groups.length);
 
-    status.textContent = "";
+    status.textContent = selectedMapResult.error;
     list.replaceChildren(
       ...columns.map((column) => createResonanceColumn(
         column.title,
@@ -711,10 +766,12 @@ export const initJayceePage = async () => {
     coreState = createProfileCoreState({
       avatarImage,
       dynamicRings,
+      dynamicSquares,
       hasUserProfile,
       isCorePage,
       ringBackgroundImage,
       rows,
+      selectedMapFractalKey,
       selectedPortalFractalKey,
       selectedSpaceNumber,
       selectedTimeSegments,
@@ -787,6 +844,7 @@ export const initJayceePage = async () => {
 
     rows = [...jayceeRows, ...profileRows];
     dynamicRings = await fetchDynamicTimeRings(client, profile);
+    dynamicSquares = await fetchDynamicSpaceSquares(client, profile);
     dynamicRings.forEach((ring) => {
       if (!selectedTimeSegments.has(ring.id)) {
         selectedTimeSegments.set(ring.id, ring.defaultSegment);

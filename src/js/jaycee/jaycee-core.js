@@ -108,9 +108,9 @@ const getThemeBorderColors = (accent, accentSoft) => {
   };
 };
 
-const getSquarePaletteColor = (column, row, palette) => {
-  const x = column / SQUARE_GRID_SIZE;
-  const y = row / SQUARE_GRID_SIZE;
+const getSquarePaletteColor = (column, row, palette, gridSize = SQUARE_GRID_SIZE) => {
+  const x = column / gridSize;
+  const y = row / gridSize;
   const top = mixRgb(
     hexToRgb(palette.topLeft),
     hexToRgb(palette.topRight),
@@ -161,6 +161,8 @@ const getCanvasMetrics = (canvas, ringCount, options = {}) => {
   const size = Math.min(rect.width, rect.height);
   const center = size / 2;
   const safeRingCount = Math.max(1, ringCount);
+  const mapSquareGridSize = Math.max(1, Number(options.mapSquareGridSize) || 1);
+  const mapSquareCoreSpan = mapSquareGridSize % 2 === 0 ? 2 : 1;
   const padding = Math.max(14, size * 0.035);
   const outerRadius = center - padding;
   const ringWidthMax = options.ringWidthMax ?? CORE_RING_WIDTH_MAX;
@@ -176,10 +178,16 @@ const getCanvasMetrics = (canvas, ringCount, options = {}) => {
     (outerRadius * ringMaxRadialShare) / safeRingCount
   );
   const squareOuterRadius = outerRadius - (ringWidth * safeRingCount);
-  const squareSize = (squareOuterRadius * 2) / Math.SQRT2;
+  const mapSquareSize = (squareOuterRadius * 2) / Math.SQRT2;
+  const mapSquareCellSize = mapSquareSize / mapSquareGridSize;
+  const squareSize = mapSquareCellSize * mapSquareCoreSpan;
 
   return {
     center,
+    mapSquareCellSize,
+    mapSquareCoreSpan,
+    mapSquareGridSize,
+    mapSquareSize,
     outerRadius,
     ringWidth,
     size,
@@ -693,6 +701,93 @@ const drawInsetSquareCell = (context, x, y, size, colors) => {
   context.restore();
 };
 
+const getMapSquareLabelSize = (cellSize, metrics) => {
+  const isCompact = metrics.size < 420;
+
+  return Math.min(
+    cellSize * 0.24,
+    Math.max(isCompact ? 8 : 11, metrics.ringWidth * (isCompact ? 0.23 : 0.3))
+  );
+};
+
+const drawMapSquare = (context, metrics, colors, mapSquare) => {
+  if (!mapSquare || metrics.mapSquareGridSize <= 1) return;
+
+  const gridSize = metrics.mapSquareGridSize;
+  const start = metrics.center - (metrics.mapSquareSize / 2);
+  const cellSize = metrics.mapSquareCellSize;
+  const labelSize = getMapSquareLabelSize(cellSize, metrics);
+  const centerStart = (gridSize - metrics.mapSquareCoreSpan) / 2;
+  const centerEnd = centerStart + metrics.mapSquareCoreSpan;
+
+  context.save();
+  context.shadowColor = colors.glow;
+  context.shadowBlur = 14;
+
+  for (let row = 0; row < gridSize; row += 1) {
+    for (let column = 0; column < gridSize; column += 1) {
+      drawGradientSquareCell(
+        context,
+        start + (column * cellSize),
+        start + (row * cellSize),
+        cellSize,
+        {
+          start: getSquarePaletteColor(column, row, colors.palette, gridSize),
+          end: getSquarePaletteColor(column + 1, row + 1, colors.palette, gridSize),
+          alpha: colors.fillAlpha
+        }
+      );
+    }
+  }
+
+  context.shadowBlur = 0;
+  context.strokeStyle = colors.cellBorder;
+  context.lineWidth = 1;
+
+  for (let index = 1; index < gridSize; index += 1) {
+    const offset = start + (cellSize * index);
+
+    context.beginPath();
+    context.moveTo(offset, start);
+    context.lineTo(offset, start + metrics.mapSquareSize);
+    context.moveTo(start, offset);
+    context.lineTo(start + metrics.mapSquareSize, offset);
+    context.stroke();
+  }
+
+  context.strokeStyle = colors.border;
+  context.strokeRect(start, start, metrics.mapSquareSize, metrics.mapSquareSize);
+
+  mapSquare.labels.forEach((label, index) => {
+    if (!label) return;
+
+    const row = Math.floor(index / gridSize);
+    const column = index % gridSize;
+
+    if (row >= centerStart && row < centerEnd && column >= centerStart && column < centerEnd) return;
+
+    drawCenteredText(
+      context,
+      String(label),
+      start + (column * cellSize) + (cellSize / 2),
+      start + (row * cellSize) + (cellSize / 2),
+      labelSize,
+      colors.coreText.fill,
+      {
+        fontFamily: CORE_NUMBER_FONT,
+        maxWidth: cellSize * 0.72,
+        shadowBlur: 8,
+        shadowColor: colors.coreText.shadow,
+        strokeColor: colors.coreText.stroke,
+        strokeWidth: Math.max(1, labelSize * 0.08),
+        weight: 750
+      }
+    );
+  });
+
+  context.restore();
+};
+
 const drawSquare = (context, metrics, colors, labels = getEmptyLabels(RING_SEGMENT_COUNT)) => {
   const start = metrics.center - (metrics.squareSize / 2);
   const cellSize = metrics.squareSize / SQUARE_GRID_SIZE;
@@ -864,7 +959,10 @@ const DEFAULT_JAYCEE_STATE = createJayceeState();
 export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
   const context = resizeCanvas(canvas);
   const rect = canvas.getBoundingClientRect();
-  const metrics = getCanvasMetrics(canvas, state.rings.length, state.metrics);
+  const metrics = getCanvasMetrics(canvas, state.rings.length, {
+    ...state.metrics,
+    mapSquareGridSize: state.mapSquare?.gridSize
+  });
   const accent = getThemeColor("--accent", "#74f7d1");
   const accentSoft = getThemeColor("--accent-soft", "#a7ffe7");
   const accentSoftRgb = getColorRgb(accentSoft, "255, 213, 107");
@@ -931,6 +1029,19 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
     });
   });
 
+  drawMapSquare(context, metrics, {
+    border: rgbToCss(squareLineRgb, state.squareBorderAlpha === undefined ? 0.22 : state.squareBorderAlpha * 0.72),
+    cellBorder: rgbToCss(squareLineRgb, state.squareCellBorderAlpha === undefined ? 0.12 : state.squareCellBorderAlpha * 0.72),
+    fillAlpha: state.mapSquare?.fillAlpha ?? 0.18,
+    glow: "rgba(116, 247, 209, 0.1)",
+    palette,
+    coreText: {
+      fill: "rgba(5, 21, 25, 0.46)",
+      shadow: "rgba(255, 255, 255, 0.1)",
+      stroke: "rgba(255, 255, 255, 0.1)"
+    }
+  }, state.mapSquare);
+
   drawSquare(context, metrics, {
     border: state.squareBorderAlpha === undefined
       ? borderColors.square
@@ -968,7 +1079,10 @@ const normalizeAngle = (angle) => {
 
 export const getJayceeHit = (canvas, state = DEFAULT_JAYCEE_STATE, clientX, clientY) => {
   const rect = canvas.getBoundingClientRect();
-  const metrics = getCanvasMetrics(canvas, state.rings.length, state.metrics);
+  const metrics = getCanvasMetrics(canvas, state.rings.length, {
+    ...state.metrics,
+    mapSquareGridSize: state.mapSquare?.gridSize
+  });
   const x = clientX - rect.left;
   const y = clientY - rect.top;
   const squareStart = metrics.center - (metrics.squareSize / 2);
