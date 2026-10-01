@@ -22,6 +22,7 @@ import {
   getAvatarImageUrl,
   getBackgroundImageUrl,
   getDisplayValue,
+  getDynamicRingKey,
   getDynamicSquareKey,
   getFractalImageUrl,
   getFractalKey,
@@ -472,6 +473,7 @@ const createProfileCoreState = ({
   isCorePage,
   hasUserProfile,
   mapSquareImages,
+  portalRingImages,
   ringBackgroundImage,
   rows,
   selectedMapFractalKey,
@@ -537,6 +539,8 @@ const createProfileCoreState = ({
       id: selectedDynamicPortalRing.id,
       activeFillAlpha: PROFILE_RING_ACTIVE_FILL_ALPHA,
       activeSegmentIndex,
+      backgroundImage: portalRingImages.get(selectedPortalFractalKey) || null,
+      backgroundImageAlpha: 0.9,
       count: segmentKeys.length,
       fillAlpha: 0,
       label: selectedDynamicPortalRing.label || "Portal",
@@ -589,6 +593,7 @@ export const initJayceePage = async () => {
   let avatarImage = null;
   let ringBackgroundImage = null;
   let mapSquareImages = new Map();
+  let portalRingImages = new Map();
   let coreState = null;
   let themeSettings = getThemeSettingsFromProfile(null);
   let selectedSpaceNumber = DEFAULT_SELECTED_NUMBER;
@@ -687,6 +692,19 @@ export const initJayceePage = async () => {
     ]);
 
     mapSquareImages = new Map(imageEntries.filter(([, image]) => image));
+  };
+
+  const loadPortalRingImages = async (client) => {
+    const imageEntries = await Promise.all(
+      dynamicRings
+        .filter((ring) => ring.sourceType === "user" && getDisplayValue(ring.image))
+        .map(async (ring) => [
+          getDynamicRingKey(ring),
+          await loadOptionalImage(await getFractalImageUrl(client, ring))
+        ])
+    );
+
+    portalRingImages = new Map(imageEntries.filter(([, image]) => image));
   };
 
   const renderPresentControls = () => {
@@ -831,6 +849,7 @@ export const initJayceePage = async () => {
       hasUserProfile,
       isCorePage,
       mapSquareImages,
+      portalRingImages,
       ringBackgroundImage,
       rows,
       selectedMapFractalKey,
@@ -923,6 +942,7 @@ export const initJayceePage = async () => {
     rows = [...jayceeRows, ...profileRows];
     dynamicRings = await fetchDynamicTimeRings(client, profile);
     dynamicSquares = await fetchDynamicSpaceSquares(client, profile);
+    await loadPortalRingImages(client);
     await loadMapSquareImages(client);
     dynamicRings.forEach((ring) => {
       if (!selectedTimeSegments.has(ring.id)) {
