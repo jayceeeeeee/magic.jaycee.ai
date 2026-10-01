@@ -791,6 +791,32 @@ const drawMapSquare = (context, metrics, colors, mapSquare) => {
 
   context.shadowBlur = 0;
 
+  context.save();
+  context.shadowColor = "transparent";
+  context.shadowBlur = 0;
+  context.strokeStyle = hasBackgroundImage ? "rgba(255, 255, 255, 0.52)" : colors.subCellBorder;
+  context.lineWidth = 1;
+
+  for (let row = 0; row < gridSize; row += 1) {
+    for (let column = 0; column < gridSize; column += 1) {
+      const x = start + (column * cellSize);
+      const y = start + (row * cellSize);
+
+      for (let index = 1; index < SQUARE_GRID_SIZE; index += 1) {
+        const offset = (cellSize / SQUARE_GRID_SIZE) * index;
+
+        context.beginPath();
+        context.moveTo(x + offset, y);
+        context.lineTo(x + offset, y + cellSize);
+        context.moveTo(x, y + offset);
+        context.lineTo(x + cellSize, y + offset);
+        context.stroke();
+      }
+    }
+  }
+
+  context.restore();
+
   for (let index = 1; index < gridSize; index += 1) {
     const offset = start + (cellSize * index);
 
@@ -1110,6 +1136,7 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
     fillAlpha: state.mapSquare?.fillAlpha ?? 0.18,
     glow: "rgba(116, 247, 209, 0.1)",
     palette,
+    subCellBorder: rgbToCss(squareLineRgb, state.squareCellBorderAlpha === undefined ? 0.12 : state.squareCellBorderAlpha * 0.62),
     coreText: {
       fill: "rgba(5, 21, 25, 0.46)",
       shadow: "rgba(255, 255, 255, 0.1)",
