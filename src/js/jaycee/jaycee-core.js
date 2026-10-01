@@ -517,6 +517,8 @@ const drawRing = (context, metrics, options) => {
     presentMarkerColor,
     showBorders = true,
     showDividers = showBorders,
+    subDividerStroke,
+    subSegmentCount = 0,
     rotation = -Math.PI / 2
   } = options;
   const segmentAngle = (Math.PI * 2) / count;
@@ -594,6 +596,38 @@ const drawRing = (context, metrics, options) => {
       rotation: -Math.PI / 2,
       stroke: tickStroke || stroke
     });
+  }
+
+  if (subSegmentCount > 1) {
+    const subSegmentAngle = segmentAngle / subSegmentCount;
+    const subStroke = hasBackgroundImage
+      ? "rgba(255, 255, 255, 0.38)"
+      : (subDividerStroke || stroke);
+
+    context.save();
+    context.shadowColor = "transparent";
+    context.shadowBlur = 0;
+    context.strokeStyle = subStroke;
+    context.lineWidth = Math.max(0.8, ringWidth * 0.014);
+
+    for (let segmentIndex = 0; segmentIndex < count; segmentIndex += 1) {
+      for (let subIndex = 1; subIndex < subSegmentCount; subIndex += 1) {
+        const angle = rotation + (segmentIndex * segmentAngle) + (subIndex * subSegmentAngle);
+
+        context.beginPath();
+        context.moveTo(
+          metrics.center + Math.cos(angle) * innerRadius,
+          metrics.center + Math.sin(angle) * innerRadius
+        );
+        context.lineTo(
+          metrics.center + Math.cos(angle) * outerRadius,
+          metrics.center + Math.sin(angle) * outerRadius
+        );
+        context.stroke();
+      }
+    }
+
+    context.restore();
   }
 
   labels.forEach((label, index) => {
@@ -1115,6 +1149,8 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
       showBorders: ring.showBorders ?? index !== STYLED_RING_INDEX,
       showDividers: ring.showDividers ?? index !== STYLED_RING_INDEX,
       styledSegmentIndices: ring.styledSegmentIndices || (index === STYLED_RING_INDEX ? getSegmentIndices(ring.count) : []),
+      subDividerStroke: rgbToCss(squareLineRgb, state.squareCellBorderAlpha === undefined ? 0.12 : state.squareCellBorderAlpha * 0.62),
+      subSegmentCount: ring.subSegmentCount || 0,
       getTickLabel: ring.getTickLabel,
       presentMarkerAngle: ring.presentMarkerAngle,
       presentMarkerColor: ring.presentMarkerColor,

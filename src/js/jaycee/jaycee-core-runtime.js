@@ -222,10 +222,6 @@ const getActiveSegmentIndex = (segmentKeys, selectedSegment) => (
   Math.max(0, segmentKeys.findIndex((key) => String(key) === String(selectedSegment)))
 );
 
-const getSegmentKeys = (count) => (
-  Array.from({ length: count }, (_, index) => String(index + 1))
-);
-
 const getDefaultMapPosition = (gridSize) => {
   const safeGridSize = Math.max(1, Number(gridSize) || 1);
   const coreSpan = safeGridSize % 2 === 0 ? 2 : 1;
@@ -384,33 +380,6 @@ const getTimeCyclePresentAngle = (fractal, now = Date.now()) => {
   const progress = elapsedSeconds / Number(fractal.length);
   return (-Math.PI / 2) + (progress * Math.PI * 2);
 };
-
-const getGeometricSegmentNumberFromIndex = (segmentIndex, count, topSegmentIndex = 0) => {
-  if (!Number.isFinite(segmentIndex) || !Number.isFinite(count) || count <= 0) return 1;
-
-  return ((segmentIndex - topSegmentIndex + count) % count) + 1;
-};
-
-const getGeometricSegmentNumberFromAngle = (angle, count) => {
-  if (!Number.isFinite(angle) || !Number.isFinite(count) || count <= 0) return null;
-
-  const fullCircle = Math.PI * 2;
-  const rotation = getTopCenteredSegmentRotation(count, 0);
-  const segmentAngle = fullCircle / count;
-  const normalizedAngle = ((angle - rotation) % fullCircle + fullCircle) % fullCircle;
-
-  return Math.floor(normalizedAngle / segmentAngle) + 1;
-};
-
-const getCenteredSegmentAngle = (segmentIndex, count, rotation) => {
-  if (!Number.isFinite(segmentIndex) || segmentIndex < 0) return null;
-
-  return rotation + ((segmentIndex + 0.5) * ((Math.PI * 2) / count));
-};
-
-const getFasterCycleFirst = (first, second) => (
-  Number(first.length) <= Number(second.length) ? [first, second] : [second, first]
-);
 
 const getSunCycleFractal = (rows) => {
   const jayceeTimeRows = rows.filter((row) => (
@@ -578,82 +547,7 @@ const createProfileCoreState = ({
       showBorders: true,
       showDividers: true,
       styledSegmentIndices: [activeSegmentIndex],
-      tone: "accent"
-    });
-
-    const sunSelectedSegmentNumber = getGeometricSegmentNumberFromIndex(
-      sunActiveSegmentIndex,
-      sunSegmentKeys.length,
-      sunSegmentKeys.length - 1
-    );
-    const portalSelectedSegmentNumber = getGeometricSegmentNumberFromIndex(
-      activeSegmentIndex,
-      segmentKeys.length,
-      0
-    );
-    const [fasterSelection, slowerSelection] = getFasterCycleFirst(
-      {
-        length: Number(sunCycleFractal?.length),
-        segmentCount: sunSegmentKeys.length,
-        selectedSegmentNumber: sunSelectedSegmentNumber
-      },
-      {
-        length: Number(selectedDynamicPortalRing?.length),
-        segmentCount: segmentKeys.length,
-        selectedSegmentNumber: portalSelectedSegmentNumber
-      }
-    );
-    const ppcmSegmentCount = fasterSelection.segmentCount * slowerSelection.segmentCount;
-    const ppcmSegmentKeys = getSegmentKeys(ppcmSegmentCount);
-    const ppcmRotation = getTopCenteredSegmentRotation(ppcmSegmentCount, 0);
-    const ppcmActiveSegmentIndex = ((slowerSelection.selectedSegmentNumber - 1) * fasterSelection.segmentCount)
-      + fasterSelection.selectedSegmentNumber
-      - 1;
-    const sunPresentSegmentNumber = getGeometricSegmentNumberFromAngle(
-      sunPresentMarkerAngle,
-      sunSegmentKeys.length
-    );
-    const portalPresentSegmentNumber = getGeometricSegmentNumberFromAngle(
-      portalPresentMarkerAngle,
-      segmentKeys.length
-    );
-    const [fasterPresent, slowerPresent] = getFasterCycleFirst(
-      {
-        length: Number(sunCycleFractal?.length),
-        segmentCount: sunSegmentKeys.length,
-        segmentNumber: sunPresentSegmentNumber
-      },
-      {
-        length: Number(selectedDynamicPortalRing?.length),
-        segmentCount: segmentKeys.length,
-        segmentNumber: portalPresentSegmentNumber
-      }
-    );
-    const ppcmPresentSegmentIndex = fasterPresent.segmentNumber && slowerPresent.segmentNumber
-      ? ((slowerPresent.segmentNumber - 1) * fasterPresent.segmentCount) + fasterPresent.segmentNumber - 1
-      : -1;
-    const ppcmPresentMarkerAngle = showPresent
-      ? getCenteredSegmentAngle(
-        ppcmPresentSegmentIndex,
-        ppcmSegmentCount,
-        ppcmRotation
-      )
-      : null;
-
-    rings.push({
-      id: `${selectedDynamicPortalRing.id}-ppcm`,
-      activeSegmentIndex: ppcmActiveSegmentIndex,
-      count: ppcmSegmentCount,
-      fillAlpha: 0,
-      interactive: false,
-      label: "PPCM",
-      labels: getEmptyLabels(ppcmSegmentCount),
-      presentMarkerAngle: ppcmPresentMarkerAngle,
-      rotation: ppcmRotation,
-      segmentKeys: ppcmSegmentKeys,
-      showBorders: true,
-      showDividers: true,
-      styledSegmentIndices: ppcmActiveSegmentIndex >= 0 ? [ppcmActiveSegmentIndex] : [],
+      subSegmentCount: sunSegmentKeys.length,
       tone: "accent"
     });
   }
