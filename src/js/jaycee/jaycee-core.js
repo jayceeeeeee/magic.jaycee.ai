@@ -719,44 +719,114 @@ const drawMapSquare = (context, metrics, colors, mapSquare) => {
   const labelSize = getMapSquareLabelSize(cellSize, metrics);
   const centerStart = (gridSize - metrics.mapSquareCoreSpan) / 2;
   const centerEnd = centerStart + metrics.mapSquareCoreSpan;
+  const selectedPosition = Number(mapSquare.selectedPosition);
+  const hasBackgroundImage = Boolean(mapSquare.backgroundImage);
+  let activeCell = null;
+
+  const strokeSquareLine = (drawPath, foreground, underlayWidth = 2.4) => {
+    if (hasBackgroundImage) {
+      context.shadowColor = "rgba(0, 0, 0, 0.72)";
+      context.shadowBlur = cellSize * 0.08;
+      context.strokeStyle = "rgba(0, 0, 0, 0.82)";
+      context.lineWidth = underlayWidth;
+      drawPath();
+    }
+
+    context.shadowColor = hasBackgroundImage ? "rgba(0, 0, 0, 0.34)" : "transparent";
+    context.shadowBlur = hasBackgroundImage ? cellSize * 0.035 : 0;
+    context.strokeStyle = foreground;
+    context.lineWidth = 1;
+    drawPath();
+  };
 
   context.save();
   context.shadowColor = colors.glow;
-  context.shadowBlur = 14;
+  context.shadowBlur = 18;
+
+  if (hasBackgroundImage) {
+    context.save();
+    context.beginPath();
+    context.rect(start, start, metrics.mapSquareSize, metrics.mapSquareSize);
+    context.clip();
+    drawCoverImage(context, mapSquare.backgroundImage, start, start, metrics.mapSquareSize, metrics.mapSquareSize);
+    context.restore();
+  }
 
   for (let row = 0; row < gridSize; row += 1) {
     for (let column = 0; column < gridSize; column += 1) {
+      const position = (row * gridSize) + column + 1;
+      const isSelected = position === selectedPosition;
+      const x = start + (column * cellSize);
+      const y = start + (row * cellSize);
+
       drawGradientSquareCell(
         context,
-        start + (column * cellSize),
-        start + (row * cellSize),
+        x,
+        y,
         cellSize,
         {
           start: getSquarePaletteColor(column, row, colors.palette, gridSize),
           end: getSquarePaletteColor(column + 1, row + 1, colors.palette, gridSize),
-          alpha: colors.fillAlpha
+          alpha: hasBackgroundImage
+            ? (isSelected ? 0.12 : 0.04)
+            : (isSelected ? colors.activeFillAlpha : colors.fillAlpha)
         }
       );
+
+      if (isSelected) {
+        activeCell = { x, y };
+
+        if (!hasBackgroundImage) {
+          drawInsetSquareCell(
+            context,
+            activeCell.x,
+            activeCell.y,
+            cellSize,
+            colors.inset
+          );
+        }
+      }
     }
   }
 
   context.shadowBlur = 0;
-  context.strokeStyle = colors.cellBorder;
-  context.lineWidth = 1;
 
   for (let index = 1; index < gridSize; index += 1) {
     const offset = start + (cellSize * index);
 
-    context.beginPath();
-    context.moveTo(offset, start);
-    context.lineTo(offset, start + metrics.mapSquareSize);
-    context.moveTo(start, offset);
-    context.lineTo(start + metrics.mapSquareSize, offset);
-    context.stroke();
+    strokeSquareLine(() => {
+      context.beginPath();
+      context.moveTo(offset, start);
+      context.lineTo(offset, start + metrics.mapSquareSize);
+      context.moveTo(start, offset);
+      context.lineTo(start + metrics.mapSquareSize, offset);
+      context.stroke();
+    }, hasBackgroundImage ? "rgba(255, 255, 255, 0.96)" : colors.cellBorder);
   }
 
-  context.strokeStyle = colors.border;
-  context.strokeRect(start, start, metrics.mapSquareSize, metrics.mapSquareSize);
+  strokeSquareLine(() => {
+    context.strokeRect(start, start, metrics.mapSquareSize, metrics.mapSquareSize);
+  }, hasBackgroundImage ? "rgba(255, 255, 255, 0.98)" : colors.border, 3);
+
+  if (hasBackgroundImage && activeCell) {
+    drawInsetSquareCell(
+      context,
+      activeCell.x,
+      activeCell.y,
+      cellSize,
+      {
+        ...colors.inset,
+        border: "rgba(0, 255, 72, 1)",
+        borderGlow: "rgba(0, 255, 72, 0.95)",
+        shadow: "rgba(0, 18, 4, 0.96)"
+      }
+    );
+  }
+
+  if (hasBackgroundImage) {
+    context.restore();
+    return;
+  }
 
   mapSquare.labels.forEach((label, index) => {
     if (!label) return;
@@ -1030,8 +1100,13 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
   });
 
   drawMapSquare(context, metrics, {
-    border: rgbToCss(squareLineRgb, state.squareBorderAlpha === undefined ? 0.22 : state.squareBorderAlpha * 0.72),
-    cellBorder: rgbToCss(squareLineRgb, state.squareCellBorderAlpha === undefined ? 0.12 : state.squareCellBorderAlpha * 0.72),
+    activeFillAlpha: ACTIVE_FILL_ALPHA,
+    border: state.squareBorderAlpha === undefined
+      ? borderColors.square
+      : rgbToCss(squareLineRgb, state.squareBorderAlpha),
+    cellBorder: state.squareCellBorderAlpha === undefined
+      ? borderColors.squareCell
+      : rgbToCss(squareLineRgb, state.squareCellBorderAlpha),
     fillAlpha: state.mapSquare?.fillAlpha ?? 0.18,
     glow: "rgba(116, 247, 209, 0.1)",
     palette,
@@ -1039,6 +1114,15 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
       fill: "rgba(5, 21, 25, 0.46)",
       shadow: "rgba(255, 255, 255, 0.1)",
       stroke: "rgba(255, 255, 255, 0.1)"
+    },
+    inset: {
+      border: "rgba(124, 255, 120, 0.92)",
+      borderGlow: "rgba(124, 255, 120, 0.42)",
+      bottomLight: "rgba(255, 255, 255, 0.035)",
+      fill: "rgba(124, 255, 120, 0.035)",
+      shadow: "rgba(17, 29, 23, 0.12)",
+      topShade: "rgba(17, 29, 23, 0.055)",
+      transparent: true
     }
   }, state.mapSquare);
 
@@ -1102,6 +1186,34 @@ export const getJayceeHit = (canvas, state = DEFAULT_JAYCEE_STATE, clientX, clie
       number: JAYCEE_ORDER[orderIndex],
       type: "square"
     };
+  }
+
+  if (state.mapSquare && metrics.mapSquareGridSize > 1) {
+    const mapSquareStart = metrics.center - (metrics.mapSquareSize / 2);
+
+    if (
+      x >= mapSquareStart
+      && x <= mapSquareStart + metrics.mapSquareSize
+      && y >= mapSquareStart
+      && y <= mapSquareStart + metrics.mapSquareSize
+    ) {
+      const column = Math.min(
+        metrics.mapSquareGridSize - 1,
+        Math.max(0, Math.floor((x - mapSquareStart) / metrics.mapSquareCellSize))
+      );
+      const row = Math.min(
+        metrics.mapSquareGridSize - 1,
+        Math.max(0, Math.floor((y - mapSquareStart) / metrics.mapSquareCellSize))
+      );
+      const position = (row * metrics.mapSquareGridSize) + column + 1;
+
+      return {
+        column,
+        position,
+        row,
+        type: "map-square"
+      };
+    }
   }
 
   const distance = Math.hypot(x - metrics.center, y - metrics.center);

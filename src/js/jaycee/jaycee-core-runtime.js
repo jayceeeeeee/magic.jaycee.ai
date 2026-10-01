@@ -22,6 +22,8 @@ import {
   getAvatarImageUrl,
   getBackgroundImageUrl,
   getDisplayValue,
+  getDynamicSquareKey,
+  getFractalImageUrl,
   getFractalKey,
   getProfileColorValue,
   getThemeSettingsFromProfile,
@@ -224,15 +226,29 @@ const getSegmentKeys = (count) => (
   Array.from({ length: count }, (_, index) => String(index + 1))
 );
 
+const getDefaultMapPosition = (gridSize) => {
+  const safeGridSize = Math.max(1, Number(gridSize) || 1);
+  const coreSpan = safeGridSize % 2 === 0 ? 2 : 1;
+  const centerStart = (safeGridSize - coreSpan) / 2;
+
+  return (centerStart * safeGridSize) + centerStart + 1;
+};
+
 const getStaticMapSquareLabels = (row) => (
   JAYCEE_ORDER.map((number) => getDisplayValue(row[String(number)]) || String(number))
 );
 
 const getDynamicMapSquareLabels = (square) => (
-  square.elements.map((element) => getDisplayValue(element.value) || String(element.position))
+  square.elements.map((element, index) => getDisplayValue(element.value) || String(index + 1))
 );
 
-const getSelectedMapSquare = ({ dynamicSquares, rows, selectedMapFractalKey }) => {
+const getSelectedMapSquare = ({
+  dynamicSquares,
+  mapSquareImages,
+  rows,
+  selectedMapFractalKey,
+  selectedMapPosition
+}) => {
   if (!selectedMapFractalKey) return { error: "", mapSquare: null };
 
   const dynamicSquare = getSelectedDynamicMapSquare(dynamicSquares, selectedMapFractalKey);
@@ -245,8 +261,10 @@ const getSelectedMapSquare = ({ dynamicSquares, rows, selectedMapFractalKey }) =
     return {
       error: "",
       mapSquare: {
+        backgroundImage: mapSquareImages.get(selectedMapFractalKey) || null,
         gridSize: dynamicSquare.gridSize,
-        labels: getDynamicMapSquareLabels(dynamicSquare)
+        labels: getDynamicMapSquareLabels(dynamicSquare),
+        selectedPosition: selectedMapPosition || getDefaultMapPosition(dynamicSquare.gridSize)
       }
     };
   }
@@ -260,11 +278,93 @@ const getSelectedMapSquare = ({ dynamicSquares, rows, selectedMapFractalKey }) =
   return {
     error: "",
     mapSquare: {
+      backgroundImage: mapSquareImages.get(selectedMapFractalKey) || null,
       gridSize: 3,
-      labels: getStaticMapSquareLabels(staticSquare)
+      labels: getStaticMapSquareLabels(staticSquare),
+      selectedPosition: selectedMapPosition || DEFAULT_SELECTED_NUMBER
     }
   };
 };
+
+const getSelectedMapDetails = ({ dynamicSquares, rows, selectedMapFractalKey }) => {
+  if (!selectedMapFractalKey) return null;
+
+  const dynamicSquare = getSelectedDynamicMapSquare(dynamicSquares, selectedMapFractalKey);
+
+  if (dynamicSquare) {
+    return {
+      gridSize: dynamicSquare.gridSize,
+      kind: "dynamic",
+      square: dynamicSquare
+    };
+  }
+
+  const staticSquare = rows.find((row) => (
+    row.sourceType === "user" && getFractalKey(row) === selectedMapFractalKey
+  ));
+
+  return staticSquare
+    ? { gridSize: 3, kind: "static", square: staticSquare }
+    : null;
+};
+
+const getDynamicMapResonanceGroups = (dynamicSquares, selectedMapFractalKey, selectedMapPosition) => {
+  const dynamicSquare = getSelectedDynamicMapSquare(dynamicSquares, selectedMapFractalKey);
+
+  if (!dynamicSquare || dynamicSquare.invalidReason) return [];
+
+  const selectedIndex = Math.max(0, Number(selectedMapPosition || getDefaultMapPosition(dynamicSquare.gridSize)) - 1);
+  const selectedElement = dynamicSquare.elements[selectedIndex];
+  const resonanceValue = getDisplayValue(selectedElement?.value);
+  const description = getDisplayValue(selectedElement?.description);
+
+  if (!resonanceValue && !description) return [];
+
+  return [{
+    rows: [{
+      description,
+      id: dynamicSquare.sourceId || dynamicSquare.id,
+      label: dynamicSquare.label || "Map",
+      resonanceValue,
+      sourceName: dynamicSquare.sourceName || "User",
+      sourceType: dynamicSquare.sourceType || "user"
+    }],
+    sourceName: dynamicSquare.sourceName || "User",
+    sourceType: dynamicSquare.sourceType || "user"
+  }];
+};
+
+const getStaticMapResonanceGroups = (rows, selectedMapFractalKey, selectedMapPosition) => {
+  const staticSquare = rows.find((row) => (
+    row.sourceType === "user" && getFractalKey(row) === selectedMapFractalKey
+  ));
+
+  if (!staticSquare) return [];
+
+  const selectedNumber = JAYCEE_ORDER[selectedMapPosition - 1] || DEFAULT_SELECTED_NUMBER;
+  const resonanceValue = getDisplayValue(staticSquare[String(selectedNumber)]);
+
+  if (!resonanceValue) return [];
+
+  return [{
+    rows: [{
+      ...staticSquare,
+      resonanceValue
+    }],
+    sourceName: staticSquare.sourceName || "User",
+    sourceType: staticSquare.sourceType || "user"
+  }];
+};
+
+const getGroupsWithSelectedResonanceValue = (groups, selectedNumber) => (
+  groups.map((group) => ({
+    ...group,
+    rows: group.rows.map((row) => ({
+      ...row,
+      resonanceValue: getDisplayValue(row[String(selectedNumber)])
+    }))
+  }))
+);
 
 const getTimeCycleElapsedSeconds = (fractal, now = Date.now()) => {
   if (!hasTimeCycle(fractal)) return null;
@@ -402,9 +502,11 @@ const createProfileCoreState = ({
   dynamicSquares,
   isCorePage,
   hasUserProfile,
+  mapSquareImages,
   ringBackgroundImage,
   rows,
   selectedMapFractalKey,
+  selectedMapPosition,
   selectedPortalFractalKey,
   selectedSpaceNumber,
   selectedTimeSegments,
@@ -422,7 +524,13 @@ const createProfileCoreState = ({
     selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER
   );
   const selectedDynamicPortalRing = getSelectedDynamicPortalRing(dynamicRings, selectedPortalFractalKey);
-  const { mapSquare } = getSelectedMapSquare({ dynamicSquares, rows, selectedMapFractalKey });
+  const { mapSquare } = getSelectedMapSquare({
+    dynamicSquares,
+    mapSquareImages,
+    rows,
+    selectedMapFractalKey,
+    selectedMapPosition
+  });
   const rings = [
     {
       id: "sun",
@@ -586,9 +694,11 @@ export const initJayceePage = async () => {
   let publicProfiles = [];
   let avatarImage = null;
   let ringBackgroundImage = null;
+  let mapSquareImages = new Map();
   let coreState = null;
   let themeSettings = getThemeSettingsFromProfile(null);
   let selectedSpaceNumber = DEFAULT_SELECTED_NUMBER;
+  let selectedMapPosition = DEFAULT_SELECTED_NUMBER;
   let selectedMapFractalKey = "";
   let selectedPortalFractalKey = "";
   let selectedDraftKey = null;
@@ -660,6 +770,31 @@ export const initJayceePage = async () => {
     }
   };
 
+  const resetSelectedMapPosition = () => {
+    const selectedMapDetails = getSelectedMapDetails({ dynamicSquares, rows, selectedMapFractalKey });
+
+    selectedMapPosition = getDefaultMapPosition(selectedMapDetails?.gridSize || 3);
+  };
+
+  const loadMapSquareImages = async (client) => {
+    const imageEntries = await Promise.all([
+      ...getRowsForDimensionColumn(rows, SPACE_DIMENSION_VALUE)
+        .filter((row) => row.sourceType === "user" && getDisplayValue(row.image))
+        .map(async (row) => [
+          getFractalKey(row),
+          await loadOptionalImage(await getFractalImageUrl(client, row))
+        ]),
+      ...dynamicSquares
+        .filter((square) => square.sourceType === "user" && getDisplayValue(square.image))
+        .map(async (square) => [
+          getDynamicSquareKey(square),
+          await loadOptionalImage(await getFractalImageUrl(client, square))
+        ])
+    ]);
+
+    mapSquareImages = new Map(imageEntries.filter(([, image]) => image));
+  };
+
   const renderPresentControls = () => {
     const corePanel = canvas.closest(".jaycee-profile-core");
     const existingControls = corePanel?.querySelector("[data-profile-present-controls]");
@@ -714,6 +849,7 @@ export const initJayceePage = async () => {
     selectors.replaceChildren(
       createFractalSelect("Choose a map", "Body", mapSelectorChoices, selectedMapFractalKey, (value) => {
         selectedMapFractalKey = value;
+        resetSelectedMapPosition();
         syncProfileView();
       }),
       createFractalSelect("Enter a portal", "Sun", portalChoices, selectedPortalFractalKey, (value) => {
@@ -730,15 +866,39 @@ export const initJayceePage = async () => {
   };
 
   const renderResonances = () => {
-    const selectedMapResult = getSelectedMapSquare({ dynamicSquares, rows, selectedMapFractalKey });
+    const selectedMapResult = getSelectedMapSquare({
+      dynamicSquares,
+      mapSquareImages,
+      rows,
+      selectedMapFractalKey,
+      selectedMapPosition
+    });
     const showDrafts = isEditableProfilePage;
-    const spaceGroups = filterUserGroupsByFractal(
+    const selectedMapDetails = getSelectedMapDetails({ dynamicSquares, rows, selectedMapFractalKey });
+    const coreSpaceGroups = getGroupsWithSelectedResonanceValue(
       getResonanceGroupsForNumber(
         getRowsForDimensionColumn(rows, SPACE_DIMENSION_VALUE),
         selectedSpaceNumber
-      ),
-      selectedMapFractalKey
+      ).filter((group) => group.sourceType === "jaycee"),
+      selectedSpaceNumber
     );
+    const selectedStaticMapNumber = selectedMapDetails?.kind === "static"
+      ? JAYCEE_ORDER[selectedMapPosition - 1] || DEFAULT_SELECTED_NUMBER
+      : selectedSpaceNumber;
+    const selectedMapGroups = selectedMapDetails?.kind === "dynamic"
+      ? getDynamicMapResonanceGroups(dynamicSquares, selectedMapFractalKey, selectedMapPosition)
+      : selectedMapDetails?.kind === "static"
+        ? getStaticMapResonanceGroups(rows, selectedMapFractalKey, selectedMapPosition)
+        : filterUserGroupsByFractal(
+          getResonanceGroupsForNumber(
+            getRowsForDimensionColumn(rows, SPACE_DIMENSION_VALUE),
+            selectedStaticMapNumber
+          ),
+          selectedMapFractalKey
+        );
+    const spaceGroups = selectedMapDetails
+      ? [...coreSpaceGroups, ...selectedMapGroups]
+      : selectedMapGroups;
     const selectedSunNumber = selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER;
     const timeGroups = filterUserGroupsByFractal(
       getTimeResonanceGroups(rows, selectedTimeSegments, dynamicRings),
@@ -746,7 +906,14 @@ export const initJayceePage = async () => {
     );
     const draftRows = showDrafts ? getDraftRows(rows) : [];
     const columns = [
-      { groups: spaceGroups, meta: `Sector ${selectedSpaceNumber}`, selectedNumber: selectedSpaceNumber, title: "Map" },
+      {
+        groups: spaceGroups,
+        meta: selectedMapDetails?.kind === "dynamic"
+          ? `Cell ${selectedMapPosition}`
+          : `Sector ${selectedStaticMapNumber}`,
+        selectedNumber: selectedMapDetails?.kind === "dynamic" ? selectedMapPosition : selectedStaticMapNumber,
+        title: "Map"
+      },
       { groups: timeGroups, meta: getTimeSelectionMeta(dynamicRings, selectedTimeSegments), selectedNumber: selectedSunNumber, title: "Portal" }
     ].filter((column) => column.groups.length);
 
@@ -769,9 +936,11 @@ export const initJayceePage = async () => {
       dynamicSquares,
       hasUserProfile,
       isCorePage,
+      mapSquareImages,
       ringBackgroundImage,
       rows,
       selectedMapFractalKey,
+      selectedMapPosition,
       selectedPortalFractalKey,
       selectedSpaceNumber,
       selectedTimeSegments,
@@ -798,8 +967,23 @@ export const initJayceePage = async () => {
       selectedSpaceNumber = hit.number;
     } else if (hit.type === "ring" && hit.ringId) {
       selectedTimeSegments.set(hit.ringId, String(hit.segmentKey));
+    } else if (hit.type === "map-square") {
+      selectedMapPosition = hit.position;
     }
 
+    syncProfileView();
+  };
+
+  const handleCanvasDoubleClick = (event) => {
+    const hit = getJayceeHit(canvas, coreState, event.clientX, event.clientY);
+
+    if (hit?.type !== "square") return;
+
+    const selectedMapDetails = getSelectedMapDetails({ dynamicSquares, rows, selectedMapFractalKey });
+
+    if (!selectedMapDetails) return;
+
+    selectedMapPosition = getDefaultMapPosition(selectedMapDetails.gridSize);
     syncProfileView();
   };
 
@@ -845,6 +1029,7 @@ export const initJayceePage = async () => {
     rows = [...jayceeRows, ...profileRows];
     dynamicRings = await fetchDynamicTimeRings(client, profile);
     dynamicSquares = await fetchDynamicSpaceSquares(client, profile);
+    await loadMapSquareImages(client);
     dynamicRings.forEach((ring) => {
       if (!selectedTimeSegments.has(ring.id)) {
         selectedTimeSegments.set(ring.id, ring.defaultSegment);
@@ -855,6 +1040,7 @@ export const initJayceePage = async () => {
     ringBackgroundImage = !hasUserProfile ? null : await loadOptionalImage(await getBackgroundImageUrl(client, profile));
     renderCore();
     canvas.addEventListener("click", handleCanvasClick);
+    canvas.addEventListener("dblclick", handleCanvasDoubleClick);
     const resizeObserver = new ResizeObserver(scheduleRenderCore);
 
     resizeObserver.observe(canvas);

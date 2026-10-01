@@ -84,7 +84,7 @@ export const getThemeSettingsFromProfile = (profile) => ({
 export const fetchJayceeResonances = async (client) => {
   const { data, error } = await client
     .from(JAYCEE_FRACTALS_TABLE)
-    .select(`id, label, user_id, dimension, ${TIME_CYCLE_COLUMNS}, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
+    .select(`id, label, user_id, dimension, image, ${TIME_CYCLE_COLUMNS}, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
     .is("user_id", null)
     .eq(FRACTAL_VISIBILITY_COLUMN, PUBLIC_VISIBILITY_VALUE)
     .order("label", { ascending: true });
@@ -101,7 +101,7 @@ export const fetchJayceeResonances = async (client) => {
 export const fetchUserResonances = async (client, profile, { publicOnly = false } = {}) => {
   let query = client
     .from(JAYCEE_FRACTALS_TABLE)
-    .select(`id, label, user_id, dimension, ${TIME_CYCLE_COLUMNS}, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
+    .select(`id, label, user_id, dimension, image, ${TIME_CYCLE_COLUMNS}, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
     .eq("user_id", profile.id);
 
   if (publicOnly) {
@@ -122,7 +122,7 @@ export const fetchUserResonances = async (client, profile, { publicOnly = false 
 export const fetchDynamicTimeRings = async (client, profile) => {
   let query = client
     .from(JAYCEE_DYNAMIC_FRACTALS_TABLE)
-    .select(`id, label, description, dimension, user_id, created_at, ${TIME_CYCLE_COLUMNS}`)
+    .select(`id, label, description, dimension, user_id, image, created_at, ${TIME_CYCLE_COLUMNS}`)
     .eq("dimension", TIME_DIMENSION_VALUE)
     .order("created_at", { ascending: true });
 
@@ -173,7 +173,7 @@ export const fetchDynamicTimeRings = async (client, profile) => {
 export const fetchDynamicSpaceSquares = async (client, profile) => {
   let query = client
     .from(JAYCEE_DYNAMIC_FRACTALS_TABLE)
-    .select("id, label, description, dimension, user_id, created_at")
+    .select("id, label, description, dimension, user_id, image, created_at")
     .eq("dimension", SPACE_DIMENSION_VALUE)
     .order("created_at", { ascending: true });
 
@@ -300,6 +300,14 @@ export const getAvatarImageUrl = async (client, profile) => (
 export const getBackgroundImageUrl = async (client, profile) => (
   getUserImageUrl(client, profile, profile?.background_path)
 );
+
+export const getFractalImageUrl = async (client, fractal) => {
+  const image = getDisplayValue(fractal?.image);
+
+  if (!fractal?.user_id || !image) return "";
+
+  return getUserImageUrl(client, { id: fractal.user_id }, image);
+};
 
 const loadImage = (imageUrl) => (
   new Promise((resolve, reject) => {
