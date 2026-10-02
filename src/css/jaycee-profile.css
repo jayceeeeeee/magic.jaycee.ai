@@ -561,6 +561,48 @@
   overflow-wrap: anywhere;
 }
 
+.profile-parameter-value {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+}
+
+.profile-parameter-value span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.profile-parameter-value.has-controls {
+  flex-wrap: wrap;
+}
+
+.profile-parameter-slider {
+  width: min(100%, 130px);
+  accent-color: var(--accent);
+}
+
+.profile-parameter-button {
+  min-height: 22px;
+  padding: 2px 7px;
+  border: 1px solid rgba(var(--accent-rgb), 0.34);
+  border-radius: 5px;
+  background: rgba(var(--accent-rgb), 0.1);
+  color: var(--accent-soft);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.66rem;
+  line-height: 1;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.profile-parameter-button:hover,
+.profile-parameter-button:focus-visible {
+  border-color: rgba(var(--accent-rgb), 0.58);
+  background: rgba(var(--accent-rgb), 0.18);
+  outline: none;
+}
+
 @media (max-width: 820px) {
   .jaycee-profile-page {
     grid-template-columns: 1fr;
