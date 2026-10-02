@@ -57,6 +57,34 @@ const PROFILE_CORE_METRICS = {
 const PROFILE_RING_ACTIVE_FILL_ALPHA = 0.09;
 const PROFILE_RING_FILL_ALPHA = 0.26;
 const PROFILE_CLOCK_REFRESH_MS = 1000;
+const PROFILE_VIEW_CACHE_PREFIX = "jayceeProfileView";
+
+const getProfileViewCacheKey = ({ pageMode, profile, publicUsername }) => {
+  const profileKey = profile?.id || publicUsername || "core";
+
+  return `${PROFILE_VIEW_CACHE_PREFIX}:${pageMode}:${profileKey}`;
+};
+
+const loadProfileViewCache = (cacheKey) => {
+  try {
+    const value = window.localStorage.getItem(cacheKey);
+
+    return value ? JSON.parse(value) : null;
+  } catch (error) {
+    console.warn("Jaycee profile view cache could not be loaded", error);
+    return null;
+  }
+};
+
+const saveProfileViewCache = (cacheKey, state) => {
+  if (!cacheKey) return;
+
+  try {
+    window.localStorage.setItem(cacheKey, JSON.stringify(state));
+  } catch (error) {
+    console.warn("Jaycee profile view cache could not be saved", error);
+  }
+};
 
 const hexToRgbParts = (color) => {
   const value = Number.parseInt(color.slice(1), 16);
@@ -657,6 +685,7 @@ export const initJayceePage = async () => {
   let draftPreviewMode = "closed";
   let draftPreviewTimer = null;
   let currentTimeTimer = null;
+  let profileViewCacheKey = "";
   const selectedTimeSegments = new Map([["sun", String(DEFAULT_SUN_TIME_NUMBER)]]);
 
   const stopCurrentTimeClock = () => {
@@ -726,6 +755,41 @@ export const initJayceePage = async () => {
     const selectedMapDetails = getSelectedMapDetails({ dynamicSquares, rows, selectedMapFractalKey });
 
     selectedMapPosition = getDefaultMapPosition(selectedMapDetails?.gridSize || 3);
+  };
+
+  const restoreProfileViewCache = (cacheKey) => {
+    const cache = loadProfileViewCache(cacheKey);
+
+    if (!cache) return;
+
+    if (Number.isFinite(Number(cache.selectedSpaceNumber))) {
+      selectedSpaceNumber = Number(cache.selectedSpaceNumber);
+    }
+    if (Number.isFinite(Number(cache.selectedMapPosition))) {
+      selectedMapPosition = Number(cache.selectedMapPosition);
+    }
+    selectedMapFractalKey = getDisplayValue(cache.selectedMapFractalKey);
+    selectedPortalFractalKey = getDisplayValue(cache.selectedPortalFractalKey);
+
+    if (cache.selectedTimeSegments && typeof cache.selectedTimeSegments === "object") {
+      Object.entries(cache.selectedTimeSegments).forEach(([key, value]) => {
+        const segment = getDisplayValue(value);
+
+        if (key && segment) {
+          selectedTimeSegments.set(key, segment);
+        }
+      });
+    }
+  };
+
+  const saveProfileViewState = () => {
+    saveProfileViewCache(profileViewCacheKey, {
+      selectedMapFractalKey,
+      selectedMapPosition,
+      selectedPortalFractalKey,
+      selectedSpaceNumber,
+      selectedTimeSegments: Object.fromEntries(selectedTimeSegments)
+    });
   };
 
   const loadMapSquareImages = async (client) => {
@@ -918,6 +982,7 @@ export const initJayceePage = async () => {
   };
 
   const syncProfileView = () => {
+    saveProfileViewState();
     renderCore();
     renderResonances();
   };
@@ -990,6 +1055,7 @@ export const initJayceePage = async () => {
       ? []
       : await fetchUserResonances(client, profile, { publicOnly: Boolean(publicUsername) });
 
+    profileViewCacheKey = getProfileViewCacheKey({ pageMode, profile, publicUsername });
     rows = [...jayceeRows, ...profileRows];
     dynamicRings = await fetchDynamicTimeRings(client, profile);
     dynamicSquares = await fetchDynamicSpaceSquares(client, profile);
@@ -1000,6 +1066,7 @@ export const initJayceePage = async () => {
         selectedTimeSegments.set(ring.id, ring.defaultSegment);
       }
     });
+    restoreProfileViewCache(profileViewCacheKey);
     publicProfiles = isPresentPage ? await fetchPublicProfiles(client) : [];
     avatarImage = !hasUserProfile ? null : await loadOptionalImage(await getAvatarImageUrl(client, profile));
     ringBackgroundImage = !hasUserProfile ? null : await loadOptionalImage(await getBackgroundImageUrl(client, profile));
