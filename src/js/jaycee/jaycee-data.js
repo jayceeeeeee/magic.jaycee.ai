@@ -12,7 +12,7 @@ export const DEFAULT_SELECTED_NUMBER = 5;
 export const DEFAULT_SUN_TIME_NUMBER = 9;
 export const JAYCEE_RESONANCE_SOURCE = "Jaycee Core";
 
-const TIME_CYCLE_COLUMNS = "start_at, length";
+const FRACTAL_PARAMETER_COLUMNS = "start_at, length";
 const SIGNED_IMAGE_URL_DURATION_SECONDS = 60 * 60;
 
 export const getFractalKey = (row) => `${row.sourceType || "source"}:${row.id || row.sourceId || row.label || "fractal"}`;
@@ -84,7 +84,7 @@ export const getThemeSettingsFromProfile = (profile) => ({
 export const fetchJayceeResonances = async (client) => {
   const { data, error } = await client
     .from(JAYCEE_FRACTALS_TABLE)
-    .select(`id, label, user_id, dimension, image, ${TIME_CYCLE_COLUMNS}, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
+    .select(`id, label, user_id, dimension, image, ${FRACTAL_PARAMETER_COLUMNS}, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
     .is("user_id", null)
     .eq(FRACTAL_VISIBILITY_COLUMN, PUBLIC_VISIBILITY_VALUE)
     .order("label", { ascending: true });
@@ -101,7 +101,7 @@ export const fetchJayceeResonances = async (client) => {
 export const fetchUserResonances = async (client, profile, { publicOnly = false } = {}) => {
   let query = client
     .from(JAYCEE_FRACTALS_TABLE)
-    .select(`id, label, user_id, dimension, image, ${TIME_CYCLE_COLUMNS}, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
+    .select(`id, label, user_id, dimension, image, ${FRACTAL_PARAMETER_COLUMNS}, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
     .eq("user_id", profile.id);
 
   if (publicOnly) {
@@ -122,7 +122,7 @@ export const fetchUserResonances = async (client, profile, { publicOnly = false 
 export const fetchDynamicTimeRings = async (client, profile) => {
   let query = client
     .from(JAYCEE_DYNAMIC_FRACTALS_TABLE)
-    .select(`id, label, description, dimension, user_id, image, created_at, ${TIME_CYCLE_COLUMNS}`)
+    .select(`id, label, description, dimension, user_id, image, created_at, ${FRACTAL_PARAMETER_COLUMNS}`)
     .eq("dimension", TIME_DIMENSION_VALUE)
     .order("created_at", { ascending: true });
 
@@ -173,7 +173,7 @@ export const fetchDynamicTimeRings = async (client, profile) => {
 export const fetchDynamicSpaceSquares = async (client, profile) => {
   let query = client
     .from(JAYCEE_DYNAMIC_FRACTALS_TABLE)
-    .select("id, label, description, dimension, user_id, image, created_at")
+    .select(`id, label, description, dimension, user_id, image, created_at, ${FRACTAL_PARAMETER_COLUMNS}`)
     .eq("dimension", SPACE_DIMENSION_VALUE)
     .order("created_at", { ascending: true });
 

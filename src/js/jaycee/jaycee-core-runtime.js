@@ -338,6 +338,93 @@ const getSelectedMapDetails = ({ dynamicSquares, rows, selectedMapFractalKey }) 
     : null;
 };
 
+const formatDuration = (secondsValue) => {
+  let seconds = Math.floor(Number(secondsValue));
+
+  if (!Number.isFinite(seconds) || seconds <= 0) return "";
+
+  const year = 365 * 24 * 60 * 60;
+  const month = 30 * 24 * 60 * 60;
+  const day = 24 * 60 * 60;
+  const years = Math.floor(seconds / year);
+  seconds %= year;
+  const months = Math.floor(seconds / month);
+  seconds %= month;
+  const days = Math.floor(seconds / day);
+  seconds %= day;
+  const hours = Math.floor(seconds / (60 * 60));
+  seconds %= 60 * 60;
+  const minutes = Math.floor(seconds / 60);
+  const finalSeconds = seconds % 60;
+  const dateParts = [
+    ...(years ? [`${years}y`] : []),
+    ...(months ? [`${months}mo`] : []),
+    ...(days ? [`${days}d`] : [])
+  ];
+  const clock = [hours, minutes, finalSeconds]
+    .map((part) => String(part).padStart(2, "0"))
+    .join(":");
+
+  return [...dateParts, clock].join(" ");
+};
+
+const formatArea = (metersValue) => {
+  const meters = Number(metersValue);
+
+  if (!Number.isFinite(meters) || meters <= 0) return "";
+
+  const squareMeters = meters * meters;
+  const formattedArea = squareMeters.toLocaleString(undefined, {
+    maximumFractionDigits: squareMeters < 10 ? 2 : 0
+  });
+
+  return `${formattedArea} sqm`;
+};
+
+const formatGpsCoordinate = (value, positiveLabel, negativeLabel) => {
+  const number = Number(value);
+
+  if (!Number.isFinite(number)) return "";
+
+  const direction = number >= 0 ? positiveLabel : negativeLabel;
+
+  return `${Math.abs(number).toFixed(4)}°${direction}`;
+};
+
+const formatGpsPosition = (value) => {
+  const text = getDisplayValue(value);
+  const [latitude, longitude, ...rest] = text.split(",").map((part) => part.trim());
+
+  if (!latitude || !longitude || rest.length) return text;
+
+  const formattedLatitude = formatGpsCoordinate(latitude, "N", "S");
+  const formattedLongitude = formatGpsCoordinate(longitude, "E", "W");
+
+  return formattedLatitude && formattedLongitude
+    ? `${formattedLatitude}, ${formattedLongitude}`
+    : text;
+};
+
+const getRingParameterRows = (fractal, now = Date.now()) => {
+  const length = formatDuration(fractal?.length);
+  const present = formatDuration(getTimeCycleElapsedSeconds(fractal, now));
+
+  return [
+    ...(length ? [{ label: "Cycle", value: length }] : []),
+    ...(present ? [{ label: "Present", value: present }] : [])
+  ];
+};
+
+const getSquareParameterRows = (fractal) => {
+  const area = formatArea(fractal?.length);
+  const gps = formatGpsPosition(fractal?.start_at);
+
+  return [
+    ...(area ? [{ label: "Surface", value: area }] : []),
+    ...(gps ? [{ label: "Position", value: gps }] : [])
+  ];
+};
+
 const getDynamicMapResonanceGroups = (dynamicSquares, selectedMapFractalKey, selectedMapPosition) => {
   const dynamicSquare = getSelectedDynamicMapSquare(dynamicSquares, selectedMapFractalKey);
 
@@ -442,6 +529,80 @@ const getNestedPresentMarkerAngle = ({
   const subSegmentAngle = parentSegmentAngle / subCount;
 
   return parentRotation + (parentIndex * parentSegmentAngle) + ((subIndex + 0.5) * subSegmentAngle);
+};
+
+const createParameterSection = (title, parameters) => {
+  const section = document.createElement("article");
+  const heading = document.createElement("h3");
+  const list = document.createElement("dl");
+
+  section.className = "profile-parameter-section";
+  heading.textContent = title;
+  list.className = "profile-parameter-list";
+  parameters.forEach((parameter) => {
+    const name = document.createElement("dt");
+    const value = document.createElement("dd");
+
+    name.textContent = parameter.label;
+    value.textContent = parameter.value;
+    list.append(name, value);
+  });
+  section.append(heading, list);
+
+  return section;
+};
+
+const getCurrentParameterSections = ({
+  dynamicRings,
+  dynamicSquares,
+  rows,
+  selectedMapFractalKey,
+  selectedPortalFractalKey
+}) => {
+  const sections = [];
+  const sunCycleFractal = getSunCycleFractal(rows);
+  const sunParameters = getRingParameterRows(sunCycleFractal);
+  const selectedDynamicPortalRing = getSelectedDynamicPortalRing(dynamicRings, selectedPortalFractalKey);
+  const selectedStaticPortalRing = selectedPortalFractalKey
+    ? getRowsForDimensionColumn(rows, TIME_DIMENSION_VALUE).find((row) => (
+      row.sourceType === "user" && getFractalKey(row) === selectedPortalFractalKey
+    ))
+    : null;
+  const selectedMapDetails = getSelectedMapDetails({ dynamicSquares, rows, selectedMapFractalKey });
+  const coreSquareRows = getRowsForDimensionColumn(rows, SPACE_DIMENSION_VALUE)
+    .filter((row) => row.sourceType === "jaycee");
+
+  if (sunParameters.length) {
+    sections.push({ parameters: sunParameters, title: sunCycleFractal?.label || "Sun" });
+  }
+
+  [selectedDynamicPortalRing, selectedStaticPortalRing]
+    .filter(Boolean)
+    .forEach((ring) => {
+      const parameters = getRingParameterRows(ring);
+
+      if (parameters.length) {
+        sections.push({ parameters, title: ring.label || "Portal" });
+      }
+    });
+
+  coreSquareRows.forEach((square) => {
+    const parameters = getSquareParameterRows(square);
+
+    if (parameters.length) {
+      sections.push({ parameters, title: square.label || "Core" });
+    }
+  });
+
+  if (selectedMapDetails?.square) {
+    const parameters = getSquareParameterRows(selectedMapDetails.square);
+
+    if (parameters.length) {
+      sections.push({ parameters, title: selectedMapDetails.square.label || "Map" });
+    }
+  }
+
+  return sections;
 };
 
 const getSunCycleFractal = (rows) => {
@@ -702,6 +863,8 @@ export const initJayceePage = async () => {
       clock.textContent = formatCurrentDateTime();
     }
     scheduleRenderCore();
+    renderResonances();
+    renderCoreParameters();
   };
 
   const startCurrentTimeClock = () => {
@@ -914,7 +1077,7 @@ export const initJayceePage = async () => {
     const selectedStaticMapNumber = selectedMapDetails?.kind === "static"
       ? JAYCEE_ORDER[selectedMapPosition - 1] || DEFAULT_SELECTED_NUMBER
       : selectedSpaceNumber;
-    const selectedMapGroups = selectedMapDetails?.kind === "dynamic"
+    const rawSelectedMapGroups = selectedMapDetails?.kind === "dynamic"
       ? getDynamicMapResonanceGroups(dynamicSquares, selectedMapFractalKey, selectedMapPosition)
       : selectedMapDetails?.kind === "static"
         ? getStaticMapResonanceGroups(rows, selectedMapFractalKey, selectedMapPosition)
@@ -925,6 +1088,9 @@ export const initJayceePage = async () => {
           ),
           selectedMapFractalKey
         );
+    const selectedMapGroups = selectedMapDetails
+      ? rawSelectedMapGroups
+      : getGroupsWithSelectedResonanceValue(rawSelectedMapGroups, selectedStaticMapNumber);
     const spaceGroups = selectedMapDetails
       ? [...coreSpaceGroups, ...selectedMapGroups]
       : selectedMapGroups;
@@ -956,6 +1122,46 @@ export const initJayceePage = async () => {
     );
   };
 
+  const renderCoreParameters = () => {
+    const corePanel = canvas.closest(".jaycee-profile-core");
+    const existingPanel = corePanel?.querySelector("[data-profile-parameters]");
+
+    if (!corePanel) {
+      existingPanel?.remove();
+      return;
+    }
+
+    const sections = getCurrentParameterSections({
+      dynamicRings,
+      dynamicSquares,
+      rows,
+      selectedMapFractalKey,
+      selectedPortalFractalKey
+    });
+
+    if (!sections.length) {
+      existingPanel?.remove();
+      return;
+    }
+
+    const panel = existingPanel || document.createElement("section");
+    const heading = document.createElement("h2");
+    const content = document.createElement("div");
+
+    panel.className = "profile-parameter-panel";
+    panel.dataset.profileParameters = "";
+    heading.textContent = "Parameters";
+    content.className = "profile-parameter-panel-content";
+    content.replaceChildren(
+      ...sections.map((section) => createParameterSection(section.title, section.parameters))
+    );
+    panel.replaceChildren(heading, content);
+
+    if (!existingPanel) {
+      canvas.insertAdjacentElement("afterend", panel);
+    }
+  };
+
   const renderCore = () => {
     coreState = createProfileCoreState({
       avatarImage,
@@ -984,6 +1190,7 @@ export const initJayceePage = async () => {
   const syncProfileView = () => {
     saveProfileViewState();
     renderCore();
+    renderCoreParameters();
     renderResonances();
   };
 
@@ -1083,6 +1290,7 @@ export const initJayceePage = async () => {
     window.addEventListener("load", scheduleRenderCore);
     renderPresentControls();
     renderFractalSelectors();
+    renderCoreParameters();
     renderResonances();
     scheduleRenderCore();
   } catch (error) {
