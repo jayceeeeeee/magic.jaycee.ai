@@ -398,8 +398,7 @@ body::after {
     min-height: 34px;
     align-items: center;
     justify-content: center;
-    flex-direction: column;
-    gap: 4px;
+    gap: 8px;
     margin-top: 0;
     padding: 0;
     border: 1px solid var(--field-border);
@@ -414,7 +413,15 @@ body::after {
     transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
 }
 
-.site-header .account-menu-button span {
+.site-header .account-menu-icon {
+    display: inline-flex;
+    width: 16px;
+    flex: 0 0 16px;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.site-header .account-menu-icon span {
     width: 16px;
     height: 1px;
     background: currentColor;
@@ -481,6 +488,7 @@ body::after {
     position: absolute;
     top: calc(100% + 8px);
     right: max(16px, calc((100vw - 1120px) / 2));
+    z-index: 20;
     display: none;
     flex-direction: column;
     align-items: stretch;
@@ -783,19 +791,20 @@ body::after {
     }
 
     .site-header.has-account-menu .account-menu-button {
-        max-width: 34vw;
-        padding: 0 9px;
+        width: 34px;
+        max-width: 34px;
+        padding: 0;
     }
 
     .site-header.has-account-menu .account-menu-button .account-menu-label {
-        max-width: 96px;
-        font-size: 0.72rem;
+        display: none;
     }
 
     .account-nav {
         position: absolute;
         top: calc(100% + 8px);
         right: 10px;
+        z-index: 20;
         display: none;
         flex-direction: column;
         align-items: stretch;

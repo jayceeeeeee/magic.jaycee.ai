@@ -58,19 +58,20 @@
                             <img src="${yoganandaImageSrc}" alt="Paramahansa Yogananda">
                         </div>
                         <button class="account-menu-button" type="button" aria-label="Open account menu" aria-expanded="false">
+                            <span class="account-menu-icon" aria-hidden="true">
+                                <span></span>
+                                <span></span>
+                                <span></span>
+                            </span>
                             ${isSignedIn
                                 ? `<span class="account-menu-label">${accountText}</span>`
-                                : `
-                                    <span></span>
-                                    <span></span>
-                                    <span></span>
-                                `}
+                                : ""}
                         </button>
                         <nav class="account-nav" aria-label="Account">
                             ${isSignedIn
                                 ? `
                                     <button class="account-button account-button-ghost" type="button" data-header-logout>Log out</button>
-                                    <a class="account-button account-button-primary" href="${routes.editProfile}">Edit profile</a>
+                                    <a class="account-button account-button-ghost" href="${routes.editProfile}">Edit profile</a>
                                     ${publicProfileUrl
                                         ? `<a class="account-button account-button-ghost" href="${publicProfileUrl}">Public profile</a>`
                                         : ""}
