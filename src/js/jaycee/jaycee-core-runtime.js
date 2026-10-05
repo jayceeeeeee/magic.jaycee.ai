@@ -408,6 +408,57 @@ const formatDuration = (secondsValue) => {
   return [...dateParts, clock].join(" ");
 };
 
+const formatDurationOffset = (secondsValue) => {
+  const seconds = Number(secondsValue);
+
+  if (!Number.isFinite(seconds) || seconds < 0) return "";
+
+  return seconds === 0 ? "00:00:00" : formatDuration(seconds);
+};
+
+const getSegmentCycleMeasureRows = ({
+  cycleSeconds,
+  rotation,
+  segmentCount,
+  selectedSegmentIndex
+}) => {
+  if (
+    !Number.isFinite(cycleSeconds)
+    || cycleSeconds <= 0
+    || !Number.isFinite(segmentCount)
+    || segmentCount <= 0
+    || selectedSegmentIndex <= 0
+  ) {
+    return [];
+  }
+
+  const fullCircle = Math.PI * 2;
+  const segmentAngle = fullCircle / segmentCount;
+  const selectedIndex = selectedSegmentIndex - 1;
+  const segmentStartAngle = Number.isFinite(rotation)
+    ? rotation + (selectedIndex * segmentAngle)
+    : (-Math.PI / 2) + (selectedIndex * segmentAngle);
+  const angleToCycleSeconds = (angle) => {
+    const progress = (((angle + (Math.PI / 2)) % fullCircle) + fullCircle) % fullCircle / fullCircle;
+
+    return progress * cycleSeconds;
+  };
+  const start = angleToCycleSeconds(segmentStartAngle);
+  const end = angleToCycleSeconds(segmentStartAngle + segmentAngle);
+  const summit = angleToCycleSeconds(segmentStartAngle + (segmentAngle / 2));
+
+  return [{
+    label: "Start",
+    value: formatDurationOffset(start)
+  }, {
+    label: "End",
+    value: formatDurationOffset(end)
+  }, {
+    label: "Peak",
+    value: formatDurationOffset(summit)
+  }].filter((row) => row.value);
+};
+
 const formatArea = (metersValue) => {
   const meters = Number(metersValue);
 
@@ -453,6 +504,13 @@ const getRingParameterRows = (fractal, options = {}) => {
   const selectedSegment = options.selectedSegment || segmentKeys[0] || "";
   const selectedSegmentIndex = getSegmentControlValue(segmentKeys, selectedSegment);
   const canControlSegment = Boolean(options.ringId && segmentKeys.length > 1);
+  const cycleSeconds = Number(fractal?.length);
+  const segmentMeasureRows = getSegmentCycleMeasureRows({
+    cycleSeconds,
+    rotation: options.rotation,
+    segmentCount: segmentKeys.length,
+    selectedSegmentIndex
+  });
 
   return [
     ...(length ? [{ label: "Cycle", value: length }] : []),
@@ -486,7 +544,8 @@ const getRingParameterRows = (fractal, options = {}) => {
       },
       label: "Segment",
       value: selectedSegment
-    }] : [])
+    }] : []),
+    ...segmentMeasureRows
   ];
 };
 
