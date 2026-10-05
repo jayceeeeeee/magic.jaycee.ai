@@ -247,7 +247,7 @@ const mergeResonanceGroups = (groups) => {
 };
 
 const getDynamicTimeRows = (dynamicRings, selectedTimeSegments) => (
-  dynamicRings.flatMap((ring) => {
+  dynamicRings.filter((ring) => !ring.invalidReason).flatMap((ring) => {
     const selectedPosition = selectedTimeSegments.get(ring.id) || ring.defaultSegment;
     const element = ring.elements.find((entry) => String(entry.position) === String(selectedPosition));
 
@@ -265,7 +265,7 @@ const getDynamicTimeRows = (dynamicRings, selectedTimeSegments) => (
 
 export const getDynamicTimeChoiceRows = (dynamicRings) => (
   dynamicRings
-    .filter((ring) => ring.sourceType === "user")
+    .filter((ring) => ring.sourceType === "user" && !ring.invalidReason)
     .map((ring) => ({
       id: ring.sourceId || ring.id,
       label: ring.label || "Time",
@@ -285,7 +285,7 @@ export const getSelectedDynamicPortalRing = (dynamicRings, selectedPortalFractal
 
 export const getDynamicSpaceChoiceRows = (dynamicSquares) => (
   dynamicSquares
-    .filter((square) => square.sourceType === "user")
+    .filter((square) => square.sourceType === "user" && !square.invalidReason)
     .map((square) => ({
       id: square.sourceId || square.id,
       label: square.label || "Map",

@@ -817,8 +817,10 @@ const drawMapSquare = (context, metrics, colors, mapSquare) => {
   const centerStart = (gridSize - metrics.mapSquareCoreSpan) / 2;
   const centerEnd = centerStart + metrics.mapSquareCoreSpan;
   const selectedPosition = Number(mapSquare.selectedPosition);
+  const selectedSubCellNumber = Number(mapSquare.selectedSubCellNumber);
   const hasBackgroundImage = Boolean(mapSquare.backgroundImage);
   let activeCell = null;
+  let activeSubCell = null;
 
   const strokeSquareLine = (drawPath, foreground, underlayWidth = 2.4) => {
     if (hasBackgroundImage) {
@@ -872,6 +874,16 @@ const drawMapSquare = (context, metrics, colors, mapSquare) => {
 
       if (isSelected) {
         activeCell = { x, y };
+        if (JAYCEE_ORDER.includes(selectedSubCellNumber)) {
+          const subOrderIndex = JAYCEE_ORDER.indexOf(selectedSubCellNumber);
+          const subCellSize = cellSize / SQUARE_GRID_SIZE;
+
+          activeSubCell = {
+            size: subCellSize,
+            x: x + ((subOrderIndex % SQUARE_GRID_SIZE) * subCellSize),
+            y: y + (Math.floor(subOrderIndex / SQUARE_GRID_SIZE) * subCellSize)
+          };
+        }
 
         if (!hasBackgroundImage) {
           drawInsetSquareCell(
@@ -946,6 +958,22 @@ const drawMapSquare = (context, metrics, colors, mapSquare) => {
     );
   }
 
+  if (activeSubCell) {
+    drawInsetSquareCell(
+      context,
+      activeSubCell.x,
+      activeSubCell.y,
+      activeSubCell.size,
+      {
+        ...colors.inset,
+        border: "rgba(0, 255, 72, 1)",
+        borderGlow: "rgba(0, 255, 72, 0.95)",
+        shadow: "rgba(0, 18, 4, 0.96)",
+        transparent: hasBackgroundImage
+      }
+    );
+  }
+
   if (hasBackgroundImage) {
     context.restore();
     return;
@@ -953,6 +981,7 @@ const drawMapSquare = (context, metrics, colors, mapSquare) => {
 
   mapSquare.labels.forEach((label, index) => {
     if (!label) return;
+    if (activeSubCell && index + 1 === selectedPosition) return;
 
     const row = Math.floor(index / gridSize);
     const column = index % gridSize;

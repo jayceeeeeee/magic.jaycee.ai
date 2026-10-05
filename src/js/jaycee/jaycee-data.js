@@ -153,6 +153,7 @@ export const fetchDynamicTimeRings = async (client, profile) => {
       const positions = ringElements
         .map((element) => Number(element.position))
         .filter((position) => Number.isFinite(position) && position > 0);
+      const hasValidSegmentCount = positions.length === 9;
 
       if (!positions.length) return null;
 
@@ -163,6 +164,9 @@ export const fetchDynamicTimeRings = async (client, profile) => {
         sourceName: fractal.user_id ? (profile?.username || "User") : JAYCEE_RESONANCE_SOURCE,
         sourceType: fractal.user_id ? "user" : "jaycee",
         sourceId: fractal.id,
+        invalidReason: hasValidSegmentCount
+          ? ""
+          : `${fractal.label || "Dynamic portal"} must have exactly 9 positions.`,
         segmentKeys: positions.map(String),
         defaultSegment: String(positions[0])
       };
@@ -202,16 +206,16 @@ export const fetchDynamicSpaceSquares = async (client, profile) => {
         .filter((element) => element.fractal_id === fractal.id)
         .sort((first, second) => Number(first.position) - Number(second.position));
       const gridSize = Math.sqrt(squareElements.length);
-      const isSquare = Number.isInteger(gridSize) && gridSize > 0;
+      const isValidGrid = squareElements.length === 9 && Number.isInteger(gridSize);
 
       return {
         ...fractal,
         elements: squareElements,
         id: `dynamic-${fractal.id}`,
-        invalidReason: isSquare
+        invalidReason: isValidGrid
           ? ""
-          : `${fractal.label || "Dynamic map"} must have a square number of positions.`,
-        gridSize: isSquare ? gridSize : 0,
+          : `${fractal.label || "Dynamic map"} must have exactly 9 positions.`,
+        gridSize: isValidGrid ? gridSize : 0,
         sourceName: fractal.user_id ? (profile?.username || "User") : JAYCEE_RESONANCE_SOURCE,
         sourceType: fractal.user_id ? "user" : "jaycee",
         sourceId: fractal.id

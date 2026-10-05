@@ -256,6 +256,14 @@ const getGeometricSegmentNumberFromIndex = (segmentIndex, count, topSegmentIndex
   return ((segmentIndex - topSegmentIndex + count) % count) + 1;
 };
 
+const getPpcmSubSegmentIndex = (sunActiveSegmentIndex, sunSegmentCount) => (
+  getGeometricSegmentNumberFromIndex(
+    sunActiveSegmentIndex,
+    sunSegmentCount,
+    sunSegmentCount - 1
+  ) - 1
+);
+
 const getDefaultMapPosition = (gridSize) => {
   const safeGridSize = Math.max(1, Number(gridSize) || 1);
   const coreSpan = safeGridSize % 2 === 0 ? 2 : 1;
@@ -336,6 +344,38 @@ const getSelectedMapDetails = ({ dynamicSquares, rows, selectedMapFractalKey }) 
   return staticSquare
     ? { gridSize: 3, kind: "static", square: staticSquare }
     : null;
+};
+
+const getMapPositionForSegmentKey = (segmentKey, mapDetails) => {
+  if (!mapDetails) return null;
+
+  const number = Number(segmentKey);
+  const gridSize = Number(mapDetails.gridSize) || 3;
+  const maxPosition = gridSize * gridSize;
+
+  if (!Number.isFinite(number)) return null;
+
+  if (mapDetails.kind === "static") {
+    const orderIndex = JAYCEE_ORDER.indexOf(number);
+
+    return orderIndex >= 0 ? orderIndex + 1 : null;
+  }
+
+  return number >= 1 && number <= maxPosition ? number : null;
+};
+
+const getSegmentKeyForMapPosition = (position, mapDetails) => {
+  if (!mapDetails) return "";
+
+  const mapPosition = Number(position);
+  const gridSize = Number(mapDetails.gridSize) || 3;
+  const maxPosition = gridSize * gridSize;
+
+  if (!Number.isFinite(mapPosition) || mapPosition < 1 || mapPosition > maxPosition) return "";
+
+  return String(mapDetails.kind === "static"
+    ? JAYCEE_ORDER[mapPosition - 1] || ""
+    : mapPosition);
 };
 
 const formatDuration = (secondsValue) => {
@@ -681,7 +721,7 @@ const getCurrentParameterSections = ({
     sections.push({ parameters: sunParameters, title: sunCycleFractal?.label || "Sun" });
   }
 
-  if (selectedDynamicPortalRing?.segmentKeys?.length) {
+  if (selectedDynamicPortalRing?.segmentKeys?.length && !selectedDynamicPortalRing.invalidReason) {
     const segmentKeys = selectedDynamicPortalRing.segmentKeys.map(String);
     const parameters = getRingParameterRows(selectedDynamicPortalRing, {
       now,
@@ -850,15 +890,29 @@ const createProfileCoreState = ({
     sunSegmentKeys,
     selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER
   );
+  const ppcmActiveSubSegmentIndex = getPpcmSubSegmentIndex(sunActiveSegmentIndex, sunSegmentKeys.length);
   const selectedDynamicPortalRing = getSelectedDynamicPortalRing(dynamicRings, selectedPortalFractalKey);
   const selectedStaticPortalRing = getSelectedStaticPortalRing(rows, selectedPortalFractalKey);
-  const { mapSquare } = getSelectedMapSquare({
+  const selectedPortalHasPpcm = Boolean(
+    selectedPortalFractalKey
+    && (
+      (selectedDynamicPortalRing?.segmentKeys?.length && !selectedDynamicPortalRing.invalidReason)
+      || selectedStaticPortalRing
+    )
+  );
+  const selectedMapResult = getSelectedMapSquare({
     dynamicSquares,
     mapSquareImages,
     rows,
     selectedMapFractalKey,
     selectedMapPosition
   });
+  const mapSquare = selectedMapResult.mapSquare && selectedPortalHasPpcm
+    ? {
+      ...selectedMapResult.mapSquare,
+      selectedSubCellNumber: ppcmActiveSubSegmentIndex + 1
+    }
+    : selectedMapResult.mapSquare;
   const rings = [
     {
       id: "sun",
@@ -883,7 +937,7 @@ const createProfileCoreState = ({
     }
   ];
 
-  if (selectedDynamicPortalRing?.segmentKeys?.length) {
+  if (selectedDynamicPortalRing?.segmentKeys?.length && !selectedDynamicPortalRing.invalidReason) {
     const segmentKeys = selectedDynamicPortalRing.segmentKeys.map(String);
     const selectedSegment = selectedTimeSegments.get(selectedDynamicPortalRing.id)
       || selectedDynamicPortalRing.defaultSegment
@@ -891,11 +945,6 @@ const createProfileCoreState = ({
     const activeSegmentIndex = getActiveSegmentIndex(segmentKeys, selectedSegment);
     const portalPresentMarkerAngle = showPresent ? getTimeCyclePresentAngle(selectedDynamicPortalRing, now) : null;
     const portalRotation = getTopCenteredSegmentRotation(segmentKeys.length, 0);
-    const ppcmActiveSubSegmentIndex = getGeometricSegmentNumberFromIndex(
-      sunActiveSegmentIndex,
-      sunSegmentKeys.length,
-      sunSegmentKeys.length - 1
-    ) - 1;
     const ppcmPresentMarkerAngle = showPresent
       ? getNestedPresentMarkerAngle({
         parentCount: segmentKeys.length,
@@ -940,11 +989,6 @@ const createProfileCoreState = ({
       || segmentKeys[0];
     const activeSegmentIndex = getActiveSegmentIndex(segmentKeys, selectedSegment);
     const portalPresentMarkerAngle = showPresent ? getTimeCyclePresentAngle(selectedStaticPortalRing, now) : null;
-    const ppcmActiveSubSegmentIndex = getGeometricSegmentNumberFromIndex(
-      sunActiveSegmentIndex,
-      sunSegmentKeys.length,
-      sunSegmentKeys.length - 1
-    ) - 1;
     const ppcmPresentMarkerAngle = showPresent
       ? getNestedPresentMarkerAngle({
         parentCount: segmentKeys.length,
@@ -1128,6 +1172,7 @@ export const initJayceePage = async () => {
     }
 
     syncCoreSquareWithSunSegment();
+    syncMapPositionWithSelectedPortal();
   };
 
   const saveProfileViewState = () => {
@@ -1148,11 +1193,81 @@ export const initJayceePage = async () => {
     }
   };
 
+  const getSelectedPortalSelection = () => {
+    const selectedDynamicPortalRing = getSelectedDynamicPortalRing(dynamicRings, selectedPortalFractalKey);
+
+    if (selectedDynamicPortalRing?.segmentKeys?.length && !selectedDynamicPortalRing.invalidReason) {
+      const segmentKeys = selectedDynamicPortalRing.segmentKeys.map(String);
+
+      return {
+        ringId: selectedDynamicPortalRing.id,
+        segmentKey: selectedTimeSegments.get(selectedDynamicPortalRing.id)
+          || selectedDynamicPortalRing.defaultSegment
+          || segmentKeys[0],
+        segmentKeys
+      };
+    }
+
+    const selectedStaticPortalRing = getSelectedStaticPortalRing(rows, selectedPortalFractalKey);
+
+    if (selectedStaticPortalRing) {
+      const segmentKeys = getSunSegmentKeys();
+      const ringId = getFractalKey(selectedStaticPortalRing);
+
+      return {
+        ringId,
+        segmentKey: selectedTimeSegments.get(ringId)
+          || getPresentSegmentKey(
+            selectedStaticPortalRing,
+            segmentKeys,
+            getTopCenteredLastSegmentRotation(segmentKeys.length)
+          )
+          || segmentKeys[0],
+        segmentKeys
+      };
+    }
+
+    return null;
+  };
+
+  const syncMapPositionWithPortalSegment = (ringId, segmentKey) => {
+    const selectedPortal = getSelectedPortalSelection();
+
+    if (!selectedPortal || selectedPortal.ringId !== ringId) return;
+
+    const selectedMapDetails = getSelectedMapDetails({ dynamicSquares, rows, selectedMapFractalKey });
+    const mapPosition = getMapPositionForSegmentKey(segmentKey, selectedMapDetails);
+
+    if (mapPosition) {
+      selectedMapPosition = mapPosition;
+    }
+  };
+
+  const syncMapPositionWithSelectedPortal = () => {
+    const selectedPortal = getSelectedPortalSelection();
+
+    if (selectedPortal) {
+      syncMapPositionWithPortalSegment(selectedPortal.ringId, selectedPortal.segmentKey);
+    }
+  };
+
+  const syncSelectedPortalWithMapPosition = (mapPosition) => {
+    const selectedPortal = getSelectedPortalSelection();
+    const selectedMapDetails = getSelectedMapDetails({ dynamicSquares, rows, selectedMapFractalKey });
+    const segmentKey = getSegmentKeyForMapPosition(mapPosition, selectedMapDetails);
+
+    if (selectedPortal?.ringId && selectedPortal.segmentKeys.includes(segmentKey)) {
+      selectedTimeSegments.set(selectedPortal.ringId, segmentKey);
+    }
+  };
+
   const setTimeSegmentSelection = (ringId, segmentKey) => {
     selectedTimeSegments.set(ringId, String(segmentKey));
 
     if (ringId === "sun") {
       syncCoreSquareWithSunSegment();
+    } else {
+      syncMapPositionWithPortalSegment(ringId, segmentKey);
     }
   };
 
@@ -1283,10 +1398,12 @@ export const initJayceePage = async () => {
       createFractalSelect("Choose a map", "God", mapSelectorChoices, selectedMapFractalKey, (value) => {
         selectedMapFractalKey = value;
         resetSelectedMapPosition();
+        syncMapPositionWithSelectedPortal();
         syncProfileView();
       }),
       createFractalSelect("Enter a portal", "Sun", portalChoices, selectedPortalFractalKey, (value) => {
         selectedPortalFractalKey = value;
+        syncMapPositionWithSelectedPortal();
         syncProfileView();
       }),
       createCurrentTimeElement()
@@ -1309,6 +1426,8 @@ export const initJayceePage = async () => {
     const showDrafts = isEditableProfilePage;
     const selectedMapDetails = getSelectedMapDetails({ dynamicSquares, rows, selectedMapFractalKey });
     const selectedStaticPortalRing = getSelectedStaticPortalRing(rows, selectedPortalFractalKey);
+    const selectedDynamicPortalRing = getSelectedDynamicPortalRing(dynamicRings, selectedPortalFractalKey);
+    const selectedPortalError = selectedDynamicPortalRing?.invalidReason || "";
     const coreSpaceGroups = getGroupsWithSelectedResonanceValue(
       getResonanceGroupsForNumber(
         getRowsForDimensionColumn(rows, SPACE_DIMENSION_VALUE),
@@ -1367,7 +1486,7 @@ export const initJayceePage = async () => {
       { groups: timeGroups, meta: "", selectedNumber: selectedStaticPortalNumber, title: "Portal" }
     ].filter((column) => column.groups.length);
 
-    status.textContent = selectedMapResult.error;
+    status.textContent = [selectedMapResult.error, selectedPortalError].filter(Boolean).join(" ");
     list.replaceChildren(
       ...columns.map((column) => createResonanceColumn(
         column.title,
@@ -1469,6 +1588,7 @@ export const initJayceePage = async () => {
       setTimeSegmentSelection(hit.ringId, hit.segmentKey);
     } else if (hit.type === "map-square") {
       selectedMapPosition = hit.position;
+      syncSelectedPortalWithMapPosition(hit.position);
     }
 
     syncProfileView();
@@ -1484,6 +1604,7 @@ export const initJayceePage = async () => {
     if (!selectedMapDetails) return;
 
     selectedMapPosition = getDefaultMapPosition(selectedMapDetails.gridSize);
+    syncSelectedPortalWithMapPosition(selectedMapPosition);
     syncProfileView();
   };
 
