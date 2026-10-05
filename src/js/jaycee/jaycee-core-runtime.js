@@ -1464,13 +1464,25 @@ export const initJayceePage = async () => {
         || selectedSunNumber
       : selectedSunNumber;
     const timeGroups = selectedStaticPortalRing
-      ? filterUserGroupsByFractal(
-        getResonanceGroupsForNumber(
-          getRowsForDimensionColumn(rows, TIME_DIMENSION_VALUE),
-          selectedStaticPortalNumber
+      ? [
+        ...getGroupsWithSelectedResonanceValue(
+          getResonanceGroupsForNumber(
+            getRowsForDimensionColumn(rows, TIME_DIMENSION_VALUE),
+            selectedSunNumber
+          ).filter((group) => group.sourceType === "jaycee"),
+          selectedSunNumber
         ),
-        selectedPortalFractalKey
-      )
+        ...getGroupsWithSelectedResonanceValue(
+          filterUserGroupsByFractal(
+            getResonanceGroupsForNumber(
+              getRowsForDimensionColumn(rows, TIME_DIMENSION_VALUE),
+              selectedStaticPortalNumber
+            ).filter((group) => group.sourceType === "user"),
+            selectedPortalFractalKey
+          ),
+          selectedStaticPortalNumber
+        )
+      ]
       : filterUserGroupsByFractal(
         getTimeResonanceGroups(rows, selectedTimeSegments, dynamicRings),
         selectedPortalFractalKey
