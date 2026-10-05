@@ -260,7 +260,7 @@ const getPpcmSubSegmentIndex = (sunActiveSegmentIndex, sunSegmentCount) => (
   getGeometricSegmentNumberFromIndex(
     sunActiveSegmentIndex,
     sunSegmentCount,
-    sunSegmentCount - 1
+    0
   ) - 1
 );
 

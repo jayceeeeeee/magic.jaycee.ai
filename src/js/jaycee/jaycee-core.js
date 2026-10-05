@@ -874,8 +874,8 @@ const drawMapSquare = (context, metrics, colors, mapSquare) => {
 
       if (isSelected) {
         activeCell = { x, y };
-        if (JAYCEE_ORDER.includes(selectedSubCellNumber)) {
-          const subOrderIndex = JAYCEE_ORDER.indexOf(selectedSubCellNumber);
+        if (selectedSubCellNumber >= 1 && selectedSubCellNumber <= SQUARE_GRID_SIZE * SQUARE_GRID_SIZE) {
+          const subOrderIndex = selectedSubCellNumber - 1;
           const subCellSize = cellSize / SQUARE_GRID_SIZE;
 
           activeSubCell = {
