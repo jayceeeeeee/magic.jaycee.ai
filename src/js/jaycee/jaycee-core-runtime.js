@@ -1303,6 +1303,22 @@ export const initJayceePage = async () => {
 
       selectedTimeSegments.set(ring.id, presentSegment || ring.defaultSegment || segmentKeys[0] || "1");
     });
+
+    const selectedStaticPortalRing = getSelectedStaticPortalRing(rows, selectedPortalFractalKey);
+
+    if (selectedStaticPortalRing) {
+      const segmentKeys = getSunSegmentKeys();
+      const ringId = getFractalKey(selectedStaticPortalRing);
+      const presentSegment = getPresentSegmentKey(
+        selectedStaticPortalRing,
+        segmentKeys,
+        getTopCenteredLastSegmentRotation(segmentKeys.length)
+      );
+
+      selectedTimeSegments.set(ringId, presentSegment || segmentKeys[0]);
+    }
+
+    syncMapPositionWithSelectedPortal();
   };
 
   const loadMapSquareImages = async (client) => {
@@ -1665,8 +1681,8 @@ export const initJayceePage = async () => {
     dynamicSquares = await fetchDynamicSpaceSquares(client, profile);
     await loadPortalRingImages(client);
     await loadMapSquareImages(client);
-    setDefaultTimeSelectionsToPresent();
     restoreProfileViewCache(profileViewCacheKey);
+    setDefaultTimeSelectionsToPresent();
     publicProfiles = isPresentPage ? await fetchPublicProfiles(client) : [];
     avatarImage = !hasUserProfile ? null : await loadOptionalImage(await getAvatarImageUrl(client, profile));
     ringBackgroundImage = !hasUserProfile ? null : await loadOptionalImage(await getBackgroundImageUrl(client, profile));
