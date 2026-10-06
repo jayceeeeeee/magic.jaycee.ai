@@ -3,8 +3,10 @@ export const JAYCEE_DYNAMIC_FRACTALS_TABLE = "jaycee_dynamic_fractals";
 export const JAYCEE_DYNAMIC_FRACTAL_ELEMENTS_TABLE = "jaycee_dynamic_fractal_elements";
 export const FRACTAL_VISIBILITY_COLUMN = "visibility";
 export const PUBLIC_VISIBILITY_VALUE = "public";
-export const SPACE_DIMENSION_VALUE = "space";
-export const TIME_DIMENSION_VALUE = "time";
+export const GOD_TYPE_VALUE = "god";
+export const ITEM_TYPE_VALUE = "item";
+export const LORE_TYPE_VALUE = "lore";
+export const MAP_TYPE_VALUE = "map";
 export const PROFILE_TABLE = "profiles";
 export const USER_IMAGES_BUCKET = "users";
 export const CODE_COLUMNS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
@@ -101,7 +103,7 @@ export const getThemeSettingsFromProfile = (profile) => ({
 export const fetchJayceeResonances = async (client) => {
   const { data, error } = await client
     .from(JAYCEE_FRACTALS_TABLE)
-    .select(`id, label, user_id, dimension, image, ${FRACTAL_PARAMETER_COLUMNS}, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
+    .select(`id, label, user_id, type, image, ${FRACTAL_PARAMETER_COLUMNS}, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
     .is("user_id", null)
     .eq(FRACTAL_VISIBILITY_COLUMN, PUBLIC_VISIBILITY_VALUE)
     .order("label", { ascending: true });
@@ -118,7 +120,7 @@ export const fetchJayceeResonances = async (client) => {
 export const fetchUserResonances = async (client, profile, { publicOnly = false } = {}) => {
   let query = client
     .from(JAYCEE_FRACTALS_TABLE)
-    .select(`id, label, user_id, dimension, image, ${FRACTAL_PARAMETER_COLUMNS}, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
+    .select(`id, label, user_id, type, image, ${FRACTAL_PARAMETER_COLUMNS}, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
     .eq("user_id", profile.id);
 
   if (publicOnly) {
@@ -139,8 +141,8 @@ export const fetchUserResonances = async (client, profile, { publicOnly = false 
 export const fetchDynamicTimeRings = async (client, profile) => {
   let query = client
     .from(JAYCEE_DYNAMIC_FRACTALS_TABLE)
-    .select(`id, label, description, dimension, user_id, image, created_at, ${FRACTAL_PARAMETER_COLUMNS}`)
-    .eq("dimension", TIME_DIMENSION_VALUE)
+    .select(`id, label, description, type, user_id, image, created_at, ${FRACTAL_PARAMETER_COLUMNS}`)
+    .eq("type", ITEM_TYPE_VALUE)
     .order("created_at", { ascending: true });
 
   if (profile?.id) {
@@ -183,7 +185,7 @@ export const fetchDynamicTimeRings = async (client, profile) => {
         sourceId: fractal.id,
         invalidReason: hasValidSegmentCount
           ? ""
-          : `${fractal.label || "Dynamic portal"} must have exactly 9 positions.`,
+          : `${fractal.label || "Dynamic item"} must have exactly 9 positions.`,
         segmentKeys: positions.map(String),
         defaultSegment: String(positions[0])
       };
@@ -194,8 +196,8 @@ export const fetchDynamicTimeRings = async (client, profile) => {
 export const fetchDynamicSpaceSquares = async (client, profile) => {
   let query = client
     .from(JAYCEE_DYNAMIC_FRACTALS_TABLE)
-    .select(`id, label, description, dimension, user_id, image, created_at, ${FRACTAL_PARAMETER_COLUMNS}`)
-    .eq("dimension", SPACE_DIMENSION_VALUE)
+    .select(`id, label, description, type, user_id, image, created_at, ${FRACTAL_PARAMETER_COLUMNS}`)
+    .eq("type", MAP_TYPE_VALUE)
     .order("created_at", { ascending: true });
 
   if (profile?.id) {

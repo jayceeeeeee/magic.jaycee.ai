@@ -3,8 +3,7 @@ import {
   CORE_TIME_RING_ID,
   DEFAULT_CORE_TIME_NUMBER,
   JAYCEE_RESONANCE_SOURCE,
-  SPACE_DIMENSION_VALUE,
-  TIME_DIMENSION_VALUE,
+  LORE_TYPE_VALUE,
   getDisplayValue,
   getDynamicRingKey,
   getDynamicSquareKey,
@@ -156,20 +155,16 @@ const getResonancesForNumber = (rows, selectedNumber) => (
   rows.filter((row) => getDisplayValue(row[String(selectedNumber)]))
 );
 
-export const getRowsForDimensionColumn = (rows, columnName) => (
+export const getRowsForType = (rows, typeName) => (
   rows.filter((row) => {
-    const dimension = getDisplayValue(row.dimension);
+    const type = getDisplayValue(row.type).toLowerCase();
 
-    if (columnName === TIME_DIMENSION_VALUE) {
-      return dimension === TIME_DIMENSION_VALUE;
-    }
-
-    return dimension === SPACE_DIMENSION_VALUE;
+    return type === typeName;
   })
 );
 
 export const getDraftRows = (rows) => (
-  rows.filter((row) => !getDisplayValue(row.dimension))
+  rows.filter((row) => !getDisplayValue(row.type))
 );
 
 export const getResonanceGroupsForNumber = (rows, selectedNumber) => (
@@ -256,7 +251,7 @@ const getDynamicTimeRows = (dynamicRings, selectedTimeSegments) => (
 
     return [{
       id: ring.sourceId || ring.id,
-      label: ring.label || "Time",
+      label: ring.label || "Item",
       resonanceValue: getDisplayValue(element.value),
       sourceName: ring.sourceName || JAYCEE_RESONANCE_SOURCE,
       sourceType: ring.sourceType || "jaycee"
@@ -269,7 +264,7 @@ export const getDynamicTimeChoiceRows = (dynamicRings) => (
     .filter((ring) => ring.sourceType === "user" && !ring.invalidReason)
     .map((ring) => ({
       id: ring.sourceId || ring.id,
-      label: ring.label || "Time",
+      label: ring.label || "Item",
       sourceId: ring.sourceId,
       sourceName: ring.sourceName,
       sourceType: ring.sourceType
@@ -307,7 +302,7 @@ export const getSelectedDynamicMapSquare = (dynamicSquares, selectedMapFractalKe
 export const getTimeResonanceGroups = (rows, selectedTimeSegments, dynamicRings) => {
   const coreTimeNumber = selectedTimeSegments.get(CORE_TIME_RING_ID) || DEFAULT_CORE_TIME_NUMBER;
   const staticTimeGroups = getResonanceGroupsForNumber(
-    getRowsForDimensionColumn(rows, TIME_DIMENSION_VALUE),
+    getRowsForType(rows, LORE_TYPE_VALUE),
     coreTimeNumber
   );
   const dynamicRows = getDynamicTimeRows(dynamicRings, selectedTimeSegments);

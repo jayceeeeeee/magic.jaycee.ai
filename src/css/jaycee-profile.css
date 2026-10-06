@@ -618,6 +618,11 @@
   gap: 11px;
 }
 
+.profile-resonance-column.is-placeholder {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .profile-resonance-drafts {
   grid-column: 1 / -1;
 }
