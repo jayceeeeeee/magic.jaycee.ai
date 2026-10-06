@@ -670,6 +670,7 @@ const createParameterSection = (title, parameters) => {
 const getCurrentParameterSections = ({
   dynamicRings,
   dynamicSquares,
+  onReturnToHere,
   onReturnAllToPresent,
   onSegmentChange,
   presentPosition,
@@ -707,6 +708,10 @@ const getCurrentParameterSections = ({
       label: "Time",
       value: presentTime
     }, {
+      actions: typeof onReturnToHere === "function" ? [{
+        label: "Here",
+        onClick: onReturnToHere
+      }] : [],
       label: "Position",
       value: formatGpsPosition(presentPosition || "0,0")
     }],
@@ -1529,6 +1534,7 @@ export const initJayceePage = async () => {
         setDefaultTimeSelectionsToPresent();
         syncProfileView();
       },
+      onReturnToHere: isEditableProfilePage ? requestPresentPosition : null,
       onSegmentChange: (ringId, segmentKey) => {
         setTimeSegmentSelection(ringId, segmentKey);
         syncProfileView();
