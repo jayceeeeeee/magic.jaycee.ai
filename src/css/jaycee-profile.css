@@ -804,22 +804,6 @@
     rgba(0, 0, 0, 0.14);
 }
 
-.profile-resonance-source {
-  width: fit-content;
-  max-width: 100%;
-  margin: 0;
-  padding: 4px 7px;
-  border: 1px solid rgba(var(--accent-rgb), 0.26);
-  border-radius: 5px;
-  background: rgba(0, 0, 0, 0.18);
-  color: var(--accent-soft);
-  font-family: "Share Tech Mono", monospace;
-  font-size: 0.68rem;
-  line-height: 1;
-  overflow-wrap: anywhere;
-  text-transform: uppercase;
-}
-
 .profile-resonance-label {
   color: var(--muted);
   font-size: 0.72rem;

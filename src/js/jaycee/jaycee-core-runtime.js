@@ -1473,13 +1473,13 @@ export const initJayceePage = async () => {
         groups: coreGodGroups,
         meta: "",
         selectedNumber: selectedSpaceNumber,
-        title: getCoreFractalLabel(getCoreMapFractal(rows), CORE_MAP_FALLBACK_LABEL)
+        title: "God"
       },
       {
         groups: coreLoreGroups,
         meta: "",
         selectedNumber: selectedCoreTimeNumber,
-        title: getCoreFractalLabel(getCoreTimeFractal(rows), CORE_TIME_FALLBACK_LABEL)
+        title: "Lore"
       },
       {
         groups: mapGroups,

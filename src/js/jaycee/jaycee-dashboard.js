@@ -39,16 +39,14 @@ const createResonanceItem = (row, selectedNumber) => {
 
 const createResonanceGroup = (sourceName, sourceType, resonances, selectedNumber) => {
   const group = document.createElement("section");
-  const heading = document.createElement("h2");
   const items = document.createElement("div");
 
   group.className = "profile-resonance-group";
   group.dataset.resonanceSource = sourceType;
-  heading.className = "profile-resonance-source";
-  heading.textContent = sourceName;
+  group.dataset.resonanceName = sourceName;
   items.className = "profile-resonance-group-items";
   items.replaceChildren(...resonances.map((row) => createResonanceItem(row, selectedNumber)));
-  group.append(heading, items);
+  group.append(items);
 
   return group;
 };
