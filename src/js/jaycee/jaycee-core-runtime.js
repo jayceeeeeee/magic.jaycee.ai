@@ -416,6 +416,15 @@ const formatGpsPosition = (value) => {
     : text;
 };
 
+const formatBrowserPosition = (position) => {
+  const latitude = Number(position?.coords?.latitude);
+  const longitude = Number(position?.coords?.longitude);
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return "0,0";
+
+  return `${latitude.toFixed(6)},${longitude.toFixed(6)}`;
+};
+
 const getRingParameterRows = (fractal, options = {}) => {
   const now = options.now || Date.now();
   const lengthMilliseconds = getLengthMilliseconds(fractal);
@@ -663,6 +672,7 @@ const getCurrentParameterSections = ({
   dynamicSquares,
   onReturnAllToPresent,
   onSegmentChange,
+  presentPosition,
   rows,
   selectedMapFractalKey,
   selectedPortalFractalKey,
@@ -696,6 +706,9 @@ const getCurrentParameterSections = ({
       }] : [],
       label: "Time",
       value: presentTime
+    }, {
+      label: "Position",
+      value: formatGpsPosition(presentPosition || "0,0")
     }],
     title: "Present"
   });
@@ -1044,8 +1057,29 @@ export const initJayceePage = async () => {
   let draftPreviewMode = "closed";
   let draftPreviewTimer = null;
   let currentTimeTimer = null;
+  let presentPosition = "0,0";
   let profileViewCacheKey = "";
   const selectedTimeSegments = new Map([["sun", String(DEFAULT_SUN_TIME_NUMBER)]]);
+
+  const requestPresentPosition = () => {
+    if (!isEditableProfilePage || !navigator.geolocation) return;
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        presentPosition = formatBrowserPosition(position);
+        renderCoreParameters();
+      },
+      () => {
+        presentPosition = "0,0";
+        renderCoreParameters();
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 30 * 1000,
+        timeout: 8 * 1000
+      }
+    );
+  };
 
   const stopCurrentTimeClock = () => {
     if (!currentTimeTimer) return;
@@ -1499,6 +1533,7 @@ export const initJayceePage = async () => {
         setTimeSegmentSelection(ringId, segmentKey);
         syncProfileView();
       },
+      presentPosition,
       rows,
       selectedMapFractalKey,
       selectedPortalFractalKey,
@@ -1652,6 +1687,7 @@ export const initJayceePage = async () => {
     renderCoreParameters();
     renderResonances();
     scheduleRenderCore();
+    requestPresentPosition();
   } catch (error) {
     console.error("Jaycee profile load failed", error);
     shell.hidden = false;
