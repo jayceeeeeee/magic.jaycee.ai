@@ -515,15 +515,6 @@ const getRingParameterRows = (fractal, options = {}) => {
   return [
     ...(length ? [{ label: "Cycle", value: length }] : []),
     ...(present ? [{
-      actions: canControlSegment ? [{
-        label: "Now",
-        onClick: () => options.onReturnToPresent?.({
-          fractal,
-          ringId: options.ringId,
-          rotation: options.rotation,
-          segmentKeys
-        })
-      }] : [],
       label: "Present",
       value: present
     }] : []),
@@ -743,7 +734,7 @@ const createParameterSection = (title, parameters) => {
 const getCurrentParameterSections = ({
   dynamicRings,
   dynamicSquares,
-  onReturnToPresent,
+  onReturnAllToPresent,
   onSegmentChange,
   rows,
   selectedMapFractalKey,
@@ -758,7 +749,6 @@ const getCurrentParameterSections = ({
   const presentTime = formatCurrentDateTime(new Date(now)).replace(/^Present:\s*/, "");
   const sunParameters = getRingParameterRows(sunCycleFractal, {
     now,
-    onReturnToPresent,
     onSegmentChange,
     ringId: "sun",
     rotation: sunRotation,
@@ -772,7 +762,14 @@ const getCurrentParameterSections = ({
     .filter((row) => row.sourceType === "jaycee");
 
   sections.push({
-    parameters: [{ label: "Time", value: presentTime }],
+    parameters: [{
+      actions: typeof onReturnAllToPresent === "function" ? [{
+        label: "Now",
+        onClick: onReturnAllToPresent
+      }] : [],
+      label: "Time",
+      value: presentTime
+    }],
     title: "Present"
   });
 
@@ -784,7 +781,6 @@ const getCurrentParameterSections = ({
     const segmentKeys = selectedDynamicPortalRing.segmentKeys.map(String);
     const parameters = getRingParameterRows(selectedDynamicPortalRing, {
       now,
-      onReturnToPresent,
       onSegmentChange,
       ringId: selectedDynamicPortalRing.id,
       rotation: getTopCenteredSegmentRotation(segmentKeys.length, 0),
@@ -803,7 +799,6 @@ const getCurrentParameterSections = ({
     const staticPortalKey = getFractalKey(selectedStaticPortalRing);
     const parameters = getRingParameterRows(selectedStaticPortalRing, {
       now,
-      onReturnToPresent,
       onSegmentChange,
       ringId: staticPortalKey,
       rotation: sunRotation,
@@ -1330,15 +1325,6 @@ export const initJayceePage = async () => {
     }
   };
 
-  const returnTimeSegmentToPresent = ({ fractal, ringId, rotation, segmentKeys }) => {
-    const presentSegmentKey = getPresentSegmentKey(fractal, segmentKeys, rotation);
-
-    if (!presentSegmentKey) return;
-
-    setTimeSegmentSelection(ringId, presentSegmentKey);
-    syncProfileView();
-  };
-
   const setDefaultTimeSelectionsToPresent = () => {
     const sunSegmentKeys = getSunSegmentKeys();
     const sunPresentSegment = getPresentSegmentKey(
@@ -1597,7 +1583,10 @@ export const initJayceePage = async () => {
     const sections = getCurrentParameterSections({
       dynamicRings,
       dynamicSquares,
-      onReturnToPresent: returnTimeSegmentToPresent,
+      onReturnAllToPresent: () => {
+        setDefaultTimeSelectionsToPresent();
+        syncProfileView();
+      },
       onSegmentChange: (ringId, segmentKey) => {
         setTimeSegmentSelection(ringId, segmentKey);
         syncProfileView();
