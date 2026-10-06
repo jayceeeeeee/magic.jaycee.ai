@@ -875,16 +875,6 @@ const formatCurrentDateTime = (date = new Date()) => {
   return `Present: ${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 };
 
-const createCurrentTimeElement = () => {
-  const clock = document.createElement("p");
-
-  clock.className = "profile-current-time";
-  clock.dataset.profileCurrentTime = "";
-  clock.textContent = formatCurrentDateTime();
-
-  return clock;
-};
-
 const createGameSelect = (profiles, selectedUsername = "") => {
   const label = document.createElement("label");
   const text = document.createElement("span");
@@ -1138,11 +1128,6 @@ export const initJayceePage = async () => {
   };
 
   const updateCurrentTimeClock = () => {
-    const clock = document.querySelector("[data-profile-current-time]");
-
-    if (clock) {
-      clock.textContent = formatCurrentDateTime();
-    }
     scheduleRenderCore();
     renderResonances();
     renderCoreParameters();
@@ -1419,10 +1404,7 @@ export const initJayceePage = async () => {
     corePanel.classList.add("has-fractal-selectors");
     controls.className = "profile-fractal-selectors";
     controls.dataset.profilePresentControls = "";
-    controls.replaceChildren(
-      createGameSelect(publicProfiles),
-      createCurrentTimeElement()
-    );
+    controls.replaceChildren(createGameSelect(publicProfiles));
     startCurrentTimeClock();
 
     if (!existingControls) {
@@ -1466,8 +1448,7 @@ export const initJayceePage = async () => {
         selectedPortalFractalKey = value;
         syncMapPositionWithSelectedPortal();
         syncProfileView();
-      }),
-      createCurrentTimeElement()
+      })
     );
     startCurrentTimeClock();
 

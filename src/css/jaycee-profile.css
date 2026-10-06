@@ -233,16 +233,6 @@
   box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
 }
 
-.profile-current-time {
-  grid-column: 1 / -1;
-  margin: 0;
-  color: var(--muted);
-  font-family: "Share Tech Mono", monospace;
-  font-size: 0.72rem;
-  line-height: 1.1;
-  text-transform: uppercase;
-}
-
 .jaycee-profile-resonances {
   height: calc(100svh - var(--banner-space) - var(--footer-space) - 48px);
   min-height: 460px;
