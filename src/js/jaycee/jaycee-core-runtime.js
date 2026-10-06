@@ -9,7 +9,6 @@ import {
 import {
   DEFAULT_SELECTED_NUMBER,
   DEFAULT_SUN_TIME_NUMBER,
-  PROFILE_TABLE,
   SPACE_DIMENSION_VALUE,
   TIME_DIMENSION_VALUE,
   fetchDynamicSpaceSquares,
@@ -26,7 +25,6 @@ import {
   getDynamicSquareKey,
   getFractalImageUrl,
   getFractalKey,
-  getProfileColorValue,
   getThemeSettingsFromProfile,
   hasTimeCycle,
   isHexColor,
@@ -143,91 +141,6 @@ const applyProfileTheme = (profile) => {
   document.body.dataset.theme = theme;
 };
 
-const getColorInputValue = (color, fallback) => (
-  getProfileColorValue(color) || fallback
-);
-
-const setThemeStatus = (statusEl, message, isError = false) => {
-  if (!statusEl) return;
-
-  statusEl.textContent = message;
-  statusEl.dataset.state = isError ? "error" : "ready";
-};
-
-const initProfileThemeControls = ({ client, onThemeChange, profile, themeSettings }) => {
-  const controls = document.querySelector("[data-profile-theme-controls]");
-  const themeSelect = document.querySelector("[data-profile-theme-select]");
-  const primaryInput = document.querySelector("[data-profile-primary-color]");
-  const secondaryInput = document.querySelector("[data-profile-secondary-color]");
-  const status = document.querySelector("[data-profile-theme-status]");
-  let saveTimer = null;
-
-  if (!controls || !themeSelect || !primaryInput || !secondaryInput || !profile?.id) return;
-
-  controls.hidden = false;
-  controls.closest(".jaycee-profile-core")?.classList.add("has-theme-controls");
-  themeSelect.replaceChildren(...(window.JayceeThemes?.options || [{ label: "Aurora", value: "aurora" }]).map((theme) => {
-    const option = document.createElement("option");
-
-    option.value = theme.value;
-    option.textContent = theme.label;
-
-    return option;
-  }));
-  themeSelect.value = themeSettings.theme;
-  primaryInput.value = getColorInputValue(themeSettings.primary_color, "#53dcc6");
-  secondaryInput.value = getColorInputValue(themeSettings.secondary_color, "#ffd56b");
-
-  const saveTheme = async () => {
-    setThemeStatus(status, "Saving...");
-
-    const { error } = await client
-      .from(PROFILE_TABLE)
-      .update({
-        primary_color: themeSettings.primary_color || null,
-        secondary_color: themeSettings.secondary_color || null,
-        theme: themeSettings.theme
-      })
-      .eq("id", profile.id);
-
-    if (error) throw error;
-
-    setThemeStatus(status, "Saved.");
-    window.JayceeAuth?.refreshHeader?.();
-  };
-
-  const scheduleSave = () => {
-    if (saveTimer) {
-      window.clearTimeout(saveTimer);
-    }
-
-    saveTimer = window.setTimeout(async () => {
-      saveTimer = null;
-
-      try {
-        await saveTheme();
-      } catch (error) {
-        console.error("Jaycee profile theme save failed", error);
-        setThemeStatus(status, error?.message || "Theme could not be saved.", true);
-      }
-    }, 320);
-  };
-
-  const syncTheme = ({ includeColors = false } = {}) => {
-    themeSettings.theme = window.JayceeThemes?.normalizeTheme?.(themeSelect.value) || "aurora";
-    if (includeColors) {
-      themeSettings.primary_color = getProfileColorValue(primaryInput.value);
-      themeSettings.secondary_color = getProfileColorValue(secondaryInput.value);
-    }
-    applyProfileTheme(themeSettings);
-    onThemeChange();
-    scheduleSave();
-  };
-
-  themeSelect.addEventListener("change", syncTheme);
-  primaryInput.addEventListener("input", () => syncTheme({ includeColors: true }));
-  secondaryInput.addEventListener("input", () => syncTheme({ includeColors: true }));
-};
 const getLoginUrl = () => (
   new URL(
     window.JayceeAuth?.getLoginUrl
@@ -1691,12 +1604,6 @@ export const initJayceePage = async () => {
     themeSettings = getThemeSettingsFromProfile(profile);
     if (isEditableProfilePage) {
       applyProfileTheme(themeSettings);
-      initProfileThemeControls({
-        client,
-        onThemeChange: renderCore,
-        profile,
-        themeSettings
-      });
     }
 
     const jayceeRows = await fetchJayceeResonances(client);

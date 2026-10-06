@@ -13,6 +13,22 @@ export const DEFAULT_SUN_TIME_NUMBER = 9;
 export const JAYCEE_RESONANCE_SOURCE = "Jaycee Core";
 
 const FRACTAL_PARAMETER_COLUMNS = "start_at, length";
+const PROFILE_SELECT_COLUMNS = [
+  "id",
+  "username",
+  "avatar_path",
+  "background_path",
+  "theme",
+  "primary_color",
+  "secondary_color",
+  "full_name",
+  "birth_date",
+  "birth_time",
+  "birth_place",
+  "birth_place_position",
+  "birth_timezone",
+  "sex"
+].join(", ");
 const SIGNED_IMAGE_URL_DURATION_SECONDS = 60 * 60;
 
 export const getFractalKey = (row) => `${row.sourceType || "source"}:${row.id || row.sourceId || row.label || "fractal"}`;
@@ -226,7 +242,7 @@ export const fetchDynamicSpaceSquares = async (client, profile) => {
 export const fetchProfileByUserId = async (client, userId) => {
   const { data, error } = await client
     .from(PROFILE_TABLE)
-    .select("id, username, avatar_path, background_path, theme, primary_color, secondary_color")
+    .select(PROFILE_SELECT_COLUMNS)
     .eq("id", userId)
     .maybeSingle();
 
@@ -238,7 +254,7 @@ export const fetchProfileByUserId = async (client, userId) => {
 export const fetchProfileByUsername = async (client, username) => {
   const { data, error } = await client
     .from(PROFILE_TABLE)
-    .select("id, username, avatar_path, background_path, theme, primary_color, secondary_color")
+    .select(PROFILE_SELECT_COLUMNS)
     .eq("username", username)
     .maybeSingle();
 

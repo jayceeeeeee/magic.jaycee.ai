@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit Profile | jaycee.ai</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@500;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/css/global.css">
+  <link rel="stylesheet" href="/src/css/jaycee-profile.css">
+</head>
+<body data-theme="aurora">
+  <jaycee-banner></jaycee-banner>
+
+  <main class="jaycee-settings-page" data-profile-settings-shell hidden>
+    <section class="jaycee-settings-panel" aria-labelledby="settings-title">
+      <div class="profile-settings-header">
+        <p class="profile-kicker">jaycee.ai &gt; account</p>
+        <h1 id="settings-title">Edit profile</h1>
+      </div>
+
+      <form class="profile-theme-controls" data-profile-theme-controls hidden>
+        <label>
+          <span>Theme</span>
+          <select name="theme" data-profile-theme-select></select>
+        </label>
+        <label>
+          <span>Primary</span>
+          <input name="primary_color" type="color" value="#53dcc6" data-profile-primary-color>
+        </label>
+        <label>
+          <span>Secondary</span>
+          <input name="secondary_color" type="color" value="#ffd56b" data-profile-secondary-color>
+        </label>
+        <p data-profile-theme-status></p>
+      </form>
+
+      <form class="profile-details-controls" data-profile-details-controls hidden>
+        <h2>Profile</h2>
+        <label>
+          <span>Username</span>
+          <input name="username" autocomplete="username" data-profile-field="username">
+        </label>
+        <label>
+          <span>Avatar path</span>
+          <input name="avatar_path" data-profile-field="avatar_path">
+        </label>
+        <label>
+          <span>Full name</span>
+          <input name="full_name" autocomplete="name" data-profile-field="full_name">
+        </label>
+        <label>
+          <span>Birth date</span>
+          <input name="birth_date" type="date" data-profile-field="birth_date">
+        </label>
+        <label>
+          <span>Birth time</span>
+          <input name="birth_time" type="time" step="1" data-profile-field="birth_time">
+        </label>
+        <label>
+          <span>Birth place</span>
+          <input name="birth_place" data-profile-field="birth_place">
+        </label>
+        <label>
+          <span>Birth position</span>
+          <input name="birth_place_position" placeholder="35.651111,139.559167" data-profile-field="birth_place_position">
+        </label>
+        <label>
+          <span>Birth timezone</span>
+          <input name="birth_timezone" placeholder="Asia/Tokyo" data-profile-field="birth_timezone">
+        </label>
+        <label>
+          <span>Sex</span>
+          <input name="sex" data-profile-field="sex">
+        </label>
+        <div class="profile-details-actions">
+          <button type="submit">Save</button>
+          <p data-profile-details-status></p>
+        </div>
+      </form>
+
+      <div class="profile-resonance-status" data-profile-settings-status aria-live="polite">Loading profile...</div>
+    </section>
+  </main>
+
+  <jaycee-footer></jaycee-footer>
+
+  <script src="/src/js/shell/jaycee-shell.js"></script>
+  <script src="/src/js/theme/jaycee-themes.js"></script>
+  <script src="/src/js/auth/auth.js"></script>
+  <script type="module" src="/src/js/jaycee/jaycee-edit-profile.js"></script>
+</body>
+</html>
