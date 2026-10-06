@@ -321,23 +321,29 @@ const formatDuration = (secondsValue) => {
   return [...dateParts, clock].join(" ");
 };
 
-const formatDurationOffset = (secondsValue) => {
-  const seconds = Number(secondsValue);
+const getLengthMilliseconds = (fractal) => Number(fractal?.length);
 
-  if (!Number.isFinite(seconds) || seconds < 0) return "";
+const formatDurationMilliseconds = (millisecondsValue) => (
+  formatDuration(Number(millisecondsValue) / 1000)
+);
 
-  return seconds === 0 ? "00:00:00" : formatDuration(seconds);
+const formatDurationOffsetMilliseconds = (millisecondsValue) => {
+  const milliseconds = Number(millisecondsValue);
+
+  if (!Number.isFinite(milliseconds) || milliseconds < 0) return "";
+
+  return milliseconds === 0 ? "00:00:00" : formatDurationMilliseconds(milliseconds);
 };
 
 const getSegmentCycleMeasureRows = ({
-  cycleSeconds,
+  cycleMilliseconds,
   rotation,
   segmentCount,
   selectedSegmentIndex
 }) => {
   if (
-    !Number.isFinite(cycleSeconds)
-    || cycleSeconds <= 0
+    !Number.isFinite(cycleMilliseconds)
+    || cycleMilliseconds <= 0
     || !Number.isFinite(segmentCount)
     || segmentCount <= 0
     || selectedSegmentIndex <= 0
@@ -351,35 +357,36 @@ const getSegmentCycleMeasureRows = ({
   const segmentStartAngle = Number.isFinite(rotation)
     ? rotation + (selectedIndex * segmentAngle)
     : (-Math.PI / 2) + (selectedIndex * segmentAngle);
-  const angleToCycleSeconds = (angle) => {
+  const angleToCycleMilliseconds = (angle) => {
     const progress = (((angle + (Math.PI / 2)) % fullCircle) + fullCircle) % fullCircle / fullCircle;
 
-    return progress * cycleSeconds;
+    return progress * cycleMilliseconds;
   };
-  const start = angleToCycleSeconds(segmentStartAngle);
-  const end = angleToCycleSeconds(segmentStartAngle + segmentAngle);
-  const summit = angleToCycleSeconds(segmentStartAngle + (segmentAngle / 2));
+  const start = angleToCycleMilliseconds(segmentStartAngle);
+  const end = angleToCycleMilliseconds(segmentStartAngle + segmentAngle);
+  const summit = angleToCycleMilliseconds(segmentStartAngle + (segmentAngle / 2));
 
   return [{
     label: "Start",
-    value: formatDurationOffset(start)
+    value: formatDurationOffsetMilliseconds(start)
   }, {
     label: "End",
-    value: formatDurationOffset(end)
+    value: formatDurationOffsetMilliseconds(end)
   }, {
     label: "Peak",
-    value: formatDurationOffset(summit)
+    value: formatDurationOffsetMilliseconds(summit)
   }].filter((row) => row.value);
 };
 
-const formatArea = (metersValue) => {
-  const meters = Number(metersValue);
+const formatArea = (millimetersValue) => {
+  const millimeters = Number(millimetersValue);
 
-  if (!Number.isFinite(meters) || meters <= 0) return "";
+  if (!Number.isFinite(millimeters) || millimeters <= 0) return "";
 
+  const meters = millimeters / 1000;
   const squareMeters = meters * meters;
   const formattedArea = squareMeters.toLocaleString(undefined, {
-    maximumFractionDigits: squareMeters < 10 ? 2 : 0
+    maximumFractionDigits: squareMeters < 1 ? 6 : squareMeters < 10 ? 2 : 0
   });
 
   return `${formattedArea} sqm`;
@@ -411,15 +418,15 @@ const formatGpsPosition = (value) => {
 
 const getRingParameterRows = (fractal, options = {}) => {
   const now = options.now || Date.now();
-  const length = formatDuration(fractal?.length);
+  const lengthMilliseconds = getLengthMilliseconds(fractal);
+  const length = formatDurationMilliseconds(lengthMilliseconds);
   const present = formatDuration(getTimeCycleElapsedSeconds(fractal, now));
   const segmentKeys = options.segmentKeys || [];
   const selectedSegment = options.selectedSegment || segmentKeys[0] || "";
   const selectedSegmentIndex = getSegmentControlValue(segmentKeys, selectedSegment);
   const canControlSegment = Boolean(options.ringId && segmentKeys.length > 1);
-  const cycleSeconds = Number(fractal?.length);
   const segmentMeasureRows = getSegmentCycleMeasureRows({
-    cycleSeconds,
+    cycleMilliseconds: lengthMilliseconds,
     rotation: options.rotation,
     segmentCount: segmentKeys.length,
     selectedSegmentIndex
@@ -531,14 +538,20 @@ const getSelectedStaticPortalRing = (rows, selectedPortalFractalKey) => {
   )) || null;
 };
 
-const getTimeCycleElapsedSeconds = (fractal, now = Date.now()) => {
+const getTimeCycleElapsedMilliseconds = (fractal, now = Date.now()) => {
   if (!hasTimeCycle(fractal)) return null;
 
   const startAt = parseBrowserGregorianDate(fractal.start_at);
-  const cycleMs = Number(fractal.length) * 1000;
+  const cycleMs = getLengthMilliseconds(fractal);
   const elapsedMs = ((now - startAt) % cycleMs + cycleMs) % cycleMs;
 
-  return elapsedMs / 1000;
+  return elapsedMs;
+};
+
+const getTimeCycleElapsedSeconds = (fractal, now = Date.now()) => {
+  const elapsedMs = getTimeCycleElapsedMilliseconds(fractal, now);
+
+  return Number.isFinite(elapsedMs) ? elapsedMs / 1000 : null;
 };
 
 const getPresentSegmentKey = (fractal, segmentKeys, rotation, now = Date.now()) => {
@@ -549,11 +562,12 @@ const getPresentSegmentKey = (fractal, segmentKeys, rotation, now = Date.now()) 
 };
 
 const getTimeCyclePresentAngle = (fractal, now = Date.now()) => {
-  const elapsedSeconds = getTimeCycleElapsedSeconds(fractal, now);
+  const elapsedMilliseconds = getTimeCycleElapsedMilliseconds(fractal, now);
+  const cycleMilliseconds = getLengthMilliseconds(fractal);
 
-  if (!Number.isFinite(elapsedSeconds)) return null;
+  if (!Number.isFinite(elapsedMilliseconds) || !Number.isFinite(cycleMilliseconds) || cycleMilliseconds <= 0) return null;
 
-  const progress = elapsedSeconds / Number(fractal.length);
+  const progress = elapsedMilliseconds / cycleMilliseconds;
   return (-Math.PI / 2) + (progress * Math.PI * 2);
 };
 
