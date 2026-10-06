@@ -860,6 +860,10 @@
   text-transform: uppercase;
 }
 
+.profile-parameter-list dt.is-hidden {
+  display: none;
+}
+
 .profile-parameter-list dd {
   color: var(--text);
   overflow-wrap: anywhere;
@@ -879,6 +883,10 @@
 
 .profile-parameter-value.has-controls {
   flex-wrap: wrap;
+}
+
+.profile-parameter-value.is-full-width {
+  grid-column: 1 / -1;
 }
 
 .profile-parameter-slider {

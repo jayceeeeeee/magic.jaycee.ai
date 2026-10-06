@@ -9,7 +9,8 @@ export const PROFILE_TABLE = "profiles";
 export const USER_IMAGES_BUCKET = "users";
 export const CODE_COLUMNS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 export const DEFAULT_SELECTED_NUMBER = 5;
-export const DEFAULT_SUN_TIME_NUMBER = 9;
+export const CORE_TIME_RING_ID = "core-time";
+export const DEFAULT_CORE_TIME_NUMBER = 9;
 export const JAYCEE_RESONANCE_SOURCE = "Jaycee Core";
 
 const FRACTAL_PARAMETER_COLUMNS = "start_at, length";

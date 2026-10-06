@@ -7,8 +7,9 @@ import {
   getTopCenteredSegmentRotation
 } from "./jaycee-core.js";
 import {
+  CORE_TIME_RING_ID,
+  DEFAULT_CORE_TIME_NUMBER,
   DEFAULT_SELECTED_NUMBER,
-  DEFAULT_SUN_TIME_NUMBER,
   SPACE_DIMENSION_VALUE,
   TIME_DIMENSION_VALUE,
   fetchDynamicSpaceSquares,
@@ -26,7 +27,6 @@ import {
   getFractalImageUrl,
   getFractalKey,
   getThemeSettingsFromProfile,
-  hasTimeCycle,
   isHexColor,
   loadOptionalImage,
   parseBrowserGregorianDate
@@ -56,6 +56,8 @@ const PROFILE_RING_ACTIVE_FILL_ALPHA = 0.09;
 const PROFILE_RING_FILL_ALPHA = 0.26;
 const PROFILE_CLOCK_REFRESH_MS = 1000;
 const PROFILE_VIEW_CACHE_PREFIX = "jayceeProfileView";
+const CORE_MAP_FALLBACK_LABEL = "God";
+const CORE_TIME_FALLBACK_LABEL = "Lore";
 
 const getProfileViewCacheKey = ({ pageMode, profile, publicUsername }) => {
   const profileKey = profile?.id || publicUsername || "core";
@@ -117,7 +119,7 @@ const getCssColorValue = (name, fallback) => {
   return isHexColor(value) ? value : fallback;
 };
 
-const getSunRingSegmentColors = () => {
+const getCoreTimeRingSegmentColors = () => {
   const primary = getCssColorValue("--accent", "#53dcc6");
   const secondary = getCssColorValue("--accent-soft", "#ffd56b");
 
@@ -169,10 +171,10 @@ const getGeometricSegmentNumberFromIndex = (segmentIndex, count, topSegmentIndex
   return ((segmentIndex - topSegmentIndex + count) % count) + 1;
 };
 
-const getPpcmSubSegmentIndex = (sunActiveSegmentIndex, sunSegmentCount) => (
+const getPpcmSubSegmentIndex = (coreTimeActiveSegmentIndex, coreTimeSegmentCount) => (
   getGeometricSegmentNumberFromIndex(
-    sunActiveSegmentIndex,
-    sunSegmentCount,
+    coreTimeActiveSegmentIndex,
+    coreTimeSegmentCount,
     0
   ) - 1
 );
@@ -321,29 +323,25 @@ const formatDuration = (secondsValue) => {
   return [...dateParts, clock].join(" ");
 };
 
-const getLengthMilliseconds = (fractal) => Number(fractal?.length);
+const getLengthSeconds = (fractal) => Number(fractal?.length);
 
-const formatDurationMilliseconds = (millisecondsValue) => (
-  formatDuration(Number(millisecondsValue) / 1000)
-);
+const formatDurationOffset = (secondsValue) => {
+  const seconds = Number(secondsValue);
 
-const formatDurationOffsetMilliseconds = (millisecondsValue) => {
-  const milliseconds = Number(millisecondsValue);
+  if (!Number.isFinite(seconds) || seconds < 0) return "";
 
-  if (!Number.isFinite(milliseconds) || milliseconds < 0) return "";
-
-  return milliseconds === 0 ? "00:00:00" : formatDurationMilliseconds(milliseconds);
+  return seconds === 0 ? "00:00:00" : formatDuration(seconds);
 };
 
 const getSegmentCycleMeasureRows = ({
-  cycleMilliseconds,
+  cycleSeconds,
   rotation,
   segmentCount,
   selectedSegmentIndex
 }) => {
   if (
-    !Number.isFinite(cycleMilliseconds)
-    || cycleMilliseconds <= 0
+    !Number.isFinite(cycleSeconds)
+    || cycleSeconds <= 0
     || !Number.isFinite(segmentCount)
     || segmentCount <= 0
     || selectedSegmentIndex <= 0
@@ -357,85 +355,38 @@ const getSegmentCycleMeasureRows = ({
   const segmentStartAngle = Number.isFinite(rotation)
     ? rotation + (selectedIndex * segmentAngle)
     : (-Math.PI / 2) + (selectedIndex * segmentAngle);
-  const angleToCycleMilliseconds = (angle) => {
+  const angleToCycleSeconds = (angle) => {
     const progress = (((angle + (Math.PI / 2)) % fullCircle) + fullCircle) % fullCircle / fullCircle;
 
-    return progress * cycleMilliseconds;
+    return progress * cycleSeconds;
   };
-  const start = angleToCycleMilliseconds(segmentStartAngle);
-  const end = angleToCycleMilliseconds(segmentStartAngle + segmentAngle);
-  const summit = angleToCycleMilliseconds(segmentStartAngle + (segmentAngle / 2));
+  const start = angleToCycleSeconds(segmentStartAngle);
+  const end = angleToCycleSeconds(segmentStartAngle + segmentAngle);
+  const summit = angleToCycleSeconds(segmentStartAngle + (segmentAngle / 2));
 
   return [{
     label: "Start",
-    value: formatDurationOffsetMilliseconds(start)
+    value: formatDurationOffset(start)
   }, {
     label: "End",
-    value: formatDurationOffsetMilliseconds(end)
+    value: formatDurationOffset(end)
   }, {
     label: "Peak",
-    value: formatDurationOffsetMilliseconds(summit)
+    value: formatDurationOffset(summit)
   }].filter((row) => row.value);
-};
-
-const formatArea = (millimetersValue) => {
-  const millimeters = Number(millimetersValue);
-
-  if (!Number.isFinite(millimeters) || millimeters <= 0) return "";
-
-  const meters = millimeters / 1000;
-  const squareMeters = meters * meters;
-  const formattedArea = squareMeters.toLocaleString(undefined, {
-    maximumFractionDigits: squareMeters < 1 ? 6 : squareMeters < 10 ? 2 : 0
-  });
-
-  return `${formattedArea} sqm`;
-};
-
-const formatGpsCoordinate = (value, positiveLabel, negativeLabel) => {
-  const number = Number(value);
-
-  if (!Number.isFinite(number)) return "";
-
-  const direction = number >= 0 ? positiveLabel : negativeLabel;
-
-  return `${Math.abs(number).toFixed(4)}°${direction}`;
-};
-
-const formatGpsPosition = (value) => {
-  const text = getDisplayValue(value);
-  const [latitude, longitude, ...rest] = text.split(",").map((part) => part.trim());
-
-  if (!latitude || !longitude || rest.length) return text;
-
-  const formattedLatitude = formatGpsCoordinate(latitude, "N", "S");
-  const formattedLongitude = formatGpsCoordinate(longitude, "E", "W");
-
-  return formattedLatitude && formattedLongitude
-    ? `${formattedLatitude}, ${formattedLongitude}`
-    : text;
-};
-
-const formatBrowserPosition = (position) => {
-  const latitude = Number(position?.coords?.latitude);
-  const longitude = Number(position?.coords?.longitude);
-
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return "0,0";
-
-  return `${latitude.toFixed(6)},${longitude.toFixed(6)}`;
 };
 
 const getRingParameterRows = (fractal, options = {}) => {
   const now = options.now || Date.now();
-  const lengthMilliseconds = getLengthMilliseconds(fractal);
-  const length = formatDurationMilliseconds(lengthMilliseconds);
+  const lengthSeconds = getLengthSeconds(fractal);
+  const length = formatDuration(lengthSeconds);
   const present = formatDuration(getTimeCycleElapsedSeconds(fractal, now));
   const segmentKeys = options.segmentKeys || [];
   const selectedSegment = options.selectedSegment || segmentKeys[0] || "";
   const selectedSegmentIndex = getSegmentControlValue(segmentKeys, selectedSegment);
   const canControlSegment = Boolean(options.ringId && segmentKeys.length > 1);
   const segmentMeasureRows = getSegmentCycleMeasureRows({
-    cycleMilliseconds: lengthMilliseconds,
+    cycleSeconds: lengthSeconds,
     rotation: options.rotation,
     segmentCount: segmentKeys.length,
     selectedSegmentIndex
@@ -466,16 +417,6 @@ const getRingParameterRows = (fractal, options = {}) => {
       value: selectedSegment
     }] : []),
     ...segmentMeasureRows
-  ];
-};
-
-const getSquareParameterRows = (fractal) => {
-  const area = formatArea(fractal?.length);
-  const gps = formatGpsPosition(fractal?.start_at);
-
-  return [
-    ...(area ? [{ label: "Surface", value: area }] : []),
-    ...(gps ? [{ label: "Position", value: gps }] : [])
   ];
 };
 
@@ -537,7 +478,7 @@ const getGroupsWithSelectedResonanceValue = (groups, selectedNumber) => (
   }))
 );
 
-const getSunSegmentKeys = () => JAYCEE_ORDER.map(String);
+const getCoreTimeSegmentKeys = () => JAYCEE_ORDER.map(String);
 
 const getSelectedStaticPortalRing = (rows, selectedPortalFractalKey) => {
   if (!selectedPortalFractalKey) return null;
@@ -548,10 +489,11 @@ const getSelectedStaticPortalRing = (rows, selectedPortalFractalKey) => {
 };
 
 const getTimeCycleElapsedMilliseconds = (fractal, now = Date.now()) => {
-  if (!hasTimeCycle(fractal)) return null;
-
   const startAt = parseBrowserGregorianDate(fractal.start_at);
-  const cycleMs = getLengthMilliseconds(fractal);
+  const cycleMs = getLengthSeconds(fractal) * 1000;
+
+  if (!Number.isFinite(startAt) || !Number.isFinite(cycleMs) || cycleMs <= 0) return null;
+
   const elapsedMs = ((now - startAt) % cycleMs + cycleMs) % cycleMs;
 
   return elapsedMs;
@@ -572,7 +514,7 @@ const getPresentSegmentKey = (fractal, segmentKeys, rotation, now = Date.now()) 
 
 const getTimeCyclePresentAngle = (fractal, now = Date.now()) => {
   const elapsedMilliseconds = getTimeCycleElapsedMilliseconds(fractal, now);
-  const cycleMilliseconds = getLengthMilliseconds(fractal);
+  const cycleMilliseconds = getLengthSeconds(fractal) * 1000;
 
   if (!Number.isFinite(elapsedMilliseconds) || !Number.isFinite(cycleMilliseconds) || cycleMilliseconds <= 0) return null;
 
@@ -615,7 +557,7 @@ const getNestedPresentMarkerAngle = ({
   return parentRotation + (parentIndex * parentSegmentAngle) + ((subIndex + 0.5) * subSegmentAngle);
 };
 
-const createParameterSection = (title, parameters) => {
+const createParameterSection = ({ hideTitle = false, parameters, title }) => {
   const section = document.createElement("article");
   const heading = document.createElement("h3");
   const list = document.createElement("dl");
@@ -632,6 +574,10 @@ const createParameterSection = (title, parameters) => {
     value.className = parameter.control || parameter.actions?.length
       ? "profile-parameter-value has-controls"
       : "profile-parameter-value";
+    if (parameter.fullWidth) {
+      name.className = "is-hidden";
+      value.classList.add("is-full-width");
+    }
     valueText.textContent = parameter.value;
     value.append(valueText);
 
@@ -662,64 +608,54 @@ const createParameterSection = (title, parameters) => {
     });
     list.append(name, value);
   });
-  section.append(heading, list);
+  section.append(...(hideTitle ? [] : [heading]), list);
 
   return section;
 };
 
 const getCurrentParameterSections = ({
   dynamicRings,
-  dynamicSquares,
-  onReturnToHere,
   onReturnAllToPresent,
   onSegmentChange,
-  presentPosition,
   rows,
-  selectedMapFractalKey,
   selectedPortalFractalKey,
   selectedTimeSegments
 }) => {
   const sections = [];
-  const sunCycleFractal = getSunCycleFractal(rows);
-  const sunSegmentKeys = getSunSegmentKeys();
-  const sunRotation = getTopCenteredLastSegmentRotation(sunSegmentKeys.length);
+  const coreTimeFractal = getCoreTimeFractal(rows);
+  const coreTimeCycleFractal = getCoreTimeCycleFractal(rows);
+  const coreTimeSegmentKeys = getCoreTimeSegmentKeys();
+  const coreTimeRotation = getTopCenteredLastSegmentRotation(coreTimeSegmentKeys.length);
   const now = Date.now();
-  const presentTime = formatCurrentDateTime(new Date(now)).replace(/^Present:\s*/, "");
-  const sunParameters = getRingParameterRows(sunCycleFractal, {
+  const coreTimeParameters = getRingParameterRows(coreTimeCycleFractal, {
     now,
     onSegmentChange,
-    ringId: "sun",
-    rotation: sunRotation,
-    segmentKeys: sunSegmentKeys,
-    selectedSegment: selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER
+    ringId: CORE_TIME_RING_ID,
+    rotation: coreTimeRotation,
+    segmentKeys: coreTimeSegmentKeys,
+    selectedSegment: selectedTimeSegments.get(CORE_TIME_RING_ID) || DEFAULT_CORE_TIME_NUMBER
   });
   const selectedDynamicPortalRing = getSelectedDynamicPortalRing(dynamicRings, selectedPortalFractalKey);
   const selectedStaticPortalRing = getSelectedStaticPortalRing(rows, selectedPortalFractalKey);
-  const selectedMapDetails = getSelectedMapDetails({ dynamicSquares, rows, selectedMapFractalKey });
-  const coreSquareRows = getRowsForDimensionColumn(rows, SPACE_DIMENSION_VALUE)
-    .filter((row) => row.sourceType === "jaycee");
 
   sections.push({
     parameters: [{
       actions: typeof onReturnAllToPresent === "function" ? [{
-        label: "Now",
-        onClick: onReturnAllToPresent
+        label: "Present",
+        onClick: () => {
+          onReturnAllToPresent();
+        }
       }] : [],
-      label: "Time",
-      value: presentTime
-    }, {
-      actions: typeof onReturnToHere === "function" ? [{
-        label: "Here",
-        onClick: onReturnToHere
-      }] : [],
-      label: "Position",
-      value: formatGpsPosition(presentPosition || "0,0")
+      fullWidth: true,
+      label: "",
+      value: ""
     }],
+    hideTitle: true,
     title: "Present"
   });
 
-  if (sunParameters.length) {
-    sections.push({ parameters: sunParameters, title: sunCycleFractal?.label || "Sun" });
+  if (coreTimeParameters.length) {
+    sections.push({ parameters: coreTimeParameters, title: getCoreFractalLabel(coreTimeFractal, CORE_TIME_FALLBACK_LABEL) });
   }
 
   if (selectedDynamicPortalRing?.segmentKeys?.length && !selectedDynamicPortalRing.invalidReason) {
@@ -746,11 +682,11 @@ const getCurrentParameterSections = ({
       now,
       onSegmentChange,
       ringId: staticPortalKey,
-      rotation: sunRotation,
-      segmentKeys: sunSegmentKeys,
+      rotation: coreTimeRotation,
+      segmentKeys: coreTimeSegmentKeys,
       selectedSegment: selectedTimeSegments.get(staticPortalKey)
-        || getPresentSegmentKey(selectedStaticPortalRing, sunSegmentKeys, sunRotation, now)
-        || sunSegmentKeys[0]
+        || getPresentSegmentKey(selectedStaticPortalRing, coreTimeSegmentKeys, coreTimeRotation, now)
+        || coreTimeSegmentKeys[0]
     });
 
     if (parameters.length) {
@@ -758,36 +694,26 @@ const getCurrentParameterSections = ({
     }
   }
 
-  coreSquareRows.forEach((square) => {
-    const parameters = getSquareParameterRows(square);
-
-    if (parameters.length) {
-      sections.push({ parameters, title: square.label || "Core" });
-    }
-  });
-
-  if (selectedMapDetails?.square) {
-    const parameters = getSquareParameterRows(selectedMapDetails.square);
-
-    if (parameters.length) {
-      sections.push({ parameters, title: selectedMapDetails.square.label || "Map" });
-    }
-  }
-
   return sections;
 };
 
-const getSunCycleFractal = (rows) => {
-  const jayceeTimeRows = rows.filter((row) => (
+const getCoreTimeCycleFractal = (rows) => {
+  return getCoreTimeFractal(rows);
+};
+
+const getCoreTimeFractal = (rows) => (
+  rows.find((row) => (
     row.sourceType === "jaycee"
     && getDisplayValue(row.dimension).toLowerCase() === TIME_DIMENSION_VALUE
-    && hasTimeCycle(row)
-  ));
+  )) || null
+);
 
-  return jayceeTimeRows.find((row) => getDisplayValue(row.label).toLowerCase() === "sun")
-    || jayceeTimeRows[0]
-    || null;
-};
+const getCoreMapFractal = (rows) => (
+  getRowsForDimensionColumn(rows, SPACE_DIMENSION_VALUE)
+    .find((row) => row.sourceType === "jaycee") || null
+);
+
+const getCoreFractalLabel = (fractal, fallback) => getDisplayValue(fractal?.label) || fallback;
 
 const createFractalSelect = (labelText, defaultText, choices, selectedValue, onChange) => {
   const label = document.createElement("label");
@@ -812,12 +738,6 @@ const createFractalSelect = (labelText, defaultText, choices, selectedValue, onC
   label.append(text, select);
 
   return label;
-};
-
-const formatCurrentDateTime = (date = new Date()) => {
-  const pad = (value, length = 2) => String(value).padStart(length, "0");
-
-  return `Present: ${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 };
 
 const createGameSelect = (profiles, selectedUsername = "") => {
@@ -868,18 +788,19 @@ const createProfileCoreState = ({
   selectedTimeSegments,
   showPresent
 }) => {
-  const sunSegmentKeys = getSunSegmentKeys();
-  const sunSegmentColors = getSunRingSegmentColors();
+  const coreTimeSegmentKeys = getCoreTimeSegmentKeys();
+  const coreTimeSegmentColors = getCoreTimeRingSegmentColors();
   const hasRingBackground = Boolean(ringBackgroundImage);
   const now = Date.now();
-  const sunCycleFractal = getSunCycleFractal(rows);
-  const sunPresentMarkerAngle = showPresent ? getTimeCyclePresentAngle(sunCycleFractal, now) : null;
-  const sunRotation = getTopCenteredLastSegmentRotation(sunSegmentKeys.length);
-  const sunActiveSegmentIndex = getActiveSegmentIndex(
-    sunSegmentKeys,
-    selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER
+  const coreTimeFractal = getCoreTimeFractal(rows);
+  const coreTimeCycleFractal = getCoreTimeCycleFractal(rows);
+  const coreTimePresentMarkerAngle = showPresent ? getTimeCyclePresentAngle(coreTimeCycleFractal, now) : null;
+  const coreTimeRotation = getTopCenteredLastSegmentRotation(coreTimeSegmentKeys.length);
+  const coreTimeActiveSegmentIndex = getActiveSegmentIndex(
+    coreTimeSegmentKeys,
+    selectedTimeSegments.get(CORE_TIME_RING_ID) || DEFAULT_CORE_TIME_NUMBER
   );
-  const ppcmActiveSubSegmentIndex = getPpcmSubSegmentIndex(sunActiveSegmentIndex, sunSegmentKeys.length);
+  const ppcmActiveSubSegmentIndex = getPpcmSubSegmentIndex(coreTimeActiveSegmentIndex, coreTimeSegmentKeys.length);
   const selectedDynamicPortalRing = getSelectedDynamicPortalRing(dynamicRings, selectedPortalFractalKey);
   const selectedStaticPortalRing = getSelectedStaticPortalRing(rows, selectedPortalFractalKey);
   const selectedPortalHasPpcm = Boolean(
@@ -904,24 +825,24 @@ const createProfileCoreState = ({
     : selectedMapResult.mapSquare;
   const rings = [
     {
-      id: "sun",
-      activeSegmentIndex: sunActiveSegmentIndex,
-      count: sunSegmentKeys.length,
+      id: CORE_TIME_RING_ID,
+      activeSegmentIndex: coreTimeActiveSegmentIndex,
+      count: coreTimeSegmentKeys.length,
       backgroundImage: ringBackgroundImage,
       backgroundImageAlpha: 0.9,
-      fillAlpha: !hasRingBackground && sunSegmentColors ? PROFILE_RING_FILL_ALPHA : 0,
+      fillAlpha: !hasRingBackground && coreTimeSegmentColors ? PROFILE_RING_FILL_ALPHA : 0,
       activeFillAlpha: PROFILE_RING_ACTIVE_FILL_ALPHA,
-      label: "Sun",
-      labels: getEmptyLabels(sunSegmentKeys.length),
-      presentMarkerAngle: sunPresentMarkerAngle,
-      rotation: sunRotation,
-      segmentColors: hasRingBackground ? null : sunSegmentColors,
-      segmentKeys: sunSegmentKeys,
+      label: getCoreFractalLabel(coreTimeFractal, CORE_TIME_FALLBACK_LABEL),
+      labels: getEmptyLabels(coreTimeSegmentKeys.length),
+      presentMarkerAngle: coreTimePresentMarkerAngle,
+      rotation: coreTimeRotation,
+      segmentColors: hasRingBackground ? null : coreTimeSegmentColors,
+      segmentKeys: coreTimeSegmentKeys,
       showBorders: true,
       showDividers: true,
-      styledSegmentIndices: !hasRingBackground && sunSegmentColors
-        ? sunSegmentKeys.map((_, index) => index)
-        : [sunActiveSegmentIndex],
+      styledSegmentIndices: !hasRingBackground && coreTimeSegmentColors
+        ? coreTimeSegmentKeys.map((_, index) => index)
+        : [coreTimeActiveSegmentIndex],
       tone: "accent"
     }
   ];
@@ -939,9 +860,9 @@ const createProfileCoreState = ({
         parentCount: segmentKeys.length,
         parentPresentAngle: portalPresentMarkerAngle,
         parentRotation: portalRotation,
-        subCount: sunSegmentKeys.length,
-        subPresentAngle: sunPresentMarkerAngle,
-        subRotation: sunRotation
+        subCount: coreTimeSegmentKeys.length,
+        subPresentAngle: coreTimePresentMarkerAngle,
+        subRotation: coreTimeRotation
       })
       : null;
 
@@ -965,16 +886,16 @@ const createProfileCoreState = ({
       subActiveParentSegmentIndex: activeSegmentIndex,
       subActiveSegmentIndex: ppcmActiveSubSegmentIndex,
       styledSegmentIndices: [activeSegmentIndex],
-      subSegmentCount: sunSegmentKeys.length,
+      subSegmentCount: coreTimeSegmentKeys.length,
       tone: "accent"
     });
   }
 
   if (selectedStaticPortalRing) {
-    const segmentKeys = sunSegmentKeys;
+    const segmentKeys = coreTimeSegmentKeys;
     const staticPortalKey = getFractalKey(selectedStaticPortalRing);
     const selectedSegment = selectedTimeSegments.get(staticPortalKey)
-      || getPresentSegmentKey(selectedStaticPortalRing, segmentKeys, sunRotation, now)
+      || getPresentSegmentKey(selectedStaticPortalRing, segmentKeys, coreTimeRotation, now)
       || segmentKeys[0];
     const activeSegmentIndex = getActiveSegmentIndex(segmentKeys, selectedSegment);
     const portalPresentMarkerAngle = showPresent ? getTimeCyclePresentAngle(selectedStaticPortalRing, now) : null;
@@ -982,10 +903,10 @@ const createProfileCoreState = ({
       ? getNestedPresentMarkerAngle({
         parentCount: segmentKeys.length,
         parentPresentAngle: portalPresentMarkerAngle,
-        parentRotation: sunRotation,
-        subCount: sunSegmentKeys.length,
-        subPresentAngle: sunPresentMarkerAngle,
-        subRotation: sunRotation
+        parentRotation: coreTimeRotation,
+        subCount: coreTimeSegmentKeys.length,
+        subPresentAngle: coreTimePresentMarkerAngle,
+        subRotation: coreTimeRotation
       })
       : null;
 
@@ -1000,7 +921,7 @@ const createProfileCoreState = ({
       label: selectedStaticPortalRing.label || "Portal",
       labels: getEmptyLabels(segmentKeys.length),
       presentMarkerAngle: portalPresentMarkerAngle,
-      rotation: sunRotation,
+      rotation: coreTimeRotation,
       secondaryPresentMarkerAngle: ppcmPresentMarkerAngle,
       secondaryPresentMarkerColor: "rgba(255, 215, 77, 0.98)",
       segmentKeys,
@@ -1009,7 +930,7 @@ const createProfileCoreState = ({
       subActiveParentSegmentIndex: activeSegmentIndex,
       subActiveSegmentIndex: ppcmActiveSubSegmentIndex,
       styledSegmentIndices: [activeSegmentIndex],
-      subSegmentCount: sunSegmentKeys.length,
+      subSegmentCount: coreTimeSegmentKeys.length,
       tone: "accent"
     });
   }
@@ -1062,29 +983,8 @@ export const initJayceePage = async () => {
   let draftPreviewMode = "closed";
   let draftPreviewTimer = null;
   let currentTimeTimer = null;
-  let presentPosition = "0,0";
   let profileViewCacheKey = "";
-  const selectedTimeSegments = new Map([["sun", String(DEFAULT_SUN_TIME_NUMBER)]]);
-
-  const requestPresentPosition = () => {
-    if (!isEditableProfilePage || !navigator.geolocation) return;
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        presentPosition = formatBrowserPosition(position);
-        renderCoreParameters();
-      },
-      () => {
-        presentPosition = "0,0";
-        renderCoreParameters();
-      },
-      {
-        enableHighAccuracy: true,
-        maximumAge: 30 * 1000,
-        timeout: 8 * 1000
-      }
-    );
-  };
+  const selectedTimeSegments = new Map([[CORE_TIME_RING_ID, String(DEFAULT_CORE_TIME_NUMBER)]]);
 
   const stopCurrentTimeClock = () => {
     if (!currentTimeTimer) return;
@@ -1169,14 +1069,15 @@ export const initJayceePage = async () => {
     if (cache.selectedTimeSegments && typeof cache.selectedTimeSegments === "object") {
       Object.entries(cache.selectedTimeSegments).forEach(([key, value]) => {
         const segment = getDisplayValue(value);
+        const timeSegmentKey = key === "sun" ? CORE_TIME_RING_ID : key;
 
-        if (key && segment) {
-          selectedTimeSegments.set(key, segment);
+        if (timeSegmentKey && segment) {
+          selectedTimeSegments.set(timeSegmentKey, segment);
         }
       });
     }
 
-    syncCoreSquareWithSunSegment();
+    syncCoreSquareWithCoreTimeSegment();
     syncMapPositionWithSelectedPortal();
   };
 
@@ -1190,11 +1091,11 @@ export const initJayceePage = async () => {
     });
   };
 
-  const syncCoreSquareWithSunSegment = () => {
-    const sunSegment = Number(selectedTimeSegments.get("sun"));
+  const syncCoreSquareWithCoreTimeSegment = () => {
+    const coreTimeSegment = Number(selectedTimeSegments.get(CORE_TIME_RING_ID));
 
-    if (JAYCEE_ORDER.includes(sunSegment)) {
-      selectedSpaceNumber = sunSegment;
+    if (JAYCEE_ORDER.includes(coreTimeSegment)) {
+      selectedSpaceNumber = coreTimeSegment;
     }
   };
 
@@ -1216,7 +1117,7 @@ export const initJayceePage = async () => {
     const selectedStaticPortalRing = getSelectedStaticPortalRing(rows, selectedPortalFractalKey);
 
     if (selectedStaticPortalRing) {
-      const segmentKeys = getSunSegmentKeys();
+      const segmentKeys = getCoreTimeSegmentKeys();
       const ringId = getFractalKey(selectedStaticPortalRing);
 
       return {
@@ -1269,24 +1170,24 @@ export const initJayceePage = async () => {
   const setTimeSegmentSelection = (ringId, segmentKey) => {
     selectedTimeSegments.set(ringId, String(segmentKey));
 
-    if (ringId === "sun") {
-      syncCoreSquareWithSunSegment();
+    if (ringId === CORE_TIME_RING_ID) {
+      syncCoreSquareWithCoreTimeSegment();
     } else {
       syncMapPositionWithPortalSegment(ringId, segmentKey);
     }
   };
 
   const setDefaultTimeSelectionsToPresent = () => {
-    const sunSegmentKeys = getSunSegmentKeys();
-    const sunPresentSegment = getPresentSegmentKey(
-      getSunCycleFractal(rows),
-      sunSegmentKeys,
-      getTopCenteredLastSegmentRotation(sunSegmentKeys.length)
+    const coreTimeSegmentKeys = getCoreTimeSegmentKeys();
+    const coreTimePresentSegment = getPresentSegmentKey(
+      getCoreTimeCycleFractal(rows),
+      coreTimeSegmentKeys,
+      getTopCenteredLastSegmentRotation(coreTimeSegmentKeys.length)
     );
 
-    if (sunPresentSegment) {
-      selectedTimeSegments.set("sun", sunPresentSegment);
-      syncCoreSquareWithSunSegment();
+    if (coreTimePresentSegment) {
+      selectedTimeSegments.set(CORE_TIME_RING_ID, coreTimePresentSegment);
+      syncCoreSquareWithCoreTimeSegment();
     }
 
     dynamicRings.forEach((ring) => {
@@ -1303,7 +1204,7 @@ export const initJayceePage = async () => {
     const selectedStaticPortalRing = getSelectedStaticPortalRing(rows, selectedPortalFractalKey);
 
     if (selectedStaticPortalRing) {
-      const segmentKeys = getSunSegmentKeys();
+      const segmentKeys = getCoreTimeSegmentKeys();
       const ringId = getFractalKey(selectedStaticPortalRing);
       const presentSegment = getPresentSegmentKey(
         selectedStaticPortalRing,
@@ -1387,6 +1288,8 @@ export const initJayceePage = async () => {
       ...mapChoices,
       ...getDynamicSpaceChoiceRows(dynamicSquares)
     ];
+    const coreMapLabel = getCoreFractalLabel(getCoreMapFractal(rows), CORE_MAP_FALLBACK_LABEL);
+    const corePortalLabel = getCoreFractalLabel(getCoreTimeFractal(rows), CORE_TIME_FALLBACK_LABEL);
     const portalChoices = [
       ...getRowsForDimensionColumn(rows, TIME_DIMENSION_VALUE).filter((row) => row.sourceType === "user"),
       ...getDynamicTimeChoiceRows(dynamicRings)
@@ -1404,13 +1307,13 @@ export const initJayceePage = async () => {
     selectors.className = "profile-fractal-selectors";
     selectors.dataset.profileFractalSelectors = "";
     selectors.replaceChildren(
-      createFractalSelect("Choose a map", "God", mapSelectorChoices, selectedMapFractalKey, (value) => {
+      createFractalSelect("Choose a map", coreMapLabel, mapSelectorChoices, selectedMapFractalKey, (value) => {
         selectedMapFractalKey = value;
         resetSelectedMapPosition();
         syncMapPositionWithSelectedPortal();
         syncProfileView();
       }),
-      createFractalSelect("Enter a portal", "Sun", portalChoices, selectedPortalFractalKey, (value) => {
+      createFractalSelect("Enter a portal", corePortalLabel, portalChoices, selectedPortalFractalKey, (value) => {
         selectedPortalFractalKey = value;
         syncMapPositionWithSelectedPortal();
         syncProfileView();
@@ -1463,22 +1366,22 @@ export const initJayceePage = async () => {
     const spaceGroups = selectedMapDetails
       ? [...coreSpaceGroups, ...selectedMapGroups]
       : selectedMapGroups;
-    const selectedSunNumber = selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER;
-    const staticPortalSegmentKeys = getSunSegmentKeys();
+    const selectedCoreTimeNumber = selectedTimeSegments.get(CORE_TIME_RING_ID) || DEFAULT_CORE_TIME_NUMBER;
+    const staticPortalSegmentKeys = getCoreTimeSegmentKeys();
     const staticPortalRotation = getTopCenteredLastSegmentRotation(staticPortalSegmentKeys.length);
     const selectedStaticPortalNumber = selectedStaticPortalRing
       ? selectedTimeSegments.get(getFractalKey(selectedStaticPortalRing))
         || getPresentSegmentKey(selectedStaticPortalRing, staticPortalSegmentKeys, staticPortalRotation)
-        || selectedSunNumber
-      : selectedSunNumber;
+        || selectedCoreTimeNumber
+      : selectedCoreTimeNumber;
     const timeGroups = selectedStaticPortalRing
       ? [
         ...getGroupsWithSelectedResonanceValue(
           getResonanceGroupsForNumber(
             getRowsForDimensionColumn(rows, TIME_DIMENSION_VALUE),
-            selectedSunNumber
+            selectedCoreTimeNumber
           ).filter((group) => group.sourceType === "jaycee"),
-          selectedSunNumber
+          selectedCoreTimeNumber
         ),
         ...getGroupsWithSelectedResonanceValue(
           filterUserGroupsByFractal(
@@ -1529,19 +1432,15 @@ export const initJayceePage = async () => {
 
     const sections = getCurrentParameterSections({
       dynamicRings,
-      dynamicSquares,
       onReturnAllToPresent: () => {
         setDefaultTimeSelectionsToPresent();
         syncProfileView();
       },
-      onReturnToHere: isEditableProfilePage ? requestPresentPosition : null,
       onSegmentChange: (ringId, segmentKey) => {
         setTimeSegmentSelection(ringId, segmentKey);
         syncProfileView();
       },
-      presentPosition,
       rows,
-      selectedMapFractalKey,
       selectedPortalFractalKey,
       selectedTimeSegments
     });
@@ -1560,7 +1459,7 @@ export const initJayceePage = async () => {
     heading.textContent = "Parameters";
     content.className = "profile-parameter-panel-content";
     content.replaceChildren(
-      ...sections.map((section) => createParameterSection(section.title, section.parameters))
+      ...sections.map((section) => createParameterSection(section))
     );
     panel.replaceChildren(heading, content);
 
@@ -1608,7 +1507,7 @@ export const initJayceePage = async () => {
 
     if (hit.type === "square") {
       selectedSpaceNumber = hit.number;
-      setTimeSegmentSelection("sun", hit.number);
+      setTimeSegmentSelection(CORE_TIME_RING_ID, hit.number);
     } else if (hit.type === "ring" && hit.ringId) {
       setTimeSegmentSelection(hit.ringId, hit.segmentKey);
     } else if (hit.type === "map-square") {
@@ -1693,7 +1592,6 @@ export const initJayceePage = async () => {
     renderCoreParameters();
     renderResonances();
     scheduleRenderCore();
-    requestPresentPosition();
   } catch (error) {
     console.error("Jaycee profile load failed", error);
     shell.hidden = false;

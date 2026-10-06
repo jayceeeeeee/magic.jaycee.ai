@@ -1,6 +1,7 @@
 import {
   CODE_COLUMNS,
-  DEFAULT_SUN_TIME_NUMBER,
+  CORE_TIME_RING_ID,
+  DEFAULT_CORE_TIME_NUMBER,
   JAYCEE_RESONANCE_SOURCE,
   SPACE_DIMENSION_VALUE,
   TIME_DIMENSION_VALUE,
@@ -304,10 +305,10 @@ export const getSelectedDynamicMapSquare = (dynamicSquares, selectedMapFractalKe
 };
 
 export const getTimeResonanceGroups = (rows, selectedTimeSegments, dynamicRings) => {
-  const sunNumber = selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER;
+  const coreTimeNumber = selectedTimeSegments.get(CORE_TIME_RING_ID) || DEFAULT_CORE_TIME_NUMBER;
   const staticTimeGroups = getResonanceGroupsForNumber(
     getRowsForDimensionColumn(rows, TIME_DIMENSION_VALUE),
-    sunNumber
+    coreTimeNumber
   );
   const dynamicRows = getDynamicTimeRows(dynamicRings, selectedTimeSegments);
   const dynamicGroups = dynamicRows.length ? getRowsAsSourceGroups(dynamicRows) : [];
@@ -316,7 +317,7 @@ export const getTimeResonanceGroups = (rows, selectedTimeSegments, dynamicRings)
 };
 
 export const getTimeSelectionMeta = (dynamicRings, selectedTimeSegments) => {
-  return `Arc ${selectedTimeSegments.get("sun") || DEFAULT_SUN_TIME_NUMBER}`;
+  return `Arc ${selectedTimeSegments.get(CORE_TIME_RING_ID) || DEFAULT_CORE_TIME_NUMBER}`;
 };
 
 export const filterUserGroupsByFractal = (groups, selectedFractalKey) => (
