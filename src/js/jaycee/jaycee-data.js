@@ -77,13 +77,6 @@ export const parseBrowserGregorianDate = (value) => {
   return Date.parse(text);
 };
 
-export const hasTimeCycle = (fractal) => {
-  const startAt = parseBrowserGregorianDate(fractal?.start_at);
-  const length = Number(fractal?.length);
-
-  return Number.isFinite(startAt) && Number.isFinite(length) && length > 0;
-};
-
 export const isHexColor = (value) => /^#[0-9a-f]{6}$/i.test(getDisplayValue(value));
 
 export const getProfileThemeValue = (profile) => (

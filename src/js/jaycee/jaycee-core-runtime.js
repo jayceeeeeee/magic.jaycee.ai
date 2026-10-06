@@ -808,7 +808,6 @@ const createProfileCoreState = ({
   avatarImage,
   dynamicRings,
   dynamicSquares,
-  isCorePage,
   hasUserProfile,
   mapSquareImages,
   portalRingImages,
@@ -1140,10 +1139,9 @@ export const initJayceePage = async () => {
     if (cache.selectedTimeSegments && typeof cache.selectedTimeSegments === "object") {
       Object.entries(cache.selectedTimeSegments).forEach(([key, value]) => {
         const segment = getDisplayValue(value);
-        const timeSegmentKey = key === "sun" ? CORE_TIME_RING_ID : key;
 
-        if (timeSegmentKey && segment) {
-          selectedTimeSegments.set(timeSegmentKey, segment);
+        if (key && segment) {
+          selectedTimeSegments.set(key, segment);
         }
       });
     }
@@ -1568,7 +1566,6 @@ export const initJayceePage = async () => {
       dynamicRings,
       dynamicSquares,
       hasUserProfile,
-      isCorePage,
       mapSquareImages,
       portalRingImages,
       ringBackgroundImage,

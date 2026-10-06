@@ -311,10 +311,6 @@ export const getTimeResonanceGroups = (rows, selectedTimeSegments, dynamicRings)
   return mergeResonanceGroups([...staticTimeGroups, ...dynamicGroups]);
 };
 
-export const getTimeSelectionMeta = (dynamicRings, selectedTimeSegments) => {
-  return `Arc ${selectedTimeSegments.get(CORE_TIME_RING_ID) || DEFAULT_CORE_TIME_NUMBER}`;
-};
-
 export const filterUserGroupsByFractal = (groups, selectedFractalKey) => (
   groups
     .map((group) => {
