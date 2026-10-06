@@ -33,11 +33,10 @@
           <span>Secondary</span>
           <input name="secondary_color" type="color" value="#ffd56b" data-profile-secondary-color>
         </label>
-        <p data-profile-theme-status></p>
       </form>
 
       <form class="profile-details-controls" data-profile-details-controls hidden>
-        <h2>Profile</h2>
+        <h2>Account</h2>
         <label>
           <span>Username</span>
           <input name="username" autocomplete="username" data-profile-field="username">
@@ -46,39 +45,57 @@
           <span>Avatar path</span>
           <input name="avatar_path" data-profile-field="avatar_path">
         </label>
-        <label>
+        <h2>Incarnation</h2>
+        <label class="profile-field-wide">
           <span>Full name</span>
           <input name="full_name" autocomplete="name" data-profile-field="full_name">
         </label>
+        <fieldset class="profile-gender-field">
+          <legend>Sex</legend>
+          <div class="profile-gender-options">
+            <label class="profile-gender-option">
+              <input name="sex" type="radio" value="male" data-profile-sex-option>
+              <span>Male</span>
+            </label>
+            <label class="profile-gender-option">
+              <input name="sex" type="radio" value="female" data-profile-sex-option>
+              <span>Female</span>
+            </label>
+          </div>
+        </fieldset>
         <label>
           <span>Birth date</span>
           <input name="birth_date" type="date" data-profile-field="birth_date">
         </label>
         <label>
           <span>Birth time</span>
-          <input name="birth_time" type="time" step="1" data-profile-field="birth_time">
+          <input name="birth_time" type="time" data-profile-field="birth_time">
         </label>
-        <label>
-          <span>Birth place</span>
-          <input name="birth_place" data-profile-field="birth_place">
-        </label>
-        <label>
-          <span>Birth position</span>
-          <input name="birth_place_position" placeholder="35.651111,139.559167" data-profile-field="birth_place_position">
-        </label>
-        <label>
-          <span>Birth timezone</span>
-          <input name="birth_timezone" placeholder="Asia/Tokyo" data-profile-field="birth_timezone">
-        </label>
-        <label>
-          <span>Sex</span>
-          <input name="sex" data-profile-field="sex">
-        </label>
-        <div class="profile-details-actions">
-          <button type="submit">Save</button>
-          <p data-profile-details-status></p>
+        <div class="location-field profile-location-field">
+          <label>
+            <span>Birth place</span>
+            <input name="birth_place" autocomplete="off" placeholder="Search city, country..." data-profile-field="birth_place">
+          </label>
+          <ul class="location-results" data-profile-location-results aria-label="Location suggestions" hidden></ul>
         </div>
+        <div class="profile-derived-birth-data" aria-label="Calculated birth place data">
+          <div>
+            <span>Birth position</span>
+            <strong data-profile-derived="birth_place_position">Select a birth place</strong>
+          </div>
+          <div>
+            <span>Birth timezone</span>
+            <strong data-profile-derived="birth_timezone">Select a birth place</strong>
+          </div>
+        </div>
+        <input name="birth_place_position" type="hidden" data-profile-field="birth_place_position">
+        <input name="birth_timezone" type="hidden" data-profile-field="birth_timezone">
       </form>
+
+      <div class="profile-settings-actions" data-profile-settings-actions hidden>
+        <button type="button" data-profile-save>Save</button>
+        <p data-profile-save-status></p>
+      </div>
 
       <div class="profile-resonance-status" data-profile-settings-status aria-live="polite">Loading profile...</div>
     </section>

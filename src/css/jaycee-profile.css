@@ -159,7 +159,7 @@
 .profile-theme-controls {
   position: relative;
   z-index: 1;
-  width: min(100%, 540px);
+  width: 100%;
   display: grid;
   grid-template-columns: minmax(120px, 1fr) repeat(2, minmax(74px, 0.55fr));
   gap: 10px;
@@ -228,7 +228,7 @@
 .profile-details-controls {
   position: relative;
   z-index: 1;
-  width: min(100%, 540px);
+  width: 100%;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
@@ -242,12 +242,17 @@
 
 .profile-details-controls h2,
 .profile-details-controls label,
-.profile-details-actions {
+.profile-gender-field,
+.profile-location-field,
+.profile-settings-actions {
   min-width: 0;
 }
 
 .profile-details-controls h2,
-.profile-details-actions {
+.profile-field-wide,
+.profile-gender-field,
+.profile-location-field,
+.profile-settings-actions {
   grid-column: 1 / -1;
 }
 
@@ -265,12 +270,78 @@
   gap: 5px;
 }
 
-.profile-details-controls span {
+.profile-details-controls span,
+.profile-gender-field legend {
   color: var(--muted);
   font-family: "Share Tech Mono", monospace;
   font-size: 0.68rem;
   line-height: 1;
   text-transform: uppercase;
+}
+
+.profile-gender-field {
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.profile-gender-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+  padding: 4px;
+  border: 1px solid var(--field-border);
+  border-radius: 8px;
+  background: rgba(var(--accent-rgb), 0.035);
+}
+
+.profile-gender-option {
+  position: relative;
+  min-height: 46px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--field-border-soft);
+  border-radius: 6px;
+  color: var(--muted);
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.profile-gender-option input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.profile-gender-option span {
+  color: inherit;
+  font-weight: 750;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.profile-gender-option:has(input:checked) {
+  border-color: var(--neon-border-strong);
+  background:
+    var(--active-button-bg),
+    var(--accent);
+  color: var(--accent-ink);
+  box-shadow: 0 8px 18px rgba(var(--accent-rgb), 0.14);
+}
+
+.profile-gender-option:has(input:focus-visible) {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 3px;
+}
+
+.profile-gender-option:hover {
+  border-color: var(--neon-border);
+  color: var(--accent-soft);
+  transform: translateY(-1px);
 }
 
 .profile-details-controls input {
@@ -285,18 +356,118 @@
   outline: none;
 }
 
+.profile-details-controls input[readonly] {
+  color: var(--muted);
+  cursor: default;
+}
+
 .profile-details-controls input:focus {
   border-color: var(--neon-border-strong);
   box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
 }
 
-.profile-details-actions {
+.profile-location-field {
+  position: relative;
+}
+
+.location-results {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 5;
+  max-height: 210px;
+  margin: 0;
+  border: 1px solid var(--field-border);
+  border-radius: 6px;
+  padding: 6px;
+  background: var(--card-strong);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.42);
+  list-style: none;
+  overflow-y: auto;
+}
+
+.location-results li {
+  margin: 0;
+}
+
+.location-option {
+  width: 100%;
+  min-height: auto;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 10px;
+  color: var(--text);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.location-option:hover,
+.location-option:focus-visible,
+.location-option:active,
+.location-option.is-pressed {
+  color: #001505;
+  background: var(--accent);
+  outline: none;
+}
+
+.profile-derived-birth-data {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 4px;
+  border: 1px solid var(--field-border);
+  border-radius: 8px;
+  background: rgba(var(--accent-rgb), 0.035);
+}
+
+.profile-derived-birth-data div {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.profile-derived-birth-data span {
+  color: var(--muted);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.68rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.profile-derived-birth-data strong {
+  min-height: 1.1em;
+  color: var(--accent-soft);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.profile-derived-birth-data strong.is-empty {
+  color: var(--muted);
+  font-weight: 500;
+  font-style: italic;
+}
+
+.profile-settings-actions {
+  position: relative;
+  z-index: 1;
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.profile-details-actions button {
+.profile-settings-actions button {
   min-height: 34px;
   padding: 7px 12px;
   border: 1px solid rgba(var(--accent-rgb), 0.42);
@@ -307,13 +478,18 @@
   font: inherit;
 }
 
-.profile-details-actions button:hover,
-.profile-details-actions button:focus-visible {
+.profile-settings-actions button:hover,
+.profile-settings-actions button:focus-visible {
   border-color: var(--neon-border-strong);
   box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
 }
 
-.profile-details-actions p {
+.profile-settings-actions button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.profile-settings-actions p {
   min-height: 1.1em;
   margin: 0;
   color: var(--accent-soft);
@@ -322,11 +498,11 @@
   line-height: 1.2;
 }
 
-.profile-details-actions p[data-state="error"] {
+.profile-settings-actions p[data-state="error"] {
   color: #ff8d8d;
 }
 
-.profile-details-actions p:empty {
+.profile-settings-actions p:empty {
   display: none;
 }
 
@@ -751,6 +927,11 @@
   }
 
   .profile-details-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-gender-options,
+  .profile-derived-birth-data {
     grid-template-columns: 1fr;
   }
 
