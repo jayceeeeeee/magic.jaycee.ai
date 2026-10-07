@@ -134,8 +134,7 @@ export const fetchUserResonances = async (client, profile, { publicOnly = false 
 export const fetchDynamicTimeRings = async (client, profile) => {
   let query = client
     .from(JAYCEE_DYNAMIC_FRACTALS_TABLE)
-    .select(`id, label, description, type, user_id, image, created_at, ${FRACTAL_PARAMETER_COLUMNS}`)
-    .eq("type", ITEM_TYPE_VALUE)
+    .select("id, label, user_id, image, created_at, time, distance, skill")
     .order("created_at", { ascending: true });
 
   if (profile?.id) {
@@ -158,6 +157,7 @@ export const fetchDynamicTimeRings = async (client, profile) => {
   if (elementsError) throw elementsError;
 
   return fractals
+    .filter((fractal) => Number(fractal.time) > 0)
     .map((fractal) => {
       const ringElements = (elements || [])
         .filter((element) => element.fractal_id === fractal.id)
@@ -173,6 +173,8 @@ export const fetchDynamicTimeRings = async (client, profile) => {
         ...fractal,
         elements: ringElements,
         id: `dynamic-${fractal.id}`,
+        length: Number(fractal.time),
+        start_at: "PRESENT",
         sourceName: fractal.user_id ? (profile?.username || "User") : JAYCEE_RESONANCE_SOURCE,
         sourceType: fractal.user_id ? "user" : "jaycee",
         sourceId: fractal.id,
@@ -189,8 +191,7 @@ export const fetchDynamicTimeRings = async (client, profile) => {
 export const fetchDynamicSpaceSquares = async (client, profile) => {
   let query = client
     .from(JAYCEE_DYNAMIC_FRACTALS_TABLE)
-    .select(`id, label, description, type, user_id, image, created_at, ${FRACTAL_PARAMETER_COLUMNS}`)
-    .eq("type", MAP_TYPE_VALUE)
+    .select("id, label, user_id, image, created_at, time, distance, skill")
     .order("created_at", { ascending: true });
 
   if (profile?.id) {
@@ -213,6 +214,7 @@ export const fetchDynamicSpaceSquares = async (client, profile) => {
   if (elementsError) throw elementsError;
 
   return fractals
+    .filter((fractal) => Number(fractal.distance) > 0)
     .map((fractal) => {
       const squareElements = (elements || [])
         .filter((element) => element.fractal_id === fractal.id)
@@ -224,6 +226,8 @@ export const fetchDynamicSpaceSquares = async (client, profile) => {
         ...fractal,
         elements: squareElements,
         id: `dynamic-${fractal.id}`,
+        length: Number(fractal.distance),
+        start_at: "PRESENT",
         invalidReason: isValidGrid
           ? ""
           : `${fractal.label || "Dynamic map"} must have exactly 9 positions.`,
