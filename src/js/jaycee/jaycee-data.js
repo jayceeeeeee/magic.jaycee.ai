@@ -1,12 +1,8 @@
 export const JAYCEE_FRACTALS_TABLE = "jaycee_fractals";
-export const JAYCEE_DYNAMIC_FRACTALS_TABLE = "jaycee_dynamic_fractals";
-export const JAYCEE_DYNAMIC_FRACTAL_ELEMENTS_TABLE = "jaycee_dynamic_fractal_elements";
 export const FRACTAL_VISIBILITY_COLUMN = "visibility";
 export const PUBLIC_VISIBILITY_VALUE = "public";
 export const GOD_TYPE_VALUE = "god";
-export const ITEM_TYPE_VALUE = "item";
 export const LORE_TYPE_VALUE = "lore";
-export const MAP_TYPE_VALUE = "map";
 export const PROFILE_TABLE = "profiles";
 export const USER_IMAGES_BUCKET = "users";
 export const CODE_COLUMNS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
@@ -33,22 +29,6 @@ const PROFILE_SELECT_COLUMNS = [
   "sex"
 ].join(", ");
 const SIGNED_IMAGE_URL_DURATION_SECONDS = 60 * 60;
-
-export const getFractalKey = (row) => `${row.sourceType || "source"}:${row.id || row.sourceId || row.label || "fractal"}`;
-
-export const getDynamicRingKey = (ring) => getFractalKey({
-  id: ring.sourceId || ring.id,
-  label: ring.label,
-  sourceId: ring.sourceId,
-  sourceType: ring.sourceType
-});
-
-export const getDynamicSquareKey = (square) => getFractalKey({
-  id: square.sourceId || square.id,
-  label: square.label,
-  sourceId: square.sourceId,
-  sourceType: square.sourceType
-});
 
 export const getDisplayValue = (value) => (
   value === null || value === undefined ? "" : String(value).trim()
@@ -129,114 +109,6 @@ export const fetchUserResonances = async (client, profile, { publicOnly = false 
     sourceName: profile.username || "User",
     sourceType: "user"
   }));
-};
-
-export const fetchDynamicTimeRings = async (client, profile) => {
-  let query = client
-    .from(JAYCEE_DYNAMIC_FRACTALS_TABLE)
-    .select("id, label, user_id, image, created_at, time, distance, skill")
-    .order("created_at", { ascending: true });
-
-  if (profile?.id) {
-    query = query.or(`user_id.is.null,user_id.eq.${profile.id}`);
-  } else {
-    query = query.is("user_id", null);
-  }
-
-  const { data: fractals, error: fractalsError } = await query;
-
-  if (fractalsError) throw fractalsError;
-  if (!fractals?.length) return [];
-
-  const { data: elements, error: elementsError } = await client
-    .from(JAYCEE_DYNAMIC_FRACTAL_ELEMENTS_TABLE)
-    .select("id, fractal_id, position, value, description, created_at")
-    .in("fractal_id", fractals.map((fractal) => fractal.id))
-    .order("position", { ascending: true });
-
-  if (elementsError) throw elementsError;
-
-  return fractals
-    .filter((fractal) => Number(fractal.time) > 0)
-    .map((fractal) => {
-      const ringElements = (elements || [])
-        .filter((element) => element.fractal_id === fractal.id)
-        .sort((first, second) => Number(first.position) - Number(second.position));
-      const positions = ringElements
-        .map((element) => Number(element.position))
-        .filter((position) => Number.isFinite(position) && position > 0);
-      const hasValidSegmentCount = positions.length === 9;
-
-      if (!positions.length) return null;
-
-      return {
-        ...fractal,
-        elements: ringElements,
-        id: `dynamic-${fractal.id}`,
-        length: Number(fractal.time),
-        start_at: "PRESENT",
-        sourceName: fractal.user_id ? (profile?.username || "User") : JAYCEE_RESONANCE_SOURCE,
-        sourceType: fractal.user_id ? "user" : "jaycee",
-        sourceId: fractal.id,
-        invalidReason: hasValidSegmentCount
-          ? ""
-          : `${fractal.label || "Dynamic item"} must have exactly 9 positions.`,
-        segmentKeys: positions.map(String),
-        defaultSegment: String(positions[0])
-      };
-    })
-    .filter(Boolean);
-};
-
-export const fetchDynamicSpaceSquares = async (client, profile) => {
-  let query = client
-    .from(JAYCEE_DYNAMIC_FRACTALS_TABLE)
-    .select("id, label, user_id, image, created_at, time, distance, skill")
-    .order("created_at", { ascending: true });
-
-  if (profile?.id) {
-    query = query.or(`user_id.is.null,user_id.eq.${profile.id}`);
-  } else {
-    query = query.is("user_id", null);
-  }
-
-  const { data: fractals, error: fractalsError } = await query;
-
-  if (fractalsError) throw fractalsError;
-  if (!fractals?.length) return [];
-
-  const { data: elements, error: elementsError } = await client
-    .from(JAYCEE_DYNAMIC_FRACTAL_ELEMENTS_TABLE)
-    .select("id, fractal_id, position, value, description, created_at")
-    .in("fractal_id", fractals.map((fractal) => fractal.id))
-    .order("position", { ascending: true });
-
-  if (elementsError) throw elementsError;
-
-  return fractals
-    .filter((fractal) => Number(fractal.distance) > 0)
-    .map((fractal) => {
-      const squareElements = (elements || [])
-        .filter((element) => element.fractal_id === fractal.id)
-        .sort((first, second) => Number(first.position) - Number(second.position));
-      const gridSize = Math.sqrt(squareElements.length);
-      const isValidGrid = squareElements.length === 9 && Number.isInteger(gridSize);
-
-      return {
-        ...fractal,
-        elements: squareElements,
-        id: `dynamic-${fractal.id}`,
-        length: Number(fractal.distance),
-        start_at: "PRESENT",
-        invalidReason: isValidGrid
-          ? ""
-          : `${fractal.label || "Dynamic map"} must have exactly 9 positions.`,
-        gridSize: isValidGrid ? gridSize : 0,
-        sourceName: fractal.user_id ? (profile?.username || "User") : JAYCEE_RESONANCE_SOURCE,
-        sourceType: fractal.user_id ? "user" : "jaycee",
-        sourceId: fractal.id
-      };
-    });
 };
 
 export const fetchProfileByUserId = async (client, userId) => {
@@ -320,14 +192,6 @@ export const getAvatarImageUrl = async (client, profile) => (
 export const getBackgroundImageUrl = async (client, profile) => (
   getUserImageUrl(client, profile, profile?.background_path)
 );
-
-export const getFractalImageUrl = async (client, fractal) => {
-  const image = getDisplayValue(fractal?.image);
-
-  if (!fractal?.user_id || !image) return "";
-
-  return getUserImageUrl(client, { id: fractal.user_id }, image);
-};
 
 const loadImage = (imageUrl) => (
   new Promise((resolve, reject) => {

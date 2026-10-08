@@ -106,11 +106,11 @@
   width: min(100%, clamp(300px, calc(100svh - var(--banner-space) - var(--footer-space) - 220px), 500px));
 }
 
-.jaycee-profile-core.has-fractal-selectors .jaycee-profile-canvas {
+.jaycee-profile-core.has-fractal-controls .jaycee-profile-canvas {
   width: min(100%, clamp(290px, calc(100svh - var(--banner-space) - var(--footer-space) - 238px), 500px));
 }
 
-.jaycee-profile-core.has-theme-controls.has-fractal-selectors .jaycee-profile-canvas {
+.jaycee-profile-core.has-theme-controls.has-fractal-controls .jaycee-profile-canvas {
   width: min(100%, clamp(270px, calc(100svh - var(--banner-space) - var(--footer-space) - 306px), 460px));
 }
 

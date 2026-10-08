@@ -3,19 +3,14 @@ import {
   createJayceeState,
   drawJaycee,
   getJayceeHit,
-  getTopCenteredLastSegmentRotation,
-  getTopCenteredSegmentRotation
+  getTopCenteredLastSegmentRotation
 } from "./jaycee-core.js";
 import {
   CORE_TIME_RING_ID,
   DEFAULT_CORE_TIME_NUMBER,
   DEFAULT_SELECTED_NUMBER,
   GOD_TYPE_VALUE,
-  ITEM_TYPE_VALUE,
   LORE_TYPE_VALUE,
-  MAP_TYPE_VALUE,
-  fetchDynamicSpaceSquares,
-  fetchDynamicTimeRings,
   fetchJayceeResonances,
   fetchProfileByUserId,
   fetchProfileByUsername,
@@ -24,10 +19,6 @@ import {
   getAvatarImageUrl,
   getBackgroundImageUrl,
   getDisplayValue,
-  getDynamicRingKey,
-  getDynamicSquareKey,
-  getFractalImageUrl,
-  getFractalKey,
   getThemeSettingsFromProfile,
   isHexColor,
   loadOptionalImage,
@@ -37,15 +28,9 @@ import {
   DRAFT_PREVIEW_ANIMATION_MS,
   createDraftsSection,
   createResonanceColumn,
-  filterUserGroupsByFractal,
   getDraftRows,
-  getDynamicSpaceChoiceRows,
-  getDynamicTimeChoiceRows,
   getResonanceGroupsForNumber,
-  getRowsForType,
-  getSelectedDynamicMapSquare,
-  getSelectedDynamicPortalRing,
-  getTimeResonanceGroups
+  getRowsForType
 } from "./jaycee-dashboard.js";
 
 const PROFILE_CORE_METRICS = {
@@ -170,134 +155,6 @@ const getEmptyLabels = (count) => Array.from({ length: count }, () => "");
 const getActiveSegmentIndex = (segmentKeys, selectedSegment) => (
   Math.max(0, segmentKeys.findIndex((key) => String(key) === String(selectedSegment)))
 );
-
-const getGeometricSegmentNumberFromIndex = (segmentIndex, count, topSegmentIndex = 0) => {
-  if (!Number.isFinite(segmentIndex) || !Number.isFinite(count) || count <= 0) return 1;
-
-  return ((segmentIndex - topSegmentIndex + count) % count) + 1;
-};
-
-const getPpcmSubSegmentIndex = (coreTimeActiveSegmentIndex, coreTimeSegmentCount) => (
-  getGeometricSegmentNumberFromIndex(
-    coreTimeActiveSegmentIndex,
-    coreTimeSegmentCount,
-    0
-  ) - 1
-);
-
-const getDefaultMapPosition = (gridSize) => {
-  const safeGridSize = Math.max(1, Number(gridSize) || 1);
-  const coreSpan = safeGridSize % 2 === 0 ? 2 : 1;
-  const centerStart = (safeGridSize - coreSpan) / 2;
-
-  return (centerStart * safeGridSize) + centerStart + 1;
-};
-
-const getStaticMapSquareLabels = (row) => (
-  JAYCEE_ORDER.map((number) => getDisplayValue(row[String(number)]) || String(number))
-);
-
-const getDynamicMapSquareLabels = (square) => (
-  square.elements.map((element, index) => getDisplayValue(element.value) || String(index + 1))
-);
-
-const getSelectedMapSquare = ({
-  dynamicSquares,
-  mapSquareImages,
-  rows,
-  selectedMapFractalKey,
-  selectedMapPosition
-}) => {
-  if (!selectedMapFractalKey) return { error: "", mapSquare: null };
-
-  const dynamicSquare = getSelectedDynamicMapSquare(dynamicSquares, selectedMapFractalKey);
-
-  if (dynamicSquare) {
-    if (dynamicSquare.invalidReason) {
-      return { error: dynamicSquare.invalidReason, mapSquare: null };
-    }
-
-    return {
-      error: "",
-      mapSquare: {
-        backgroundImage: mapSquareImages.get(selectedMapFractalKey) || null,
-        gridSize: dynamicSquare.gridSize,
-        labels: getDynamicMapSquareLabels(dynamicSquare),
-        selectedPosition: selectedMapPosition || getDefaultMapPosition(dynamicSquare.gridSize)
-      }
-    };
-  }
-
-  const staticSquare = rows.find((row) => (
-    row.sourceType === "user" && getFractalKey(row) === selectedMapFractalKey
-  ));
-
-  if (!staticSquare) return { error: "", mapSquare: null };
-
-  return {
-    error: "",
-    mapSquare: {
-      backgroundImage: mapSquareImages.get(selectedMapFractalKey) || null,
-      gridSize: 3,
-      labels: getStaticMapSquareLabels(staticSquare),
-      selectedPosition: selectedMapPosition || DEFAULT_SELECTED_NUMBER
-    }
-  };
-};
-
-const getSelectedMapDetails = ({ dynamicSquares, rows, selectedMapFractalKey }) => {
-  if (!selectedMapFractalKey) return null;
-
-  const dynamicSquare = getSelectedDynamicMapSquare(dynamicSquares, selectedMapFractalKey);
-
-  if (dynamicSquare) {
-    return {
-      gridSize: dynamicSquare.gridSize,
-      kind: "dynamic",
-      square: dynamicSquare
-    };
-  }
-
-  const staticSquare = rows.find((row) => (
-    row.sourceType === "user" && getFractalKey(row) === selectedMapFractalKey
-  ));
-
-  return staticSquare
-    ? { gridSize: 3, kind: "static", square: staticSquare }
-    : null;
-};
-
-const getMapPositionForSegmentKey = (segmentKey, mapDetails) => {
-  if (!mapDetails) return null;
-
-  const number = Number(segmentKey);
-  const gridSize = Number(mapDetails.gridSize) || 3;
-  const maxPosition = gridSize * gridSize;
-
-  if (!Number.isFinite(number)) return null;
-
-  if (mapDetails.kind === "static") {
-    const orderIndex = JAYCEE_ORDER.indexOf(number);
-
-    return orderIndex >= 0 ? orderIndex + 1 : null;
-  }
-
-  return number >= 1 && number <= maxPosition ? number : null;
-};
-
-const getSegmentKeyForMapPosition = (position, mapDetails) => {
-  if (!mapDetails) return "";
-
-  const mapPosition = Number(position);
-  const gridSize = Number(mapDetails.gridSize) || 3;
-  const maxPosition = gridSize * gridSize;
-
-  if (!Number.isFinite(mapPosition) || mapPosition < 1 || mapPosition > maxPosition) return "";
-
-  return String(mapDetails.kind === "static"
-    ? JAYCEE_ORDER[mapPosition - 1] || ""
-    : mapPosition);
-};
 
 const formatDuration = (secondsValue) => {
   let seconds = Math.floor(Number(secondsValue));
@@ -435,54 +292,6 @@ const getRingParameterRows = (fractal, options = {}) => {
   ];
 };
 
-const getDynamicMapResonanceGroups = (dynamicSquares, selectedMapFractalKey, selectedMapPosition) => {
-  const dynamicSquare = getSelectedDynamicMapSquare(dynamicSquares, selectedMapFractalKey);
-
-  if (!dynamicSquare || dynamicSquare.invalidReason) return [];
-
-  const selectedIndex = Math.max(0, Number(selectedMapPosition || getDefaultMapPosition(dynamicSquare.gridSize)) - 1);
-  const selectedElement = dynamicSquare.elements[selectedIndex];
-  const resonanceValue = getDisplayValue(selectedElement?.value);
-  const description = getDisplayValue(selectedElement?.description);
-
-  if (!resonanceValue && !description) return [];
-
-  return [{
-    rows: [{
-      description,
-      id: dynamicSquare.sourceId || dynamicSquare.id,
-      label: dynamicSquare.label || "Map",
-      resonanceValue,
-      sourceName: dynamicSquare.sourceName || "User",
-      sourceType: dynamicSquare.sourceType || "user"
-    }],
-    sourceName: dynamicSquare.sourceName || "User",
-    sourceType: dynamicSquare.sourceType || "user"
-  }];
-};
-
-const getStaticMapResonanceGroups = (rows, selectedMapFractalKey, selectedMapPosition) => {
-  const staticSquare = rows.find((row) => (
-    row.sourceType === "user" && getFractalKey(row) === selectedMapFractalKey
-  ));
-
-  if (!staticSquare) return [];
-
-  const selectedNumber = JAYCEE_ORDER[selectedMapPosition - 1] || DEFAULT_SELECTED_NUMBER;
-  const resonanceValue = getDisplayValue(staticSquare[String(selectedNumber)]);
-
-  if (!resonanceValue) return [];
-
-  return [{
-    rows: [{
-      ...staticSquare,
-      resonanceValue
-    }],
-    sourceName: staticSquare.sourceName || "User",
-    sourceType: staticSquare.sourceType || "user"
-  }];
-};
-
 const getGroupsWithSelectedResonanceValue = (groups, selectedNumber) => (
   groups.map((group) => ({
     ...group,
@@ -494,14 +303,6 @@ const getGroupsWithSelectedResonanceValue = (groups, selectedNumber) => (
 );
 
 const getCoreTimeSegmentKeys = () => JAYCEE_ORDER.map(String);
-
-const getSelectedStaticPortalRing = (rows, selectedPortalFractalKey) => {
-  if (!selectedPortalFractalKey) return null;
-
-  return getRowsForType(rows, ITEM_TYPE_VALUE).find((row) => (
-    row.sourceType === "user" && getFractalKey(row) === selectedPortalFractalKey
-  )) || null;
-};
 
 const getTimeCycleStartMilliseconds = (fractal, now = Date.now()) => (
   isPresentReference(fractal?.start_at)
@@ -557,25 +358,6 @@ const getSegmentControlValue = (segmentKeys, selectedSegment) => {
   const segmentIndex = segmentKeys.findIndex((key) => String(key) === String(selectedSegment));
 
   return Math.max(1, segmentIndex + 1);
-};
-
-const getNestedPresentMarkerAngle = ({
-  parentCount,
-  parentPresentAngle,
-  parentRotation,
-  subCount,
-  subPresentAngle,
-  subRotation
-}) => {
-  const parentIndex = getSegmentIndexFromAngle(parentPresentAngle, parentCount, parentRotation);
-  const subIndex = getSegmentIndexFromAngle(subPresentAngle, subCount, subRotation);
-
-  if (parentIndex < 0 || subIndex < 0) return null;
-
-  const parentSegmentAngle = (Math.PI * 2) / parentCount;
-  const subSegmentAngle = parentSegmentAngle / subCount;
-
-  return parentRotation + (parentIndex * parentSegmentAngle) + ((subIndex + 0.5) * subSegmentAngle);
 };
 
 const createParameterSection = ({ hideTitle = false, parameters, title }) => {
@@ -635,11 +417,9 @@ const createParameterSection = ({ hideTitle = false, parameters, title }) => {
 };
 
 const getCurrentParameterSections = ({
-  dynamicRings,
   onReturnAllToPresent,
   onSegmentChange,
   rows,
-  selectedPortalFractalKey,
   selectedTimeSegments
 }) => {
   const sections = [];
@@ -656,8 +436,6 @@ const getCurrentParameterSections = ({
     segmentKeys: coreTimeSegmentKeys,
     selectedSegment: selectedTimeSegments.get(CORE_TIME_RING_ID) || DEFAULT_CORE_TIME_NUMBER
   });
-  const selectedDynamicPortalRing = getSelectedDynamicPortalRing(dynamicRings, selectedPortalFractalKey);
-  const selectedStaticPortalRing = getSelectedStaticPortalRing(rows, selectedPortalFractalKey);
 
   sections.push({
     parameters: [{
@@ -677,42 +455,6 @@ const getCurrentParameterSections = ({
 
   if (coreTimeParameters.length) {
     sections.push({ parameters: coreTimeParameters, title: getCoreFractalLabel(coreTimeFractal, CORE_TIME_FALLBACK_LABEL) });
-  }
-
-  if (selectedDynamicPortalRing?.segmentKeys?.length && !selectedDynamicPortalRing.invalidReason) {
-    const segmentKeys = selectedDynamicPortalRing.segmentKeys.map(String);
-    const parameters = getRingParameterRows(selectedDynamicPortalRing, {
-      now,
-      onSegmentChange,
-      ringId: selectedDynamicPortalRing.id,
-      rotation: getTopCenteredSegmentRotation(segmentKeys.length, 0),
-      segmentKeys,
-      selectedSegment: selectedTimeSegments.get(selectedDynamicPortalRing.id)
-        || selectedDynamicPortalRing.defaultSegment
-        || segmentKeys[0]
-    });
-
-    if (parameters.length) {
-      sections.push({ parameters, title: selectedDynamicPortalRing.label || "Item" });
-    }
-  }
-
-  if (selectedStaticPortalRing) {
-    const staticPortalKey = getFractalKey(selectedStaticPortalRing);
-    const parameters = getRingParameterRows(selectedStaticPortalRing, {
-      now,
-      onSegmentChange,
-      ringId: staticPortalKey,
-      rotation: coreTimeRotation,
-      segmentKeys: coreTimeSegmentKeys,
-      selectedSegment: selectedTimeSegments.get(staticPortalKey)
-        || getPresentSegmentKey(selectedStaticPortalRing, coreTimeSegmentKeys, coreTimeRotation, now)
-        || coreTimeSegmentKeys[0]
-    });
-
-    if (parameters.length) {
-      sections.push({ parameters, title: selectedStaticPortalRing.label || "Item" });
-    }
   }
 
   return sections;
@@ -737,41 +479,9 @@ const getCoreMapFractal = (rows) => (
 const getCoreFractalLabel = (fractal, fallback) => getDisplayValue(fractal?.label) || fallback;
 
 const hasPresentSpaceStart = (fractal) => (
-  [GOD_TYPE_VALUE, MAP_TYPE_VALUE].includes(getDisplayValue(fractal?.type).toLowerCase())
+  getDisplayValue(fractal?.type).toLowerCase() === GOD_TYPE_VALUE
   && isPresentReference(fractal?.start_at)
 );
-
-const hasAnyPresentSpaceStart = (rows, dynamicSquares) => (
-  rows.some(hasPresentSpaceStart) || dynamicSquares.some(hasPresentSpaceStart)
-);
-
-const createFractalSelect = (labelText, defaultText, choices, selectedValue, onChange) => {
-  const label = document.createElement("label");
-  const text = document.createElement("span");
-  const select = document.createElement("select");
-  const defaultOption = document.createElement("option");
-
-  label.className = "profile-fractal-select";
-  defaultOption.value = "";
-  defaultOption.textContent = defaultText;
-  select.replaceChildren(defaultOption, ...choices.map((choice) => {
-    const option = document.createElement("option");
-
-    option.value = getFractalKey(choice);
-    option.textContent = choice.label || "Untitled fractal";
-
-    return option;
-  }));
-  select.value = choices.some((choice) => getFractalKey(choice) === selectedValue) ? selectedValue : "";
-  select.addEventListener("change", () => onChange(select.value));
-  if (labelText) {
-    text.textContent = labelText;
-    label.append(text);
-  }
-  label.append(select);
-
-  return label;
-};
 
 const createGameSelect = (profiles, selectedUsername = "") => {
   const label = document.createElement("label");
@@ -806,16 +516,9 @@ const createGameSelect = (profiles, selectedUsername = "") => {
 
 const createProfileCoreState = ({
   avatarImage,
-  dynamicRings,
-  dynamicSquares,
   hasUserProfile,
-  mapSquareImages,
-  portalRingImages,
   ringBackgroundImage,
   rows,
-  selectedMapFractalKey,
-  selectedMapPosition,
-  selectedPortalFractalKey,
   selectedSpaceNumber,
   selectedTimeSegments,
   showPresent
@@ -832,29 +535,6 @@ const createProfileCoreState = ({
     coreTimeSegmentKeys,
     selectedTimeSegments.get(CORE_TIME_RING_ID) || DEFAULT_CORE_TIME_NUMBER
   );
-  const ppcmActiveSubSegmentIndex = getPpcmSubSegmentIndex(coreTimeActiveSegmentIndex, coreTimeSegmentKeys.length);
-  const selectedDynamicPortalRing = getSelectedDynamicPortalRing(dynamicRings, selectedPortalFractalKey);
-  const selectedStaticPortalRing = getSelectedStaticPortalRing(rows, selectedPortalFractalKey);
-  const selectedPortalHasPpcm = Boolean(
-    selectedPortalFractalKey
-    && (
-      (selectedDynamicPortalRing?.segmentKeys?.length && !selectedDynamicPortalRing.invalidReason)
-      || selectedStaticPortalRing
-    )
-  );
-  const selectedMapResult = getSelectedMapSquare({
-    dynamicSquares,
-    mapSquareImages,
-    rows,
-    selectedMapFractalKey,
-    selectedMapPosition
-  });
-  const mapSquare = selectedMapResult.mapSquare && selectedPortalHasPpcm
-    ? {
-      ...selectedMapResult.mapSquare,
-      selectedSubCellNumber: ppcmActiveSubSegmentIndex + 1
-    }
-    : selectedMapResult.mapSquare;
   const rings = [
     {
       id: CORE_TIME_RING_ID,
@@ -879,94 +559,6 @@ const createProfileCoreState = ({
     }
   ];
 
-  if (selectedDynamicPortalRing?.segmentKeys?.length && !selectedDynamicPortalRing.invalidReason) {
-    const segmentKeys = selectedDynamicPortalRing.segmentKeys.map(String);
-    const selectedSegment = selectedTimeSegments.get(selectedDynamicPortalRing.id)
-      || selectedDynamicPortalRing.defaultSegment
-      || segmentKeys[0];
-    const activeSegmentIndex = getActiveSegmentIndex(segmentKeys, selectedSegment);
-    const portalPresentMarkerAngle = showPresent ? getTimeCyclePresentAngle(selectedDynamicPortalRing, now) : null;
-    const portalRotation = getTopCenteredSegmentRotation(segmentKeys.length, 0);
-    const ppcmPresentMarkerAngle = showPresent
-      ? getNestedPresentMarkerAngle({
-        parentCount: segmentKeys.length,
-        parentPresentAngle: portalPresentMarkerAngle,
-        parentRotation: portalRotation,
-        subCount: coreTimeSegmentKeys.length,
-        subPresentAngle: coreTimePresentMarkerAngle,
-        subRotation: coreTimeRotation
-      })
-      : null;
-
-    rings.push({
-      id: selectedDynamicPortalRing.id,
-      activeFillAlpha: PROFILE_RING_ACTIVE_FILL_ALPHA,
-      activeSegmentIndex,
-      backgroundImage: portalRingImages.get(selectedPortalFractalKey) || null,
-      backgroundImageAlpha: 0.9,
-      count: segmentKeys.length,
-      fillAlpha: 0,
-      label: selectedDynamicPortalRing.label || "Item",
-      labels: getEmptyLabels(segmentKeys.length),
-      presentMarkerAngle: portalPresentMarkerAngle,
-      rotation: portalRotation,
-      secondaryPresentMarkerAngle: ppcmPresentMarkerAngle,
-      secondaryPresentMarkerColor: "rgba(255, 215, 77, 0.98)",
-      segmentKeys,
-      showBorders: true,
-      showDividers: true,
-      subActiveParentSegmentIndex: activeSegmentIndex,
-      subActiveSegmentIndex: ppcmActiveSubSegmentIndex,
-      styledSegmentIndices: [activeSegmentIndex],
-      subSegmentCount: coreTimeSegmentKeys.length,
-      tone: "accent"
-    });
-  }
-
-  if (selectedStaticPortalRing) {
-    const segmentKeys = coreTimeSegmentKeys;
-    const staticPortalKey = getFractalKey(selectedStaticPortalRing);
-    const selectedSegment = selectedTimeSegments.get(staticPortalKey)
-      || getPresentSegmentKey(selectedStaticPortalRing, segmentKeys, coreTimeRotation, now)
-      || segmentKeys[0];
-    const activeSegmentIndex = getActiveSegmentIndex(segmentKeys, selectedSegment);
-    const portalPresentMarkerAngle = showPresent ? getTimeCyclePresentAngle(selectedStaticPortalRing, now) : null;
-    const ppcmPresentMarkerAngle = showPresent
-      ? getNestedPresentMarkerAngle({
-        parentCount: segmentKeys.length,
-        parentPresentAngle: portalPresentMarkerAngle,
-        parentRotation: coreTimeRotation,
-        subCount: coreTimeSegmentKeys.length,
-        subPresentAngle: coreTimePresentMarkerAngle,
-        subRotation: coreTimeRotation
-      })
-      : null;
-
-    rings.push({
-      id: staticPortalKey,
-      activeFillAlpha: PROFILE_RING_ACTIVE_FILL_ALPHA,
-      activeSegmentIndex,
-      backgroundImage: portalRingImages.get(selectedPortalFractalKey) || null,
-      backgroundImageAlpha: 0.9,
-      count: segmentKeys.length,
-      fillAlpha: 0,
-      label: selectedStaticPortalRing.label || "Item",
-      labels: getEmptyLabels(segmentKeys.length),
-      presentMarkerAngle: portalPresentMarkerAngle,
-      rotation: coreTimeRotation,
-      secondaryPresentMarkerAngle: ppcmPresentMarkerAngle,
-      secondaryPresentMarkerColor: "rgba(255, 215, 77, 0.98)",
-      segmentKeys,
-      showBorders: true,
-      showDividers: true,
-      subActiveParentSegmentIndex: activeSegmentIndex,
-      subActiveSegmentIndex: ppcmActiveSubSegmentIndex,
-      styledSegmentIndices: [activeSegmentIndex],
-      subSegmentCount: coreTimeSegmentKeys.length,
-      tone: "accent"
-    });
-  }
-
   return {
     ...createJayceeState({
       coreSquareLabels: getEmptyLabels(JAYCEE_ORDER.length),
@@ -977,7 +569,6 @@ const createProfileCoreState = ({
     squareBorderAlpha: 0.46,
     squareFillAlpha: hasUserProfile ? undefined : PROFILE_RING_FILL_ALPHA,
     squareCellBorderAlpha: 0.34,
-    mapSquare,
     squareBackgroundImage: avatarImage
   };
 };
@@ -998,19 +589,12 @@ export const initJayceePage = async () => {
   if (!shell || !canvas || !status || !list) return;
 
   let rows = [];
-  let dynamicRings = [];
-  let dynamicSquares = [];
   let publicProfiles = [];
   let avatarImage = null;
   let ringBackgroundImage = null;
-  let mapSquareImages = new Map();
-  let portalRingImages = new Map();
   let coreState = null;
   let themeSettings = getThemeSettingsFromProfile(null);
   let selectedSpaceNumber = DEFAULT_SELECTED_NUMBER;
-  let selectedMapPosition = DEFAULT_SELECTED_NUMBER;
-  let selectedMapFractalKey = "";
-  let selectedPortalFractalKey = "";
   let selectedDraftKey = null;
   let draftPreviewMode = "closed";
   let draftPreviewTimer = null;
@@ -1027,7 +611,6 @@ export const initJayceePage = async () => {
     );
 
     rows = rows.map(resolveSpaceStart);
-    dynamicSquares = dynamicSquares.map(resolveSpaceStart);
   };
 
   const requestPresentPosition = () => {
@@ -1116,12 +699,6 @@ export const initJayceePage = async () => {
     }
   };
 
-  const resetSelectedMapPosition = () => {
-    const selectedMapDetails = getSelectedMapDetails({ dynamicSquares, rows, selectedMapFractalKey });
-
-    selectedMapPosition = getDefaultMapPosition(selectedMapDetails?.gridSize || 3);
-  };
-
   const restoreProfileViewCache = (cacheKey) => {
     const cache = loadProfileViewCache(cacheKey);
 
@@ -1130,31 +707,22 @@ export const initJayceePage = async () => {
     if (Number.isFinite(Number(cache.selectedSpaceNumber))) {
       selectedSpaceNumber = Number(cache.selectedSpaceNumber);
     }
-    if (Number.isFinite(Number(cache.selectedMapPosition))) {
-      selectedMapPosition = Number(cache.selectedMapPosition);
-    }
-    selectedMapFractalKey = getDisplayValue(cache.selectedMapFractalKey);
-    selectedPortalFractalKey = getDisplayValue(cache.selectedPortalFractalKey);
 
     if (cache.selectedTimeSegments && typeof cache.selectedTimeSegments === "object") {
       Object.entries(cache.selectedTimeSegments).forEach(([key, value]) => {
         const segment = getDisplayValue(value);
 
-        if (key && segment) {
+        if (key === CORE_TIME_RING_ID && segment) {
           selectedTimeSegments.set(key, segment);
         }
       });
     }
 
     syncCoreSquareWithCoreTimeSegment();
-    syncMapPositionWithSelectedPortal();
   };
 
   const saveProfileViewState = () => {
     saveProfileViewCache(profileViewCacheKey, {
-      selectedMapFractalKey,
-      selectedMapPosition,
-      selectedPortalFractalKey,
       selectedSpaceNumber,
       selectedTimeSegments: Object.fromEntries(selectedTimeSegments)
     });
@@ -1168,81 +736,11 @@ export const initJayceePage = async () => {
     }
   };
 
-  const getSelectedPortalSelection = () => {
-    const selectedDynamicPortalRing = getSelectedDynamicPortalRing(dynamicRings, selectedPortalFractalKey);
-
-    if (selectedDynamicPortalRing?.segmentKeys?.length && !selectedDynamicPortalRing.invalidReason) {
-      const segmentKeys = selectedDynamicPortalRing.segmentKeys.map(String);
-
-      return {
-        ringId: selectedDynamicPortalRing.id,
-        segmentKey: selectedTimeSegments.get(selectedDynamicPortalRing.id)
-          || selectedDynamicPortalRing.defaultSegment
-          || segmentKeys[0],
-        segmentKeys
-      };
-    }
-
-    const selectedStaticPortalRing = getSelectedStaticPortalRing(rows, selectedPortalFractalKey);
-
-    if (selectedStaticPortalRing) {
-      const segmentKeys = getCoreTimeSegmentKeys();
-      const ringId = getFractalKey(selectedStaticPortalRing);
-
-      return {
-        ringId,
-        segmentKey: selectedTimeSegments.get(ringId)
-          || getPresentSegmentKey(
-            selectedStaticPortalRing,
-            segmentKeys,
-            getTopCenteredLastSegmentRotation(segmentKeys.length)
-          )
-          || segmentKeys[0],
-        segmentKeys
-      };
-    }
-
-    return null;
-  };
-
-  const syncMapPositionWithPortalSegment = (ringId, segmentKey) => {
-    const selectedPortal = getSelectedPortalSelection();
-
-    if (!selectedPortal || selectedPortal.ringId !== ringId) return;
-
-    const selectedMapDetails = getSelectedMapDetails({ dynamicSquares, rows, selectedMapFractalKey });
-    const mapPosition = getMapPositionForSegmentKey(segmentKey, selectedMapDetails);
-
-    if (mapPosition) {
-      selectedMapPosition = mapPosition;
-    }
-  };
-
-  const syncMapPositionWithSelectedPortal = () => {
-    const selectedPortal = getSelectedPortalSelection();
-
-    if (selectedPortal) {
-      syncMapPositionWithPortalSegment(selectedPortal.ringId, selectedPortal.segmentKey);
-    }
-  };
-
-  const syncSelectedPortalWithMapPosition = (mapPosition) => {
-    const selectedPortal = getSelectedPortalSelection();
-    const selectedMapDetails = getSelectedMapDetails({ dynamicSquares, rows, selectedMapFractalKey });
-    const segmentKey = getSegmentKeyForMapPosition(mapPosition, selectedMapDetails);
-
-    if (selectedPortal?.ringId && selectedPortal.segmentKeys.includes(segmentKey)) {
-      selectedTimeSegments.set(selectedPortal.ringId, segmentKey);
-    }
-  };
-
   const setTimeSegmentSelection = (ringId, segmentKey) => {
     selectedTimeSegments.set(ringId, String(segmentKey));
 
     if (ringId === CORE_TIME_RING_ID) {
       syncCoreSquareWithCoreTimeSegment();
-    } else {
-      syncMapPositionWithPortalSegment(ringId, segmentKey);
     }
   };
 
@@ -1259,70 +757,6 @@ export const initJayceePage = async () => {
       syncCoreSquareWithCoreTimeSegment();
     }
 
-    dynamicRings.forEach((ring) => {
-      const segmentKeys = ring.segmentKeys?.map(String) || [];
-      const presentSegment = getPresentSegmentKey(
-        ring,
-        segmentKeys,
-        getTopCenteredSegmentRotation(segmentKeys.length, 0)
-      );
-
-      selectedTimeSegments.set(ring.id, presentSegment || ring.defaultSegment || segmentKeys[0] || "1");
-    });
-
-    const selectedStaticPortalRing = getSelectedStaticPortalRing(rows, selectedPortalFractalKey);
-
-    if (selectedStaticPortalRing) {
-      const segmentKeys = getCoreTimeSegmentKeys();
-      const ringId = getFractalKey(selectedStaticPortalRing);
-      const presentSegment = getPresentSegmentKey(
-        selectedStaticPortalRing,
-        segmentKeys,
-        getTopCenteredLastSegmentRotation(segmentKeys.length)
-      );
-
-      selectedTimeSegments.set(ringId, presentSegment || segmentKeys[0]);
-    }
-
-    syncMapPositionWithSelectedPortal();
-  };
-
-  const loadMapSquareImages = async (client) => {
-    const imageEntries = await Promise.all([
-      ...getRowsForType(rows, MAP_TYPE_VALUE)
-        .filter((row) => row.sourceType === "user" && getDisplayValue(row.image))
-        .map(async (row) => [
-          getFractalKey(row),
-          await loadOptionalImage(await getFractalImageUrl(client, row))
-        ]),
-      ...dynamicSquares
-        .filter((square) => square.sourceType === "user" && getDisplayValue(square.image))
-        .map(async (square) => [
-          getDynamicSquareKey(square),
-          await loadOptionalImage(await getFractalImageUrl(client, square))
-        ])
-    ]);
-
-    mapSquareImages = new Map(imageEntries.filter(([, image]) => image));
-  };
-
-  const loadPortalRingImages = async (client) => {
-    const imageEntries = await Promise.all([
-      ...getRowsForType(rows, ITEM_TYPE_VALUE)
-        .filter((row) => row.sourceType === "user" && getDisplayValue(row.image))
-        .map(async (row) => [
-          getFractalKey(row),
-          await loadOptionalImage(await getFractalImageUrl(client, row))
-        ]),
-      ...dynamicRings
-        .filter((ring) => ring.sourceType === "user" && getDisplayValue(ring.image))
-        .map(async (ring) => [
-          getDynamicRingKey(ring),
-          await loadOptionalImage(await getFractalImageUrl(client, ring))
-        ])
-    ]);
-
-    portalRingImages = new Map(imageEntries.filter(([, image]) => image));
   };
 
   const renderPresentControls = () => {
@@ -1331,13 +765,13 @@ export const initJayceePage = async () => {
 
     if (!corePanel || !isPresentPage) {
       existingControls?.remove();
-      corePanel?.classList.remove("has-fractal-selectors");
+      corePanel?.classList.remove("has-fractal-controls");
       return;
     }
 
     const controls = existingControls || document.createElement("div");
 
-    corePanel.classList.add("has-fractal-selectors");
+    corePanel.classList.add("has-fractal-controls");
     controls.className = "profile-fractal-selectors";
     controls.dataset.profilePresentControls = "";
     controls.replaceChildren(createGameSelect(publicProfiles));
@@ -1348,64 +782,8 @@ export const initJayceePage = async () => {
     }
   };
 
-  const renderFractalSelectors = () => {
-    const corePanel = canvas.closest(".jaycee-profile-core");
-    const existingSelectors = corePanel?.querySelector("[data-profile-fractal-selectors]");
-    const mapChoices = getRowsForType(rows, MAP_TYPE_VALUE)
-      .filter((row) => row.sourceType === "user");
-    const mapSelectorChoices = [
-      ...mapChoices,
-      ...getDynamicSpaceChoiceRows(dynamicSquares)
-    ];
-    const portalChoices = [
-      ...getRowsForType(rows, ITEM_TYPE_VALUE).filter((row) => row.sourceType === "user"),
-      ...getDynamicTimeChoiceRows(dynamicRings)
-    ];
-
-    if (!corePanel || isCorePage || isPresentPage) {
-      existingSelectors?.remove();
-      return;
-    }
-
-    corePanel.classList.add("has-fractal-selectors");
-
-    const selectors = existingSelectors || document.createElement("div");
-
-    selectors.className = "profile-fractal-selectors";
-    selectors.dataset.profileFractalSelectors = "";
-    selectors.replaceChildren(
-      createFractalSelect("", "Choose a map", mapSelectorChoices, selectedMapFractalKey, (value) => {
-        selectedMapFractalKey = value;
-        resetSelectedMapPosition();
-        syncMapPositionWithSelectedPortal();
-        syncProfileView();
-      }),
-      createFractalSelect("", "Choose an item", portalChoices, selectedPortalFractalKey, (value) => {
-        selectedPortalFractalKey = value;
-        syncMapPositionWithSelectedPortal();
-        syncProfileView();
-      })
-    );
-    startCurrentTimeClock();
-
-    if (!existingSelectors) {
-      corePanel.insertBefore(selectors, canvas);
-    }
-  };
-
   const renderResonances = () => {
-    const selectedMapResult = getSelectedMapSquare({
-      dynamicSquares,
-      mapSquareImages,
-      rows,
-      selectedMapFractalKey,
-      selectedMapPosition
-    });
     const showDrafts = isEditableProfilePage;
-    const selectedMapDetails = getSelectedMapDetails({ dynamicSquares, rows, selectedMapFractalKey });
-    const selectedStaticPortalRing = getSelectedStaticPortalRing(rows, selectedPortalFractalKey);
-    const selectedDynamicPortalRing = getSelectedDynamicPortalRing(dynamicRings, selectedPortalFractalKey);
-    const selectedPortalError = selectedDynamicPortalRing?.invalidReason || "";
     const coreGodGroups = getGroupsWithSelectedResonanceValue(
       getResonanceGroupsForNumber(
         getRowsForType(rows, GOD_TYPE_VALUE),
@@ -1413,32 +791,7 @@ export const initJayceePage = async () => {
       ).filter((group) => group.sourceType === "jaycee"),
       selectedSpaceNumber
     );
-    const selectedStaticMapNumber = selectedMapDetails?.kind === "static"
-      ? JAYCEE_ORDER[selectedMapPosition - 1] || DEFAULT_SELECTED_NUMBER
-      : selectedSpaceNumber;
-    const rawSelectedMapGroups = selectedMapDetails?.kind === "dynamic"
-      ? getDynamicMapResonanceGroups(dynamicSquares, selectedMapFractalKey, selectedMapPosition)
-      : selectedMapDetails?.kind === "static"
-        ? getStaticMapResonanceGroups(rows, selectedMapFractalKey, selectedMapPosition)
-        : filterUserGroupsByFractal(
-          getResonanceGroupsForNumber(
-            getRowsForType(rows, MAP_TYPE_VALUE),
-            selectedStaticMapNumber
-          ),
-          selectedMapFractalKey
-        );
-    const selectedMapGroups = selectedMapDetails
-      ? rawSelectedMapGroups
-      : getGroupsWithSelectedResonanceValue(rawSelectedMapGroups, selectedStaticMapNumber);
-    const mapGroups = selectedMapGroups;
     const selectedCoreTimeNumber = selectedTimeSegments.get(CORE_TIME_RING_ID) || DEFAULT_CORE_TIME_NUMBER;
-    const staticPortalSegmentKeys = getCoreTimeSegmentKeys();
-    const staticPortalRotation = getTopCenteredLastSegmentRotation(staticPortalSegmentKeys.length);
-    const selectedStaticPortalNumber = selectedStaticPortalRing
-      ? selectedTimeSegments.get(getFractalKey(selectedStaticPortalRing))
-        || getPresentSegmentKey(selectedStaticPortalRing, staticPortalSegmentKeys, staticPortalRotation)
-        || selectedCoreTimeNumber
-      : selectedCoreTimeNumber;
     const coreLoreGroups = getGroupsWithSelectedResonanceValue(
       getResonanceGroupsForNumber(
         getRowsForType(rows, LORE_TYPE_VALUE),
@@ -1446,27 +799,6 @@ export const initJayceePage = async () => {
       ).filter((group) => group.sourceType === "jaycee"),
       selectedCoreTimeNumber
     );
-    const itemGroups = selectedStaticPortalRing
-      ? [
-        ...getGroupsWithSelectedResonanceValue(
-          filterUserGroupsByFractal(
-            getResonanceGroupsForNumber(
-              getRowsForType(rows, ITEM_TYPE_VALUE),
-              selectedStaticPortalNumber
-            ).filter((group) => group.sourceType === "user"),
-            selectedPortalFractalKey
-          ),
-          selectedStaticPortalNumber
-        )
-      ]
-      : selectedPortalFractalKey
-        ? filterUserGroupsByFractal(
-          getTimeResonanceGroups(rows, selectedTimeSegments, dynamicRings)
-            .filter((group) => group.sourceType !== "jaycee"),
-          selectedPortalFractalKey
-        )
-        : [];
-    const shouldReserveMapColumn = Boolean(itemGroups.length && !mapGroups.length);
     const draftRows = showDrafts ? getDraftRows(rows) : [];
     const columns = [
       {
@@ -1480,35 +812,17 @@ export const initJayceePage = async () => {
         meta: "",
         selectedNumber: selectedCoreTimeNumber,
         title: "Lore"
-      },
-      {
-        groups: mapGroups,
-        keepEmpty: shouldReserveMapColumn,
-        meta: "",
-        selectedNumber: selectedStaticMapNumber,
-        hidden: shouldReserveMapColumn,
-        title: "Map"
-      },
-      { groups: itemGroups, meta: "", selectedNumber: selectedStaticPortalNumber, title: "Item" }
-    ].filter((column) => column.groups.length || column.keepEmpty);
+      }
+    ].filter((column) => column.groups.length);
 
-    status.textContent = [selectedMapResult.error, selectedPortalError].filter(Boolean).join(" ");
+    status.textContent = "";
     list.replaceChildren(
-      ...columns.map((column) => {
-        const columnElement = createResonanceColumn(
-          column.title,
-          column.groups,
-          column.selectedNumber,
-          column.meta
-        );
-
-        if (column.hidden) {
-          columnElement.classList.add("is-placeholder");
-          columnElement.setAttribute("aria-hidden", "true");
-        }
-
-        return columnElement;
-      }),
+      ...columns.map((column) => createResonanceColumn(
+        column.title,
+        column.groups,
+        column.selectedNumber,
+        column.meta
+      )),
       ...(draftRows.length ? [createDraftsSection(draftRows, selectedDraftKey, draftPreviewMode, toggleDraft)] : [])
     );
   };
@@ -1523,7 +837,6 @@ export const initJayceePage = async () => {
     }
 
     const sections = getCurrentParameterSections({
-      dynamicRings,
       onReturnAllToPresent: () => {
         setDefaultTimeSelectionsToPresent();
         syncProfileView();
@@ -1533,7 +846,6 @@ export const initJayceePage = async () => {
         syncProfileView();
       },
       rows,
-      selectedPortalFractalKey,
       selectedTimeSegments
     });
 
@@ -1563,16 +875,9 @@ export const initJayceePage = async () => {
   const renderCore = () => {
     coreState = createProfileCoreState({
       avatarImage,
-      dynamicRings,
-      dynamicSquares,
       hasUserProfile,
-      mapSquareImages,
-      portalRingImages,
       ringBackgroundImage,
       rows,
-      selectedMapFractalKey,
-      selectedMapPosition,
-      selectedPortalFractalKey,
       selectedSpaceNumber,
       selectedTimeSegments,
       showPresent
@@ -1601,25 +906,8 @@ export const initJayceePage = async () => {
       setTimeSegmentSelection(CORE_TIME_RING_ID, hit.number);
     } else if (hit.type === "ring" && hit.ringId) {
       setTimeSegmentSelection(hit.ringId, hit.segmentKey);
-    } else if (hit.type === "map-square") {
-      selectedMapPosition = hit.position;
-      syncSelectedPortalWithMapPosition(hit.position);
     }
 
-    syncProfileView();
-  };
-
-  const handleCanvasDoubleClick = (event) => {
-    const hit = getJayceeHit(canvas, coreState, event.clientX, event.clientY);
-
-    if (hit?.type !== "square") return;
-
-    const selectedMapDetails = getSelectedMapDetails({ dynamicSquares, rows, selectedMapFractalKey });
-
-    if (!selectedMapDetails) return;
-
-    selectedMapPosition = getDefaultMapPosition(selectedMapDetails.gridSize);
-    syncSelectedPortalWithMapPosition(selectedMapPosition);
     syncProfileView();
   };
 
@@ -1658,13 +946,9 @@ export const initJayceePage = async () => {
 
     profileViewCacheKey = getProfileViewCacheKey({ pageMode, profile, publicUsername });
     rows = [...jayceeRows, ...profileRows];
-    dynamicRings = await fetchDynamicTimeRings(client, profile);
-    dynamicSquares = await fetchDynamicSpaceSquares(client, profile);
-    if (hasAnyPresentSpaceStart(rows, dynamicSquares)) {
+    if (rows.some(hasPresentSpaceStart)) {
       requestPresentPosition();
     }
-    await loadPortalRingImages(client);
-    await loadMapSquareImages(client);
     restoreProfileViewCache(profileViewCacheKey);
     setDefaultTimeSelectionsToPresent();
     publicProfiles = isPresentPage ? await fetchPublicProfiles(client) : [];
@@ -1672,7 +956,6 @@ export const initJayceePage = async () => {
     ringBackgroundImage = !hasUserProfile ? null : await loadOptionalImage(await getBackgroundImageUrl(client, profile));
     renderCore();
     canvas.addEventListener("click", handleCanvasClick);
-    canvas.addEventListener("dblclick", handleCanvasDoubleClick);
     const resizeObserver = new ResizeObserver(scheduleRenderCore);
 
     resizeObserver.observe(canvas);
@@ -1682,7 +965,6 @@ export const initJayceePage = async () => {
     window.addEventListener("resize", scheduleRenderCore);
     window.addEventListener("load", scheduleRenderCore);
     renderPresentControls();
-    renderFractalSelectors();
     renderCoreParameters();
     renderResonances();
     scheduleRenderCore();
