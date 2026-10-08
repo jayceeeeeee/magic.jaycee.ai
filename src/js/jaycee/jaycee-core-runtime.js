@@ -15,6 +15,7 @@ import {
   fetchProfileByUserId,
   fetchProfileByUsername,
   fetchPublicProfiles,
+  fetchSkillsByIds,
   fetchUserResonances,
   fetchUserDynamicFractals,
   fetchUserGameSettings,
@@ -25,6 +26,7 @@ import {
   isHexColor,
   loadOptionalImage,
   parseBrowserGregorianDate,
+  updateSkills,
   upsertUserGameSettings
 } from "./jaycee-data.js";
 import {
@@ -536,14 +538,62 @@ const getGamePayload = (form) => ({
     : null
 });
 
+const createSkillForms = (skills) => (
+  (skills || []).map((skill) => ({
+    id: skill.id,
+    label: getDisplayValue(skill.label),
+    parent: getDisplayValue(skill.parent),
+    ratio: getDisplayValue(skill.ratio)
+  }))
+);
+
+const getSkillPayload = (form) => ({
+  id: form.id,
+  label: getDisplayValue(form.label),
+  parent: getDisplayValue(form.parent) || null,
+  ratio: Number.isFinite(Number(form.ratio)) && getDisplayValue(form.ratio)
+    ? Number(form.ratio)
+    : null
+});
+
+const getPrimarySkillId = (dynamicFractals, gameForm) => {
+  const selectedFractalId = getDisplayValue(gameForm?.primary_fractal);
+  const selectedFractal = dynamicFractals.find((fractal) => String(fractal.id) === String(selectedFractalId));
+
+  return getDisplayValue(selectedFractal?.skill);
+};
+
+const orderSkillForms = (skillForms, primarySkillId) => {
+  const remaining = new Map(skillForms.map((skill) => [skill.id, skill]));
+  const ordered = [];
+  const appendSkill = (skill) => {
+    if (!skill || !remaining.has(skill.id)) return;
+
+    remaining.delete(skill.id);
+    ordered.push(skill);
+    skillForms
+      .filter((child) => child.parent === skill.id)
+      .sort((first, second) => first.label.localeCompare(second.label))
+      .forEach(appendSkill);
+  };
+
+  appendSkill(remaining.get(primarySkillId));
+  [...remaining.values()]
+    .filter((skill) => !skill.parent || !remaining.has(skill.parent))
+    .sort((first, second) => first.label.localeCompare(second.label))
+    .forEach(appendSkill);
+  [...remaining.values()]
+    .sort((first, second) => first.label.localeCompare(second.label))
+    .forEach(appendSkill);
+
+  return ordered;
+};
+
 const createPrimaryFractalPanel = ({
   dynamicFractals,
   gameForm,
   onFieldChange,
-  onSave,
-  onSelect,
-  saveDisabled,
-  saveStatus
+  onSelect
 }) => {
   const section = document.createElement("section");
   const heading = document.createElement("h2");
@@ -551,14 +601,12 @@ const createPrimaryFractalPanel = ({
   const selectedFractalId = getDisplayValue(gameForm?.primary_fractal);
   const selectedFractal = dynamicFractals.find((fractal) => String(fractal.id) === String(selectedFractalId)) || null;
   const fields = [
-    { key: "label", label: "Label", type: "text", value: getDisplayValue(selectedFractal?.label), disabled: true },
-    { key: "primary_time", label: "Time", type: "number", value: getDisplayValue(gameForm?.primary_time) },
-    { key: "primary_distance", label: "Distance", type: "number", value: getDisplayValue(gameForm?.primary_distance) }
+    { key: "primary_time", label: "Time (s)", type: "number", value: getDisplayValue(gameForm?.primary_time) },
+    { key: "primary_distance", label: "Distance (m)", type: "number", value: getDisplayValue(gameForm?.primary_distance) }
   ];
   const select = document.createElement("select");
   const emptyOption = document.createElement("option");
-  const saveButton = document.createElement("button");
-  const statusText = document.createElement("p");
+  const fieldsRow = document.createElement("div");
 
   section.className = "profile-resonance-column profile-primary-fractal-panel";
   heading.className = "profile-resonance-column-title";
@@ -579,6 +627,7 @@ const createPrimaryFractalPanel = ({
   select.value = selectedFractal ? selectedFractal.id : "";
   select.addEventListener("change", () => onSelect(select.value));
   content.append(select);
+  fieldsRow.className = "profile-primary-fractal-fields";
 
   fields.forEach((field) => {
     const label = document.createElement("label");
@@ -599,21 +648,132 @@ const createPrimaryFractalPanel = ({
       onFieldChange(field.key, input.value);
     });
     label.append(labelText, input);
-    content.append(label);
+    fieldsRow.append(label);
   });
-  saveButton.className = "profile-primary-fractal-save";
-  saveButton.type = "button";
-  saveButton.textContent = "Save";
-  saveButton.disabled = saveDisabled;
-  saveButton.addEventListener("click", onSave);
-  content.append(saveButton);
+  content.append(fieldsRow);
+  section.append(heading, content);
+
+  return section;
+};
+
+const createSkillsPanel = ({
+  onFieldChange,
+  primarySkillId,
+  skillForms
+}) => {
+  const section = document.createElement("section");
+  const heading = document.createElement("h2");
+  const content = document.createElement("div");
+  const orderedSkillForms = orderSkillForms(skillForms, primarySkillId);
+
+  section.className = "profile-resonance-column profile-skills-panel";
+  heading.className = "profile-resonance-column-title";
+  heading.textContent = "Skills";
+  content.className = "profile-skills-content";
+
+  if (!orderedSkillForms.length) {
+    const empty = document.createElement("p");
+
+    empty.className = "profile-primary-fractal-status";
+    empty.textContent = "No skills yet.";
+    content.append(empty);
+  } else {
+    const header = document.createElement("div");
+    const number = document.createElement("span");
+    const label = document.createElement("span");
+    const parent = document.createElement("span");
+    const ratio = document.createElement("span");
+
+    header.className = "profile-skill-header";
+    number.textContent = "#";
+    label.textContent = "Skill";
+    parent.textContent = "Parent";
+    ratio.textContent = "Ratio";
+    header.append(number, label, parent, ratio);
+    content.append(header);
+  }
+
+  orderedSkillForms.forEach((skill, index) => {
+    const item = document.createElement("article");
+    const isPrimarySkill = getDisplayValue(skill.id) === getDisplayValue(primarySkillId);
+    const badge = document.createElement("span");
+
+    badge.className = "profile-skill-badge";
+    badge.textContent = String(index + 1);
+
+    if (isPrimarySkill) {
+      const label = document.createElement("span");
+      const value = document.createElement("strong");
+
+      item.className = "profile-skill-root";
+      item.append(badge);
+      label.textContent = "Root";
+      value.textContent = skill.label || "Untitled skill";
+      item.append(label, value);
+      content.append(item);
+      return;
+    }
+
+    const labelInput = document.createElement("input");
+    const parentSelect = document.createElement("select");
+    const emptyParent = document.createElement("option");
+    const ratioInput = document.createElement("input");
+
+    item.className = "profile-skill-row";
+    item.append(badge);
+    labelInput.type = "text";
+    labelInput.value = skill.label;
+    labelInput.setAttribute("aria-label", "Skill label");
+    labelInput.addEventListener("input", () => onFieldChange(skill.id, "label", labelInput.value));
+
+    emptyParent.value = "";
+    emptyParent.textContent = "No parent";
+    parentSelect.setAttribute("aria-label", "Skill parent");
+    parentSelect.replaceChildren(emptyParent, ...skillForms
+      .filter((optionSkill) => optionSkill.id !== skill.id)
+      .map((optionSkill) => {
+        const option = document.createElement("option");
+
+        option.value = optionSkill.id;
+        option.textContent = optionSkill.label || "Untitled skill";
+
+        return option;
+      }));
+    parentSelect.value = skill.parent;
+    parentSelect.addEventListener("change", () => onFieldChange(skill.id, "parent", parentSelect.value));
+
+    ratioInput.type = "number";
+    ratioInput.step = "any";
+    ratioInput.inputMode = "decimal";
+    ratioInput.value = skill.ratio;
+    ratioInput.setAttribute("aria-label", "Skill ratio");
+    ratioInput.addEventListener("input", () => onFieldChange(skill.id, "ratio", ratioInput.value));
+
+    item.append(labelInput, parentSelect, ratioInput);
+    content.append(item);
+  });
+  section.append(heading, content);
+
+  return section;
+};
+
+const createDashboardSavePanel = ({ onSave, saveDisabled, saveStatus }) => {
+  const section = document.createElement("section");
+  const button = document.createElement("button");
+  const statusText = document.createElement("p");
+
+  section.className = "profile-dashboard-save-panel";
+  button.className = "profile-primary-fractal-save";
+  button.type = "button";
+  button.textContent = "Save";
+  button.disabled = saveDisabled;
+  button.addEventListener("click", onSave);
+  section.append(button);
   if (saveStatus) {
     statusText.className = "profile-primary-fractal-status";
     statusText.textContent = saveStatus;
-    content.append(statusText);
+    section.append(statusText);
   }
-
-  section.append(heading, content);
 
   return section;
 };
@@ -699,12 +859,14 @@ export const initJayceePage = async () => {
   let ringBackgroundImage = null;
   let coreState = null;
   let currentProfile = null;
+  let dashboardSaveStatus = "";
+  let dashboardSaveStatusTimer = null;
   let gameForm = createEmptyGameSettings();
-  let gameSaveStatus = "";
-  let gameSaveStatusTimer = null;
   let gameSettings = null;
-  let isGameSaving = false;
+  let isDashboardSaving = false;
   let supabaseClient = null;
+  let skillForms = [];
+  let skills = [];
   let themeSettings = getThemeSettingsFromProfile(null);
   let selectedSpaceNumber = DEFAULT_SELECTED_NUMBER;
   let currentTimeTimer = null;
@@ -829,23 +991,32 @@ export const initJayceePage = async () => {
   };
 
   const setPrimaryFractalSelection = (fractalId) => {
+    const primarySkillId = getPrimarySkillId(dynamicFractals, { primary_fractal: fractalId });
+
     gameForm = {
       ...gameForm,
       primary_fractal: getDisplayValue(fractalId)
     };
-    gameSaveStatus = "Unsaved changes";
+    if (primarySkillId) {
+      skillForms = skillForms.map((skill) => (
+        getDisplayValue(skill.id) === primarySkillId
+          ? { ...skill, parent: "", ratio: "1" }
+          : skill
+      ));
+    }
+    dashboardSaveStatus = "Unsaved changes";
     renderResonances();
   };
 
-  const saveGameSettings = async () => {
-    if (!supabaseClient || !currentProfile || isGameSaving) return;
+  const saveDashboardSettings = async () => {
+    if (!supabaseClient || !currentProfile || isDashboardSaving) return;
 
-    if (gameSaveStatusTimer) {
-      window.clearTimeout(gameSaveStatusTimer);
-      gameSaveStatusTimer = null;
+    if (dashboardSaveStatusTimer) {
+      window.clearTimeout(dashboardSaveStatusTimer);
+      dashboardSaveStatusTimer = null;
     }
-    isGameSaving = true;
-    gameSaveStatus = "Saving...";
+    isDashboardSaving = true;
+    dashboardSaveStatus = "Saving...";
     renderResonances();
 
     try {
@@ -854,23 +1025,41 @@ export const initJayceePage = async () => {
         currentProfile,
         getGamePayload(gameForm)
       );
+      const primarySkillId = getPrimarySkillId(dynamicFractals, gameForm);
+      const skillPayloads = skillForms.map((skill) => {
+        const payload = getSkillPayload(skill);
+
+        return getDisplayValue(payload.id) === primarySkillId
+          ? { ...payload, parent: null, ratio: 1 }
+          : payload;
+      });
 
       gameSettings = updatedSettings || { ...gameSettings, ...getGamePayload(gameForm), user_id: currentProfile.id };
       gameForm = createGameForm(gameSettings);
-      gameSaveStatus = "Saved";
-      isGameSaving = false;
+      if (skillPayloads.length) {
+        const updatedSkills = await updateSkills(supabaseClient, skillPayloads);
+
+        skills = skills.map((skill) => updatedSkills.find((updatedSkill) => updatedSkill.id === skill.id) || skill);
+        skillForms = createSkillForms(skills).map((skill) => (
+          getDisplayValue(skill.id) === primarySkillId
+            ? { ...skill, parent: "", ratio: "1" }
+            : skill
+        ));
+      }
+      dashboardSaveStatus = "Saved";
+      isDashboardSaving = false;
       renderResonances();
-      gameSaveStatusTimer = window.setTimeout(() => {
-        gameSaveStatus = "";
-        gameSaveStatusTimer = null;
+      dashboardSaveStatusTimer = window.setTimeout(() => {
+        dashboardSaveStatus = "";
+        dashboardSaveStatusTimer = null;
         renderResonances();
       }, 1600);
     } catch (error) {
-      console.error("Game settings could not be updated", error);
-      gameSaveStatus = "Could not save";
-      isGameSaving = false;
+      console.error("Dashboard settings could not be updated", error);
+      dashboardSaveStatus = "Could not save";
+      isDashboardSaving = false;
       renderResonances();
-      status.textContent = error?.message || "Game settings could not be updated.";
+      status.textContent = error?.message || "Dashboard settings could not be updated.";
     }
   };
 
@@ -879,7 +1068,16 @@ export const initJayceePage = async () => {
       ...gameForm,
       [field]: getDisplayValue(value)
     };
-    gameSaveStatus = "Unsaved changes";
+    dashboardSaveStatus = "Unsaved changes";
+  };
+
+  const updateSkillField = (skillId, field, value) => {
+    skillForms = skillForms.map((skill) => (
+      skill.id === skillId
+        ? { ...skill, [field]: getDisplayValue(value) }
+        : skill
+    ));
+    dashboardSaveStatus = "Unsaved changes";
   };
 
   const renderPresentControls = () => {
@@ -949,10 +1147,17 @@ export const initJayceePage = async () => {
           dynamicFractals,
           gameForm,
           onFieldChange: updatePrimaryFractalField,
-          onSave: saveGameSettings,
-          onSelect: setPrimaryFractalSelection,
-          saveDisabled: !currentProfile || isGameSaving,
-          saveStatus: gameSaveStatus
+          onSelect: setPrimaryFractalSelection
+        }),
+        createSkillsPanel({
+          onFieldChange: updateSkillField,
+          primarySkillId: getPrimarySkillId(dynamicFractals, gameForm),
+          skillForms
+        }),
+        createDashboardSavePanel({
+          onSave: saveDashboardSettings,
+          saveDisabled: !currentProfile || isDashboardSaving,
+          saveStatus: dashboardSaveStatus
         })
       ] : [])
     );
@@ -1077,6 +1282,10 @@ export const initJayceePage = async () => {
       ? []
       : await fetchUserResonances(client, profile, { publicOnly: Boolean(publicUsername) });
     dynamicFractals = isEditableProfilePage ? await fetchUserDynamicFractals(client, profile) : [];
+    skills = isEditableProfilePage
+      ? await fetchSkillsByIds(client, dynamicFractals.map((fractal) => fractal.skill))
+      : [];
+    skillForms = createSkillForms(skills);
     gameSettings = isEditableProfilePage ? await fetchUserGameSettings(client, profile) : null;
     gameForm = createGameForm(gameSettings);
 
@@ -1093,6 +1302,11 @@ export const initJayceePage = async () => {
       gameSettings = { ...gameSettings, primary_fractal: null };
       gameForm = { ...gameForm, primary_fractal: "" };
     }
+    skillForms = skillForms.map((skill) => (
+      getDisplayValue(skill.id) === getPrimarySkillId(dynamicFractals, gameForm)
+        ? { ...skill, parent: "", ratio: "1" }
+        : skill
+    ));
     setDefaultTimeSelectionsToPresent();
     publicProfiles = isPresentPage ? await fetchPublicProfiles(client) : [];
     avatarImage = !hasUserProfile ? null : await loadOptionalImage(await getAvatarImageUrl(client, profile));

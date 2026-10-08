@@ -623,6 +623,17 @@
   pointer-events: none;
 }
 
+.profile-primary-fractal-panel,
+.profile-skills-panel,
+.profile-dashboard-save-panel {
+  grid-column: 1 / -1;
+}
+
+.profile-dashboard-save-panel {
+  display: grid;
+  gap: 7px;
+}
+
 .profile-resonance-column-title {
   margin: 0;
   color: var(--text);
@@ -658,7 +669,8 @@
   gap: 10px;
 }
 
-.profile-primary-fractal-content {
+.profile-primary-fractal-content,
+.profile-skills-content {
   display: grid;
   gap: 10px;
   padding: 12px 13px;
@@ -670,6 +682,7 @@
 }
 
 .profile-primary-fractal-select,
+.profile-primary-fractal-field select,
 .profile-primary-fractal-field input,
 .profile-primary-fractal-save {
   width: 100%;
@@ -685,6 +698,7 @@
 }
 
 .profile-primary-fractal-select:focus,
+.profile-primary-fractal-field select:focus,
 .profile-primary-fractal-field input:focus,
 .profile-primary-fractal-save:focus-visible {
   border-color: rgba(var(--accent-rgb), 0.58);
@@ -693,6 +707,12 @@
 .profile-primary-fractal-field {
   display: grid;
   gap: 5px;
+}
+
+.profile-primary-fractal-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .profile-primary-fractal-field span {
@@ -706,6 +726,108 @@
 .profile-primary-fractal-field input:disabled {
   color: var(--muted);
   opacity: 0.72;
+}
+
+.profile-primary-fractal-field select:disabled {
+  color: var(--muted);
+  opacity: 0.72;
+}
+
+.profile-skill-root,
+.profile-skill-row {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(var(--accent-rgb), 0.18);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.profile-skill-root {
+  display: grid;
+  grid-template-columns: 30px max-content minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-skill-badge {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(var(--accent-rgb), 0.28);
+  border-radius: 999px;
+  background: rgba(var(--accent-rgb), 0.1);
+  color: var(--text);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.profile-skill-root > span:not(.profile-skill-badge) {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.profile-skill-root strong {
+  min-width: 0;
+  color: var(--text);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 1rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.profile-skill-row {
+  display: grid;
+  grid-template-columns: 30px repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-skill-header {
+  display: grid;
+  grid-template-columns: 30px repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0 10px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.profile-skill-row input,
+.profile-skill-row select {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 7px 8px;
+  border: 1px solid var(--field-border-soft);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.16);
+  color: var(--text);
+  font: inherit;
+  outline: none;
+}
+
+.profile-skill-row input:focus,
+.profile-skill-row select:focus {
+  border-color: rgba(var(--accent-rgb), 0.58);
+}
+
+@media (max-width: 720px) {
+  .profile-primary-fractal-fields,
+  .profile-skill-row {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-skill-header {
+    display: none;
+  }
 }
 
 .profile-primary-fractal-save {

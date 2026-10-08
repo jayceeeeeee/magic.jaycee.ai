@@ -1,6 +1,7 @@
 export const JAYCEE_FRACTALS_TABLE = "jaycee_fractals";
 export const JAYCEE_DYNAMIC_FRACTALS_TABLE = "jaycee_dynamic_fractals";
 export const JAYCEE_GAME_TABLE = "jaycee_game";
+export const JAYCEE_SKILLS_TABLE = "jaycee_skills";
 export const FRACTAL_VISIBILITY_COLUMN = "visibility";
 export const PUBLIC_VISIBILITY_VALUE = "public";
 export const GOD_TYPE_VALUE = "god";
@@ -230,6 +231,43 @@ export const upsertUserGameSettings = async (client, profile, values) => {
   if (error) throw error;
 
   return data || null;
+};
+
+export const fetchSkillsByIds = async (client, skillIds) => {
+  const ids = [...new Set((skillIds || []).map(getDisplayValue).filter(Boolean))];
+
+  if (!ids.length) return [];
+
+  const { data, error } = await client
+    .from(JAYCEE_SKILLS_TABLE)
+    .select("id, label, parent, ratio, created_at")
+    .in("id", ids)
+    .order("label", { ascending: true });
+
+  if (error) throw error;
+
+  return data || [];
+};
+
+export const updateSkills = async (client, skillUpdates) => {
+  const updates = (skillUpdates || []).filter((skill) => skill?.id);
+
+  if (!updates.length) return [];
+
+  const updatedRows = await Promise.all(updates.map(async ({ id, ...values }) => {
+    const { data, error } = await client
+      .from(JAYCEE_SKILLS_TABLE)
+      .update(values)
+      .eq("id", id)
+      .select("id, label, parent, ratio, created_at")
+      .maybeSingle();
+
+    if (error) throw error;
+
+    return data;
+  }));
+
+  return updatedRows.filter(Boolean);
 };
 
 export const getAvatarImageUrl = async (client, profile) => (
