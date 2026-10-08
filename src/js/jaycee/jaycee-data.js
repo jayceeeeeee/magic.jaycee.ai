@@ -170,7 +170,7 @@ export const fetchUserDynamicFractals = async (client, profile) => {
 
   const { data, error } = await client
     .from(JAYCEE_DYNAMIC_FRACTALS_TABLE)
-    .select("id, label, user_id, image, created_at, skill")
+    .select("id, label, user_id, image, created_at, skill, time")
     .eq("user_id", profile.id)
     .order("created_at", { ascending: true });
 
@@ -273,7 +273,7 @@ export const updateUserDynamicFractals = async (client, fractalUpdates) => {
       .from(JAYCEE_DYNAMIC_FRACTALS_TABLE)
       .update(values)
       .eq("id", id)
-      .select("id, label, user_id, image, created_at, skill")
+      .select("id, label, user_id, image, created_at, skill, time")
       .maybeSingle();
 
     if (error) throw error;

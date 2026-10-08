@@ -120,6 +120,7 @@
   width: min(100%, 540px);
   display: grid;
   gap: 9px;
+  margin-top: 14px;
   padding: 10px 12px;
   border: 1px solid rgba(var(--accent-rgb), 0.28);
   border-radius: 7px;
@@ -133,6 +134,20 @@
   color: var(--accent-soft);
   font-family: "Share Tech Mono", monospace;
   font-size: 0.72rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.profile-parameter-section {
+  display: grid;
+  gap: 5px;
+}
+
+.profile-parameter-section h3 {
+  margin: 0;
+  color: var(--muted);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.66rem;
   line-height: 1;
   text-transform: uppercase;
 }

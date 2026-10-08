@@ -153,23 +153,43 @@ const getActiveSegmentIndex = (segmentKeys, selectedSegment) => (
   Math.max(0, segmentKeys.findIndex((key) => String(key) === String(selectedSegment)))
 );
 
-const formatDuration = (secondsValue) => {
-  let seconds = Math.floor(Number(secondsValue));
+const formatDuration = (secondsValue, { compact = true } = {}) => {
+  let seconds = Math.round(Number(secondsValue));
 
   if (!Number.isFinite(seconds) || seconds <= 0) return "";
 
   const day = 24 * 60 * 60;
+  const hour = 60 * 60;
   const days = Math.floor(seconds / day);
-  seconds %= day;
-  const hours = Math.floor(seconds / (60 * 60));
-  seconds %= 60 * 60;
+  seconds -= days * 24 * 60 * 60;
+  const hours = Math.floor(seconds / hour);
+  seconds -= hours * hour;
   const minutes = Math.floor(seconds / 60);
-  const finalSeconds = seconds % 60;
-  const clock = [hours, minutes, finalSeconds]
-    .map((part) => String(part).padStart(2, "0"))
-    .join(":");
+  seconds -= minutes * 60;
+  const parts = [
+    ...(days ? [`${days}d`] : []),
+    ...(hours ? [`${hours}h`] : []),
+    ...(minutes ? [`${minutes}min`] : []),
+    ...(seconds ? [`${seconds}s`] : [])
+  ];
 
-  return days ? `${days}d ${clock}` : clock;
+  if (compact && parts.length > 2) {
+    return parts.slice(0, 2).join(" ");
+  }
+
+  return parts.join(" ");
+};
+
+const formatDistance = (metersValue) => {
+  const meters = Number(metersValue);
+
+  if (!Number.isFinite(meters) || meters <= 0) return "";
+
+  if (meters >= 1000 && meters % 1000 === 0) {
+    return `${Math.round(meters / 1000)}km`;
+  }
+
+  return `${Number.isInteger(meters) ? meters : Number(meters.toFixed(2))}m`;
 };
 
 const getGroupsWithSelectedResonanceValue = (groups, selectedNumber) => (
@@ -205,6 +225,73 @@ const getFractalElements = (elementsByFractalId, fractalId) => (
       return getDisplayValue(first.id).localeCompare(getDisplayValue(second.id));
     })
 );
+
+const getDynamicRingModels = ({
+  dynamicFractals,
+  elementsByFractalId,
+  gameForm,
+  selectedDynamicRingSegments,
+  skillForms
+}) => {
+  const primaryFractal = dynamicFractals.find((fractal) => (
+    getDisplayValue(fractal.id) === getDisplayValue(gameForm.primary_fractal)
+  ));
+  const primarySkillId = getDisplayValue(primaryFractal?.skill);
+
+  if (!primaryFractal || !primarySkillId) return [];
+
+  const fractalBySkillId = new Map(dynamicFractals.map((fractal) => [
+    getDisplayValue(fractal.skill),
+    fractal
+  ]));
+  const orderedSkills = orderSkillForms(skillForms, primarySkillId);
+  const cycleBySkillId = new Map([[primarySkillId, Number(gameForm.primary_time)]]);
+  const distanceBySkillId = new Map([[primarySkillId, Number(gameForm.primary_distance)]]);
+
+  return orderedSkills
+    .map((skill) => {
+      const skillId = getDisplayValue(skill.id);
+      const fractal = fractalBySkillId.get(skillId);
+      const elements = getFractalElements(elementsByFractalId, fractal?.id);
+
+      if (!fractal || !elements.length) return null;
+
+      if (skillId !== primarySkillId && !cycleBySkillId.has(skillId)) {
+        const parentCycle = cycleBySkillId.get(getDisplayValue(skill.parent));
+        const parentDistance = distanceBySkillId.get(getDisplayValue(skill.parent));
+        const ratio = Number(skill.ratio);
+
+        if (Number.isFinite(parentCycle) && Number.isFinite(ratio) && ratio > 0) {
+          cycleBySkillId.set(skillId, parentCycle / ratio);
+        }
+        if (Number.isFinite(parentDistance) && Number.isFinite(ratio) && ratio > 0) {
+          distanceBySkillId.set(skillId, parentDistance / ratio);
+        }
+      }
+
+      const segmentKeys = elements.map((element) => getDisplayValue(element.id));
+      const selectedSegment = selectedDynamicRingSegments.get(fractal.id) || segmentKeys[0];
+      const selectedElement = elements.find((element) => (
+        getDisplayValue(element.id) === getDisplayValue(selectedSegment)
+      )) || elements[0];
+
+      return {
+        cycleSeconds: cycleBySkillId.get(skillId),
+        distanceMeters: distanceBySkillId.get(skillId),
+        elements,
+        fractal,
+        id: `dynamic-fractal:${fractal.id}`,
+        label: getDisplayValue(fractal.label) || "Fractal",
+        practiceSeconds: cycleBySkillId.get(skillId),
+        segmentKeys,
+        selectedElement,
+        selectedSegment,
+        skill,
+        skillLabel: getDisplayValue(skill.label) || "Skill"
+      };
+    })
+    .filter(Boolean);
+};
 
 const getCoreRingFractal = (rows) => (
   rows.find((row) => (
@@ -296,7 +383,10 @@ const getPrimarySkillId = (dynamicFractals, gameForm) => {
 const getDynamicFractalPayload = (fractal) => ({
   id: fractal.id,
   label: getDisplayValue(fractal.label),
-  skill: getDisplayValue(fractal.skill) || null
+  skill: getDisplayValue(fractal.skill) || null,
+  time: Number.isFinite(Number(fractal.time)) && getDisplayValue(fractal.time)
+    ? Number(fractal.time)
+    : null
 });
 
 const orderSkillForms = (skillForms, primarySkillId) => {
@@ -329,7 +419,6 @@ const createPrimaryFractalPanel = ({
   dynamicFractals,
   gameForm,
   onFieldChange,
-  onFractalSkillChange,
   onSelect,
   skillForms
 }) => {
@@ -338,25 +427,19 @@ const createPrimaryFractalPanel = ({
   const content = document.createElement("div");
   const selectedFractalId = getDisplayValue(gameForm?.primary_fractal);
   const selectedFractal = dynamicFractals.find((fractal) => String(fractal.id) === String(selectedFractalId)) || null;
-  const selectedSkillId = getDisplayValue(selectedFractal?.skill);
   const fields = [
     { key: "primary_time", label: "Time (s)", type: "number", value: getDisplayValue(gameForm?.primary_time) },
     { key: "primary_distance", label: "Distance (m)", type: "number", value: getDisplayValue(gameForm?.primary_distance) }
   ];
-  const selectorsRow = document.createElement("div");
   const fractalLabel = document.createElement("label");
   const select = document.createElement("select");
   const emptyOption = document.createElement("option");
-  const skillLabel = document.createElement("label");
-  const skillSelect = document.createElement("select");
-  const emptySkillOption = document.createElement("option");
   const fieldsRow = document.createElement("div");
 
   section.className = "profile-resonance-column profile-primary-fractal-panel";
   heading.className = "profile-resonance-column-title";
   heading.textContent = "Primary Fractal";
   content.className = "profile-primary-fractal-content";
-  selectorsRow.className = "profile-primary-fractal-fields";
   fractalLabel.className = "profile-primary-fractal-field";
   select.className = "profile-primary-fractal-select";
   select.value = "";
@@ -374,31 +457,7 @@ const createPrimaryFractalPanel = ({
   select.addEventListener("change", () => onSelect(select.value));
   fractalLabel.append(document.createElement("span"), select);
   fractalLabel.firstElementChild.textContent = "Fractal";
-  selectorsRow.append(fractalLabel);
-
-  skillLabel.className = "profile-primary-fractal-field";
-  skillSelect.className = "profile-primary-fractal-select";
-  emptySkillOption.value = "";
-  emptySkillOption.textContent = "Choose a skill";
-  emptySkillOption.disabled = Boolean(skillForms.length);
-  skillSelect.replaceChildren(emptySkillOption, ...skillForms.map((skill) => {
-    const option = document.createElement("option");
-
-    option.value = skill.id;
-    option.textContent = skill.label || "Untitled skill";
-
-    return option;
-  }));
-  skillSelect.value = selectedSkillId;
-  skillSelect.disabled = !selectedFractal;
-  skillSelect.addEventListener("change", () => {
-    if (!selectedFractal) return;
-    onFractalSkillChange(selectedFractal.id, skillSelect.value);
-  });
-  skillLabel.append(document.createElement("span"), skillSelect);
-  skillLabel.firstElementChild.textContent = "Skill";
-  selectorsRow.append(skillLabel);
-  content.append(selectorsRow);
+  content.append(fractalLabel);
   fieldsRow.className = "profile-primary-fractal-fields";
 
   fields.forEach((field) => {
@@ -438,20 +497,21 @@ const createSecondaryFractalPanel = ({
   const heading = document.createElement("h2");
   const content = document.createElement("div");
   const primaryFractalId = getDisplayValue(gameForm?.primary_fractal);
-  const secondaryFractals = dynamicFractals.filter((fractal) => (
-    getDisplayValue(fractal.id) !== primaryFractalId
-  ));
+  const orderedFractals = [
+    ...dynamicFractals.filter((fractal) => getDisplayValue(fractal.id) === primaryFractalId),
+    ...dynamicFractals.filter((fractal) => getDisplayValue(fractal.id) !== primaryFractalId)
+  ];
 
   section.className = "profile-resonance-column profile-secondary-fractal-panel";
   heading.className = "profile-resonance-column-title";
-  heading.textContent = "Secondary Fractals";
+  heading.textContent = "Fractals";
   content.className = "profile-skills-content";
 
-  if (!secondaryFractals.length) {
+  if (!orderedFractals.length) {
     const empty = document.createElement("p");
 
     empty.className = "profile-primary-fractal-status";
-    empty.textContent = "No secondary fractals yet.";
+    empty.textContent = "No fractals yet.";
     content.append(empty);
   } else {
     const header = document.createElement("div");
@@ -466,7 +526,7 @@ const createSecondaryFractalPanel = ({
     content.append(header);
   }
 
-  secondaryFractals.forEach((fractal) => {
+  orderedFractals.forEach((fractal) => {
     const item = document.createElement("article");
     const labelInput = document.createElement("input");
     const skillSelect = document.createElement("select");
@@ -634,58 +694,61 @@ const createDashboardSavePanel = ({ onSave, saveDisabled, saveStatus }) => {
   return section;
 };
 
-const createPrimaryRingParameterPanel = ({
-  elementsByFractalId,
-  gameForm,
-  primaryFractal,
-  selectedDynamicRingSegments
-}) => {
-  if (!primaryFractal) return null;
+const createDynamicRingParameterPanel = ({ ringModels }) => {
+  if (!ringModels.length) return null;
 
   const section = document.createElement("section");
   const heading = document.createElement("h2");
-  const list = document.createElement("dl");
-  const primaryElements = getFractalElements(elementsByFractalId, primaryFractal.id);
-  const selectedSegment = selectedDynamicRingSegments.get(primaryFractal.id)
-    || getDisplayValue(primaryElements[0]?.id)
-    || "1";
-  const selectedElement = primaryElements.find((element) => (
-    getDisplayValue(element.id) === getDisplayValue(selectedSegment)
-  ));
-  const rows = [{
-    label: "Cycle",
-    value: formatDuration(gameForm.primary_time) || "00:00:00"
-  }, {
-    label: "Segment",
-    value: getElementLabel(selectedElement, selectedSegment)
-  }];
 
   section.className = "profile-parameter-panel";
   section.dataset.profileParameters = "";
-  heading.textContent = getDisplayValue(primaryFractal.label) || "Primary Fractal";
-  list.className = "profile-parameter-list";
-  rows.forEach((row) => {
-    const label = document.createElement("dt");
-    const value = document.createElement("dd");
+  heading.textContent = "Parameters";
+  section.append(heading);
+  ringModels.forEach((ringModel) => {
+    const group = document.createElement("article");
+    const title = document.createElement("h3");
+    const list = document.createElement("dl");
+    const rows = [{
+      label: "Cycle",
+      value: formatDuration(ringModel.fractal.time) || "00:00:00"
+    }, {
+      label: "Practice",
+      value: formatDuration(ringModel.practiceSeconds, { compact: false }) || "00:00:00"
+    }, {
+      label: "Zone",
+      value: formatDistance(ringModel.distanceMeters) || "0m"
+    }, {
+      label: "Segment",
+      value: getElementLabel(ringModel.selectedElement, ringModel.selectedSegment)
+    }, {
+      label: "Skill",
+      value: ringModel.skillLabel
+    }];
 
-    label.textContent = row.label;
-    value.textContent = row.value;
-    list.append(label, value);
+    group.className = "profile-parameter-section";
+    title.textContent = ringModel.label;
+    list.className = "profile-parameter-list";
+    rows.forEach((row) => {
+      const label = document.createElement("dt");
+      const value = document.createElement("dd");
+
+      label.textContent = row.label;
+      value.textContent = row.value;
+      list.append(label, value);
+    });
+    group.append(title, list);
+    section.append(group);
   });
-  section.append(heading, list);
 
   return section;
 };
 
 const createProfileCoreState = ({
   avatarImage,
-  dynamicFractals,
-  elementsByFractalId,
-  gameForm,
   hasUserProfile,
   ringBackgroundImage,
+  ringModels,
   rows,
-  selectedDynamicRingSegments,
   selectedSpaceNumber,
   selectedCoreRingSegments
 }) => {
@@ -720,32 +783,25 @@ const createProfileCoreState = ({
       tone: "accent"
     }
   ];
-  const primaryFractal = dynamicFractals.find((fractal) => (
-    getDisplayValue(fractal.id) === getDisplayValue(gameForm.primary_fractal)
-  ));
-  const primaryElements = getFractalElements(elementsByFractalId, primaryFractal?.id);
-
-  if (primaryFractal && primaryElements.length) {
-    const segmentKeys = primaryElements.map((element) => getDisplayValue(element.id));
-    const selectedSegment = selectedDynamicRingSegments.get(primaryFractal.id) || segmentKeys[0];
-    const activeSegmentIndex = getActiveSegmentIndex(segmentKeys, selectedSegment);
+  ringModels.forEach((ringModel) => {
+    const activeSegmentIndex = getActiveSegmentIndex(ringModel.segmentKeys, ringModel.selectedSegment);
 
     rings.push({
-      id: `dynamic-primary:${primaryFractal.id}`,
+      id: ringModel.id,
       activeFillAlpha: PROFILE_RING_ACTIVE_FILL_ALPHA,
       activeSegmentIndex,
-      count: segmentKeys.length,
+      count: ringModel.segmentKeys.length,
       fillAlpha: 0,
-      label: getDisplayValue(primaryFractal.label) || "Primary Fractal",
-      labels: getEmptyLabels(segmentKeys.length),
-      rotation: getTopCenteredLastSegmentRotation(segmentKeys.length),
-      segmentKeys,
+      label: ringModel.label,
+      labels: getEmptyLabels(ringModel.segmentKeys.length),
+      rotation: getTopCenteredLastSegmentRotation(ringModel.segmentKeys.length),
+      segmentKeys: ringModel.segmentKeys,
       showBorders: true,
       showDividers: true,
       styledSegmentIndices: [activeSegmentIndex],
       tone: "accent"
     });
-  }
+  });
 
   return {
     ...createJayceeState({
@@ -1049,7 +1105,6 @@ export const initJayceePage = async () => {
           dynamicFractals,
           gameForm,
           onFieldChange: updatePrimaryFractalField,
-          onFractalSkillChange: updateDynamicFractalField,
           onSelect: setPrimaryFractalSelection,
           skillForms
         }),
@@ -1076,15 +1131,14 @@ export const initJayceePage = async () => {
   const renderCoreParameters = () => {
     const corePanel = canvas.closest(".jaycee-profile-core");
     const existingPanel = corePanel?.querySelector("[data-profile-parameters]");
-    const primaryFractal = dynamicFractals.find((fractal) => (
-      getDisplayValue(fractal.id) === getDisplayValue(gameForm.primary_fractal)
-    ));
-    const panel = createPrimaryRingParameterPanel({
+    const ringModels = getDynamicRingModels({
+      dynamicFractals,
       elementsByFractalId: getElementsByFractalId(),
       gameForm,
-      primaryFractal,
-      selectedDynamicRingSegments
+      selectedDynamicRingSegments,
+      skillForms
     });
+    const panel = createDynamicRingParameterPanel({ ringModels });
 
     if (!corePanel || !panel) {
       existingPanel?.remove();
@@ -1099,15 +1153,20 @@ export const initJayceePage = async () => {
   };
 
   const renderCore = () => {
-    coreState = createProfileCoreState({
-      avatarImage,
+    const ringModels = getDynamicRingModels({
       dynamicFractals,
       elementsByFractalId: getElementsByFractalId(),
       gameForm,
+      selectedDynamicRingSegments,
+      skillForms
+    });
+
+    coreState = createProfileCoreState({
+      avatarImage,
       hasUserProfile,
       ringBackgroundImage,
+      ringModels,
       rows,
-      selectedDynamicRingSegments,
       selectedSpaceNumber,
       selectedCoreRingSegments
     });
@@ -1134,7 +1193,7 @@ export const initJayceePage = async () => {
       selectedSpaceNumber = hit.number;
       setCoreRingSegmentSelection(CORE_RING_ID, hit.number);
     } else if (hit.type === "ring" && hit.ringId) {
-      if (getDisplayValue(hit.ringId).startsWith("dynamic-primary:")) {
+      if (getDisplayValue(hit.ringId).startsWith("dynamic-fractal:")) {
         setDynamicRingSegmentSelection(hit.ringId, hit.segmentKey);
       } else {
         setCoreRingSegmentSelection(hit.ringId, hit.segmentKey);
