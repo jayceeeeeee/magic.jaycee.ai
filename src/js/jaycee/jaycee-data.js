@@ -1,4 +1,6 @@
 export const JAYCEE_FRACTALS_TABLE = "jaycee_fractals";
+export const JAYCEE_DYNAMIC_FRACTALS_TABLE = "jaycee_dynamic_fractals";
+export const JAYCEE_GAME_TABLE = "jaycee_game";
 export const FRACTAL_VISIBILITY_COLUMN = "visibility";
 export const PUBLIC_VISIBILITY_VALUE = "public";
 export const GOD_TYPE_VALUE = "god";
@@ -183,6 +185,51 @@ const getUserImageUrl = async (client, profile, path) => {
   if (error) throw error;
 
   return data?.signedUrl || "";
+};
+
+export const fetchUserDynamicFractals = async (client, profile) => {
+  if (!profile?.id) return [];
+
+  const { data, error } = await client
+    .from(JAYCEE_DYNAMIC_FRACTALS_TABLE)
+    .select("id, label, user_id, image, created_at, skill")
+    .eq("user_id", profile.id)
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+
+  return data || [];
+};
+
+export const fetchUserGameSettings = async (client, profile) => {
+  if (!profile?.id) return null;
+
+  const { data, error } = await client
+    .from(JAYCEE_GAME_TABLE)
+    .select("id, user_id, primary_fractal, primary_time, primary_distance, created_at")
+    .eq("user_id", profile.id)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  return data || null;
+};
+
+export const upsertUserGameSettings = async (client, profile, values) => {
+  if (!profile?.id) return null;
+
+  const { data, error } = await client
+    .from(JAYCEE_GAME_TABLE)
+    .upsert({
+      ...values,
+      user_id: profile.id
+    }, { onConflict: "user_id" })
+    .select("id, user_id, primary_fractal, primary_time, primary_distance, created_at")
+    .maybeSingle();
+
+  if (error) throw error;
+
+  return data || null;
 };
 
 export const getAvatarImageUrl = async (client, profile) => (

@@ -623,10 +623,6 @@
   pointer-events: none;
 }
 
-.profile-resonance-drafts {
-  grid-column: 1 / -1;
-}
-
 .profile-resonance-column-title {
   margin: 0;
   color: var(--text);
@@ -662,135 +658,98 @@
   gap: 10px;
 }
 
-.profile-draft-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 9px;
+.profile-primary-fractal-content {
+  display: grid;
+  gap: 10px;
+  padding: 12px 13px;
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
+  border-radius: 7px;
+  background:
+    linear-gradient(90deg, rgba(var(--accent-rgb), 0.16), transparent 72%),
+    rgba(0, 0, 0, 0.14);
 }
 
-.profile-draft-item {
+.profile-primary-fractal-select,
+.profile-primary-fractal-field input,
+.profile-primary-fractal-save {
+  width: 100%;
   min-width: 0;
+  min-height: 38px;
   padding: 8px 10px;
   border: 1px solid var(--field-border-soft);
   border-radius: 6px;
-  background:
-    linear-gradient(90deg, rgba(var(--accent-rgb), 0.1), transparent 72%),
-    rgba(0, 0, 0, 0.14);
+  background: rgba(0, 0, 0, 0.16);
   color: var(--text);
-  font-family: "Share Tech Mono", monospace;
-  font-size: 0.88rem;
-  line-height: 1.2;
-  overflow-wrap: anywhere;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
-}
-
-.profile-draft-item:hover,
-.profile-draft-item:focus-visible,
-.profile-draft-item[aria-pressed="true"] {
-  border-color: rgba(124, 255, 120, 0.58);
-  background:
-    linear-gradient(90deg, rgba(124, 255, 120, 0.12), transparent 72%),
-    rgba(0, 0, 0, 0.18);
-  color: rgba(124, 255, 120, 0.94);
+  font: inherit;
   outline: none;
 }
 
-.profile-draft-preview {
+.profile-primary-fractal-select:focus,
+.profile-primary-fractal-field input:focus,
+.profile-primary-fractal-save:focus-visible {
+  border-color: rgba(var(--accent-rgb), 0.58);
+}
+
+.profile-primary-fractal-field {
   display: grid;
-  gap: 10px;
-  overflow: hidden;
+  gap: 5px;
 }
 
-.profile-draft-preview.is-opening {
-  animation: draft-slide-in 220ms ease both;
+.profile-primary-fractal-field span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
-.profile-draft-preview.is-closing {
-  animation: draft-slide-out 220ms ease both;
+.profile-primary-fractal-field input:disabled {
+  color: var(--muted);
+  opacity: 0.72;
 }
 
-.profile-draft-table {
-  width: 100%;
-  display: grid;
-  border: 1px solid rgba(var(--accent-rgb), 0.3);
-  background: rgba(0, 0, 0, 0.12);
-  overflow-x: auto;
+.profile-primary-fractal-save {
+  background:
+    linear-gradient(90deg, rgba(var(--accent-rgb), 0.24), rgba(var(--accent-rgb), 0.08)),
+    rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  font-weight: 700;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 120ms ease;
 }
 
-.profile-draft-table-row {
-  min-width: 828px;
-  display: grid;
-  grid-template-columns: repeat(9, minmax(92px, 1fr));
+.profile-primary-fractal-save:hover,
+.profile-primary-fractal-save:focus-visible {
+  border-color: rgba(124, 255, 120, 0.62);
+  background:
+    linear-gradient(90deg, rgba(124, 255, 120, 0.24), rgba(var(--accent-rgb), 0.12)),
+    rgba(0, 0, 0, 0.22);
+  color: rgba(124, 255, 120, 0.96);
 }
 
-.profile-draft-table-head .profile-draft-table-cell {
-  min-height: 34px;
-  align-content: center;
-  background: rgba(var(--accent-rgb), 0.08);
+.profile-primary-fractal-save:active {
+  transform: translateY(1px);
+}
+
+.profile-primary-fractal-save:disabled {
+  cursor: default;
+  opacity: 0.56;
+  transform: none;
+}
+
+.profile-primary-fractal-save:disabled:hover {
+  border-color: var(--field-border-soft);
+  background:
+    linear-gradient(90deg, rgba(var(--accent-rgb), 0.24), rgba(var(--accent-rgb), 0.08)),
+    rgba(0, 0, 0, 0.18);
+  color: var(--text);
+}
+
+.profile-primary-fractal-status {
+  margin: 0;
   color: var(--muted);
   font-family: "Share Tech Mono", monospace;
   font-size: 0.72rem;
-  line-height: 1;
-}
-
-.profile-draft-table-cell {
-  min-width: 0;
-  min-height: 78px;
-  display: grid;
-  align-content: start;
-  justify-items: start;
-  gap: 7px;
-  padding: 10px;
-  border-right: 1px solid rgba(var(--accent-rgb), 0.2);
-  border-bottom: 1px solid rgba(var(--accent-rgb), 0.2);
-  background: rgba(var(--accent-rgb), 0.035);
-}
-
-.profile-draft-table-cell:last-child {
-  border-right: 0;
-}
-
-.profile-draft-table-values .profile-draft-table-cell {
-  border-bottom: 0;
-}
-
-.profile-draft-table-cell strong {
-  color: var(--text);
-  font-family: "Share Tech Mono", monospace;
-  font-size: 0.92rem;
-  font-weight: 600;
   line-height: 1.2;
-  overflow-wrap: anywhere;
-}
-
-@keyframes draft-slide-in {
-  from {
-    max-height: 0;
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-
-  to {
-    max-height: 360px;
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes draft-slide-out {
-  from {
-    max-height: 360px;
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  to {
-    max-height: 0;
-    opacity: 0;
-    transform: translateY(-6px);
-  }
 }
 
 .profile-resonance-item {

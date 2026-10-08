@@ -16,19 +16,19 @@ import {
   fetchProfileByUsername,
   fetchPublicProfiles,
   fetchUserResonances,
+  fetchUserDynamicFractals,
+  fetchUserGameSettings,
   getAvatarImageUrl,
   getBackgroundImageUrl,
   getDisplayValue,
   getThemeSettingsFromProfile,
   isHexColor,
   loadOptionalImage,
-  parseBrowserGregorianDate
+  parseBrowserGregorianDate,
+  upsertUserGameSettings
 } from "./jaycee-data.js";
 import {
-  DRAFT_PREVIEW_ANIMATION_MS,
-  createDraftsSection,
   createResonanceColumn,
-  getDraftRows,
   getResonanceGroupsForNumber,
   getRowsForType
 } from "./jaycee-dashboard.js";
@@ -514,6 +514,110 @@ const createGameSelect = (profiles, selectedUsername = "") => {
   return label;
 };
 
+const createEmptyGameSettings = () => ({
+  primary_distance: "",
+  primary_fractal: "",
+  primary_time: ""
+});
+
+const createGameForm = (settings) => ({
+  primary_distance: getDisplayValue(settings?.primary_distance),
+  primary_fractal: getDisplayValue(settings?.primary_fractal),
+  primary_time: getDisplayValue(settings?.primary_time)
+});
+
+const getGamePayload = (form) => ({
+  primary_distance: Number.isFinite(Number(form?.primary_distance)) && getDisplayValue(form?.primary_distance)
+    ? Number(form.primary_distance)
+    : null,
+  primary_fractal: getDisplayValue(form?.primary_fractal) || null,
+  primary_time: Number.isFinite(Number(form?.primary_time)) && getDisplayValue(form?.primary_time)
+    ? Number(form.primary_time)
+    : null
+});
+
+const createPrimaryFractalPanel = ({
+  dynamicFractals,
+  gameForm,
+  onFieldChange,
+  onSave,
+  onSelect,
+  saveDisabled,
+  saveStatus
+}) => {
+  const section = document.createElement("section");
+  const heading = document.createElement("h2");
+  const content = document.createElement("div");
+  const selectedFractalId = getDisplayValue(gameForm?.primary_fractal);
+  const selectedFractal = dynamicFractals.find((fractal) => String(fractal.id) === String(selectedFractalId)) || null;
+  const fields = [
+    { key: "label", label: "Label", type: "text", value: getDisplayValue(selectedFractal?.label), disabled: true },
+    { key: "primary_time", label: "Time", type: "number", value: getDisplayValue(gameForm?.primary_time) },
+    { key: "primary_distance", label: "Distance", type: "number", value: getDisplayValue(gameForm?.primary_distance) }
+  ];
+  const select = document.createElement("select");
+  const emptyOption = document.createElement("option");
+  const saveButton = document.createElement("button");
+  const statusText = document.createElement("p");
+
+  section.className = "profile-resonance-column profile-primary-fractal-panel";
+  heading.className = "profile-resonance-column-title";
+  heading.textContent = "Primary Fractal";
+  content.className = "profile-primary-fractal-content";
+  select.className = "profile-primary-fractal-select";
+  select.value = "";
+  emptyOption.value = "";
+  emptyOption.textContent = "Choose a primary fractal";
+  select.replaceChildren(emptyOption, ...dynamicFractals.map((fractal) => {
+    const option = document.createElement("option");
+
+    option.value = fractal.id;
+    option.textContent = getDisplayValue(fractal.label) || "Untitled fractal";
+
+    return option;
+  }));
+  select.value = selectedFractal ? selectedFractal.id : "";
+  select.addEventListener("change", () => onSelect(select.value));
+  content.append(select);
+
+  fields.forEach((field) => {
+    const label = document.createElement("label");
+    const labelText = document.createElement("span");
+    const input = document.createElement("input");
+
+    label.className = "profile-primary-fractal-field";
+    labelText.textContent = field.label;
+    input.type = field.type;
+    input.value = field.value;
+    input.disabled = Boolean(field.disabled);
+    if (field.type === "number") {
+      input.step = "any";
+      input.inputMode = "decimal";
+    }
+    input.addEventListener("input", () => {
+      if (field.disabled) return;
+      onFieldChange(field.key, input.value);
+    });
+    label.append(labelText, input);
+    content.append(label);
+  });
+  saveButton.className = "profile-primary-fractal-save";
+  saveButton.type = "button";
+  saveButton.textContent = "Save";
+  saveButton.disabled = saveDisabled;
+  saveButton.addEventListener("click", onSave);
+  content.append(saveButton);
+  if (saveStatus) {
+    statusText.className = "profile-primary-fractal-status";
+    statusText.textContent = saveStatus;
+    content.append(statusText);
+  }
+
+  section.append(heading, content);
+
+  return section;
+};
+
 const createProfileCoreState = ({
   avatarImage,
   hasUserProfile,
@@ -589,15 +693,20 @@ export const initJayceePage = async () => {
   if (!shell || !canvas || !status || !list) return;
 
   let rows = [];
+  let dynamicFractals = [];
   let publicProfiles = [];
   let avatarImage = null;
   let ringBackgroundImage = null;
   let coreState = null;
+  let currentProfile = null;
+  let gameForm = createEmptyGameSettings();
+  let gameSaveStatus = "";
+  let gameSaveStatusTimer = null;
+  let gameSettings = null;
+  let isGameSaving = false;
+  let supabaseClient = null;
   let themeSettings = getThemeSettingsFromProfile(null);
   let selectedSpaceNumber = DEFAULT_SELECTED_NUMBER;
-  let selectedDraftKey = null;
-  let draftPreviewMode = "closed";
-  let draftPreviewTimer = null;
   let currentTimeTimer = null;
   let profileViewCacheKey = "";
   let presentPosition = DEFAULT_PRESENT_POSITION;
@@ -657,46 +766,6 @@ export const initJayceePage = async () => {
 
     if (currentTimeTimer) return;
     currentTimeTimer = window.setInterval(updateCurrentTimeClock, PROFILE_CLOCK_REFRESH_MS);
-  };
-
-  const scheduleDraftPreviewMode = (mode, callback) => {
-    if (draftPreviewTimer) {
-      window.clearTimeout(draftPreviewTimer);
-    }
-
-    draftPreviewTimer = window.setTimeout(() => {
-      draftPreviewMode = mode;
-      draftPreviewTimer = null;
-      if (callback) callback();
-      renderResonances();
-    }, DRAFT_PREVIEW_ANIMATION_MS);
-  };
-
-  const toggleDraft = (draftKey) => {
-    const sameDraft = selectedDraftKey === draftKey;
-    const hadOpenDraft = Boolean(selectedDraftKey) && draftPreviewMode !== "closing";
-
-    if (sameDraft) {
-      draftPreviewMode = "closing";
-      renderResonances();
-      scheduleDraftPreviewMode("closed", () => {
-        selectedDraftKey = null;
-      });
-      return;
-    }
-
-    if (draftPreviewTimer) {
-      window.clearTimeout(draftPreviewTimer);
-      draftPreviewTimer = null;
-    }
-
-    selectedDraftKey = draftKey;
-    draftPreviewMode = hadOpenDraft ? "static" : "opening";
-    renderResonances();
-
-    if (!hadOpenDraft) {
-      scheduleDraftPreviewMode("static");
-    }
   };
 
   const restoreProfileViewCache = (cacheKey) => {
@@ -759,6 +828,60 @@ export const initJayceePage = async () => {
 
   };
 
+  const setPrimaryFractalSelection = (fractalId) => {
+    gameForm = {
+      ...gameForm,
+      primary_fractal: getDisplayValue(fractalId)
+    };
+    gameSaveStatus = "Unsaved changes";
+    renderResonances();
+  };
+
+  const saveGameSettings = async () => {
+    if (!supabaseClient || !currentProfile || isGameSaving) return;
+
+    if (gameSaveStatusTimer) {
+      window.clearTimeout(gameSaveStatusTimer);
+      gameSaveStatusTimer = null;
+    }
+    isGameSaving = true;
+    gameSaveStatus = "Saving...";
+    renderResonances();
+
+    try {
+      const updatedSettings = await upsertUserGameSettings(
+        supabaseClient,
+        currentProfile,
+        getGamePayload(gameForm)
+      );
+
+      gameSettings = updatedSettings || { ...gameSettings, ...getGamePayload(gameForm), user_id: currentProfile.id };
+      gameForm = createGameForm(gameSettings);
+      gameSaveStatus = "Saved";
+      isGameSaving = false;
+      renderResonances();
+      gameSaveStatusTimer = window.setTimeout(() => {
+        gameSaveStatus = "";
+        gameSaveStatusTimer = null;
+        renderResonances();
+      }, 1600);
+    } catch (error) {
+      console.error("Game settings could not be updated", error);
+      gameSaveStatus = "Could not save";
+      isGameSaving = false;
+      renderResonances();
+      status.textContent = error?.message || "Game settings could not be updated.";
+    }
+  };
+
+  const updatePrimaryFractalField = (field, value) => {
+    gameForm = {
+      ...gameForm,
+      [field]: getDisplayValue(value)
+    };
+    gameSaveStatus = "Unsaved changes";
+  };
+
   const renderPresentControls = () => {
     const corePanel = canvas.closest(".jaycee-profile-core");
     const existingControls = corePanel?.querySelector("[data-profile-present-controls]");
@@ -783,7 +906,6 @@ export const initJayceePage = async () => {
   };
 
   const renderResonances = () => {
-    const showDrafts = isEditableProfilePage;
     const coreGodGroups = getGroupsWithSelectedResonanceValue(
       getResonanceGroupsForNumber(
         getRowsForType(rows, GOD_TYPE_VALUE),
@@ -799,7 +921,6 @@ export const initJayceePage = async () => {
       ).filter((group) => group.sourceType === "jaycee"),
       selectedCoreTimeNumber
     );
-    const draftRows = showDrafts ? getDraftRows(rows) : [];
     const columns = [
       {
         groups: coreGodGroups,
@@ -823,7 +944,17 @@ export const initJayceePage = async () => {
         column.selectedNumber,
         column.meta
       )),
-      ...(draftRows.length ? [createDraftsSection(draftRows, selectedDraftKey, draftPreviewMode, toggleDraft)] : [])
+      ...(isEditableProfilePage ? [
+        createPrimaryFractalPanel({
+          dynamicFractals,
+          gameForm,
+          onFieldChange: updatePrimaryFractalField,
+          onSave: saveGameSettings,
+          onSelect: setPrimaryFractalSelection,
+          saveDisabled: !currentProfile || isGameSaving,
+          saveStatus: gameSaveStatus
+        })
+      ] : [])
     );
   };
 
@@ -913,6 +1044,7 @@ export const initJayceePage = async () => {
 
   try {
     const client = await window.JayceeAuth.getSupabaseClient();
+    supabaseClient = client;
     const sessionResult = await window.JayceeAuth?.getSession?.();
     const user = sessionResult?.data?.session?.user;
 
@@ -926,6 +1058,7 @@ export const initJayceePage = async () => {
       : publicUsername
         ? await fetchProfileByUsername(client, publicUsername)
         : await fetchProfileByUserId(client, user.id);
+    currentProfile = profile;
 
     if (hasUserProfile && !profile) {
       shell.hidden = false;
@@ -943,6 +1076,9 @@ export const initJayceePage = async () => {
     const profileRows = !hasUserProfile
       ? []
       : await fetchUserResonances(client, profile, { publicOnly: Boolean(publicUsername) });
+    dynamicFractals = isEditableProfilePage ? await fetchUserDynamicFractals(client, profile) : [];
+    gameSettings = isEditableProfilePage ? await fetchUserGameSettings(client, profile) : null;
+    gameForm = createGameForm(gameSettings);
 
     profileViewCacheKey = getProfileViewCacheKey({ pageMode, profile, publicUsername });
     rows = [...jayceeRows, ...profileRows];
@@ -950,6 +1086,13 @@ export const initJayceePage = async () => {
       requestPresentPosition();
     }
     restoreProfileViewCache(profileViewCacheKey);
+    if (
+      gameForm.primary_fractal
+      && !dynamicFractals.some((fractal) => String(fractal.id) === String(gameForm.primary_fractal))
+    ) {
+      gameSettings = { ...gameSettings, primary_fractal: null };
+      gameForm = { ...gameForm, primary_fractal: "" };
+    }
     setDefaultTimeSelectionsToPresent();
     publicProfiles = isPresentPage ? await fetchPublicProfiles(client) : [];
     avatarImage = !hasUserProfile ? null : await loadOptionalImage(await getAvatarImageUrl(client, profile));

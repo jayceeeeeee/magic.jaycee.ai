@@ -1,5 +1,4 @@
 import {
-  CODE_COLUMNS,
   JAYCEE_RESONANCE_SOURCE,
   getDisplayValue
 } from "./jaycee-data.js";
@@ -74,75 +73,6 @@ export const createResonanceColumn = (title, groups, selectedNumber, meta = "") 
   return column;
 };
 
-const getDraftKey = (row) => row.id || row.label || "";
-
-export const DRAFT_PREVIEW_ANIMATION_MS = 220;
-
-const createDraftPreview = (draft, mode) => {
-  const preview = document.createElement("div");
-  const table = document.createElement("div");
-  const headerRow = document.createElement("div");
-  const valueRow = document.createElement("div");
-
-  preview.className = `profile-draft-preview is-${mode}`;
-  table.className = "profile-draft-table";
-  headerRow.className = "profile-draft-table-row profile-draft-table-head";
-  valueRow.className = "profile-draft-table-row profile-draft-table-values";
-  headerRow.replaceChildren(...CODE_COLUMNS.map((number) => {
-    const cell = document.createElement("div");
-
-    cell.className = "profile-draft-table-cell";
-    cell.textContent = number;
-
-    return cell;
-  }));
-  valueRow.replaceChildren(...CODE_COLUMNS.map((number) => {
-    const cell = document.createElement("div");
-    const valueEl = document.createElement("strong");
-
-    cell.className = "profile-draft-table-cell";
-    valueEl.textContent = getDisplayValue(draft[String(number)]) || "-";
-    cell.append(valueEl);
-
-    return cell;
-  }));
-  table.append(headerRow, valueRow);
-  preview.append(table);
-
-  return preview;
-};
-
-export const createDraftsSection = (draftRows, selectedDraftKey, draftPreviewMode, onToggleDraft) => {
-  const section = document.createElement("section");
-  const heading = document.createElement("h2");
-  const items = document.createElement("div");
-  const selectedDraft = draftRows.find((row) => getDraftKey(row) === selectedDraftKey);
-
-  section.className = "profile-resonance-column profile-resonance-drafts";
-  heading.className = "profile-resonance-column-title";
-  heading.textContent = "Drafts";
-  items.className = "profile-draft-list";
-  items.replaceChildren(...draftRows.map((row) => {
-    const item = document.createElement("button");
-    const draftKey = getDraftKey(row);
-
-    item.className = "profile-draft-item";
-    item.type = "button";
-    item.textContent = row.label || "Untitled fractal";
-    item.setAttribute("aria-pressed", String(draftKey === selectedDraftKey));
-    item.addEventListener("click", () => onToggleDraft(draftKey));
-
-    return item;
-  }));
-  section.append(
-    heading,
-    ...(selectedDraft ? [createDraftPreview(selectedDraft, draftPreviewMode)] : []),
-    items
-  );
-
-  return section;
-};
-
 const getResonancesForNumber = (rows, selectedNumber) => (
   rows.filter((row) => getDisplayValue(row[String(selectedNumber)]))
 );
@@ -153,10 +83,6 @@ export const getRowsForType = (rows, typeName) => (
 
     return type === typeName;
   })
-);
-
-export const getDraftRows = (rows) => (
-  rows.filter((row) => !getDisplayValue(row.type))
 );
 
 export const getResonanceGroupsForNumber = (rows, selectedNumber) => (
