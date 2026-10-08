@@ -114,6 +114,56 @@
   width: min(100%, clamp(270px, calc(100svh - var(--banner-space) - var(--footer-space) - 306px), 460px));
 }
 
+.profile-parameter-panel {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 540px);
+  display: grid;
+  gap: 9px;
+  padding: 10px 12px;
+  border: 1px solid rgba(var(--accent-rgb), 0.28);
+  border-radius: 7px;
+  background:
+    linear-gradient(90deg, rgba(var(--accent-rgb), 0.1), transparent 72%),
+    rgba(0, 0, 0, 0.16);
+}
+
+.profile-parameter-panel h2 {
+  margin: 0;
+  color: var(--accent-soft);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.72rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.profile-parameter-list {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 9px;
+  margin: 0;
+  color: var(--muted);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+.profile-parameter-list dt,
+.profile-parameter-list dd {
+  min-width: 0;
+  margin: 0;
+}
+
+.profile-parameter-list dt {
+  color: var(--accent-soft);
+  text-transform: uppercase;
+}
+
+.profile-parameter-list dd {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
 .profile-theme-controls {
   position: relative;
   z-index: 1;

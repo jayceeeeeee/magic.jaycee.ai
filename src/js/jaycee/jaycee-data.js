@@ -1,5 +1,6 @@
 export const JAYCEE_FRACTALS_TABLE = "jaycee_fractals";
 export const JAYCEE_DYNAMIC_FRACTALS_TABLE = "jaycee_dynamic_fractals";
+export const JAYCEE_DYNAMIC_FRACTAL_ELEMENTS_TABLE = "jaycee_dynamic_fractal_elements";
 export const JAYCEE_GAME_TABLE = "jaycee_game";
 export const JAYCEE_SKILLS_TABLE = "jaycee_skills";
 export const FRACTAL_VISIBILITY_COLUMN = "visibility";
@@ -172,6 +173,22 @@ export const fetchUserDynamicFractals = async (client, profile) => {
     .select("id, label, user_id, image, created_at, skill")
     .eq("user_id", profile.id)
     .order("created_at", { ascending: true });
+
+  if (error) throw error;
+
+  return data || [];
+};
+
+export const fetchDynamicFractalElements = async (client, fractalIds) => {
+  const ids = [...new Set((fractalIds || []).map(getDisplayValue).filter(Boolean))];
+
+  if (!ids.length) return [];
+
+  const { data, error } = await client
+    .from(JAYCEE_DYNAMIC_FRACTAL_ELEMENTS_TABLE)
+    .select("*")
+    .in("fractal_id", ids)
+    .order("position", { ascending: true });
 
   if (error) throw error;
 

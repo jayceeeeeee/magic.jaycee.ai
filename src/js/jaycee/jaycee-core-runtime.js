@@ -11,6 +11,7 @@ import {
   DEFAULT_SELECTED_NUMBER,
   GOD_TYPE_VALUE,
   LORE_TYPE_VALUE,
+  fetchDynamicFractalElements,
   fetchJayceeResonances,
   fetchProfileByUserId,
   fetchProfileByUsername,
@@ -152,6 +153,25 @@ const getActiveSegmentIndex = (segmentKeys, selectedSegment) => (
   Math.max(0, segmentKeys.findIndex((key) => String(key) === String(selectedSegment)))
 );
 
+const formatDuration = (secondsValue) => {
+  let seconds = Math.floor(Number(secondsValue));
+
+  if (!Number.isFinite(seconds) || seconds <= 0) return "";
+
+  const day = 24 * 60 * 60;
+  const days = Math.floor(seconds / day);
+  seconds %= day;
+  const hours = Math.floor(seconds / (60 * 60));
+  seconds %= 60 * 60;
+  const minutes = Math.floor(seconds / 60);
+  const finalSeconds = seconds % 60;
+  const clock = [hours, minutes, finalSeconds]
+    .map((part) => String(part).padStart(2, "0"))
+    .join(":");
+
+  return days ? `${days}d ${clock}` : clock;
+};
+
 const getGroupsWithSelectedResonanceValue = (groups, selectedNumber) => (
   groups.map((group) => ({
     ...group,
@@ -163,6 +183,28 @@ const getGroupsWithSelectedResonanceValue = (groups, selectedNumber) => (
 );
 
 const getCoreRingSegmentKeys = () => JAYCEE_ORDER.map(String);
+
+const getElementLabel = (element, fallback = "") => (
+  getDisplayValue(element?.label)
+  || getDisplayValue(element?.value)
+  || getDisplayValue(element?.name)
+  || fallback
+);
+
+const getFractalElements = (elementsByFractalId, fractalId) => (
+  (elementsByFractalId.get(getDisplayValue(fractalId)) || [])
+    .slice()
+    .sort((first, second) => {
+      const firstPosition = Number(first.position);
+      const secondPosition = Number(second.position);
+
+      if (Number.isFinite(firstPosition) && Number.isFinite(secondPosition)) {
+        return firstPosition - secondPosition;
+      }
+
+      return getDisplayValue(first.id).localeCompare(getDisplayValue(second.id));
+    })
+);
 
 const getCoreRingFractal = (rows) => (
   rows.find((row) => (
@@ -592,11 +634,58 @@ const createDashboardSavePanel = ({ onSave, saveDisabled, saveStatus }) => {
   return section;
 };
 
+const createPrimaryRingParameterPanel = ({
+  elementsByFractalId,
+  gameForm,
+  primaryFractal,
+  selectedDynamicRingSegments
+}) => {
+  if (!primaryFractal) return null;
+
+  const section = document.createElement("section");
+  const heading = document.createElement("h2");
+  const list = document.createElement("dl");
+  const primaryElements = getFractalElements(elementsByFractalId, primaryFractal.id);
+  const selectedSegment = selectedDynamicRingSegments.get(primaryFractal.id)
+    || getDisplayValue(primaryElements[0]?.id)
+    || "1";
+  const selectedElement = primaryElements.find((element) => (
+    getDisplayValue(element.id) === getDisplayValue(selectedSegment)
+  ));
+  const rows = [{
+    label: "Cycle",
+    value: formatDuration(gameForm.primary_time) || "00:00:00"
+  }, {
+    label: "Segment",
+    value: getElementLabel(selectedElement, selectedSegment)
+  }];
+
+  section.className = "profile-parameter-panel";
+  section.dataset.profileParameters = "";
+  heading.textContent = getDisplayValue(primaryFractal.label) || "Primary Fractal";
+  list.className = "profile-parameter-list";
+  rows.forEach((row) => {
+    const label = document.createElement("dt");
+    const value = document.createElement("dd");
+
+    label.textContent = row.label;
+    value.textContent = row.value;
+    list.append(label, value);
+  });
+  section.append(heading, list);
+
+  return section;
+};
+
 const createProfileCoreState = ({
   avatarImage,
+  dynamicFractals,
+  elementsByFractalId,
+  gameForm,
   hasUserProfile,
   ringBackgroundImage,
   rows,
+  selectedDynamicRingSegments,
   selectedSpaceNumber,
   selectedCoreRingSegments
 }) => {
@@ -631,6 +720,32 @@ const createProfileCoreState = ({
       tone: "accent"
     }
   ];
+  const primaryFractal = dynamicFractals.find((fractal) => (
+    getDisplayValue(fractal.id) === getDisplayValue(gameForm.primary_fractal)
+  ));
+  const primaryElements = getFractalElements(elementsByFractalId, primaryFractal?.id);
+
+  if (primaryFractal && primaryElements.length) {
+    const segmentKeys = primaryElements.map((element) => getDisplayValue(element.id));
+    const selectedSegment = selectedDynamicRingSegments.get(primaryFractal.id) || segmentKeys[0];
+    const activeSegmentIndex = getActiveSegmentIndex(segmentKeys, selectedSegment);
+
+    rings.push({
+      id: `dynamic-primary:${primaryFractal.id}`,
+      activeFillAlpha: PROFILE_RING_ACTIVE_FILL_ALPHA,
+      activeSegmentIndex,
+      count: segmentKeys.length,
+      fillAlpha: 0,
+      label: getDisplayValue(primaryFractal.label) || "Primary Fractal",
+      labels: getEmptyLabels(segmentKeys.length),
+      rotation: getTopCenteredLastSegmentRotation(segmentKeys.length),
+      segmentKeys,
+      showBorders: true,
+      showDividers: true,
+      styledSegmentIndices: [activeSegmentIndex],
+      tone: "accent"
+    });
+  }
 
   return {
     ...createJayceeState({
@@ -660,6 +775,7 @@ export const initJayceePage = async () => {
   if (!shell || !canvas || !status || !list) return;
 
   let rows = [];
+  let dynamicFractalElements = [];
   let dynamicFractals = [];
   let publicProfiles = [];
   let avatarImage = null;
@@ -677,6 +793,21 @@ export const initJayceePage = async () => {
   let selectedSpaceNumber = DEFAULT_SELECTED_NUMBER;
   let profileViewCacheKey = "";
   const selectedCoreRingSegments = new Map([[CORE_RING_ID, String(DEFAULT_CORE_RING_NUMBER)]]);
+  const selectedDynamicRingSegments = new Map();
+
+  const getElementsByFractalId = () => (
+    dynamicFractalElements.reduce((elementsById, element) => {
+      const fractalId = getDisplayValue(element.fractal_id) || getDisplayValue(element.fractal);
+
+    if (!fractalId) return elementsById;
+      if (!elementsById.has(fractalId)) {
+        elementsById.set(fractalId, []);
+      }
+      elementsById.get(fractalId).push(element);
+
+      return elementsById;
+    }, new Map())
+  );
 
   const restoreProfileViewCache = (cacheKey) => {
     const cache = loadProfileViewCache(cacheKey);
@@ -728,6 +859,13 @@ export const initJayceePage = async () => {
     }
   };
 
+  const setDynamicRingSegmentSelection = (ringId, segmentKey) => {
+    const [, fractalId] = getDisplayValue(ringId).split(":");
+
+    if (!fractalId) return;
+    selectedDynamicRingSegments.set(fractalId, getDisplayValue(segmentKey));
+  };
+
   const setPrimaryFractalSelection = (fractalId) => {
     const primarySkillId = getPrimarySkillId(dynamicFractals, { primary_fractal: fractalId });
 
@@ -743,7 +881,7 @@ export const initJayceePage = async () => {
       ));
     }
     dashboardSaveStatus = "Unsaved changes";
-    renderResonances();
+    syncProfileView();
   };
 
   const updateDynamicFractalField = (fractalId, field, value) => {
@@ -761,7 +899,7 @@ export const initJayceePage = async () => {
       ));
     }
     dashboardSaveStatus = "Unsaved changes";
-    renderResonances();
+    syncProfileView();
   };
 
   const saveDashboardSettings = async () => {
@@ -833,6 +971,7 @@ export const initJayceePage = async () => {
       [field]: getDisplayValue(value)
     };
     dashboardSaveStatus = "Unsaved changes";
+    renderCoreParameters();
   };
 
   const updateSkillField = (skillId, field, value) => {
@@ -934,12 +1073,41 @@ export const initJayceePage = async () => {
     );
   };
 
+  const renderCoreParameters = () => {
+    const corePanel = canvas.closest(".jaycee-profile-core");
+    const existingPanel = corePanel?.querySelector("[data-profile-parameters]");
+    const primaryFractal = dynamicFractals.find((fractal) => (
+      getDisplayValue(fractal.id) === getDisplayValue(gameForm.primary_fractal)
+    ));
+    const panel = createPrimaryRingParameterPanel({
+      elementsByFractalId: getElementsByFractalId(),
+      gameForm,
+      primaryFractal,
+      selectedDynamicRingSegments
+    });
+
+    if (!corePanel || !panel) {
+      existingPanel?.remove();
+      return;
+    }
+
+    if (existingPanel) {
+      existingPanel.replaceWith(panel);
+    } else {
+      canvas.insertAdjacentElement("afterend", panel);
+    }
+  };
+
   const renderCore = () => {
     coreState = createProfileCoreState({
       avatarImage,
+      dynamicFractals,
+      elementsByFractalId: getElementsByFractalId(),
+      gameForm,
       hasUserProfile,
       ringBackgroundImage,
       rows,
+      selectedDynamicRingSegments,
       selectedSpaceNumber,
       selectedCoreRingSegments
     });
@@ -953,6 +1121,7 @@ export const initJayceePage = async () => {
   const syncProfileView = () => {
     saveProfileViewState();
     renderCore();
+    renderCoreParameters();
     renderResonances();
   };
 
@@ -965,7 +1134,11 @@ export const initJayceePage = async () => {
       selectedSpaceNumber = hit.number;
       setCoreRingSegmentSelection(CORE_RING_ID, hit.number);
     } else if (hit.type === "ring" && hit.ringId) {
-      setCoreRingSegmentSelection(hit.ringId, hit.segmentKey);
+      if (getDisplayValue(hit.ringId).startsWith("dynamic-primary:")) {
+        setDynamicRingSegmentSelection(hit.ringId, hit.segmentKey);
+      } else {
+        setCoreRingSegmentSelection(hit.ringId, hit.segmentKey);
+      }
     }
 
     syncProfileView();
@@ -1005,6 +1178,9 @@ export const initJayceePage = async () => {
       ? []
       : await fetchUserResonances(client, profile, { publicOnly: Boolean(publicUsername) });
     dynamicFractals = isEditableProfilePage ? await fetchUserDynamicFractals(client, profile) : [];
+    dynamicFractalElements = isEditableProfilePage
+      ? await fetchDynamicFractalElements(client, dynamicFractals.map((fractal) => fractal.id))
+      : [];
     skills = isEditableProfilePage
       ? await fetchSkillsByIds(client, dynamicFractals.map((fractal) => fractal.skill))
       : [];
@@ -1041,6 +1217,7 @@ export const initJayceePage = async () => {
     window.addEventListener("resize", scheduleRenderCore);
     window.addEventListener("load", scheduleRenderCore);
     renderPresentControls();
+    renderCoreParameters();
     renderResonances();
     scheduleRenderCore();
   } catch (error) {
