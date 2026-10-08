@@ -10,11 +10,10 @@ export const PROFILE_TABLE = "profiles";
 export const USER_IMAGES_BUCKET = "users";
 export const CODE_COLUMNS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 export const DEFAULT_SELECTED_NUMBER = 5;
-export const CORE_TIME_RING_ID = "core-time";
-export const DEFAULT_CORE_TIME_NUMBER = 9;
+export const CORE_RING_ID = "core-ring";
+export const DEFAULT_CORE_RING_NUMBER = 9;
 export const JAYCEE_RESONANCE_SOURCE = "Jaycee Core";
 
-const FRACTAL_PARAMETER_COLUMNS = "start_at, length";
 const PROFILE_SELECT_COLUMNS = [
   "id",
   "username",
@@ -37,29 +36,6 @@ export const getDisplayValue = (value) => (
   value === null || value === undefined ? "" : String(value).trim()
 );
 
-export const parseBrowserGregorianDate = (value) => {
-  const text = getDisplayValue(value);
-  const match = text.match(
-    /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3})\d*)?)?)?/
-  );
-
-  if (match) {
-    const [, year, month, day, hours = "0", minutes = "0", seconds = "0", milliseconds = "0"] = match;
-
-    return new Date(
-      Number(year),
-      Number(month) - 1,
-      Number(day),
-      Number(hours),
-      Number(minutes),
-      Number(seconds),
-      Number(milliseconds.padEnd(3, "0"))
-    ).getTime();
-  }
-
-  return Date.parse(text);
-};
-
 export const isHexColor = (value) => /^#[0-9a-f]{6}$/i.test(getDisplayValue(value));
 
 export const getProfileThemeValue = (profile) => (
@@ -79,7 +55,7 @@ export const getThemeSettingsFromProfile = (profile) => ({
 export const fetchJayceeResonances = async (client) => {
   const { data, error } = await client
     .from(JAYCEE_FRACTALS_TABLE)
-    .select(`id, label, user_id, type, image, ${FRACTAL_PARAMETER_COLUMNS}, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
+    .select(`id, label, user_id, type, image, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
     .is("user_id", null)
     .eq(FRACTAL_VISIBILITY_COLUMN, PUBLIC_VISIBILITY_VALUE)
     .order("label", { ascending: true });
@@ -96,7 +72,7 @@ export const fetchJayceeResonances = async (client) => {
 export const fetchUserResonances = async (client, profile, { publicOnly = false } = {}) => {
   let query = client
     .from(JAYCEE_FRACTALS_TABLE)
-    .select(`id, label, user_id, type, image, ${FRACTAL_PARAMETER_COLUMNS}, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
+    .select(`id, label, user_id, type, image, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
     .eq("user_id", profile.id);
 
   if (publicOnly) {
