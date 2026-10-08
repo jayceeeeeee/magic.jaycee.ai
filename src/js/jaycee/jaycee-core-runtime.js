@@ -715,7 +715,7 @@ const createSecondaryFractalPanel = ({
 
   section.className = "profile-resonance-column profile-secondary-fractal-panel";
   heading.className = "profile-resonance-column-title";
-  heading.textContent = "Secondary Fractal";
+  heading.textContent = "Secondary Fractals";
   content.className = "profile-skills-content";
 
   if (!secondaryFractals.length) {
@@ -728,7 +728,7 @@ const createSecondaryFractalPanel = ({
     const header = document.createElement("div");
 
     header.className = "profile-secondary-fractal-header";
-    ["#", "Fractal", "Skill"].forEach((text) => {
+    ["Fractal", "Skill"].forEach((text) => {
       const item = document.createElement("span");
 
       item.textContent = text;
@@ -737,16 +737,13 @@ const createSecondaryFractalPanel = ({
     content.append(header);
   }
 
-  secondaryFractals.forEach((fractal, index) => {
+  secondaryFractals.forEach((fractal) => {
     const item = document.createElement("article");
-    const badge = document.createElement("span");
     const labelInput = document.createElement("input");
     const skillSelect = document.createElement("select");
     const emptySkillOption = document.createElement("option");
 
     item.className = "profile-secondary-fractal-row";
-    badge.className = "profile-skill-badge";
-    badge.textContent = String(index + 1);
     labelInput.type = "text";
     labelInput.value = getDisplayValue(fractal.label);
     labelInput.setAttribute("aria-label", "Fractal name");
@@ -767,7 +764,7 @@ const createSecondaryFractalPanel = ({
     skillSelect.value = getDisplayValue(fractal.skill);
     skillSelect.addEventListener("change", () => onFractalFieldChange(fractal.id, "skill", skillSelect.value));
 
-    item.append(badge, labelInput, skillSelect);
+    item.append(labelInput, skillSelect);
     content.append(item);
   });
   section.append(heading, content);
