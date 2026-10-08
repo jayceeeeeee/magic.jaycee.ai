@@ -185,8 +185,10 @@ const formatDistance = (metersValue) => {
 
   if (!Number.isFinite(meters) || meters <= 0) return "";
 
-  if (meters >= 1000 && meters % 1000 === 0) {
-    return `${Math.round(meters / 1000)}km`;
+  if (meters >= 1000) {
+    const kilometers = meters / 1000;
+
+    return `${Number.isInteger(kilometers) ? kilometers : Number(kilometers.toFixed(2))}km`;
   }
 
   return `${Number.isInteger(meters) ? meters : Number(meters.toFixed(2))}m`;
@@ -710,7 +712,7 @@ const createDynamicRingParameterPanel = ({ ringModels }) => {
     const list = document.createElement("dl");
     const rows = [{
       label: "Cycle",
-      value: formatDuration(ringModel.fractal.time) || "00:00:00"
+      value: formatDuration(ringModel.fractal.time, { compact: false }) || "00:00:00"
     }, {
       label: "Practice",
       value: formatDuration(ringModel.practiceSeconds, { compact: false }) || "00:00:00"
