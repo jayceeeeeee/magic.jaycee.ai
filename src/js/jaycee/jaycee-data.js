@@ -270,6 +270,27 @@ export const updateSkills = async (client, skillUpdates) => {
   return updatedRows.filter(Boolean);
 };
 
+export const updateUserDynamicFractals = async (client, fractalUpdates) => {
+  const updates = (fractalUpdates || []).filter((fractal) => fractal?.id);
+
+  if (!updates.length) return [];
+
+  const updatedRows = await Promise.all(updates.map(async ({ id, ...values }) => {
+    const { data, error } = await client
+      .from(JAYCEE_DYNAMIC_FRACTALS_TABLE)
+      .update(values)
+      .eq("id", id)
+      .select("id, label, user_id, image, created_at, skill")
+      .maybeSingle();
+
+    if (error) throw error;
+
+    return data;
+  }));
+
+  return updatedRows.filter(Boolean);
+};
+
 export const getAvatarImageUrl = async (client, profile) => (
   getUserImageUrl(client, profile, profile?.avatar_path)
 );

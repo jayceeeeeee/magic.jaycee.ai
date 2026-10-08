@@ -624,6 +624,7 @@
 }
 
 .profile-primary-fractal-panel,
+.profile-secondary-fractal-panel,
 .profile-skills-panel,
 .profile-dashboard-save-panel {
   grid-column: 1 / -1;
@@ -734,19 +735,13 @@
 }
 
 .profile-skill-root,
-.profile-skill-row {
+.profile-skill-row,
+.profile-secondary-fractal-row {
   min-width: 0;
   padding: 10px;
   border: 1px solid rgba(var(--accent-rgb), 0.18);
   border-radius: 6px;
   background: rgba(0, 0, 0, 0.1);
-}
-
-.profile-skill-root {
-  display: grid;
-  grid-template-columns: 30px max-content minmax(0, 1fr);
-  align-items: center;
-  gap: 10px;
 }
 
 .profile-skill-badge {
@@ -764,23 +759,6 @@
   line-height: 1;
 }
 
-.profile-skill-root > span:not(.profile-skill-badge) {
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 700;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.profile-skill-root strong {
-  min-width: 0;
-  color: var(--text);
-  font-family: "Share Tech Mono", monospace;
-  font-size: 1rem;
-  font-weight: 700;
-  overflow-wrap: anywhere;
-}
-
 .profile-skill-row {
   display: grid;
   grid-template-columns: 30px repeat(3, minmax(0, 1fr));
@@ -788,9 +766,16 @@
   gap: 8px;
 }
 
-.profile-skill-header {
+.profile-secondary-fractal-row {
   display: grid;
-  grid-template-columns: 30px repeat(3, minmax(0, 1fr));
+  grid-template-columns: 30px repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-skill-header,
+.profile-secondary-fractal-header {
+  display: grid;
   gap: 8px;
   padding: 0 10px;
   color: var(--muted);
@@ -800,8 +785,18 @@
   text-transform: uppercase;
 }
 
+.profile-skill-header {
+  grid-template-columns: 30px repeat(3, minmax(0, 1fr));
+}
+
+.profile-secondary-fractal-header {
+  grid-template-columns: 30px repeat(2, minmax(0, 1fr));
+}
+
 .profile-skill-row input,
-.profile-skill-row select {
+.profile-skill-row select,
+.profile-secondary-fractal-row input,
+.profile-secondary-fractal-row select {
   width: 100%;
   min-width: 0;
   min-height: 34px;
@@ -815,17 +810,27 @@
 }
 
 .profile-skill-row input:focus,
-.profile-skill-row select:focus {
+.profile-skill-row select:focus,
+.profile-secondary-fractal-row input:focus,
+.profile-secondary-fractal-row select:focus {
   border-color: rgba(var(--accent-rgb), 0.58);
+}
+
+.profile-skill-row input:disabled,
+.profile-skill-row select:disabled {
+  color: var(--muted);
+  opacity: 0.72;
 }
 
 @media (max-width: 720px) {
   .profile-primary-fractal-fields,
-  .profile-skill-row {
+  .profile-skill-row,
+  .profile-secondary-fractal-row {
     grid-template-columns: 1fr;
   }
 
-  .profile-skill-header {
+  .profile-skill-header,
+  .profile-secondary-fractal-header {
     display: none;
   }
 }

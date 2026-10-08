@@ -27,6 +27,7 @@ import {
   loadOptionalImage,
   parseBrowserGregorianDate,
   updateSkills,
+  updateUserDynamicFractals,
   upsertUserGameSettings
 } from "./jaycee-data.js";
 import {
@@ -563,6 +564,12 @@ const getPrimarySkillId = (dynamicFractals, gameForm) => {
   return getDisplayValue(selectedFractal?.skill);
 };
 
+const getDynamicFractalPayload = (fractal) => ({
+  id: fractal.id,
+  label: getDisplayValue(fractal.label),
+  skill: getDisplayValue(fractal.skill) || null
+});
+
 const orderSkillForms = (skillForms, primarySkillId) => {
   const remaining = new Map(skillForms.map((skill) => [skill.id, skill]));
   const ordered = [];
@@ -593,25 +600,35 @@ const createPrimaryFractalPanel = ({
   dynamicFractals,
   gameForm,
   onFieldChange,
-  onSelect
+  onFractalSkillChange,
+  onSelect,
+  skillForms
 }) => {
   const section = document.createElement("section");
   const heading = document.createElement("h2");
   const content = document.createElement("div");
   const selectedFractalId = getDisplayValue(gameForm?.primary_fractal);
   const selectedFractal = dynamicFractals.find((fractal) => String(fractal.id) === String(selectedFractalId)) || null;
+  const selectedSkillId = getDisplayValue(selectedFractal?.skill);
   const fields = [
     { key: "primary_time", label: "Time (s)", type: "number", value: getDisplayValue(gameForm?.primary_time) },
     { key: "primary_distance", label: "Distance (m)", type: "number", value: getDisplayValue(gameForm?.primary_distance) }
   ];
+  const selectorsRow = document.createElement("div");
+  const fractalLabel = document.createElement("label");
   const select = document.createElement("select");
   const emptyOption = document.createElement("option");
+  const skillLabel = document.createElement("label");
+  const skillSelect = document.createElement("select");
+  const emptySkillOption = document.createElement("option");
   const fieldsRow = document.createElement("div");
 
   section.className = "profile-resonance-column profile-primary-fractal-panel";
   heading.className = "profile-resonance-column-title";
   heading.textContent = "Primary Fractal";
   content.className = "profile-primary-fractal-content";
+  selectorsRow.className = "profile-primary-fractal-fields";
+  fractalLabel.className = "profile-primary-fractal-field";
   select.className = "profile-primary-fractal-select";
   select.value = "";
   emptyOption.value = "";
@@ -626,7 +643,33 @@ const createPrimaryFractalPanel = ({
   }));
   select.value = selectedFractal ? selectedFractal.id : "";
   select.addEventListener("change", () => onSelect(select.value));
-  content.append(select);
+  fractalLabel.append(document.createElement("span"), select);
+  fractalLabel.firstElementChild.textContent = "Fractal";
+  selectorsRow.append(fractalLabel);
+
+  skillLabel.className = "profile-primary-fractal-field";
+  skillSelect.className = "profile-primary-fractal-select";
+  emptySkillOption.value = "";
+  emptySkillOption.textContent = "Choose a skill";
+  emptySkillOption.disabled = Boolean(skillForms.length);
+  skillSelect.replaceChildren(emptySkillOption, ...skillForms.map((skill) => {
+    const option = document.createElement("option");
+
+    option.value = skill.id;
+    option.textContent = skill.label || "Untitled skill";
+
+    return option;
+  }));
+  skillSelect.value = selectedSkillId;
+  skillSelect.disabled = !selectedFractal;
+  skillSelect.addEventListener("change", () => {
+    if (!selectedFractal) return;
+    onFractalSkillChange(selectedFractal.id, skillSelect.value);
+  });
+  skillLabel.append(document.createElement("span"), skillSelect);
+  skillLabel.firstElementChild.textContent = "Skill";
+  selectorsRow.append(skillLabel);
+  content.append(selectorsRow);
   fieldsRow.className = "profile-primary-fractal-fields";
 
   fields.forEach((field) => {
@@ -651,6 +694,82 @@ const createPrimaryFractalPanel = ({
     fieldsRow.append(label);
   });
   content.append(fieldsRow);
+  section.append(heading, content);
+
+  return section;
+};
+
+const createSecondaryFractalPanel = ({
+  dynamicFractals,
+  gameForm,
+  onFractalFieldChange,
+  skillForms
+}) => {
+  const section = document.createElement("section");
+  const heading = document.createElement("h2");
+  const content = document.createElement("div");
+  const primaryFractalId = getDisplayValue(gameForm?.primary_fractal);
+  const secondaryFractals = dynamicFractals.filter((fractal) => (
+    getDisplayValue(fractal.id) !== primaryFractalId
+  ));
+
+  section.className = "profile-resonance-column profile-secondary-fractal-panel";
+  heading.className = "profile-resonance-column-title";
+  heading.textContent = "Secondary Fractal";
+  content.className = "profile-skills-content";
+
+  if (!secondaryFractals.length) {
+    const empty = document.createElement("p");
+
+    empty.className = "profile-primary-fractal-status";
+    empty.textContent = "No secondary fractals yet.";
+    content.append(empty);
+  } else {
+    const header = document.createElement("div");
+
+    header.className = "profile-secondary-fractal-header";
+    ["#", "Fractal", "Skill"].forEach((text) => {
+      const item = document.createElement("span");
+
+      item.textContent = text;
+      header.append(item);
+    });
+    content.append(header);
+  }
+
+  secondaryFractals.forEach((fractal, index) => {
+    const item = document.createElement("article");
+    const badge = document.createElement("span");
+    const labelInput = document.createElement("input");
+    const skillSelect = document.createElement("select");
+    const emptySkillOption = document.createElement("option");
+
+    item.className = "profile-secondary-fractal-row";
+    badge.className = "profile-skill-badge";
+    badge.textContent = String(index + 1);
+    labelInput.type = "text";
+    labelInput.value = getDisplayValue(fractal.label);
+    labelInput.setAttribute("aria-label", "Fractal name");
+    labelInput.addEventListener("input", () => onFractalFieldChange(fractal.id, "label", labelInput.value));
+
+    emptySkillOption.value = "";
+    emptySkillOption.textContent = "Choose a skill";
+    emptySkillOption.disabled = Boolean(skillForms.length);
+    skillSelect.setAttribute("aria-label", "Fractal skill");
+    skillSelect.replaceChildren(emptySkillOption, ...skillForms.map((skill) => {
+      const option = document.createElement("option");
+
+      option.value = skill.id;
+      option.textContent = skill.label || "Untitled skill";
+
+      return option;
+    }));
+    skillSelect.value = getDisplayValue(fractal.skill);
+    skillSelect.addEventListener("change", () => onFractalFieldChange(fractal.id, "skill", skillSelect.value));
+
+    item.append(badge, labelInput, skillSelect);
+    content.append(item);
+  });
   section.append(heading, content);
 
   return section;
@@ -702,14 +821,25 @@ const createSkillsPanel = ({
     badge.textContent = String(index + 1);
 
     if (isPrimarySkill) {
-      const label = document.createElement("span");
-      const value = document.createElement("strong");
+      const labelInput = document.createElement("input");
+      const parentInput = document.createElement("input");
+      const ratioInput = document.createElement("input");
 
-      item.className = "profile-skill-root";
+      item.className = "profile-skill-row profile-skill-root";
       item.append(badge);
-      label.textContent = "Root";
-      value.textContent = skill.label || "Untitled skill";
-      item.append(label, value);
+      labelInput.type = "text";
+      labelInput.value = skill.label;
+      labelInput.setAttribute("aria-label", "Root skill label");
+      labelInput.addEventListener("input", () => onFieldChange(skill.id, "label", labelInput.value));
+      parentInput.type = "text";
+      parentInput.value = "Root";
+      parentInput.disabled = true;
+      parentInput.setAttribute("aria-label", "Root skill parent");
+      ratioInput.type = "number";
+      ratioInput.value = "1";
+      ratioInput.disabled = true;
+      ratioInput.setAttribute("aria-label", "Root skill ratio");
+      item.append(labelInput, parentInput, ratioInput);
       content.append(item);
       return;
     }
@@ -1008,6 +1138,24 @@ export const initJayceePage = async () => {
     renderResonances();
   };
 
+  const updateDynamicFractalField = (fractalId, field, value) => {
+    dynamicFractals = dynamicFractals.map((fractal) => (
+      String(fractal.id) === String(fractalId)
+        ? { ...fractal, [field]: getDisplayValue(value) }
+        : fractal
+    ));
+
+    if (field === "skill" && String(gameForm.primary_fractal) === String(fractalId)) {
+      skillForms = skillForms.map((skill) => (
+        getDisplayValue(skill.id) === getDisplayValue(value)
+          ? { ...skill, parent: "", ratio: "1" }
+          : skill
+      ));
+    }
+    dashboardSaveStatus = "Unsaved changes";
+    renderResonances();
+  };
+
   const saveDashboardSettings = async () => {
     if (!supabaseClient || !currentProfile || isDashboardSaving) return;
 
@@ -1033,9 +1181,17 @@ export const initJayceePage = async () => {
           ? { ...payload, parent: null, ratio: 1 }
           : payload;
       });
+      const fractalPayloads = dynamicFractals.map(getDynamicFractalPayload);
 
       gameSettings = updatedSettings || { ...gameSettings, ...getGamePayload(gameForm), user_id: currentProfile.id };
       gameForm = createGameForm(gameSettings);
+      if (fractalPayloads.length) {
+        const updatedFractals = await updateUserDynamicFractals(supabaseClient, fractalPayloads);
+
+        dynamicFractals = dynamicFractals.map((fractal) => (
+          updatedFractals.find((updatedFractal) => updatedFractal.id === fractal.id) || fractal
+        ));
+      }
       if (skillPayloads.length) {
         const updatedSkills = await updateSkills(supabaseClient, skillPayloads);
 
@@ -1147,7 +1303,15 @@ export const initJayceePage = async () => {
           dynamicFractals,
           gameForm,
           onFieldChange: updatePrimaryFractalField,
-          onSelect: setPrimaryFractalSelection
+          onFractalSkillChange: updateDynamicFractalField,
+          onSelect: setPrimaryFractalSelection,
+          skillForms
+        }),
+        createSecondaryFractalPanel({
+          dynamicFractals,
+          gameForm,
+          onFractalFieldChange: updateDynamicFractalField,
+          skillForms
         }),
         createSkillsPanel({
           onFieldChange: updateSkillField,
