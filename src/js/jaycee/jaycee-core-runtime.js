@@ -430,8 +430,8 @@ const createPrimaryFractalPanel = ({
   const selectedFractalId = getDisplayValue(gameForm?.primary_fractal);
   const selectedFractal = dynamicFractals.find((fractal) => String(fractal.id) === String(selectedFractalId)) || null;
   const fields = [
-    { key: "primary_time", label: "Time (s)", type: "number", value: getDisplayValue(gameForm?.primary_time) },
-    { key: "primary_distance", label: "Distance (m)", type: "number", value: getDisplayValue(gameForm?.primary_distance) }
+    { key: "primary_time", label: "Cycle (s)", type: "number", value: getDisplayValue(gameForm?.primary_time) },
+    { key: "primary_distance", label: "Zone (m)", type: "number", value: getDisplayValue(gameForm?.primary_distance) }
   ];
   const fractalLabel = document.createElement("label");
   const select = document.createElement("select");
