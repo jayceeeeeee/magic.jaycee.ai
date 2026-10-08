@@ -440,7 +440,7 @@ const createPrimaryFractalPanel = ({
 
   section.className = "profile-resonance-column profile-primary-fractal-panel";
   heading.className = "profile-resonance-column-title";
-  heading.textContent = "Primary Fractal";
+  heading.textContent = "Passive";
   content.className = "profile-primary-fractal-content";
   fractalLabel.className = "profile-primary-fractal-field";
   select.className = "profile-primary-fractal-select";
@@ -506,7 +506,7 @@ const createSecondaryFractalPanel = ({
 
   section.className = "profile-resonance-column profile-secondary-fractal-panel";
   heading.className = "profile-resonance-column-title";
-  heading.textContent = "Fractals";
+  heading.textContent = "Edit Fractals";
   content.className = "profile-skills-content";
 
   if (!orderedFractals.length) {
@@ -606,7 +606,7 @@ const createSkillsPanel = ({
     const badge = document.createElement("span");
 
     badge.className = "profile-skill-badge";
-    badge.textContent = String(index + 1);
+    badge.textContent = String(index);
 
     if (isPrimarySkill) {
       const labelInput = document.createElement("input");
@@ -1110,15 +1110,15 @@ export const initJayceePage = async () => {
           onSelect: setPrimaryFractalSelection,
           skillForms
         }),
+        createSkillsPanel({
+          onFieldChange: updateSkillField,
+          primarySkillId: getPrimarySkillId(dynamicFractals, gameForm),
+          skillForms
+        }),
         createSecondaryFractalPanel({
           dynamicFractals,
           gameForm,
           onFractalFieldChange: updateDynamicFractalField,
-          skillForms
-        }),
-        createSkillsPanel({
-          onFieldChange: updateSkillField,
-          primarySkillId: getPrimarySkillId(dynamicFractals, gameForm),
           skillForms
         }),
         createDashboardSavePanel({
