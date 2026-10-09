@@ -680,7 +680,7 @@ body::after {
 }
 
 .auth-switch {
-    margin: 7px 0 0;
+    margin: 3px 0 0;
     color: var(--muted);
     font-size: 0.92rem;
     line-height: 1.3;
