@@ -33,6 +33,8 @@ const PROFILE_RING_ACTIVE_FILL_ALPHA = 0.09;
 const PROFILE_RING_FILL_ALPHA = 0.26;
 const PROFILE_VIEW_CACHE_PREFIX = "jayceeProfileView";
 const ACTIVE_RING_LIMIT = 3;
+const ACTIVE_RING_DISPLAY_LIMIT = 2;
+const FRACTAL_SQUARE_GRID_SIZE = 3;
 
 const getProfileViewCacheKey = ({ pageMode, profile, publicUsername }) => {
   const profileKey = profile?.id || publicUsername || "core";
@@ -296,6 +298,20 @@ const getPublicProfileUrl = (profile) => {
   const username = getDisplayValue(profile?.username);
 
   return username ? `/src/html/jaycee-profile.html?username=${encodeURIComponent(username)}` : "";
+};
+
+const getFractalSquareModel = (ringModels) => {
+  const squareSource = ringModels[ACTIVE_RING_DISPLAY_LIMIT];
+
+  if (!squareSource) return null;
+
+  return {
+    coreStyle: true,
+    fillAlpha: 0.86,
+    gridSize: FRACTAL_SQUARE_GRID_SIZE,
+    labels: getEmptyLabels(FRACTAL_SQUARE_GRID_SIZE * FRACTAL_SQUARE_GRID_SIZE),
+    selectedPosition: 5
+  };
 };
 
 const createGameSelect = (profiles, selectedUsername = "") => {
@@ -843,6 +859,7 @@ const createDynamicRingParameterPanel = ({ passiveModel, ringModels, ultimateMod
 
 const createProfileCoreState = ({
   avatarImage,
+  fractalSquare,
   hasUserProfile,
   ringModels,
   selectedSpaceNumber
@@ -879,6 +896,7 @@ const createProfileCoreState = ({
     squareBorderAlpha: 0.46,
     squareFillAlpha: hasUserProfile ? undefined : PROFILE_RING_FILL_ALPHA,
     squareCellBorderAlpha: 0.34,
+    mapSquare: fractalSquare,
     squareBackgroundImage: avatarImage
   };
 };
@@ -1143,11 +1161,13 @@ export const initJayceePage = async () => {
     });
     const ringModels = [
       ...(passiveRingModel ? [passiveRingModel] : []),
-      ...activeRingModels
+      ...activeRingModels.slice(0, ACTIVE_RING_DISPLAY_LIMIT)
     ];
+    const fractalSquare = getFractalSquareModel(activeRingModels);
 
     coreState = createProfileCoreState({
       avatarImage,
+      fractalSquare,
       hasUserProfile,
       ringModels,
       selectedSpaceNumber

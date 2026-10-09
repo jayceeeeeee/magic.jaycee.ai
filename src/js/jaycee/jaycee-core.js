@@ -819,11 +819,12 @@ const drawMapSquare = (context, metrics, colors, mapSquare) => {
   const selectedPosition = Number(mapSquare.selectedPosition);
   const selectedSubCellNumber = Number(mapSquare.selectedSubCellNumber);
   const hasBackgroundImage = Boolean(mapSquare.backgroundImage);
+  const usesCoreStyle = mapSquare.coreStyle === true;
   let activeCell = null;
   let activeSubCell = null;
 
   const strokeSquareLine = (drawPath, foreground, underlayWidth = 2.4) => {
-    if (hasBackgroundImage) {
+    if (hasBackgroundImage || usesCoreStyle) {
       context.shadowColor = "rgba(0, 0, 0, 0.72)";
       context.shadowBlur = cellSize * 0.08;
       context.strokeStyle = "rgba(0, 0, 0, 0.82)";
@@ -831,8 +832,8 @@ const drawMapSquare = (context, metrics, colors, mapSquare) => {
       drawPath();
     }
 
-    context.shadowColor = hasBackgroundImage ? "rgba(0, 0, 0, 0.34)" : "transparent";
-    context.shadowBlur = hasBackgroundImage ? cellSize * 0.035 : 0;
+    context.shadowColor = hasBackgroundImage || usesCoreStyle ? "rgba(0, 0, 0, 0.34)" : "transparent";
+    context.shadowBlur = hasBackgroundImage || usesCoreStyle ? cellSize * 0.035 : 0;
     context.strokeStyle = foreground;
     context.lineWidth = 1;
     drawPath();
@@ -900,31 +901,33 @@ const drawMapSquare = (context, metrics, colors, mapSquare) => {
 
   context.shadowBlur = 0;
 
-  context.save();
-  context.shadowColor = "transparent";
-  context.shadowBlur = 0;
-  context.strokeStyle = hasBackgroundImage ? "rgba(255, 255, 255, 0.52)" : colors.subCellBorder;
-  context.lineWidth = 1;
+  if (mapSquare.showSubGrid !== false) {
+    context.save();
+    context.shadowColor = "transparent";
+    context.shadowBlur = 0;
+    context.strokeStyle = hasBackgroundImage ? "rgba(255, 255, 255, 0.52)" : colors.subCellBorder;
+    context.lineWidth = 1;
 
-  for (let row = 0; row < gridSize; row += 1) {
-    for (let column = 0; column < gridSize; column += 1) {
-      const x = start + (column * cellSize);
-      const y = start + (row * cellSize);
+    for (let row = 0; row < gridSize; row += 1) {
+      for (let column = 0; column < gridSize; column += 1) {
+        const x = start + (column * cellSize);
+        const y = start + (row * cellSize);
 
-      for (let index = 1; index < SQUARE_GRID_SIZE; index += 1) {
-        const offset = (cellSize / SQUARE_GRID_SIZE) * index;
+        for (let index = 1; index < SQUARE_GRID_SIZE; index += 1) {
+          const offset = (cellSize / SQUARE_GRID_SIZE) * index;
 
-        context.beginPath();
-        context.moveTo(x + offset, y);
-        context.lineTo(x + offset, y + cellSize);
-        context.moveTo(x, y + offset);
-        context.lineTo(x + cellSize, y + offset);
-        context.stroke();
+          context.beginPath();
+          context.moveTo(x + offset, y);
+          context.lineTo(x + offset, y + cellSize);
+          context.moveTo(x, y + offset);
+          context.lineTo(x + cellSize, y + offset);
+          context.stroke();
+        }
       }
     }
-  }
 
-  context.restore();
+    context.restore();
+  }
 
   for (let index = 1; index < gridSize; index += 1) {
     const offset = start + (cellSize * index);
@@ -936,12 +939,12 @@ const drawMapSquare = (context, metrics, colors, mapSquare) => {
       context.moveTo(start, offset);
       context.lineTo(start + metrics.mapSquareSize, offset);
       context.stroke();
-    }, hasBackgroundImage ? "rgba(255, 255, 255, 0.96)" : colors.cellBorder);
+    }, hasBackgroundImage || usesCoreStyle ? "rgba(255, 255, 255, 0.96)" : colors.cellBorder);
   }
 
   strokeSquareLine(() => {
     context.strokeRect(start, start, metrics.mapSquareSize, metrics.mapSquareSize);
-  }, hasBackgroundImage ? "rgba(255, 255, 255, 0.98)" : colors.border, 3);
+  }, hasBackgroundImage || usesCoreStyle ? "rgba(255, 255, 255, 0.98)" : colors.border, 3);
 
   if (hasBackgroundImage && activeCell) {
     drawInsetSquareCell(
@@ -1206,6 +1209,12 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
   const palette = getThemePaletteCorners(accent, accentSoft);
   const borderColors = getThemeBorderColors(accent, accentSoft);
   const squareLineRgb = mixRgb(hexToRgb(accent), hexToRgb(accentSoft), 0.5);
+  const squareBorderColor = state.squareBorderAlpha === undefined
+    ? borderColors.square
+    : rgbToCss(squareLineRgb, state.squareBorderAlpha);
+  const squareCellBorderColor = state.squareCellBorderAlpha === undefined
+    ? borderColors.squareCell
+    : rgbToCss(squareLineRgb, state.squareCellBorderAlpha);
   context.clearRect(0, 0, rect.width, rect.height);
 
   [...state.rings].reverse().forEach((ring, reversedIndex) => {
@@ -1274,16 +1283,12 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
 
   drawMapSquare(context, metrics, {
     activeFillAlpha: ACTIVE_FILL_ALPHA,
-    border: state.squareBorderAlpha === undefined
-      ? borderColors.square
-      : rgbToCss(squareLineRgb, state.squareBorderAlpha),
-    cellBorder: state.squareCellBorderAlpha === undefined
-      ? borderColors.squareCell
-      : rgbToCss(squareLineRgb, state.squareCellBorderAlpha),
+    border: squareBorderColor,
+    cellBorder: squareCellBorderColor,
     fillAlpha: state.mapSquare?.fillAlpha ?? 0.18,
     glow: "rgba(116, 247, 209, 0.1)",
     palette,
-    subCellBorder: rgbToCss(squareLineRgb, state.squareCellBorderAlpha === undefined ? 0.12 : state.squareCellBorderAlpha * 0.62),
+    subCellBorder: squareCellBorderColor,
     coreText: {
       fill: "rgba(5, 21, 25, 0.46)",
       shadow: "rgba(255, 255, 255, 0.1)",
@@ -1301,13 +1306,9 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
   }, state.mapSquare);
 
   drawSquare(context, metrics, {
-    border: state.squareBorderAlpha === undefined
-      ? borderColors.square
-      : rgbToCss(squareLineRgb, state.squareBorderAlpha),
+    border: squareBorderColor,
     backgroundImage: state.squareBackgroundImage,
-    cellBorder: state.squareCellBorderAlpha === undefined
-      ? borderColors.squareCell
-      : rgbToCss(squareLineRgb, state.squareCellBorderAlpha),
+    cellBorder: squareCellBorderColor,
     activeFillAlpha: ACTIVE_FILL_ALPHA,
     activeSquareNumber: state.activeSquareNumber || 5,
     fillAlpha: state.squareFillAlpha ?? SURFACE_FILL_ALPHA,
