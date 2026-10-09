@@ -703,7 +703,7 @@ const createDynamicRingParameterPanel = ({ ringModels }) => {
       label: "Cycle",
       value: formatDuration(ringModel.fractal.time, { compact: false }) || "00:00:00"
     }, {
-      label: "Practice",
+      label: "Quest",
       value: formatDuration(ringModel.practiceSeconds, { compact: false }) || "00:00:00"
     }, {
       label: "Zone",
