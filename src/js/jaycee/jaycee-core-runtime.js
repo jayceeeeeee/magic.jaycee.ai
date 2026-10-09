@@ -223,8 +223,10 @@ const getDynamicRingModels = ({
     fractal
   ]));
   const orderedSkills = orderSkillForms(skillForms, rootSkillId);
-  const cycleBySkillId = new Map([[rootSkillId, Number(gameForm.primary_time)]]);
-  const distanceBySkillId = new Map([[rootSkillId, Number(gameForm.primary_distance)]]);
+  const cycleBySkillId = new Map();
+  const distanceBySkillId = new Map();
+  const passiveCycle = Number(gameForm.primary_time);
+  const passiveDistance = Number(gameForm.primary_distance);
 
   return orderedSkills
     .map((skill) => {
@@ -234,9 +236,10 @@ const getDynamicRingModels = ({
 
       if (!fractal || !elements.length) return null;
 
-      if (skillId !== rootSkillId && !cycleBySkillId.has(skillId)) {
-        const parentCycle = cycleBySkillId.get(getDisplayValue(skill.parent));
-        const parentDistance = distanceBySkillId.get(getDisplayValue(skill.parent));
+      if (!cycleBySkillId.has(skillId)) {
+        const parentSkillId = getDisplayValue(skill.parent);
+        const parentCycle = parentSkillId ? cycleBySkillId.get(parentSkillId) : passiveCycle;
+        const parentDistance = parentSkillId ? distanceBySkillId.get(parentSkillId) : passiveDistance;
         const ratio = Number(skill.ratio);
 
         if (Number.isFinite(parentCycle) && Number.isFinite(ratio) && ratio > 0) {
