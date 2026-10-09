@@ -1,25 +1,15 @@
-export const JAYCEE_FRACTALS_TABLE = "jaycee_fractals";
 export const JAYCEE_DYNAMIC_FRACTALS_TABLE = "jaycee_dynamic_fractals";
 export const JAYCEE_DYNAMIC_FRACTAL_ELEMENTS_TABLE = "jaycee_dynamic_fractal_elements";
 export const JAYCEE_GAME_TABLE = "jaycee_game";
 export const JAYCEE_SKILLS_TABLE = "jaycee_skills";
-export const FRACTAL_VISIBILITY_COLUMN = "visibility";
-export const PUBLIC_VISIBILITY_VALUE = "public";
-export const GOD_TYPE_VALUE = "god";
-export const LORE_TYPE_VALUE = "lore";
 export const PROFILE_TABLE = "profiles";
 export const USER_IMAGES_BUCKET = "users";
-export const CODE_COLUMNS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
 export const DEFAULT_SELECTED_NUMBER = 5;
-export const CORE_RING_ID = "core-ring";
-export const DEFAULT_CORE_RING_NUMBER = 9;
-export const JAYCEE_RESONANCE_SOURCE = "Jaycee Core";
 
 const PROFILE_SELECT_COLUMNS = [
   "id",
   "username",
   "avatar_path",
-  "background_path",
   "theme",
   "primary_color",
   "secondary_color",
@@ -53,44 +43,6 @@ export const getThemeSettingsFromProfile = (profile) => ({
   theme: getProfileThemeValue(profile)
 });
 
-export const fetchJayceeResonances = async (client) => {
-  const { data, error } = await client
-    .from(JAYCEE_FRACTALS_TABLE)
-    .select(`id, label, user_id, type, image, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
-    .is("user_id", null)
-    .eq(FRACTAL_VISIBILITY_COLUMN, PUBLIC_VISIBILITY_VALUE)
-    .order("label", { ascending: true });
-
-  if (error) throw error;
-
-  return (data || []).map((row) => ({
-    ...row,
-    sourceName: JAYCEE_RESONANCE_SOURCE,
-    sourceType: "jaycee"
-  }));
-};
-
-export const fetchUserResonances = async (client, profile, { publicOnly = false } = {}) => {
-  let query = client
-    .from(JAYCEE_FRACTALS_TABLE)
-    .select(`id, label, user_id, type, image, ${CODE_COLUMNS.map((column) => `"${column}"`).join(", ")}`)
-    .eq("user_id", profile.id);
-
-  if (publicOnly) {
-    query = query.eq(FRACTAL_VISIBILITY_COLUMN, PUBLIC_VISIBILITY_VALUE);
-  }
-
-  const { data, error } = await query.order("label", { ascending: true });
-
-  if (error) throw error;
-
-  return (data || []).map((row) => ({
-    ...row,
-    sourceName: profile.username || "User",
-    sourceType: "user"
-  }));
-};
-
 export const fetchProfileByUserId = async (client, userId) => {
   const { data, error } = await client
     .from(PROFILE_TABLE)
@@ -115,7 +67,7 @@ export const fetchProfileByUsername = async (client, username) => {
   return data || null;
 };
 
-export const fetchPublicProfiles = async (client, limit = 10) => {
+export const fetchPublicProfiles = async (client, limit = 100) => {
   const { data, error } = await client
     .from(PROFILE_TABLE)
     .select("id, username")
@@ -200,7 +152,7 @@ export const fetchUserGameSettings = async (client, profile) => {
 
   const { data, error } = await client
     .from(JAYCEE_GAME_TABLE)
-    .select("id, user_id, primary_fractal, primary_time, primary_distance, created_at")
+    .select("id, user_id, primary_fractal, primary_time, primary_distance, ultimate_fractal, ultimate_link, created_at")
     .eq("user_id", profile.id)
     .maybeSingle();
 
@@ -218,7 +170,7 @@ export const upsertUserGameSettings = async (client, profile, values) => {
       ...values,
       user_id: profile.id
     }, { onConflict: "user_id" })
-    .select("id, user_id, primary_fractal, primary_time, primary_distance, created_at")
+    .select("id, user_id, primary_fractal, primary_time, primary_distance, ultimate_fractal, ultimate_link, created_at")
     .maybeSingle();
 
   if (error) throw error;
@@ -286,10 +238,6 @@ export const updateUserDynamicFractals = async (client, fractalUpdates) => {
 
 export const getAvatarImageUrl = async (client, profile) => (
   getUserImageUrl(client, profile, profile?.avatar_path)
-);
-
-export const getBackgroundImageUrl = async (client, profile) => (
-  getUserImageUrl(client, profile, profile?.background_path)
 );
 
 const loadImage = (imageUrl) => (
