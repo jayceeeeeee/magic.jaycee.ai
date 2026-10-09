@@ -289,7 +289,7 @@ const getDynamicRingModels = ({
         selectedElement,
         selectedSegment,
         skill,
-        skillLabel: getDisplayValue(skill.label) || "Skill"
+        skillLabel: getDisplayValue(skill.label) || "Active"
       };
     })
     .filter(Boolean);
@@ -421,8 +421,7 @@ const createPrimaryFractalPanel = ({
   dynamicFractals,
   gameForm,
   onFieldChange,
-  onSelect,
-  skillForms
+  onSelect
 }) => {
   const section = document.createElement("section");
   const heading = document.createElement("h2");
@@ -498,10 +497,19 @@ const createSecondaryFractalPanel = ({
   const section = document.createElement("section");
   const heading = document.createElement("h2");
   const content = document.createElement("div");
-  const primaryFractalId = getDisplayValue(gameForm?.primary_fractal);
+  const primarySkillId = getPrimarySkillId(dynamicFractals, gameForm);
+  const fractalsBySkillId = new Map(dynamicFractals.map((fractal) => [
+    getDisplayValue(fractal.skill),
+    fractal
+  ]));
+  const orderedSkillForms = orderSkillForms(skillForms, primarySkillId);
   const orderedFractals = [
-    ...dynamicFractals.filter((fractal) => getDisplayValue(fractal.id) === primaryFractalId),
-    ...dynamicFractals.filter((fractal) => getDisplayValue(fractal.id) !== primaryFractalId)
+    ...orderedSkillForms
+      .map((skill) => fractalsBySkillId.get(getDisplayValue(skill.id)))
+      .filter(Boolean),
+    ...dynamicFractals.filter((fractal) => (
+      !orderedSkillForms.some((skill) => getDisplayValue(skill.id) === getDisplayValue(fractal.skill))
+    ))
   ];
 
   section.className = "profile-resonance-column profile-secondary-fractal-panel";
@@ -519,7 +527,7 @@ const createSecondaryFractalPanel = ({
     const header = document.createElement("div");
 
     header.className = "profile-secondary-fractal-header";
-    ["Fractal", "Skill"].forEach((text) => {
+    ["Fractal", "Cycle (s)"].forEach((text) => {
       const item = document.createElement("span");
 
       item.textContent = text;
@@ -531,8 +539,7 @@ const createSecondaryFractalPanel = ({
   orderedFractals.forEach((fractal) => {
     const item = document.createElement("article");
     const labelInput = document.createElement("input");
-    const skillSelect = document.createElement("select");
-    const emptySkillOption = document.createElement("option");
+    const cycleInput = document.createElement("input");
 
     item.className = "profile-secondary-fractal-row";
     labelInput.type = "text";
@@ -540,22 +547,14 @@ const createSecondaryFractalPanel = ({
     labelInput.setAttribute("aria-label", "Fractal name");
     labelInput.addEventListener("input", () => onFractalFieldChange(fractal.id, "label", labelInput.value));
 
-    emptySkillOption.value = "";
-    emptySkillOption.textContent = "Choose a skill";
-    emptySkillOption.disabled = Boolean(skillForms.length);
-    skillSelect.setAttribute("aria-label", "Fractal skill");
-    skillSelect.replaceChildren(emptySkillOption, ...skillForms.map((skill) => {
-      const option = document.createElement("option");
+    cycleInput.type = "number";
+    cycleInput.step = "any";
+    cycleInput.inputMode = "decimal";
+    cycleInput.value = getDisplayValue(fractal.time);
+    cycleInput.setAttribute("aria-label", "Fractal cycle");
+    cycleInput.addEventListener("input", () => onFractalFieldChange(fractal.id, "time", cycleInput.value));
 
-      option.value = skill.id;
-      option.textContent = skill.label || "Untitled skill";
-
-      return option;
-    }));
-    skillSelect.value = getDisplayValue(fractal.skill);
-    skillSelect.addEventListener("change", () => onFractalFieldChange(fractal.id, "skill", skillSelect.value));
-
-    item.append(labelInput, skillSelect);
+    item.append(labelInput, cycleInput);
     content.append(item);
   });
   section.append(heading, content);
@@ -572,17 +571,20 @@ const createSkillsPanel = ({
   const heading = document.createElement("h2");
   const content = document.createElement("div");
   const orderedSkillForms = orderSkillForms(skillForms, primarySkillId);
+  const visibleSkillForms = orderedSkillForms.filter((skill) => (
+    getDisplayValue(skill.id) !== getDisplayValue(primarySkillId)
+  ));
 
   section.className = "profile-resonance-column profile-skills-panel";
   heading.className = "profile-resonance-column-title";
-  heading.textContent = "Skills";
+  heading.textContent = "Actives";
   content.className = "profile-skills-content";
 
-  if (!orderedSkillForms.length) {
+  if (!visibleSkillForms.length) {
     const empty = document.createElement("p");
 
     empty.className = "profile-primary-fractal-status";
-    empty.textContent = "No skills yet.";
+    empty.textContent = "No actives yet.";
     content.append(empty);
   } else {
     const header = document.createElement("div");
@@ -593,44 +595,19 @@ const createSkillsPanel = ({
 
     header.className = "profile-skill-header";
     number.textContent = "#";
-    label.textContent = "Skill";
+    label.textContent = "Active";
     parent.textContent = "Parent";
     ratio.textContent = "Ratio";
     header.append(number, label, parent, ratio);
     content.append(header);
   }
 
-  orderedSkillForms.forEach((skill, index) => {
+  visibleSkillForms.forEach((skill, index) => {
     const item = document.createElement("article");
-    const isPrimarySkill = getDisplayValue(skill.id) === getDisplayValue(primarySkillId);
     const badge = document.createElement("span");
 
     badge.className = "profile-skill-badge";
-    badge.textContent = String(index);
-
-    if (isPrimarySkill) {
-      const labelInput = document.createElement("input");
-      const parentInput = document.createElement("input");
-      const ratioInput = document.createElement("input");
-
-      item.className = "profile-skill-row profile-skill-root";
-      item.append(badge);
-      labelInput.type = "text";
-      labelInput.value = skill.label;
-      labelInput.setAttribute("aria-label", "Root skill label");
-      labelInput.addEventListener("input", () => onFieldChange(skill.id, "label", labelInput.value));
-      parentInput.type = "text";
-      parentInput.value = "Root";
-      parentInput.disabled = true;
-      parentInput.setAttribute("aria-label", "Root skill parent");
-      ratioInput.type = "number";
-      ratioInput.value = "1";
-      ratioInput.disabled = true;
-      ratioInput.setAttribute("aria-label", "Root skill ratio");
-      item.append(labelInput, parentInput, ratioInput);
-      content.append(item);
-      return;
-    }
+    badge.textContent = String(index + 1);
 
     const labelInput = document.createElement("input");
     const parentSelect = document.createElement("select");
@@ -641,19 +618,19 @@ const createSkillsPanel = ({
     item.append(badge);
     labelInput.type = "text";
     labelInput.value = skill.label;
-    labelInput.setAttribute("aria-label", "Skill label");
+    labelInput.setAttribute("aria-label", "Active label");
     labelInput.addEventListener("input", () => onFieldChange(skill.id, "label", labelInput.value));
 
     emptyParent.value = "";
     emptyParent.textContent = "No parent";
-    parentSelect.setAttribute("aria-label", "Skill parent");
+    parentSelect.setAttribute("aria-label", "Active parent");
     parentSelect.replaceChildren(emptyParent, ...skillForms
       .filter((optionSkill) => optionSkill.id !== skill.id)
       .map((optionSkill) => {
         const option = document.createElement("option");
 
         option.value = optionSkill.id;
-        option.textContent = optionSkill.label || "Untitled skill";
+        option.textContent = optionSkill.label || "Untitled active";
 
         return option;
       }));
@@ -664,7 +641,7 @@ const createSkillsPanel = ({
     ratioInput.step = "any";
     ratioInput.inputMode = "decimal";
     ratioInput.value = skill.ratio;
-    ratioInput.setAttribute("aria-label", "Skill ratio");
+    ratioInput.setAttribute("aria-label", "Active ratio");
     ratioInput.addEventListener("input", () => onFieldChange(skill.id, "ratio", ratioInput.value));
 
     item.append(labelInput, parentSelect, ratioInput);
@@ -723,7 +700,7 @@ const createDynamicRingParameterPanel = ({ ringModels }) => {
       label: "Segment",
       value: getElementLabel(ringModel.selectedElement, ringModel.selectedSegment)
     }, {
-      label: "Skill",
+      label: "Active",
       value: ringModel.skillLabel
     }];
 
@@ -1107,8 +1084,7 @@ export const initJayceePage = async () => {
           dynamicFractals,
           gameForm,
           onFieldChange: updatePrimaryFractalField,
-          onSelect: setPrimaryFractalSelection,
-          skillForms
+          onSelect: setPrimaryFractalSelection
         }),
         createSkillsPanel({
           onFieldChange: updateSkillField,
