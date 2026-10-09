@@ -340,6 +340,7 @@ const getPublicProfileUsernameFromUrl = () => {
   const queryUsername = getDisplayValue(params.get("username"));
 
   if (queryUsername) return queryUsername;
+  if (!window.location.pathname.endsWith("/jaycee-profile.html")) return "";
 
   const match = window.location.pathname.match(/\/jaycee-([^/]+)\.html$/);
 
