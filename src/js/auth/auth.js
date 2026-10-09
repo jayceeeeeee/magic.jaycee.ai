@@ -71,7 +71,7 @@
     function getPublicProfileUrl(username) {
         const value = getDisplayValue(username);
 
-        return value ? `/src/html/jaycee-${encodeURIComponent(value)}.html` : "";
+        return value ? `/src/html/jaycee-profile.html?username=${encodeURIComponent(value)}` : "";
     }
 
     function getDisplayValue(value) {

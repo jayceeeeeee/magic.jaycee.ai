@@ -328,11 +328,22 @@ const createGameSelect = (profiles, selectedUsername = "") => {
     const username = getDisplayValue(select.value);
 
     if (!username) return;
-    window.location.href = `/src/html/jaycee-${encodeURIComponent(username)}.html`;
+    window.location.href = `/src/html/jaycee-profile.html?username=${encodeURIComponent(username)}`;
   });
   label.append(text, select);
 
   return label;
+};
+
+const getPublicProfileUsernameFromUrl = () => {
+  const params = new URLSearchParams(window.location.search);
+  const queryUsername = getDisplayValue(params.get("username"));
+
+  if (queryUsername) return queryUsername;
+
+  const match = window.location.pathname.match(/\/jaycee-([^/]+)\.html$/);
+
+  return match && match[1] !== "profile" ? decodeURIComponent(match[1]) : "";
 };
 
 const createEmptyGameSettings = () => ({
@@ -801,7 +812,7 @@ export const initJayceePage = async () => {
   const canvas = document.querySelector("[data-profile-canvas]");
   const status = document.querySelector("[data-profile-status]");
   const list = document.querySelector("[data-profile-resonances]");
-  const publicUsername = getDisplayValue(shell?.dataset.profileUsername);
+  const publicUsername = getDisplayValue(shell?.dataset.profileUsername) || getPublicProfileUsernameFromUrl();
   const pageMode = getDisplayValue(shell?.dataset.profileMode) || (publicUsername ? "public" : "profile");
   const isPresentPage = pageMode === "present";
   const isEditableProfilePage = pageMode === "profile" && !publicUsername;
