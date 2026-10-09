@@ -1,7 +1,7 @@
 (function () {
     const supabaseUrl = "https://ndtnfwyfdfdcxljvvjfd.supabase.co";
     const supabasePublishableKey = "sb_publishable_lMEHC2xjlGGmTnkI5G-okg_0AVRhiDd";
-    const defaultLoginPath = "/src/html/auth/login.html";
+    const defaultLoginPath = "/src/html/auth/auth.html";
     const defaultAccountPath = "/src/html/jaycee-dashboard.html";
     const defaultAfterSignInPath = "/src/html/jaycee-dashboard.html";
     const themeConfig = window.JayceeThemes || {

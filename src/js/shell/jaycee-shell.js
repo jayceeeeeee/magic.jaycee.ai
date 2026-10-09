@@ -5,7 +5,8 @@
     const logoLabel = "J";
     const routes = {
         home: "/",
-        login: "/src/html/auth/login.html",
+        login: "/src/html/auth/auth.html",
+        signup: "/src/html/auth/auth.html?mode=signup",
         dashboard: "/src/html/jaycee-dashboard.html",
         editProfile: "/src/html/jaycee-edit-profile.html",
         contact: "/profile.html",
@@ -80,6 +81,7 @@
                                 `
                                 : `
                                     <a class="account-button account-button-ghost" href="${routes.login}">Log in</a>
+                                    <a class="account-button account-button-ghost" href="${routes.signup}">Sign up</a>
                                 `}
                         </nav>
                     </div>
