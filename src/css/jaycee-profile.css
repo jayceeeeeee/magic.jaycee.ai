@@ -820,28 +820,39 @@
   grid-template-columns: 34px minmax(0, 1fr);
   align-items: stretch;
   gap: 10px;
+  border-color: rgba(var(--accent-rgb), 0.24);
   background:
-    linear-gradient(135deg, rgba(var(--accent-rgb), 0.13), transparent 64%),
+    linear-gradient(90deg, rgba(var(--accent-rgb), 0.13), transparent 58%),
     rgba(0, 0, 0, 0.12);
 }
 
 .profile-skill-card-body {
   display: grid;
-  gap: 8px;
+  gap: 0;
+  border: 1px solid rgba(var(--accent-rgb), 0.14);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.1);
+  overflow: hidden;
 }
 
 .profile-skill-card-line {
   display: grid;
-  grid-template-columns: 72px repeat(2, minmax(0, 1fr));
+  grid-template-columns: 82px repeat(2, minmax(0, 1fr));
   align-items: stretch;
   gap: 8px;
+  padding: 9px;
+}
+
+.profile-skill-card-line + .profile-skill-card-line {
+  border-top: 1px solid rgba(var(--accent-rgb), 0.16);
 }
 
 .profile-skill-card-line-title {
   min-height: 100%;
-  display: grid;
-  place-items: center;
-  padding: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  border-right: 1px solid rgba(var(--accent-rgb), 0.16);
   color: var(--accent-soft);
   font-family: "Share Tech Mono", monospace;
   font-size: 0.7rem;
