@@ -552,7 +552,7 @@ const createUltimatePanel = ({
 
   linkLabel.className = "profile-primary-fractal-field";
   emptyLinkOption.value = "";
-  emptyLinkOption.textContent = "Choose a linked profile";
+  emptyLinkOption.textContent = "Choose a teammate";
   linkSelect.className = "profile-primary-fractal-select";
   linkSelect.replaceChildren(emptyLinkOption, ...publicProfiles.map((profile) => {
     const option = document.createElement("option");
@@ -566,7 +566,7 @@ const createUltimatePanel = ({
   linkSelect.value = getDisplayValue(gameForm?.ultimate_link);
   linkSelect.addEventListener("change", () => onFieldChange("ultimate_link", linkSelect.value));
   linkLabel.append(document.createElement("span"), linkSelect);
-  linkLabel.firstElementChild.textContent = "Follows";
+  linkLabel.firstElementChild.textContent = "Teammate";
 
   fieldsRow.append(fractalLabel, linkLabel, skillLabel);
   content.append(fieldsRow);
@@ -773,8 +773,8 @@ const createDynamicRingParameterPanel = ({ passiveModel, ringModels, ultimateMod
     const rows = [{
       href: profileUrl,
       isProfileLink: true,
-      label: "Follows",
-      value: getDisplayValue(ultimateModel.linkedProfile?.username) || "No linked profile"
+      label: "Teammate",
+      value: getDisplayValue(ultimateModel.linkedProfile?.username) || "No teammate"
     }, {
       label: "Skill",
       value: ultimateModel.skillLabel || "No skill"
