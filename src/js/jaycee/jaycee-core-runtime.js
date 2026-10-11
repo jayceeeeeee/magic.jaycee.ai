@@ -447,6 +447,45 @@ const orderSkillForms = (skillForms, primarySkillId) => {
   return ordered;
 };
 
+const getSkillDescendantIds = (skillForms, skillId) => {
+  const descendants = new Set();
+  const appendChildren = (parentId) => {
+    skillForms
+      .filter((skill) => getDisplayValue(skill.parent) === getDisplayValue(parentId))
+      .forEach((skill) => {
+        if (descendants.has(skill.id)) return;
+        descendants.add(skill.id);
+        appendChildren(skill.id);
+      });
+  };
+
+  appendChildren(skillId);
+
+  return descendants;
+};
+
+const normalizeSkillFormsForSave = (skillForms) => {
+  const rootSkillId = getRootSkillId(skillForms);
+  const skillIds = new Set(skillForms.map((skill) => getDisplayValue(skill.id)).filter(Boolean));
+
+  return skillForms.map((skill) => {
+    const skillId = getDisplayValue(skill.id);
+    const parentId = getDisplayValue(skill.parent);
+    const descendants = getSkillDescendantIds(skillForms, skillId);
+    const hasValidParent = (
+      parentId
+      && parentId !== skillId
+      && skillIds.has(parentId)
+      && !descendants.has(parentId)
+    );
+
+    return {
+      ...skill,
+      parent: skillId === rootSkillId ? "" : hasValidParent ? parentId : rootSkillId
+    };
+  });
+};
+
 const createPrimaryFractalPanel = ({
   dynamicFractals,
   gameForm,
@@ -676,6 +715,7 @@ const createSkillsPanel = ({
     const item = document.createElement("article");
     const badge = document.createElement("span");
     const isRootSkill = getDisplayValue(skill.id) === getDisplayValue(rootSkillId);
+    const descendantIds = getSkillDescendantIds(skillForms, skill.id);
 
     badge.className = "profile-skill-badge";
     badge.textContent = String(index + 1);
@@ -696,7 +736,10 @@ const createSkillsPanel = ({
     emptyParent.textContent = isRootSkill ? "Root" : "No parent";
     parentSelect.setAttribute("aria-label", "Active parent");
     parentSelect.replaceChildren(emptyParent, ...skillForms
-      .filter((optionSkill) => optionSkill.id !== skill.id)
+      .filter((optionSkill) => (
+        optionSkill.id !== skill.id
+        && !descendantIds.has(optionSkill.id)
+      ))
       .map((optionSkill) => {
         const option = document.createElement("option");
 
@@ -730,6 +773,7 @@ const createDashboardSavePanel = ({ onSave, saveDisabled, saveStatus }) => {
   const statusText = document.createElement("p");
 
   section.className = "profile-dashboard-save-panel";
+  section.dataset.profileDashboardSave = "";
   button.className = "profile-primary-fractal-save";
   button.type = "button";
   button.textContent = "Save";
@@ -969,6 +1013,23 @@ export const initJayceePage = async () => {
     selectedDynamicRingSegments.set(fractalId, getDisplayValue(segmentKey));
   };
 
+  const renderDashboardSavePanel = () => {
+    const existingPanel = list.querySelector("[data-profile-dashboard-save]");
+
+    if (!existingPanel || !isEditableProfilePage) return;
+
+    existingPanel.replaceWith(createDashboardSavePanel({
+      onSave: saveDashboardSettings,
+      saveDisabled: !currentProfile || isDashboardSaving,
+      saveStatus: dashboardSaveStatus
+    }));
+  };
+
+  const markDashboardDirty = () => {
+    dashboardSaveStatus = "Unsaved changes";
+    renderDashboardSavePanel();
+  };
+
   const updateDynamicFractalField = (fractalId, field, value) => {
     dynamicFractals = dynamicFractals.map((fractal) => (
       String(fractal.id) === String(fractalId)
@@ -976,8 +1037,10 @@ export const initJayceePage = async () => {
         : fractal
     ));
 
-    dashboardSaveStatus = "Unsaved changes";
-    syncProfileView();
+    markDashboardDirty();
+    saveProfileViewState();
+    renderCore();
+    renderCoreParameters();
   };
 
   const saveDashboardSettings = async () => {
@@ -997,6 +1060,7 @@ export const initJayceePage = async () => {
         currentProfile,
         getGamePayload(gameForm)
       );
+      skillForms = normalizeSkillFormsForSave(skillForms);
       const rootSkillId = getRootSkillId(skillForms);
       const skillPayloads = skillForms.map((skill) => {
         const payload = getSkillPayload(skill);
@@ -1020,7 +1084,7 @@ export const initJayceePage = async () => {
         const updatedSkills = await updateSkills(supabaseClient, skillPayloads);
 
         skills = skills.map((skill) => updatedSkills.find((updatedSkill) => updatedSkill.id === skill.id) || skill);
-        skillForms = createSkillForms(skills);
+        skillForms = normalizeSkillFormsForSave(createSkillForms(skills));
       }
       dashboardSaveStatus = "Saved";
       isDashboardSaving = false;
@@ -1044,17 +1108,41 @@ export const initJayceePage = async () => {
       ...gameForm,
       [field]: getDisplayValue(value)
     };
-    dashboardSaveStatus = "Unsaved changes";
+    markDashboardDirty();
+    renderCore();
     renderCoreParameters();
+    if (field === "ultimate_link") {
+      renderResonances();
+    }
   };
 
   const updateSkillField = (skillId, field, value) => {
+    const rootSkillId = getRootSkillId(skillForms);
+    const validSkillIds = new Set(skillForms.map((skill) => getDisplayValue(skill.id)).filter(Boolean));
+    const descendantIds = getSkillDescendantIds(skillForms, skillId);
+    const rawValue = getDisplayValue(value);
+    const nextValue = field === "parent"
+      ? getDisplayValue(skillId) === rootSkillId
+        ? ""
+        : rawValue
+          && rawValue !== getDisplayValue(skillId)
+          && validSkillIds.has(rawValue)
+          && !descendantIds.has(rawValue)
+          ? rawValue
+          : rootSkillId
+      : rawValue;
+
     skillForms = skillForms.map((skill) => (
       skill.id === skillId
-        ? { ...skill, [field]: getDisplayValue(value) }
+        ? { ...skill, [field]: nextValue }
         : skill
     ));
-    dashboardSaveStatus = "Unsaved changes";
+    markDashboardDirty();
+    renderCore();
+    renderCoreParameters();
+    if (field === "parent") {
+      renderResonances();
+    }
   };
 
   const renderPresentControls = () => {
@@ -1238,7 +1326,7 @@ export const initJayceePage = async () => {
     skills = hasUserProfile
       ? await fetchSkillsByIds(client, dynamicFractals.map((fractal) => fractal.skill))
       : [];
-    skillForms = createSkillForms(skills);
+    skillForms = normalizeSkillFormsForSave(createSkillForms(skills));
     gameSettings = hasUserProfile ? await fetchUserGameSettings(client, profile) : null;
     gameForm = createGameForm(gameSettings);
 
