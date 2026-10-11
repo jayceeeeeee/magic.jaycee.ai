@@ -182,12 +182,12 @@ const createRingModelFromFractal = ({
     fractal,
     id: `dynamic-fractal:${fractal.id}`,
     label: getDisplayValue(fractal.label) || "Fractal",
-    practiceSeconds: cycleSeconds,
     segmentKeys,
     selectedElement,
     selectedSegment,
     skill,
-    skillLabel
+    skillLabel,
+    questSeconds: cycleSeconds
   };
 };
 
@@ -209,6 +209,33 @@ const getPassiveRingModel = ({
   });
 };
 
+const getActiveFractals = (dynamicFractals, gameForm) => {
+  const excludedIds = new Set([
+    getDisplayValue(gameForm?.primary_fractal),
+    getDisplayValue(gameForm?.ultimate_fractal)
+  ].filter(Boolean));
+
+  return dynamicFractals
+    .filter((fractal) => (
+      getDisplayValue(fractal.id)
+      && getDisplayValue(fractal.skill)
+      && !excludedIds.has(getDisplayValue(fractal.id))
+    ))
+    .slice()
+    .sort((first, second) => {
+      const firstTime = Number(first.time);
+      const secondTime = Number(second.time);
+      const firstHasTime = Number.isFinite(firstTime);
+      const secondHasTime = Number.isFinite(secondTime);
+
+      if (firstHasTime && secondHasTime && firstTime !== secondTime) return secondTime - firstTime;
+      if (firstHasTime !== secondHasTime) return firstHasTime ? -1 : 1;
+
+      return (getDisplayValue(first.label) || getDisplayValue(first.id))
+        .localeCompare(getDisplayValue(second.label) || getDisplayValue(second.id));
+    });
+};
+
 const getDynamicRingModels = ({
   dynamicFractals,
   elementsByFractalId,
@@ -216,45 +243,30 @@ const getDynamicRingModels = ({
   selectedDynamicRingSegments,
   skillForms
 }) => {
-  const rootSkillId = getRootSkillId(skillForms);
+  let previousQuestSeconds = Number(gameForm.primary_time);
+  let previousDistanceMeters = Number(gameForm.primary_distance);
 
-  if (!rootSkillId) return [];
-
-  const fractalBySkillId = new Map(dynamicFractals.map((fractal) => [
-    getDisplayValue(fractal.skill),
-    fractal
-  ]));
-  const orderedSkills = orderSkillForms(skillForms, rootSkillId);
-  const cycleBySkillId = new Map();
-  const distanceBySkillId = new Map();
-  const passiveCycle = Number(gameForm.primary_time);
-  const passiveDistance = Number(gameForm.primary_distance);
-
-  return orderedSkills
-    .map((skill) => {
-      const skillId = getDisplayValue(skill.id);
-      const fractal = fractalBySkillId.get(skillId);
+  return getActiveFractals(dynamicFractals, gameForm)
+    .slice(0, ACTIVE_RING_LIMIT)
+    .map((fractal) => {
+      const skill = getSkillById(skillForms, fractal.skill);
+      const skillRatio = Number(skill?.ratio);
+      const questSeconds = Number.isFinite(previousQuestSeconds) && Number.isFinite(skillRatio) && skillRatio > 0
+        ? previousQuestSeconds / skillRatio
+        : null;
+      const distanceMeters = Number.isFinite(previousDistanceMeters) && Number.isFinite(skillRatio) && skillRatio > 0
+        ? previousDistanceMeters / skillRatio
+        : null;
       const elements = getFractalElements(elementsByFractalId, fractal?.id);
 
       if (!fractal || !elements.length) return null;
 
-      if (!cycleBySkillId.has(skillId)) {
-        const parentSkillId = getDisplayValue(skill.parent);
-        const parentCycle = parentSkillId ? cycleBySkillId.get(parentSkillId) : passiveCycle;
-        const parentDistance = parentSkillId ? distanceBySkillId.get(parentSkillId) : passiveDistance;
-        const ratio = Number(skill.ratio);
-
-        if (Number.isFinite(parentCycle) && Number.isFinite(ratio) && ratio > 0) {
-          cycleBySkillId.set(skillId, parentCycle / ratio);
-        }
-        if (Number.isFinite(parentDistance) && Number.isFinite(ratio) && ratio > 0) {
-          distanceBySkillId.set(skillId, parentDistance / ratio);
-        }
-      }
+      previousQuestSeconds = questSeconds;
+      previousDistanceMeters = distanceMeters;
 
       return createRingModelFromFractal({
-        cycleSeconds: cycleBySkillId.get(skillId),
-        distanceMeters: distanceBySkillId.get(skillId),
+        cycleSeconds: questSeconds,
+        distanceMeters,
         elements,
         fractal,
         selectedDynamicRingSegments,
@@ -262,8 +274,7 @@ const getDynamicRingModels = ({
         skillLabel: getDisplayValue(skill.label) || "Active"
       });
     })
-    .filter(Boolean)
-    .slice(0, ACTIVE_RING_LIMIT);
+    .filter(Boolean);
 };
 
 const getPassiveModel = ({ dynamicFractals, gameForm }) => {
@@ -279,18 +290,24 @@ const getPassiveModel = ({ dynamicFractals, gameForm }) => {
   };
 };
 
-const getUltimateModel = ({ dynamicFractals, gameForm, publicProfiles }) => {
+const getSkillById = (skillForms, skillId) => (
+  (skillForms || []).find((skill) => getDisplayValue(skill.id) === getDisplayValue(skillId)) || null
+);
+
+const getUltimateModel = ({ dynamicFractals, gameForm, publicProfiles, skillForms }) => {
   const fractal = getFractalById(dynamicFractals, gameForm?.ultimate_fractal);
   const label = getDisplayValue(fractal?.label);
+  const skill = getSkillById(skillForms, fractal?.skill);
   const linkedProfile = publicProfiles.find((profile) => (
     getDisplayValue(profile.id) === getDisplayValue(gameForm?.ultimate_link)
   ));
 
-  if (!label && !linkedProfile) return null;
+  if (!label && !skill && !linkedProfile) return null;
 
   return {
     label: label || "Ultimate",
-    linkedProfile
+    linkedProfile,
+    skillLabel: getDisplayValue(skill?.label)
   };
 };
 
@@ -389,28 +406,29 @@ const createSkillForms = (skills) => (
   (skills || []).map((skill) => ({
     id: skill.id,
     label: getDisplayValue(skill.label),
-    parent: getDisplayValue(skill.parent),
     ratio: getDisplayValue(skill.ratio)
   }))
 );
 
+const createLabeledGameInput = ({ ariaLabel, input, label }) => {
+  const wrapper = document.createElement("label");
+  const text = document.createElement("span");
+
+  wrapper.className = "profile-skill-card-field";
+  text.textContent = label;
+  input.setAttribute("aria-label", ariaLabel || label);
+  wrapper.append(text, input);
+
+  return wrapper;
+};
+
 const getSkillPayload = (form) => ({
   id: form.id,
   label: getDisplayValue(form.label),
-  parent: getDisplayValue(form.parent) || null,
   ratio: Number.isFinite(Number(form.ratio)) && getDisplayValue(form.ratio)
     ? Number(form.ratio)
     : null
 });
-
-const getRootSkillId = (skillForms) => {
-  const rootSkill = (skillForms || [])
-    .filter((skill) => !getDisplayValue(skill.parent))
-    .sort((first, second) => first.label.localeCompare(second.label))[0]
-    || (skillForms || []).slice().sort((first, second) => first.label.localeCompare(second.label))[0];
-
-  return getDisplayValue(rootSkill?.id);
-};
 
 const getDynamicFractalPayload = (fractal) => ({
   id: fractal.id,
@@ -420,71 +438,6 @@ const getDynamicFractalPayload = (fractal) => ({
     ? Number(fractal.time)
     : null
 });
-
-const orderSkillForms = (skillForms, primarySkillId) => {
-  const remaining = new Map(skillForms.map((skill) => [skill.id, skill]));
-  const ordered = [];
-  const appendSkill = (skill) => {
-    if (!skill || !remaining.has(skill.id)) return;
-
-    remaining.delete(skill.id);
-    ordered.push(skill);
-    skillForms
-      .filter((child) => child.parent === skill.id)
-      .sort((first, second) => first.label.localeCompare(second.label))
-      .forEach(appendSkill);
-  };
-
-  appendSkill(remaining.get(primarySkillId));
-  [...remaining.values()]
-    .filter((skill) => !skill.parent || !remaining.has(skill.parent))
-    .sort((first, second) => first.label.localeCompare(second.label))
-    .forEach(appendSkill);
-  [...remaining.values()]
-    .sort((first, second) => first.label.localeCompare(second.label))
-    .forEach(appendSkill);
-
-  return ordered;
-};
-
-const getSkillDescendantIds = (skillForms, skillId) => {
-  const descendants = new Set();
-  const appendChildren = (parentId) => {
-    skillForms
-      .filter((skill) => getDisplayValue(skill.parent) === getDisplayValue(parentId))
-      .forEach((skill) => {
-        if (descendants.has(skill.id)) return;
-        descendants.add(skill.id);
-        appendChildren(skill.id);
-      });
-  };
-
-  appendChildren(skillId);
-
-  return descendants;
-};
-
-const normalizeSkillFormsForSave = (skillForms) => {
-  const rootSkillId = getRootSkillId(skillForms);
-  const skillIds = new Set(skillForms.map((skill) => getDisplayValue(skill.id)).filter(Boolean));
-
-  return skillForms.map((skill) => {
-    const skillId = getDisplayValue(skill.id);
-    const parentId = getDisplayValue(skill.parent);
-    const descendants = getSkillDescendantIds(skillForms, skillId);
-    const hasValidParent = (
-      parentId
-      && parentId !== skillId
-      && skillIds.has(parentId)
-      && !descendants.has(parentId)
-    );
-
-    return {
-      ...skill,
-      parent: skillId === rootSkillId ? "" : hasValidParent ? parentId : rootSkillId
-    };
-  });
-};
 
 const createPrimaryFractalPanel = ({
   dynamicFractals,
@@ -551,7 +504,9 @@ const createUltimatePanel = ({
   gameForm,
   onFractalFieldChange,
   onFieldChange,
-  publicProfiles
+  onSkillFieldChange,
+  publicProfiles,
+  skillForms
 }) => {
   const section = document.createElement("section");
   const heading = document.createElement("h2");
@@ -559,6 +514,9 @@ const createUltimatePanel = ({
   const fractalLabel = document.createElement("label");
   const fractalInput = document.createElement("input");
   const ultimateFractal = getFractalById(dynamicFractals, gameForm?.ultimate_fractal);
+  const ultimateSkill = getSkillById(skillForms, ultimateFractal?.skill);
+  const skillLabel = document.createElement("label");
+  const skillInput = document.createElement("input");
   const linkLabel = document.createElement("label");
   const linkSelect = document.createElement("select");
   const emptyLinkOption = document.createElement("option");
@@ -566,7 +524,7 @@ const createUltimatePanel = ({
 
   section.className = "profile-resonance-column profile-primary-fractal-panel";
   heading.className = "profile-resonance-column-title";
-  heading.textContent = "Ultimate";
+  heading.textContent = "Ultimate Ability";
   content.className = "profile-primary-fractal-content";
   fieldsRow.className = "profile-primary-fractal-fields";
 
@@ -580,6 +538,17 @@ const createUltimatePanel = ({
   });
   fractalLabel.append(document.createElement("span"), fractalInput);
   fractalLabel.firstElementChild.textContent = "Fractal";
+
+  skillLabel.className = "profile-primary-fractal-field";
+  skillInput.type = "text";
+  skillInput.value = getDisplayValue(ultimateSkill?.label);
+  skillInput.disabled = !ultimateSkill;
+  skillInput.addEventListener("input", () => {
+    if (!ultimateSkill) return;
+    onSkillFieldChange(ultimateSkill.id, "label", skillInput.value);
+  });
+  skillLabel.append(document.createElement("span"), skillInput);
+  skillLabel.firstElementChild.textContent = "Skill";
 
   linkLabel.className = "profile-primary-fractal-field";
   emptyLinkOption.value = "";
@@ -597,169 +566,107 @@ const createUltimatePanel = ({
   linkSelect.value = getDisplayValue(gameForm?.ultimate_link);
   linkSelect.addEventListener("change", () => onFieldChange("ultimate_link", linkSelect.value));
   linkLabel.append(document.createElement("span"), linkSelect);
-  linkLabel.firstElementChild.textContent = "Linked profile";
+  linkLabel.firstElementChild.textContent = "Follows";
 
-  fieldsRow.append(fractalLabel, linkLabel);
+  fieldsRow.append(fractalLabel, linkLabel, skillLabel);
   content.append(fieldsRow);
   section.append(heading, content);
 
   return section;
 };
 
-const createSecondaryFractalPanel = ({
-  dynamicFractals,
-  onFractalFieldChange,
-  skillForms
-}) => {
-  const section = document.createElement("section");
-  const heading = document.createElement("h2");
-  const content = document.createElement("div");
-  const rootSkillId = getRootSkillId(skillForms);
-  const fractalsBySkillId = new Map(dynamicFractals.map((fractal) => [
-    getDisplayValue(fractal.skill),
-    fractal
-  ]));
-  const orderedSkillForms = orderSkillForms(skillForms, rootSkillId);
-  const orderedFractals = orderedSkillForms
-    .map((skill) => fractalsBySkillId.get(getDisplayValue(skill.id)))
-    .filter(Boolean);
-
-  section.className = "profile-resonance-column profile-secondary-fractal-panel";
-  heading.className = "profile-resonance-column-title";
-  heading.textContent = "Edit Fractals";
-  content.className = "profile-skills-content";
-
-  if (!orderedFractals.length) {
-    const empty = document.createElement("p");
-
-    empty.className = "profile-primary-fractal-status";
-    empty.textContent = "No fractals yet.";
-    content.append(empty);
-  } else {
-    const header = document.createElement("div");
-
-    header.className = "profile-secondary-fractal-header";
-    ["Fractal", "Cycle (s)"].forEach((text) => {
-      const item = document.createElement("span");
-
-      item.textContent = text;
-      header.append(item);
-    });
-    content.append(header);
-  }
-
-  orderedFractals.forEach((fractal) => {
-    const item = document.createElement("article");
-    const labelInput = document.createElement("input");
-    const cycleInput = document.createElement("input");
-
-    item.className = "profile-secondary-fractal-row";
-    labelInput.type = "text";
-    labelInput.value = getDisplayValue(fractal.label);
-    labelInput.setAttribute("aria-label", "Fractal name");
-    labelInput.addEventListener("input", () => onFractalFieldChange(fractal.id, "label", labelInput.value));
-
-    cycleInput.type = "number";
-    cycleInput.step = "any";
-    cycleInput.inputMode = "decimal";
-    cycleInput.value = getDisplayValue(fractal.time);
-    cycleInput.setAttribute("aria-label", "Fractal cycle");
-    cycleInput.addEventListener("input", () => onFractalFieldChange(fractal.id, "time", cycleInput.value));
-
-    item.append(labelInput, cycleInput);
-    content.append(item);
-  });
-  section.append(heading, content);
-
-  return section;
-};
-
 const createSkillsPanel = ({
+  dynamicFractals,
+  gameForm,
+  onFractalFieldChange,
   onFieldChange,
   skillForms
 }) => {
   const section = document.createElement("section");
   const heading = document.createElement("h2");
   const content = document.createElement("div");
-  const rootSkillId = getRootSkillId(skillForms);
-  const orderedSkillForms = orderSkillForms(skillForms, rootSkillId);
+  const activeFractals = getActiveFractals(dynamicFractals, gameForm)
+    .slice(0, ACTIVE_RING_LIMIT);
 
   section.className = "profile-resonance-column profile-skills-panel";
   heading.className = "profile-resonance-column-title";
-  heading.textContent = "Actives";
+  heading.textContent = "Basic Abilities";
   content.className = "profile-skills-content";
 
-  if (!orderedSkillForms.length) {
+  if (!activeFractals.length) {
     const empty = document.createElement("p");
 
     empty.className = "profile-primary-fractal-status";
     empty.textContent = "No actives yet.";
     content.append(empty);
-  } else {
-    const header = document.createElement("div");
-    const number = document.createElement("span");
-    const label = document.createElement("span");
-    const parent = document.createElement("span");
-    const ratio = document.createElement("span");
-
-    header.className = "profile-skill-header";
-    number.textContent = "#";
-    label.textContent = "Active";
-    parent.textContent = "Parent";
-    ratio.textContent = "Ratio";
-    header.append(number, label, parent, ratio);
-    content.append(header);
   }
 
-  orderedSkillForms.forEach((skill, index) => {
+  activeFractals.forEach((fractal, index) => {
+    const skill = getSkillById(skillForms, fractal.skill);
     const item = document.createElement("article");
     const badge = document.createElement("span");
-    const isRootSkill = getDisplayValue(skill.id) === getDisplayValue(rootSkillId);
-    const descendantIds = getSkillDescendantIds(skillForms, skill.id);
+    const body = document.createElement("div");
+    const passiveLine = document.createElement("div");
+    const activeLine = document.createElement("div");
+    const passiveTitle = document.createElement("span");
+    const activeTitle = document.createElement("span");
+    const fractalInput = document.createElement("input");
+    const cycleInput = document.createElement("input");
+    const skillInput = document.createElement("input");
+    const ratioInput = document.createElement("input");
 
     badge.className = "profile-skill-badge";
     badge.textContent = String(index + 1);
 
-    const labelInput = document.createElement("input");
-    const parentSelect = document.createElement("select");
-    const emptyParent = document.createElement("option");
-    const ratioInput = document.createElement("input");
-
     item.className = "profile-skill-row";
-    item.append(badge);
-    labelInput.type = "text";
-    labelInput.value = skill.label;
-    labelInput.setAttribute("aria-label", "Active label");
-    labelInput.addEventListener("input", () => onFieldChange(skill.id, "label", labelInput.value));
+    body.className = "profile-skill-card-body";
+    passiveLine.className = "profile-skill-card-line";
+    activeLine.className = "profile-skill-card-line";
+    passiveTitle.className = "profile-skill-card-line-title";
+    activeTitle.className = "profile-skill-card-line-title";
+    passiveTitle.textContent = "Passive";
+    activeTitle.textContent = "Active";
 
-    emptyParent.value = "";
-    emptyParent.textContent = isRootSkill ? "Root" : "No parent";
-    parentSelect.setAttribute("aria-label", "Active parent");
-    parentSelect.replaceChildren(emptyParent, ...skillForms
-      .filter((optionSkill) => (
-        optionSkill.id !== skill.id
-        && !descendantIds.has(optionSkill.id)
-      ))
-      .map((optionSkill) => {
-        const option = document.createElement("option");
+    fractalInput.type = "text";
+    fractalInput.value = getDisplayValue(fractal.label);
+    fractalInput.addEventListener("input", () => onFractalFieldChange(fractal.id, "label", fractalInput.value));
 
-        option.value = optionSkill.id;
-        option.textContent = optionSkill.label || "Untitled active";
+    cycleInput.type = "number";
+    cycleInput.step = "any";
+    cycleInput.inputMode = "decimal";
+    cycleInput.value = getDisplayValue(fractal.time);
+    cycleInput.addEventListener("input", () => onFractalFieldChange(fractal.id, "time", cycleInput.value));
 
-        return option;
-      }));
-    parentSelect.value = skill.parent;
-    parentSelect.disabled = isRootSkill;
-    parentSelect.addEventListener("change", () => onFieldChange(skill.id, "parent", parentSelect.value));
+    skillInput.type = "text";
+    skillInput.value = getDisplayValue(skill?.label);
+    skillInput.disabled = !skill;
+    skillInput.addEventListener("input", () => {
+      if (!skill) return;
+      onFieldChange(skill.id, "label", skillInput.value);
+    });
 
     ratioInput.type = "number";
     ratioInput.step = "any";
     ratioInput.inputMode = "decimal";
-    ratioInput.value = skill.ratio;
-    ratioInput.setAttribute("aria-label", "Active ratio");
-    ratioInput.addEventListener("input", () => onFieldChange(skill.id, "ratio", ratioInput.value));
+    ratioInput.value = getDisplayValue(skill?.ratio);
+    ratioInput.disabled = !skill;
+    ratioInput.addEventListener("input", () => {
+      if (!skill) return;
+      onFieldChange(skill.id, "ratio", ratioInput.value);
+    });
 
-    item.append(labelInput, parentSelect, ratioInput);
+    passiveLine.append(
+      passiveTitle,
+      createLabeledGameInput({ ariaLabel: "Fractal name", input: fractalInput, label: "Name" }),
+      createLabeledGameInput({ ariaLabel: "Fractal cycle", input: cycleInput, label: "Cycle (s)" })
+    );
+    activeLine.append(
+      activeTitle,
+      createLabeledGameInput({ ariaLabel: "Active skill", input: skillInput, label: "Name" }),
+      createLabeledGameInput({ ariaLabel: "Active ratio", input: ratioInput, label: "Ratio" })
+    );
+    body.append(passiveLine, activeLine);
+    item.append(badge, body);
     content.append(item);
   });
   section.append(heading, content);
@@ -804,14 +711,11 @@ const createDynamicRingParameterPanel = ({ passiveModel, ringModels, ultimateMod
     const title = document.createElement("h3");
     const list = document.createElement("dl");
     const rows = [{
-      label: "Cycle",
+      label: "Passive",
       value: formatDuration(passiveModel.cycleSeconds, { compact: false }) || "00:00:00"
     }, {
       label: "Zone",
       value: formatDistance(passiveModel.distanceMeters) || "0m"
-    }, {
-      label: "Segment",
-      value: getElementLabel(passiveModel.selectedElement, passiveModel.selectedSegment)
     }];
 
     group.className = "profile-parameter-section";
@@ -833,19 +737,16 @@ const createDynamicRingParameterPanel = ({ passiveModel, ringModels, ultimateMod
     const title = document.createElement("h3");
     const list = document.createElement("dl");
     const rows = [{
-      label: "Cycle",
+      label: "Passive",
       value: formatDuration(ringModel.fractal.time, { compact: false }) || "00:00:00"
     }, {
-      label: "Quest",
-      value: formatDuration(ringModel.practiceSeconds, { compact: false }) || "00:00:00"
+      label: "Active",
+      value: formatDuration(ringModel.questSeconds, { compact: false }) || "00:00:00"
     }, {
       label: "Zone",
       value: formatDistance(ringModel.distanceMeters) || "0m"
     }, {
-      label: "Segment",
-      value: getElementLabel(ringModel.selectedElement, ringModel.selectedSegment)
-    }, {
-      label: "Active",
+      label: "Skill",
       value: ringModel.skillLabel
     }];
 
@@ -871,8 +772,12 @@ const createDynamicRingParameterPanel = ({ passiveModel, ringModels, ultimateMod
     const profileUrl = getPublicProfileUrl(ultimateModel.linkedProfile);
     const rows = [{
       href: profileUrl,
-      label: "Link",
+      isProfileLink: true,
+      label: "Follows",
       value: getDisplayValue(ultimateModel.linkedProfile?.username) || "No linked profile"
+    }, {
+      label: "Skill",
+      value: ultimateModel.skillLabel || "No skill"
     }];
 
     group.className = "profile-parameter-section";
@@ -886,6 +791,7 @@ const createDynamicRingParameterPanel = ({ passiveModel, ringModels, ultimateMod
       if (row.href) {
         const link = document.createElement("a");
 
+        link.className = row.isProfileLink ? "profile-parameter-profile-link" : "";
         link.href = row.href;
         link.textContent = row.value;
         value.append(link);
@@ -1060,15 +966,7 @@ export const initJayceePage = async () => {
         currentProfile,
         getGamePayload(gameForm)
       );
-      skillForms = normalizeSkillFormsForSave(skillForms);
-      const rootSkillId = getRootSkillId(skillForms);
-      const skillPayloads = skillForms.map((skill) => {
-        const payload = getSkillPayload(skill);
-
-        return getDisplayValue(payload.id) === rootSkillId
-          ? { ...payload, parent: null }
-          : payload;
-      });
+      const skillPayloads = skillForms.map(getSkillPayload);
       const fractalPayloads = dynamicFractals.map(getDynamicFractalPayload);
 
       gameSettings = updatedSettings || { ...gameSettings, ...getGamePayload(gameForm), user_id: currentProfile.id };
@@ -1084,7 +982,7 @@ export const initJayceePage = async () => {
         const updatedSkills = await updateSkills(supabaseClient, skillPayloads);
 
         skills = skills.map((skill) => updatedSkills.find((updatedSkill) => updatedSkill.id === skill.id) || skill);
-        skillForms = normalizeSkillFormsForSave(createSkillForms(skills));
+        skillForms = createSkillForms(skills);
       }
       dashboardSaveStatus = "Saved";
       isDashboardSaving = false;
@@ -1117,32 +1015,14 @@ export const initJayceePage = async () => {
   };
 
   const updateSkillField = (skillId, field, value) => {
-    const rootSkillId = getRootSkillId(skillForms);
-    const validSkillIds = new Set(skillForms.map((skill) => getDisplayValue(skill.id)).filter(Boolean));
-    const descendantIds = getSkillDescendantIds(skillForms, skillId);
-    const rawValue = getDisplayValue(value);
-    const nextValue = field === "parent"
-      ? getDisplayValue(skillId) === rootSkillId
-        ? ""
-        : rawValue
-          && rawValue !== getDisplayValue(skillId)
-          && validSkillIds.has(rawValue)
-          && !descendantIds.has(rawValue)
-          ? rawValue
-          : rootSkillId
-      : rawValue;
-
     skillForms = skillForms.map((skill) => (
       skill.id === skillId
-        ? { ...skill, [field]: nextValue }
+        ? { ...skill, [field]: getDisplayValue(value) }
         : skill
     ));
     markDashboardDirty();
     renderCore();
     renderCoreParameters();
-    if (field === "parent") {
-      renderResonances();
-    }
   };
 
   const renderPresentControls = () => {
@@ -1178,6 +1058,9 @@ export const initJayceePage = async () => {
           onFractalFieldChange: updateDynamicFractalField
         }),
         createSkillsPanel({
+          dynamicFractals,
+          gameForm,
+          onFractalFieldChange: updateDynamicFractalField,
           onFieldChange: updateSkillField,
           skillForms
         }),
@@ -1186,11 +1069,8 @@ export const initJayceePage = async () => {
           gameForm,
           onFractalFieldChange: updateDynamicFractalField,
           onFieldChange: updatePrimaryFractalField,
-          publicProfiles
-        }),
-        createSecondaryFractalPanel({
-          dynamicFractals,
-          onFractalFieldChange: updateDynamicFractalField,
+          onSkillFieldChange: updateSkillField,
+          publicProfiles,
           skillForms
         }),
         createDashboardSavePanel({
@@ -1218,7 +1098,7 @@ export const initJayceePage = async () => {
       gameForm,
       selectedDynamicRingSegments
     }) || getPassiveModel({ dynamicFractals, gameForm });
-    const ultimateModel = getUltimateModel({ dynamicFractals, gameForm, publicProfiles });
+    const ultimateModel = getUltimateModel({ dynamicFractals, gameForm, publicProfiles, skillForms });
     const panel = createDynamicRingParameterPanel({ passiveModel, ringModels, ultimateModel });
 
     if (!corePanel || !panel) {
@@ -1326,7 +1206,7 @@ export const initJayceePage = async () => {
     skills = hasUserProfile
       ? await fetchSkillsByIds(client, dynamicFractals.map((fractal) => fractal.skill))
       : [];
-    skillForms = normalizeSkillFormsForSave(createSkillForms(skills));
+    skillForms = createSkillForms(skills);
     gameSettings = hasUserProfile ? await fetchUserGameSettings(client, profile) : null;
     gameForm = createGameForm(gameSettings);
 

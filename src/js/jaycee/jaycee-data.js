@@ -185,7 +185,7 @@ export const fetchSkillsByIds = async (client, skillIds) => {
 
   const { data, error } = await client
     .from(JAYCEE_SKILLS_TABLE)
-    .select("id, label, parent, ratio, created_at")
+    .select("id, label, ratio, created_at")
     .in("id", ids)
     .order("label", { ascending: true });
 
@@ -204,7 +204,7 @@ export const updateSkills = async (client, skillUpdates) => {
       .from(JAYCEE_SKILLS_TABLE)
       .update(values)
       .eq("id", id)
-      .select("id, label, parent, ratio, created_at")
+      .select("id, label, ratio, created_at")
       .maybeSingle();
 
     if (error) throw error;
