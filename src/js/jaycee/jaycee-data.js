@@ -1,5 +1,5 @@
-export const JAYCEE_DYNAMIC_FRACTALS_TABLE = "jaycee_dynamic_fractals";
-export const JAYCEE_DYNAMIC_FRACTAL_ELEMENTS_TABLE = "jaycee_dynamic_fractal_elements";
+export const JAYCEE_FRACTALS_TABLE = "jaycee_fractals";
+export const JAYCEE_FRACTAL_ELEMENTS_TABLE = "jaycee_fractal_elements";
 export const JAYCEE_GAME_TABLE = "jaycee_game";
 export const JAYCEE_SKILLS_TABLE = "jaycee_skills";
 export const PROFILE_TABLE = "profiles";
@@ -120,7 +120,7 @@ export const fetchUserDynamicFractals = async (client, profile) => {
   if (!profile?.id) return [];
 
   const { data, error } = await client
-    .from(JAYCEE_DYNAMIC_FRACTALS_TABLE)
+    .from(JAYCEE_FRACTALS_TABLE)
     .select("id, label, user_id, image, created_at, skill, time")
     .eq("user_id", profile.id)
     .order("created_at", { ascending: true });
@@ -136,7 +136,7 @@ export const fetchDynamicFractalElements = async (client, fractalIds) => {
   if (!ids.length) return [];
 
   const { data, error } = await client
-    .from(JAYCEE_DYNAMIC_FRACTAL_ELEMENTS_TABLE)
+    .from(JAYCEE_FRACTAL_ELEMENTS_TABLE)
     .select("*")
     .in("fractal_id", ids)
     .order("position", { ascending: true });
@@ -221,7 +221,7 @@ export const updateUserDynamicFractals = async (client, fractalUpdates) => {
 
   const updatedRows = await Promise.all(updates.map(async ({ id, ...values }) => {
     const { data, error } = await client
-      .from(JAYCEE_DYNAMIC_FRACTALS_TABLE)
+      .from(JAYCEE_FRACTALS_TABLE)
       .update(values)
       .eq("id", id)
       .select("id, label, user_id, image, created_at, skill, time")

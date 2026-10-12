@@ -102,6 +102,89 @@
   outline: none;
 }
 
+.profile-vitals-panel {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 540px);
+  display: grid;
+  gap: 8px;
+}
+
+.profile-vital-bar {
+  display: grid;
+  gap: 4px;
+  padding: 7px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent),
+    rgba(0, 0, 0, 0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.profile-vital-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.7rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.profile-vital-header span:last-child {
+  color: var(--text);
+  text-align: right;
+  text-transform: none;
+}
+
+.profile-vital-track {
+  height: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.58);
+  border-radius: 4px;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.52), rgba(255, 255, 255, 0.05)),
+    rgba(0, 0, 0, 0.42);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.75),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.profile-vital-fill {
+  height: 100%;
+  min-width: 3px;
+  display: block;
+  border-right: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 0 14px currentColor;
+}
+
+.profile-vital-bar.is-health .profile-vital-header span:first-child {
+  color: #a9ff95;
+}
+
+.profile-vital-bar.is-health .profile-vital-fill {
+  color: rgba(91, 255, 116, 0.5);
+  background:
+    linear-gradient(90deg, #1e8b41, #5bff74 68%, #caff75);
+}
+
+.profile-vital-bar.is-mana .profile-vital-header span:first-child {
+  color: #9bd8ff;
+}
+
+.profile-vital-bar.is-mana .profile-vital-fill {
+  color: rgba(76, 178, 255, 0.52);
+  background:
+    linear-gradient(90deg, #1a5fbf, #4cb2ff 70%, #b3f5ff);
+}
+
 .jaycee-profile-core.has-theme-controls .jaycee-profile-canvas {
   width: min(100%, clamp(300px, calc(100svh - var(--banner-space) - var(--footer-space) - 220px), 500px));
 }

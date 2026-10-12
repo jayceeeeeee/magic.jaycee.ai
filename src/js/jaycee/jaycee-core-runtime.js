@@ -31,6 +31,7 @@ const ACTIVE_RING_LIMIT = 3;
 const FRACTAL_SQUARE_GRID_SIZE = 3;
 const FRACTAL_GRID_DISPLAY_LIMIT = 5;
 const TRAILING_GLYPH_PATTERN = /((?:\p{Extended_Pictographic}|\p{S})(?:\uFE0F|\uFE0E)?(?:\u200D(?:\p{Extended_Pictographic}|\p{S})(?:\uFE0F|\uFE0E)?)*)\s*$/u;
+const HEALTH_MAX_YEARS = 1000000;
 
 const applyProfileTheme = (profile) => {
   const theme = getThemeSettingsFromProfile(profile).theme;
@@ -95,6 +96,23 @@ const formatDistance = (metersValue) => {
   }
 
   return `${Number.isInteger(meters) ? meters : Number(meters.toFixed(2))}m`;
+};
+
+const getAgeInYears = (birthDate) => {
+  const value = getDisplayValue(birthDate);
+  const date = value ? new Date(`${value}T00:00:00`) : null;
+
+  if (!date || Number.isNaN(date.getTime())) return null;
+
+  const now = new Date();
+  let age = now.getFullYear() - date.getFullYear();
+  const birthdayThisYear = new Date(now.getFullYear(), date.getMonth(), date.getDate());
+
+  if (now < birthdayThisYear) {
+    age -= 1;
+  }
+
+  return Math.max(0, age);
 };
 
 const getElementLabel = (element, fallback = "") => (
@@ -337,6 +355,57 @@ const createGameSelect = (profiles, selectedUsername = "") => {
   label.append(text, select);
 
   return label;
+};
+
+const createVitalBar = ({ current, label, max, tone, valueText }) => {
+  const bar = document.createElement("div");
+  const header = document.createElement("div");
+  const name = document.createElement("span");
+  const value = document.createElement("span");
+  const track = document.createElement("div");
+  const fill = document.createElement("span");
+  const progress = Number.isFinite(Number(current)) && Number.isFinite(Number(max)) && Number(max) > 0
+    ? Math.min(1, Math.max(0, Number(current) / Number(max)))
+    : 0;
+
+  bar.className = `profile-vital-bar is-${tone}`;
+  header.className = "profile-vital-header";
+  name.textContent = label;
+  value.textContent = valueText;
+  track.className = "profile-vital-track";
+  fill.className = "profile-vital-fill";
+  fill.style.width = `${progress * 100}%`;
+  header.append(name, value);
+  track.append(fill);
+  bar.append(header, track);
+
+  return bar;
+};
+
+const createVitalsPanel = (profile) => {
+  const panel = document.createElement("section");
+  const age = getAgeInYears(profile?.birth_date);
+
+  panel.className = "profile-vitals-panel";
+  panel.dataset.profileVitals = "";
+  panel.replaceChildren(
+    createVitalBar({
+      current: age || 0,
+      label: "Health",
+      max: HEALTH_MAX_YEARS,
+      tone: "health",
+      valueText: age === null ? `0 / ${HEALTH_MAX_YEARS.toLocaleString()}y` : `${age} / ${HEALTH_MAX_YEARS.toLocaleString()}y`
+    }),
+    createVitalBar({
+      current: 0,
+      label: "Mana",
+      max: 1,
+      tone: "mana",
+      valueText: "0 / daily quests"
+    })
+  );
+
+  return panel;
 };
 
 const getPublicProfileUsernameFromUrl = () => {
@@ -1023,6 +1092,24 @@ export const initJayceePage = async () => {
     }
   };
 
+  const renderVitalsPanel = () => {
+    const corePanel = canvas.closest(".jaycee-profile-core");
+    const existingPanel = corePanel?.querySelector("[data-profile-vitals]");
+
+    if (!corePanel || !hasUserProfile) {
+      existingPanel?.remove();
+      return;
+    }
+
+    const panel = createVitalsPanel(currentProfile);
+
+    if (existingPanel) {
+      existingPanel.replaceWith(panel);
+    } else {
+      corePanel.insertBefore(panel, corePanel.firstChild);
+    }
+  };
+
   const renderResonances = () => {
     status.textContent = "";
     list.replaceChildren(
@@ -1170,6 +1257,7 @@ export const initJayceePage = async () => {
     }
     window.addEventListener("resize", scheduleRenderCore);
     window.addEventListener("load", scheduleRenderCore);
+    renderVitalsPanel();
     renderPresentControls();
     renderCoreParameters();
     renderResonances();
