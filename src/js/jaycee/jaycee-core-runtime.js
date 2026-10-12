@@ -873,18 +873,25 @@ const createProfileCoreState = ({
   };
 };
 
-export const initJayceePage = async () => {
+export const initJayceePage = async ({ surface = "combined" } = {}) => {
   const shell = document.querySelector("[data-profile-shell]");
-  const canvas = document.querySelector("[data-profile-canvas]");
-  const status = document.querySelector("[data-profile-status]");
-  const list = document.querySelector("[data-profile-resonances]");
+  const rendersCore = surface !== "dashboard";
+  const rendersDashboard = surface !== "profile";
+  const canvas = rendersCore ? document.querySelector("[data-profile-canvas]") : null;
+  const status = rendersDashboard ? document.querySelector("[data-profile-status]") : null;
+  const list = rendersDashboard ? document.querySelector("[data-profile-resonances]") : null;
   const publicUsername = getDisplayValue(shell?.dataset.profileUsername) || getPublicProfileUsernameFromUrl();
   const pageMode = getDisplayValue(shell?.dataset.profileMode) || (publicUsername ? "public" : "profile");
   const isPresentPage = pageMode === "present";
   const isEditableProfilePage = pageMode === "profile" && !publicUsername;
   const hasUserProfile = Boolean(publicUsername) || isEditableProfilePage;
+  const setStatus = (message) => {
+    if (status) {
+      status.textContent = message;
+    }
+  };
 
-  if (!shell || !canvas || !status || !list) return;
+  if (!shell || (rendersCore && !canvas) || (rendersDashboard && (!status || !list))) return;
 
   let dynamicFractalElements = [];
   let dynamicFractals = [];
@@ -961,6 +968,8 @@ export const initJayceePage = async () => {
   };
 
   const renderDashboardSavePanel = () => {
+    if (!list) return;
+
     const existingPanel = list.querySelector("[data-profile-dashboard-save]");
 
     if (!existingPanel || !isEditableProfilePage) return;
@@ -1037,7 +1046,7 @@ export const initJayceePage = async () => {
       dashboardSaveStatus = "Could not save";
       isDashboardSaving = false;
       renderResonances();
-      status.textContent = error?.message || "Dashboard settings could not be updated.";
+      setStatus(error?.message || "Dashboard settings could not be updated.");
     }
   };
 
@@ -1071,6 +1080,8 @@ export const initJayceePage = async () => {
   };
 
   const renderPresentControls = () => {
+    if (!canvas) return;
+
     const corePanel = canvas.closest(".jaycee-profile-core");
     const existingControls = corePanel?.querySelector("[data-profile-present-controls]");
 
@@ -1093,6 +1104,8 @@ export const initJayceePage = async () => {
   };
 
   const renderVitalsPanel = () => {
+    if (!canvas) return;
+
     const corePanel = canvas.closest(".jaycee-profile-core");
     const existingPanel = corePanel?.querySelector("[data-profile-vitals]");
 
@@ -1111,7 +1124,9 @@ export const initJayceePage = async () => {
   };
 
   const renderResonances = () => {
-    status.textContent = "";
+    if (!list) return;
+
+    setStatus("");
     list.replaceChildren(
       ...(isEditableProfilePage ? [
         createPrimaryFractalPanel({
@@ -1146,6 +1161,8 @@ export const initJayceePage = async () => {
   };
 
   const renderCoreParameters = () => {
+    if (!canvas) return;
+
     const corePanel = canvas.closest(".jaycee-profile-core");
     const existingPanel = corePanel?.querySelector("[data-profile-parameters]");
     const activeModels = getActiveFractalModels({
@@ -1180,6 +1197,8 @@ export const initJayceePage = async () => {
   };
 
   const renderCore = () => {
+    if (!canvas) return;
+
     const elementsByFractalId = getElementsByFractalId();
     const fractalSquare = getFractalGridSquareModel({
       dynamicFractals,
@@ -1196,6 +1215,8 @@ export const initJayceePage = async () => {
   };
 
   const scheduleRenderCore = () => {
+    if (!canvas) return;
+
     window.requestAnimationFrame(renderCore);
   };
 
@@ -1225,7 +1246,7 @@ export const initJayceePage = async () => {
 
     if (hasUserProfile && !profile) {
       shell.hidden = false;
-      status.textContent = "Profile not found.";
+      setStatus("Profile not found.");
       return;
     }
 
@@ -1235,7 +1256,7 @@ export const initJayceePage = async () => {
     }
 
     dynamicFractals = hasUserProfile ? await fetchUserDynamicFractals(client, profile) : [];
-    dynamicFractalElements = hasUserProfile
+    dynamicFractalElements = rendersCore && hasUserProfile
       ? await fetchDynamicFractalElements(client, dynamicFractals.map((fractal) => fractal.id))
       : [];
     skills = hasUserProfile
@@ -1246,17 +1267,23 @@ export const initJayceePage = async () => {
     gameForm = createGameForm(gameSettings);
 
     publicProfiles = (isPresentPage || hasUserProfile) ? await fetchPublicProfiles(client) : [];
-    await loadUltimateTeammateSkillLabel();
-    avatarImage = !hasUserProfile ? null : await loadOptionalImage(await getAvatarImageUrl(client, profile));
-    renderCore();
-    const resizeObserver = new ResizeObserver(scheduleRenderCore);
-
-    resizeObserver.observe(canvas);
-    if (canvas.parentElement) {
-      resizeObserver.observe(canvas.parentElement);
+    if (rendersCore) {
+      await loadUltimateTeammateSkillLabel();
     }
-    window.addEventListener("resize", scheduleRenderCore);
-    window.addEventListener("load", scheduleRenderCore);
+    avatarImage = rendersCore && hasUserProfile
+      ? await loadOptionalImage(await getAvatarImageUrl(client, profile))
+      : null;
+    renderCore();
+    if (canvas) {
+      const resizeObserver = new ResizeObserver(scheduleRenderCore);
+
+      resizeObserver.observe(canvas);
+      if (canvas.parentElement) {
+        resizeObserver.observe(canvas.parentElement);
+      }
+      window.addEventListener("resize", scheduleRenderCore);
+      window.addEventListener("load", scheduleRenderCore);
+    }
     renderVitalsPanel();
     renderPresentControls();
     renderCoreParameters();
@@ -1265,14 +1292,22 @@ export const initJayceePage = async () => {
   } catch (error) {
     console.error("Jaycee profile load failed", error);
     shell.hidden = false;
-    status.textContent = error?.message || "Profile could not be loaded.";
+    setStatus(error?.message || "Profile could not be loaded.");
   }
 };
 
-export const startJayceePage = () => {
+export const startJayceePage = (options) => {
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initJayceePage, { once: true });
+    document.addEventListener("DOMContentLoaded", () => initJayceePage(options), { once: true });
   } else {
-    initJayceePage();
+    initJayceePage(options);
   }
+};
+
+export const startJayceeProfilePage = () => {
+  startJayceePage({ surface: "profile" });
+};
+
+export const startJayceeDashboardPage = () => {
+  startJayceePage({ surface: "dashboard" });
 };

@@ -14,6 +14,12 @@
   padding: calc(var(--banner-space) + 24px) 0 calc(var(--footer-space) + 24px);
 }
 
+.jaycee-profile-page.is-profile-view,
+.jaycee-profile-page.is-dashboard-view {
+  width: min(100% - 28px, 560px);
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .jaycee-settings-page {
   width: min(100% - 28px, 760px);
   min-height: 100svh;
@@ -89,6 +95,19 @@
     var(--panel-light),
     var(--panel-aura),
     var(--card);
+}
+
+.jaycee-profile-page.is-profile-view .jaycee-profile-core,
+.jaycee-profile-page.is-dashboard-view .jaycee-profile-resonances {
+  width: 100%;
+}
+
+.jaycee-profile-page.is-profile-view .jaycee-profile-core {
+  min-height: calc(100svh - var(--banner-space) - var(--footer-space) - 48px);
+}
+
+.jaycee-profile-page.is-profile-view .jaycee-profile-canvas {
+  width: min(100%, 620px, calc(100svh - var(--banner-space) - var(--footer-space) - 190px));
 }
 
 .jaycee-profile-canvas {
