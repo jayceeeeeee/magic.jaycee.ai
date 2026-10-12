@@ -4,7 +4,6 @@ export const JAYCEE_GAME_TABLE = "jaycee_game";
 export const JAYCEE_SKILLS_TABLE = "jaycee_skills";
 export const PROFILE_TABLE = "profiles";
 export const USER_IMAGES_BUCKET = "users";
-export const DEFAULT_SELECTED_NUMBER = 5;
 
 const PROFILE_SELECT_COLUMNS = [
   "id",

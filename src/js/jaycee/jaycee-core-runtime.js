@@ -1,12 +1,9 @@
 import {
   JAYCEE_ORDER,
   createJayceeState,
-  drawJaycee,
-  getJayceeHit,
-  getTopCenteredLastSegmentRotation
+  drawJaycee
 } from "./jaycee-core.js";
 import {
-  DEFAULT_SELECTED_NUMBER,
   fetchDynamicFractalElements,
   fetchProfileByUserId,
   fetchProfileByUsername,
@@ -29,39 +26,11 @@ const PROFILE_CORE_METRICS = {
   ringWidthMin: 14,
   ringWidthRatio: 0.072
 };
-const PROFILE_RING_ACTIVE_FILL_ALPHA = 0.09;
 const PROFILE_RING_FILL_ALPHA = 0.26;
-const PROFILE_VIEW_CACHE_PREFIX = "jayceeProfileView";
 const ACTIVE_RING_LIMIT = 3;
-const ACTIVE_RING_DISPLAY_LIMIT = 2;
 const FRACTAL_SQUARE_GRID_SIZE = 3;
-
-const getProfileViewCacheKey = ({ pageMode, profile, publicUsername }) => {
-  const profileKey = profile?.id || publicUsername || "core";
-
-  return `${PROFILE_VIEW_CACHE_PREFIX}:${pageMode}:${profileKey}`;
-};
-
-const loadProfileViewCache = (cacheKey) => {
-  try {
-    const value = window.localStorage.getItem(cacheKey);
-
-    return value ? JSON.parse(value) : null;
-  } catch (error) {
-    console.warn("Jaycee profile view cache could not be loaded", error);
-    return null;
-  }
-};
-
-const saveProfileViewCache = (cacheKey, state) => {
-  if (!cacheKey) return;
-
-  try {
-    window.localStorage.setItem(cacheKey, JSON.stringify(state));
-  } catch (error) {
-    console.warn("Jaycee profile view cache could not be saved", error);
-  }
-};
+const FRACTAL_GRID_DISPLAY_LIMIT = 5;
+const TRAILING_GLYPH_PATTERN = /((?:\p{Extended_Pictographic}|\p{S})(?:\uFE0F|\uFE0E)?(?:\u200D(?:\p{Extended_Pictographic}|\p{S})(?:\uFE0F|\uFE0E)?)*)\s*$/u;
 
 const applyProfileTheme = (profile) => {
   const theme = getThemeSettingsFromProfile(profile).theme;
@@ -86,10 +55,6 @@ const redirectToLogin = () => {
 };
 
 const getEmptyLabels = (count) => Array.from({ length: count }, () => "");
-
-const getActiveSegmentIndex = (segmentKeys, selectedSegment) => (
-  Math.max(0, segmentKeys.findIndex((key) => String(key) === String(selectedSegment)))
-);
 
 const formatDuration = (secondsValue, { compact = true } = {}) => {
   let seconds = Math.round(Number(secondsValue));
@@ -139,6 +104,13 @@ const getElementLabel = (element, fallback = "") => (
   || fallback
 );
 
+const getTrailingGlyph = (value) => {
+  const label = getDisplayValue(value).trim();
+  const match = label.match(TRAILING_GLYPH_PATTERN);
+
+  return match?.[1] || "";
+};
+
 const getFractalElements = (elementsByFractalId, fractalId) => (
   (elementsByFractalId.get(getDisplayValue(fractalId)) || [])
     .slice()
@@ -158,54 +130,41 @@ const getFractalById = (dynamicFractals, fractalId) => (
   dynamicFractals.find((fractal) => getDisplayValue(fractal.id) === getDisplayValue(fractalId)) || null
 );
 
-const createRingModelFromFractal = ({
+const createFractalMeasureModel = ({
   cycleSeconds,
   distanceMeters,
   elements,
   fractal,
-  selectedDynamicRingSegments,
   skill = null,
   skillLabel = ""
 }) => {
   if (!fractal || !elements.length) return null;
-
-  const segmentKeys = elements.map((element) => getDisplayValue(element.id));
-  const selectedSegment = selectedDynamicRingSegments.get(fractal.id) || segmentKeys[0];
-  const selectedElement = elements.find((element) => (
-    getDisplayValue(element.id) === getDisplayValue(selectedSegment)
-  )) || elements[0];
 
   return {
     cycleSeconds,
     distanceMeters,
     elements,
     fractal,
-    id: `dynamic-fractal:${fractal.id}`,
     label: getDisplayValue(fractal.label) || "Fractal",
-    segmentKeys,
-    selectedElement,
-    selectedSegment,
     skill,
     skillLabel,
     questSeconds: cycleSeconds
   };
 };
 
-const getPassiveRingModel = ({
+const getPassiveFractalModel = ({
   dynamicFractals,
   elementsByFractalId,
-  gameForm,
-  selectedDynamicRingSegments
+  gameForm
 }) => {
   const fractal = getFractalById(dynamicFractals, gameForm?.primary_fractal);
   const elements = getFractalElements(elementsByFractalId, fractal?.id);
 
-  return createRingModelFromFractal({
+  return createFractalMeasureModel({
     cycleSeconds: Number(gameForm?.primary_time),
     distanceMeters: Number(gameForm?.primary_distance),
     elements,
-    fractal,
-    selectedDynamicRingSegments
+    fractal
   });
 };
 
@@ -236,11 +195,16 @@ const getActiveFractals = (dynamicFractals, gameForm) => {
     });
 };
 
-const getDynamicRingModels = ({
+const getFractalsForCoreGrid = ({ dynamicFractals, gameForm }) => ([
+  getFractalById(dynamicFractals, gameForm?.primary_fractal),
+  ...getActiveFractals(dynamicFractals, gameForm).slice(0, ACTIVE_RING_LIMIT),
+  getFractalById(dynamicFractals, gameForm?.ultimate_fractal)
+].filter(Boolean).slice(0, FRACTAL_GRID_DISPLAY_LIMIT));
+
+const getActiveFractalModels = ({
   dynamicFractals,
   elementsByFractalId,
   gameForm,
-  selectedDynamicRingSegments,
   skillForms
 }) => {
   let previousQuestSeconds = Number(gameForm.primary_time);
@@ -264,12 +228,11 @@ const getDynamicRingModels = ({
       previousQuestSeconds = questSeconds;
       previousDistanceMeters = distanceMeters;
 
-      return createRingModelFromFractal({
+      return createFractalMeasureModel({
         cycleSeconds: questSeconds,
         distanceMeters,
         elements,
         fractal,
-        selectedDynamicRingSegments,
         skill,
         skillLabel: getDisplayValue(skill.label) || "Active"
       });
@@ -317,17 +280,32 @@ const getPublicProfileUrl = (profile) => {
   return username ? `/src/html/jaycee-profile.html?username=${encodeURIComponent(username)}` : "";
 };
 
-const getFractalSquareModel = (ringModels) => {
-  const squareSource = ringModels[ACTIVE_RING_DISPLAY_LIMIT];
+const getJayceeOrderedElementGlyphs = (elements) => (
+  JAYCEE_ORDER.map((number) => getTrailingGlyph(getElementLabel(elements[number - 1])))
+);
 
-  if (!squareSource) return null;
+const getFractalGridSquareModel = ({ dynamicFractals, elementsByFractalId, gameForm }) => {
+  const fractals = getFractalsForCoreGrid({ dynamicFractals, gameForm });
+  const subCellLabelsByPosition = {};
+
+  fractals.forEach((fractal, index) => {
+    const position = JAYCEE_ORDER[index];
+    const elements = getFractalElements(elementsByFractalId, fractal.id);
+    const labels = getJayceeOrderedElementGlyphs(elements);
+
+    if (position && labels.some(Boolean)) {
+      subCellLabelsByPosition[position] = labels;
+    }
+  });
+
+  if (!Object.keys(subCellLabelsByPosition).length) return null;
 
   return {
     coreStyle: true,
-    fillAlpha: 0.86,
+    fillAlpha: 0.08,
     gridSize: FRACTAL_SQUARE_GRID_SIZE,
     labels: getEmptyLabels(FRACTAL_SQUARE_GRID_SIZE * FRACTAL_SQUARE_GRID_SIZE),
-    selectedPosition: 5
+    subCellLabelsByPosition
   };
 };
 
@@ -696,8 +674,8 @@ const createDashboardSavePanel = ({ onSave, saveDisabled, saveStatus }) => {
   return section;
 };
 
-const createDynamicRingParameterPanel = ({ passiveModel, ringModels, ultimateModel }) => {
-  if (!passiveModel && !ringModels.length && !ultimateModel) return null;
+const createFractalParameterPanel = ({ activeModels, passiveModel, ultimateModel }) => {
+  if (!passiveModel && !activeModels.length && !ultimateModel) return null;
 
   const section = document.createElement("section");
   const heading = document.createElement("h2");
@@ -732,26 +710,26 @@ const createDynamicRingParameterPanel = ({ passiveModel, ringModels, ultimateMod
     group.append(title, list);
     section.append(group);
   }
-  ringModels.forEach((ringModel) => {
+  activeModels.forEach((fractalModel) => {
     const group = document.createElement("article");
     const title = document.createElement("h3");
     const list = document.createElement("dl");
     const rows = [{
       label: "Passive",
-      value: formatDuration(ringModel.fractal.time, { compact: false }) || "00:00:00"
+      value: formatDuration(fractalModel.fractal.time, { compact: false }) || "00:00:00"
     }, {
       label: "Active",
-      value: formatDuration(ringModel.questSeconds, { compact: false }) || "00:00:00"
+      value: formatDuration(fractalModel.questSeconds, { compact: false }) || "00:00:00"
     }, {
       label: "Zone",
-      value: formatDistance(ringModel.distanceMeters) || "0m"
+      value: formatDistance(fractalModel.distanceMeters) || "0m"
     }, {
       label: "Skill",
-      value: ringModel.skillLabel
+      value: fractalModel.skillLabel
     }];
 
     group.className = "profile-parameter-section";
-    title.textContent = ringModel.label;
+    title.textContent = fractalModel.label;
     list.className = "profile-parameter-list";
     rows.forEach((row) => {
       const label = document.createElement("dt");
@@ -810,38 +788,14 @@ const createDynamicRingParameterPanel = ({ passiveModel, ringModels, ultimateMod
 const createProfileCoreState = ({
   avatarImage,
   fractalSquare,
-  hasUserProfile,
-  ringModels,
-  selectedSpaceNumber
+  hasUserProfile
 }) => {
-  const rings = [];
-
-  ringModels.forEach((ringModel) => {
-    const activeSegmentIndex = getActiveSegmentIndex(ringModel.segmentKeys, ringModel.selectedSegment);
-
-    rings.push({
-      id: ringModel.id,
-      activeFillAlpha: PROFILE_RING_ACTIVE_FILL_ALPHA,
-      activeSegmentIndex,
-      count: ringModel.segmentKeys.length,
-      fillAlpha: 0,
-      label: ringModel.label,
-      labels: getEmptyLabels(ringModel.segmentKeys.length),
-      rotation: getTopCenteredLastSegmentRotation(ringModel.segmentKeys.length),
-      segmentKeys: ringModel.segmentKeys,
-      showBorders: true,
-      showDividers: true,
-      styledSegmentIndices: [activeSegmentIndex],
-      tone: "accent"
-    });
-  });
-
   return {
     ...createJayceeState({
       coreSquareLabels: getEmptyLabels(JAYCEE_ORDER.length),
-      rings
+      rings: []
     }),
-    activeSquareNumber: selectedSpaceNumber,
+    activeSquareNumber: 0,
     metrics: PROFILE_CORE_METRICS,
     squareBorderAlpha: 0.46,
     squareFillAlpha: hasUserProfile ? undefined : PROFILE_RING_FILL_ALPHA,
@@ -868,7 +822,6 @@ export const initJayceePage = async () => {
   let dynamicFractals = [];
   let publicProfiles = [];
   let avatarImage = null;
-  let coreState = null;
   let currentProfile = null;
   let dashboardSaveStatus = "";
   let dashboardSaveStatusTimer = null;
@@ -878,10 +831,6 @@ export const initJayceePage = async () => {
   let supabaseClient = null;
   let skillForms = [];
   let skills = [];
-  let selectedSpaceNumber = DEFAULT_SELECTED_NUMBER;
-  let profileViewCacheKey = "";
-  const selectedDynamicRingSegments = new Map();
-
   const getElementsByFractalId = () => (
     dynamicFractalElements.reduce((elementsById, element) => {
       const fractalId = getDisplayValue(element.fractal_id) || getDisplayValue(element.fractal);
@@ -895,29 +844,6 @@ export const initJayceePage = async () => {
       return elementsById;
     }, new Map())
   );
-
-  const restoreProfileViewCache = (cacheKey) => {
-    const cache = loadProfileViewCache(cacheKey);
-
-    if (!cache) return;
-
-    if (Number.isFinite(Number(cache.selectedSpaceNumber))) {
-      selectedSpaceNumber = Number(cache.selectedSpaceNumber);
-    }
-  };
-
-  const saveProfileViewState = () => {
-    saveProfileViewCache(profileViewCacheKey, {
-      selectedSpaceNumber
-    });
-  };
-
-  const setDynamicRingSegmentSelection = (ringId, segmentKey) => {
-    const [, fractalId] = getDisplayValue(ringId).split(":");
-
-    if (!fractalId) return;
-    selectedDynamicRingSegments.set(fractalId, getDisplayValue(segmentKey));
-  };
 
   const renderDashboardSavePanel = () => {
     const existingPanel = list.querySelector("[data-profile-dashboard-save]");
@@ -1085,21 +1011,19 @@ export const initJayceePage = async () => {
   const renderCoreParameters = () => {
     const corePanel = canvas.closest(".jaycee-profile-core");
     const existingPanel = corePanel?.querySelector("[data-profile-parameters]");
-    const ringModels = getDynamicRingModels({
+    const activeModels = getActiveFractalModels({
       dynamicFractals,
       elementsByFractalId: getElementsByFractalId(),
       gameForm,
-      selectedDynamicRingSegments,
       skillForms
     });
-    const passiveModel = getPassiveRingModel({
+    const passiveModel = getPassiveFractalModel({
       dynamicFractals,
       elementsByFractalId: getElementsByFractalId(),
-      gameForm,
-      selectedDynamicRingSegments
+      gameForm
     }) || getPassiveModel({ dynamicFractals, gameForm });
     const ultimateModel = getUltimateModel({ dynamicFractals, gameForm, publicProfiles, skillForms });
-    const panel = createDynamicRingParameterPanel({ passiveModel, ringModels, ultimateModel });
+    const panel = createFractalParameterPanel({ activeModels, passiveModel, ultimateModel });
 
     if (!corePanel || !panel) {
       existingPanel?.remove();
@@ -1114,31 +1038,17 @@ export const initJayceePage = async () => {
   };
 
   const renderCore = () => {
-    const passiveRingModel = getPassiveRingModel({
+    const elementsByFractalId = getElementsByFractalId();
+    const fractalSquare = getFractalGridSquareModel({
       dynamicFractals,
-      elementsByFractalId: getElementsByFractalId(),
-      gameForm,
-      selectedDynamicRingSegments
+      elementsByFractalId,
+      gameForm
     });
-    const activeRingModels = getDynamicRingModels({
-      dynamicFractals,
-      elementsByFractalId: getElementsByFractalId(),
-      gameForm,
-      selectedDynamicRingSegments,
-      skillForms
-    });
-    const ringModels = [
-      ...(passiveRingModel ? [passiveRingModel] : []),
-      ...activeRingModels.slice(0, ACTIVE_RING_DISPLAY_LIMIT)
-    ];
-    const fractalSquare = getFractalSquareModel(activeRingModels);
 
-    coreState = createProfileCoreState({
+    const coreState = createProfileCoreState({
       avatarImage,
       fractalSquare,
-      hasUserProfile,
-      ringModels,
-      selectedSpaceNumber
+      hasUserProfile
     });
     drawJaycee(canvas, coreState);
   };
@@ -1148,26 +1058,9 @@ export const initJayceePage = async () => {
   };
 
   const syncProfileView = () => {
-    saveProfileViewState();
     renderCore();
     renderCoreParameters();
     renderResonances();
-  };
-
-  const handleCanvasClick = (event) => {
-    const hit = getJayceeHit(canvas, coreState, event.clientX, event.clientY);
-
-    if (!hit) return;
-
-    if (hit.type === "square") {
-      selectedSpaceNumber = hit.number;
-    } else if (hit.type === "ring" && hit.ringId) {
-      if (getDisplayValue(hit.ringId).startsWith("dynamic-fractal:")) {
-        setDynamicRingSegmentSelection(hit.ringId, hit.segmentKey);
-      }
-    }
-
-    syncProfileView();
   };
 
   try {
@@ -1210,12 +1103,9 @@ export const initJayceePage = async () => {
     gameSettings = hasUserProfile ? await fetchUserGameSettings(client, profile) : null;
     gameForm = createGameForm(gameSettings);
 
-    profileViewCacheKey = getProfileViewCacheKey({ pageMode, profile, publicUsername });
-    restoreProfileViewCache(profileViewCacheKey);
     publicProfiles = (isPresentPage || hasUserProfile) ? await fetchPublicProfiles(client) : [];
     avatarImage = !hasUserProfile ? null : await loadOptionalImage(await getAvatarImageUrl(client, profile));
     renderCore();
-    canvas.addEventListener("click", handleCanvasClick);
     const resizeObserver = new ResizeObserver(scheduleRenderCore);
 
     resizeObserver.observe(canvas);

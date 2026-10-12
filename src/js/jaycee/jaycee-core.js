@@ -1,8 +1,3 @@
-import {
-  MAIN_CORE_RING_LANGUAGE,
-  loadJayceeLanguage
-} from "./jaycee-language.js";
-
 const RING_SEGMENT_COUNT = 9;
 const SQUARE_GRID_SIZE = 3;
 export const JAYCEE_ORDER = [1, 2, 4, 3, 5, 7, 6, 8, 9];
@@ -160,7 +155,7 @@ const getCanvasMetrics = (canvas, ringCount, options = {}) => {
   const rect = canvas.getBoundingClientRect();
   const size = Math.min(rect.width, rect.height);
   const center = size / 2;
-  const safeRingCount = Math.max(1, ringCount);
+  const safeRingCount = Math.max(0, ringCount);
   const mapSquareGridSize = Math.max(1, Number(options.mapSquareGridSize) || 1);
   const mapSquareCoreSpan = mapSquareGridSize % 2 === 0 ? 2 : 1;
   const padding = Math.max(14, size * 0.035);
@@ -173,10 +168,12 @@ const getCanvasMetrics = (canvas, ringCount, options = {}) => {
     ringWidthMax,
     Math.max(ringWidthMin, size * ringWidthRatio)
   );
-  const ringWidth = Math.min(
-    preferredRingWidth,
-    (outerRadius * ringMaxRadialShare) / safeRingCount
-  );
+  const ringWidth = safeRingCount > 0
+    ? Math.min(
+      preferredRingWidth,
+      (outerRadius * ringMaxRadialShare) / safeRingCount
+    )
+    : 0;
   const squareOuterRadius = outerRadius - (ringWidth * safeRingCount);
   const mapSquareSize = (squareOuterRadius * 2) / Math.SQRT2;
   const mapSquareCellSize = mapSquareSize / mapSquareGridSize;
@@ -793,6 +790,16 @@ const getMapSquareLabelSize = (cellSize, metrics) => {
   );
 };
 
+const getMapSquareMicroLabelSize = (cellSize, metrics) => {
+  const isCompact = metrics.size < 420;
+  const subCellSize = cellSize / SQUARE_GRID_SIZE;
+
+  return Math.min(
+    subCellSize * 0.52,
+    Math.max(isCompact ? 9 : 12, metrics.ringWidth * (isCompact ? 0.22 : 0.28))
+  );
+};
+
 const isMapCenterPositionSelected = (metrics, selectedPosition) => {
   const position = Number(selectedPosition);
 
@@ -807,6 +814,62 @@ const isMapCenterPositionSelected = (metrics, selectedPosition) => {
   return row >= centerStart && row < centerEnd && column >= centerStart && column < centerEnd;
 };
 
+const isMapCellInCore = (gridSize, coreSpan, row, column) => {
+  const centerStart = (gridSize - coreSpan) / 2;
+  const centerEnd = centerStart + coreSpan;
+
+  return row >= centerStart && row < centerEnd && column >= centerStart && column < centerEnd;
+};
+
+const drawMapSquareSubCellLabels = (context, metrics, colors, subCellLabelsByPosition, options = {}) => {
+  const gridSize = metrics.mapSquareGridSize;
+  const start = metrics.center - (metrics.mapSquareSize / 2);
+  const cellSize = metrics.mapSquareCellSize;
+
+  Object.entries(subCellLabelsByPosition || {}).forEach(([positionKey, subLabels]) => {
+    const position = Number(positionKey);
+
+    if (!Number.isFinite(position) || position < 1 || position > gridSize * gridSize) return;
+    if (!Array.isArray(subLabels) || !subLabels.some(Boolean)) return;
+
+    const cellIndex = position - 1;
+    const row = Math.floor(cellIndex / gridSize);
+    const column = cellIndex % gridSize;
+    const isCoreCell = isMapCellInCore(gridSize, metrics.mapSquareCoreSpan, row, column);
+
+    if (options.onlyCoreCell && !isCoreCell) return;
+    if (options.skipCoreCell && isCoreCell) return;
+
+    const x = start + (column * cellSize);
+    const y = start + (row * cellSize);
+    const subCellSize = cellSize / SQUARE_GRID_SIZE;
+    const microLabelSize = getMapSquareMicroLabelSize(cellSize, metrics);
+
+    subLabels.forEach((label, subIndex) => {
+      if (!label) return;
+
+      const subRow = Math.floor(subIndex / SQUARE_GRID_SIZE);
+      const subColumn = subIndex % SQUARE_GRID_SIZE;
+
+      drawCenteredText(
+        context,
+        String(label),
+        x + (subColumn * subCellSize) + (subCellSize / 2),
+        y + (subRow * subCellSize) + (subCellSize / 2),
+        microLabelSize,
+        options.color || colors.coreText.fill,
+        {
+          fontFamily: "\"Segoe UI Emoji\", \"Apple Color Emoji\", \"Noto Color Emoji\", sans-serif",
+          maxWidth: subCellSize * 0.78,
+          shadowBlur: options.overlay ? 9 : 5,
+          shadowColor: options.overlay ? "rgba(0, 0, 0, 0.78)" : "rgba(0, 0, 0, 0.48)",
+          weight: 700
+        }
+      );
+    });
+  });
+};
+
 const drawMapSquare = (context, metrics, colors, mapSquare) => {
   if (!mapSquare || metrics.mapSquareGridSize <= 1) return;
 
@@ -818,6 +881,7 @@ const drawMapSquare = (context, metrics, colors, mapSquare) => {
   const centerEnd = centerStart + metrics.mapSquareCoreSpan;
   const selectedPosition = Number(mapSquare.selectedPosition);
   const selectedSubCellNumber = Number(mapSquare.selectedSubCellNumber);
+  const subCellLabelsByPosition = mapSquare.subCellLabelsByPosition || {};
   const hasBackgroundImage = Boolean(mapSquare.backgroundImage);
   const usesCoreStyle = mapSquare.coreStyle === true;
   let activeCell = null;
@@ -928,6 +992,11 @@ const drawMapSquare = (context, metrics, colors, mapSquare) => {
 
     context.restore();
   }
+
+  drawMapSquareSubCellLabels(context, metrics, colors, subCellLabelsByPosition, {
+    color: "rgba(255, 255, 255, 0.88)",
+    skipCoreCell: true
+  });
 
   for (let index = 1; index < gridSize; index += 1) {
     const offset = start + (cellSize * index);
@@ -1281,7 +1350,7 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
     });
   });
 
-  drawMapSquare(context, metrics, {
+  const mapSquareColors = {
     activeFillAlpha: ACTIVE_FILL_ALPHA,
     border: squareBorderColor,
     cellBorder: squareCellBorderColor,
@@ -1303,14 +1372,16 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
       topShade: "rgba(17, 29, 23, 0.055)",
       transparent: true
     }
-  }, state.mapSquare);
+  };
+
+  drawMapSquare(context, metrics, mapSquareColors, state.mapSquare);
 
   drawSquare(context, metrics, {
     border: squareBorderColor,
     backgroundImage: state.squareBackgroundImage,
     cellBorder: squareCellBorderColor,
     activeFillAlpha: ACTIVE_FILL_ALPHA,
-    activeSquareNumber: state.activeSquareNumber || 5,
+    activeSquareNumber: state.activeSquareNumber ?? 5,
     fillAlpha: state.squareFillAlpha ?? SURFACE_FILL_ALPHA,
     glow: "rgba(116, 247, 209, 0.14)",
     showMapCenterSelection: isMapCenterPositionSelected(metrics, state.mapSquare?.selectedPosition),
@@ -1330,95 +1401,7 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
       transparent: true
     }
   }, state.coreSquareLabels);
-};
 
-const normalizeAngle = (angle) => {
-  const fullCircle = Math.PI * 2;
-  return ((angle % fullCircle) + fullCircle) % fullCircle;
-};
-
-export const getJayceeHit = (canvas, state = DEFAULT_JAYCEE_STATE, clientX, clientY) => {
-  const rect = canvas.getBoundingClientRect();
-  const metrics = getCanvasMetrics(canvas, state.rings.length, {
-    ...state.metrics,
-    mapSquareGridSize: state.mapSquare?.gridSize
-  });
-  const x = clientX - rect.left;
-  const y = clientY - rect.top;
-  const squareStart = metrics.center - (metrics.squareSize / 2);
-
-  if (
-    x >= squareStart
-    && x <= squareStart + metrics.squareSize
-    && y >= squareStart
-    && y <= squareStart + metrics.squareSize
-  ) {
-    const cellSize = metrics.squareSize / SQUARE_GRID_SIZE;
-    const column = Math.min(SQUARE_GRID_SIZE - 1, Math.max(0, Math.floor((x - squareStart) / cellSize)));
-    const row = Math.min(SQUARE_GRID_SIZE - 1, Math.max(0, Math.floor((y - squareStart) / cellSize)));
-    const orderIndex = (row * SQUARE_GRID_SIZE) + column;
-
-    return {
-      number: JAYCEE_ORDER[orderIndex],
-      type: "square"
-    };
-  }
-
-  if (state.mapSquare && metrics.mapSquareGridSize > 1) {
-    const mapSquareStart = metrics.center - (metrics.mapSquareSize / 2);
-
-    if (
-      x >= mapSquareStart
-      && x <= mapSquareStart + metrics.mapSquareSize
-      && y >= mapSquareStart
-      && y <= mapSquareStart + metrics.mapSquareSize
-    ) {
-      const column = Math.min(
-        metrics.mapSquareGridSize - 1,
-        Math.max(0, Math.floor((x - mapSquareStart) / metrics.mapSquareCellSize))
-      );
-      const row = Math.min(
-        metrics.mapSquareGridSize - 1,
-        Math.max(0, Math.floor((y - mapSquareStart) / metrics.mapSquareCellSize))
-      );
-      const position = (row * metrics.mapSquareGridSize) + column + 1;
-
-      return {
-        column,
-        position,
-        row,
-        type: "map-square"
-      };
-    }
-  }
-
-  const distance = Math.hypot(x - metrics.center, y - metrics.center);
-  const angle = Math.atan2(y - metrics.center, x - metrics.center);
-
-  for (let index = state.rings.length - 1; index >= 0; index -= 1) {
-    const ring = state.rings[index];
-
-    if (ring.interactive === false) continue;
-
-    const innerRadius = metrics.squareOuterRadius + (metrics.ringWidth * index);
-    const outerRadius = innerRadius + metrics.ringWidth;
-
-    if (distance < innerRadius || distance > outerRadius) continue;
-
-    const rotation = ring.rotation ?? (ring.centerLastSegmentAtTop ? getTopCenteredLastSegmentRotation(ring.count) : -Math.PI / 2);
-    const segmentAngle = (Math.PI * 2) / ring.count;
-    const segmentIndex = Math.floor(normalizeAngle(angle - rotation) / segmentAngle);
-
-    return {
-      ring,
-      ringId: ring.id,
-      segmentIndex,
-      segmentKey: ring.segmentKeys?.[segmentIndex] || String(segmentIndex + 1),
-      type: "ring"
-    };
-  }
-
-  return null;
 };
 
 const initJaycee = () => {
@@ -1455,19 +1438,6 @@ const initJaycee = () => {
   }
   render();
   scheduleRender();
-
-  loadJayceeLanguage({
-    coreRingLanguage: MAIN_CORE_RING_LANGUAGE,
-    coreSquareLanguage: null,
-    jayceeOrder: JAYCEE_ORDER
-  })
-    .then((language) => {
-      jayceeState = createJayceeState(language);
-      scheduleRender();
-    })
-    .catch((error) => {
-      console.error("Jaycee language load failed", error);
-    });
 
   window.addEventListener("pagehide", () => {
     window.clearInterval(clock);
