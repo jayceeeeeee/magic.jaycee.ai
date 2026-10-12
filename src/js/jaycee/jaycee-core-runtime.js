@@ -4,6 +4,7 @@ import {
   drawJaycee
 } from "./jaycee-core.js";
 import {
+  JAYCEE_GAME_CYCLE_LABELS,
   JAYCEE_GAME_CONFIG
 } from "./jaycee-game-config.js";
 import {
@@ -360,6 +361,36 @@ const getSkillById = (skillForms, skillId) => (
   (skillForms || []).find((skill) => getDisplayValue(skill.id) === getDisplayValue(skillId)) || null
 );
 
+const getCurrentQuestModel = ({
+  dynamicFractals = [],
+  gameForm = {},
+  player,
+  skillForms = []
+}) => {
+  if (!player) return null;
+
+  const level = Math.min(ACTIVE_RING_LIMIT, Math.max(1, Number(player?.level) || 1));
+  const activeModel = getActiveFractalModels({
+    dynamicFractals,
+    gameForm,
+    skillForms
+  })[level - 1] || null;
+
+  if (!activeModel) return null;
+
+  const skillName = getDisplayValue(activeModel?.skillLabel)
+    || getDisplayValue(activeModel?.skill?.label)
+    || getDisplayValue(activeModel?.label)
+    || "your skill";
+  const duration = formatDuration(activeModel?.questSeconds, { compact: false }) || "0s";
+
+  return {
+    cycleLabel: JAYCEE_GAME_CYCLE_LABELS.activeAbilities[level - 1] || "Cycle",
+    duration,
+    skillName
+  };
+};
+
 const getUltimateModel = ({ dynamicFractals, gameForm, publicProfiles, ultimateTeammateSkillLabel }) => {
   const fractal = getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.ultimate.fractalLabel)
     || getFractalById(dynamicFractals, gameForm?.ultimate_fractal);
@@ -452,15 +483,30 @@ const createVitalBar = ({ centered = false, current, label, max, tone, valueText
   return bar;
 };
 
-const createVitalsPanel = ({ onPlay, player, playerProfile }) => {
+const createVitalsPanel = ({
+  dynamicFractals,
+  gameForm,
+  onPlay,
+  player,
+  playerProfile,
+  skillForms
+}) => {
   const panel = document.createElement("section");
   const level = Number(player?.level) || 0;
-  const levelText = document.createElement("p");
+  const status = document.createElement("div");
+  const levelBadge = document.createElement("p");
+  const quest = document.createElement("p");
   const playButton = document.createElement("button");
   const lifeMaxSeconds = JAYCEE_GAME_CONFIG.lifeMaxYears * YEAR_SECONDS;
   const hasPlayer = Boolean(player);
   const lifeSeconds = Number(player?.life_bar) || 0;
   const manaModel = hasPlayer ? getManaModel({ player, playerProfile }) : null;
+  const questModel = getCurrentQuestModel({
+    dynamicFractals,
+    gameForm,
+    player,
+    skillForms
+  });
 
   panel.className = "profile-vitals-panel";
   panel.dataset.profileVitals = "";
@@ -487,9 +533,26 @@ const createVitalsPanel = ({ onPlay, player, playerProfile }) => {
   );
 
   if (hasPlayer) {
-    levelText.className = "profile-player-level";
-    levelText.textContent = `Level ${level}`;
-    panel.append(levelText);
+    status.className = "profile-player-status";
+    levelBadge.className = "profile-player-level";
+    levelBadge.textContent = `Level ${level}`;
+    status.append(levelBadge);
+
+    if (questModel) {
+      quest.className = "profile-player-quest";
+      quest.replaceChildren(
+        "You have ",
+        Object.assign(document.createElement("strong"), { textContent: `1 ${questModel.cycleLabel}` }),
+        " to do ",
+        Object.assign(document.createElement("strong"), { textContent: questModel.duration }),
+        " of ",
+        Object.assign(document.createElement("strong"), { textContent: questModel.skillName }),
+        "."
+      );
+      status.append(quest);
+    }
+
+    panel.append(status);
   }
 
   if (!hasPlayer) {
@@ -803,9 +866,12 @@ export const initJayceePage = async () => {
     }
 
     const panel = createVitalsPanel({
+      dynamicFractals,
+      gameForm,
       onPlay: handlePlayClick,
       player: currentPlayer,
-      playerProfile
+      playerProfile,
+      skillForms
     });
 
     if (existingPanel) {

@@ -26,3 +26,8 @@ export const JAYCEE_GAME_CONFIG = {
     fractalLabel: "Body"
   }
 };
+
+export const JAYCEE_GAME_CYCLE_LABELS = {
+  passive: "Year", 
+  activeAbilities: ["Month", "Day", "Hour"]
+};
