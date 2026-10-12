@@ -124,6 +124,68 @@ const createTextField = ({ inputMode = "", label, name, type = "text", value = "
   return { input, wrapper };
 };
 
+const createSelectField = ({ label, name, options, value = "" }) => {
+  const wrapper = document.createElement("label");
+  const text = document.createElement("span");
+  const select = document.createElement("select");
+  const normalizedValue = getDisplayValue(value);
+
+  text.textContent = label;
+  select.name = name;
+  select.replaceChildren(...options.map((optionConfig) => {
+    const option = document.createElement("option");
+
+    option.value = optionConfig.value;
+    option.textContent = optionConfig.label;
+
+    return option;
+  }));
+  select.value = options.some((option) => option.value === normalizedValue)
+    ? normalizedValue
+    : getDisplayValue(options[0]?.value);
+  wrapper.append(text, select);
+
+  return { select, wrapper };
+};
+
+const getCurrencyOptions = () => {
+  const fallbackCurrencies = ["EUR", "USD", "JPY", "GBP", "CHF", "CAD", "AUD", "NZD", "CNY", "HKD", "SGD", "KRW", "INR", "BRL", "MXN", "ZAR"];
+  let currencies = fallbackCurrencies;
+
+  try {
+    currencies = typeof Intl.supportedValuesOf === "function"
+      ? Intl.supportedValuesOf("currency")
+      : fallbackCurrencies;
+  } catch (error) {
+    currencies = fallbackCurrencies;
+  }
+
+  const names = typeof Intl.DisplayNames === "function"
+    ? new Intl.DisplayNames([navigator.language || "en"], { type: "currency" })
+    : null;
+
+  return currencies.map((currency) => {
+    const name = names?.of(currency);
+
+    return {
+      label: name && name !== currency ? `${currency} - ${name}` : currency,
+      value: currency
+    };
+  });
+};
+
+const normalizeCurrencyValue = (value) => (
+  /^[A-Z]{3}$/.test(getDisplayValue(value).toUpperCase())
+    ? getDisplayValue(value).toUpperCase()
+    : "EUR"
+);
+
+const MANA_CYCLE_OPTIONS = [
+  { label: "Year", value: "year" },
+  { label: "Month", value: "month" },
+  { label: "Day", value: "day" }
+];
+
 const getFractalById = (fractals, id) => (
   fractals.find((fractal) => getDisplayValue(fractal.id) === getDisplayValue(id)) || null
 );
@@ -278,9 +340,23 @@ const createMapsSection = ({ profile, status }) => {
     type: "number",
     value: profile.mana_target
   });
+  const manaUnitField = createSelectField({
+    label: "Mana unit",
+    name: "mana_unit",
+    options: getCurrencyOptions(),
+    value: normalizeCurrencyValue(profile.mana_unit)
+  });
+  const manaCycleField = createSelectField({
+    label: "Mana cycle",
+    name: "mana_cycle",
+    options: MANA_CYCLE_OPTIONS,
+    value: getDisplayValue(profile.mana_cycle) || "year"
+  });
+  const manaFields = document.createElement("div");
   let selectedLocation = getInitialBirthLocation(profile);
 
   form.className = "profile-details-controls jaycee-account-form";
+  manaFields.className = "profile-mana-fields";
   birthDateField.input.max = new Date().toISOString().split("T")[0];
   locationWrapper.className = "location-field profile-location-field";
   results.className = "location-results";
@@ -301,7 +377,16 @@ const createMapsSection = ({ profile, status }) => {
   derived.children[0].append(positionDisplay);
   derived.children[1].append(timezoneDisplay);
   locationWrapper.append(birthPlaceField.wrapper, results);
-  form.append(birthDateField.wrapper, birthTimeField.wrapper, locationWrapper, derived, manaTargetField.wrapper, positionInput, timezoneInput);
+  manaFields.append(manaTargetField.wrapper, manaUnitField.wrapper, manaCycleField.wrapper);
+  form.append(
+    birthDateField.wrapper,
+    birthTimeField.wrapper,
+    locationWrapper,
+    derived,
+    manaFields,
+    positionInput,
+    timezoneInput
+  );
   content.append(form);
 
   const setDerivedBirthPlaceFields = async (location) => {
@@ -374,7 +459,9 @@ const createMapsSection = ({ profile, status }) => {
           birth_timezone: getDisplayValue(timezoneInput.value) || null,
           mana_target: Number.isFinite(Number(manaTargetField.input.value)) && getDisplayValue(manaTargetField.input.value)
             ? Number(manaTargetField.input.value)
-            : 0
+            : 0,
+          mana_unit: normalizeCurrencyValue(manaUnitField.select.value),
+          mana_cycle: getDisplayValue(manaCycleField.select.value) || "year"
         }
       };
     },

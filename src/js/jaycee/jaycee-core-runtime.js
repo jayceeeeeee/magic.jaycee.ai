@@ -29,7 +29,13 @@ const PROFILE_CORE_METRICS = {
 };
 const PROFILE_RING_FILL_ALPHA = 0.26;
 const ACTIVE_RING_LIMIT = 3;
-const YEAR_SECONDS = 365 * 24 * 60 * 60;
+const YEAR_SECONDS = JAYCEE_GAME_CONFIG.passive.cycleSeconds;
+const DAY_SECONDS = 24 * 60 * 60;
+const MANA_CYCLE_SECONDS = {
+  day: DAY_SECONDS,
+  month: YEAR_SECONDS / 12,
+  year: YEAR_SECONDS
+};
 
 const applyProfileTheme = (profile) => {
   const theme = getThemeSettingsFromProfile(profile).theme;
@@ -124,9 +130,61 @@ const formatYearsFromSeconds = (secondsValue) => {
 
   if (!Number.isFinite(seconds) || seconds <= 0) return "0y";
 
-  const years = seconds / YEAR_SECONDS;
+  const years = Math.round(seconds / YEAR_SECONDS);
 
-  return `${Number.isInteger(years) ? years : Number(years.toFixed(2))}y`;
+  return `${years.toLocaleString()}y`;
+};
+
+const normalizeManaCycle = (cycle) => (
+  Object.prototype.hasOwnProperty.call(MANA_CYCLE_SECONDS, getDisplayValue(cycle))
+    ? getDisplayValue(cycle)
+    : "year"
+);
+
+const normalizeManaUnit = (unit) => (
+  /^[A-Z]{3}$/.test(getDisplayValue(unit).toUpperCase())
+    ? getDisplayValue(unit).toUpperCase()
+    : "EUR"
+);
+
+const getManaCycleSeconds = (cycle, now = new Date()) => {
+  if (cycle === "month") {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+    return Math.max(1, (end.getTime() - start.getTime()) / 1000);
+  }
+
+  return MANA_CYCLE_SECONDS[cycle] || MANA_CYCLE_SECONDS.year;
+};
+
+const getCurrencySymbol = (unit) => {
+  const currency = normalizeManaUnit(unit);
+
+  try {
+    const symbol = new Intl.NumberFormat(undefined, {
+      currency,
+      currencyDisplay: "narrowSymbol",
+      style: "currency"
+    }).formatToParts(0).find((part) => part.type === "currency")?.value;
+
+    return symbol || currency;
+  } catch (error) {
+    return currency;
+  }
+};
+
+const formatManaValue = (value, unit) => {
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue)) return "";
+
+  const amount = new Intl.NumberFormat(undefined, {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0
+  }).format(numericValue);
+
+  return `${amount} ${getCurrencySymbol(unit)}`;
 };
 
 const getCurrentPeriodBounds = (level, now = new Date()) => {
@@ -155,12 +213,15 @@ const getCurrentPeriodBounds = (level, now = new Date()) => {
 const getManaModel = ({ player, playerProfile }) => {
   const level = Math.min(3, Math.max(1, Number(player?.level) || 1));
   const manaTarget = Number(playerProfile?.mana_target);
+  const manaCycle = normalizeManaCycle(playerProfile?.mana_cycle);
+  const manaUnit = normalizeManaUnit(playerProfile?.mana_unit);
+  const now = new Date();
   const abilityConfig = JAYCEE_GAME_CONFIG.activeAbilities[level - 1] || JAYCEE_GAME_CONFIG.activeAbilities[0];
-  const { end, start } = getCurrentPeriodBounds(level);
+  const { end, start } = getCurrentPeriodBounds(level, now);
   const periodSeconds = Math.max(1, (end.getTime() - start.getTime()) / 1000);
-  const elapsedSeconds = Math.min(periodSeconds, Math.max(0, (Date.now() - start.getTime()) / 1000));
+  const elapsedSeconds = Math.min(periodSeconds, Math.max(0, (now.getTime() - start.getTime()) / 1000));
   const periodTarget = Number.isFinite(manaTarget)
-    ? manaTarget * (periodSeconds / YEAR_SECONDS)
+    ? manaTarget * (periodSeconds / getManaCycleSeconds(manaCycle, now))
     : 0;
   const activeCycleSeconds = periodSeconds / Math.max(1, Number(abilityConfig?.ratio) || 1);
   const practiceSeconds = Number(player?.[`skill_${level}_practice`]) || 0;
@@ -173,6 +234,7 @@ const getManaModel = ({ player, playerProfile }) => {
   return {
     maxAbs: Math.max(1, Math.abs(periodTarget)),
     target: periodTarget,
+    unit: manaUnit,
     value
   };
 };
@@ -419,7 +481,7 @@ const createVitalsPanel = ({ onPlay, player, playerProfile }) => {
       max: manaModel?.maxAbs || 1,
       tone: "mana",
       valueText: hasPlayer && manaModel
-        ? `${Number(manaModel.value.toFixed(2))} / ${Number(manaModel.target.toFixed(2))}`
+        ? `${formatManaValue(manaModel.value, manaModel.unit)} / ${formatManaValue(manaModel.target, manaModel.unit)}`
         : ""
     })
   );

@@ -560,6 +560,7 @@
 .profile-field-wide,
 .profile-gender-field,
 .profile-location-field,
+.profile-mana-fields,
 .profile-settings-actions {
   grid-column: 1 / -1;
 }
@@ -759,7 +760,8 @@
   transform: translateY(-1px);
 }
 
-.profile-details-controls input {
+.profile-details-controls input,
+.profile-details-controls select {
   min-width: 0;
   min-height: 36px;
   padding: 7px 9px;
@@ -776,9 +778,16 @@
   cursor: default;
 }
 
-.profile-details-controls input:focus {
+.profile-details-controls input:focus,
+.profile-details-controls select:focus {
   border-color: var(--neon-border-strong);
   box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
+}
+
+.profile-mana-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .profile-location-field {
@@ -1322,7 +1331,8 @@
   }
 
   .profile-gender-options,
-  .profile-derived-birth-data {
+  .profile-derived-birth-data,
+  .profile-mana-fields {
     grid-template-columns: 1fr;
   }
 
