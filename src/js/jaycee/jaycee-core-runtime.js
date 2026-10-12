@@ -4,6 +4,9 @@ import {
   drawJaycee
 } from "./jaycee-core.js";
 import {
+  JAYCEE_GAME_CONFIG
+} from "./jaycee-game-config.js";
+import {
   fetchDynamicFractalElements,
   fetchProfileByUserId,
   fetchProfileByUsername,
@@ -16,7 +19,6 @@ import {
   getThemeSettingsFromProfile,
   loadOptionalImage,
   updateSkills,
-  updateUserDynamicFractals,
   upsertUserGameSettings
 } from "./jaycee-data.js";
 
@@ -148,6 +150,12 @@ const getFractalById = (dynamicFractals, fractalId) => (
   dynamicFractals.find((fractal) => getDisplayValue(fractal.id) === getDisplayValue(fractalId)) || null
 );
 
+const getFractalByLabel = (dynamicFractals, label) => (
+  dynamicFractals.find((fractal) => (
+    getDisplayValue(fractal.label).toLowerCase() === getDisplayValue(label).toLowerCase()
+  )) || null
+);
+
 const createFractalMeasureModel = ({
   cycleSeconds,
   distanceMeters,
@@ -156,7 +164,7 @@ const createFractalMeasureModel = ({
   skill = null,
   skillLabel = ""
 }) => {
-  if (!fractal || !elements.length) return null;
+  if (!fractal) return null;
 
   return {
     cycleSeconds,
@@ -175,12 +183,13 @@ const getPassiveFractalModel = ({
   elementsByFractalId,
   gameForm
 }) => {
-  const fractal = getFractalById(dynamicFractals, gameForm?.primary_fractal);
+  const fractal = getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.passive.fractalLabel)
+    || getFractalById(dynamicFractals, gameForm?.primary_fractal);
   const elements = getFractalElements(elementsByFractalId, fractal?.id);
 
   return createFractalMeasureModel({
-    cycleSeconds: Number(gameForm?.primary_time),
-    distanceMeters: Number(gameForm?.primary_distance),
+    cycleSeconds: JAYCEE_GAME_CONFIG.passive.cycleSeconds,
+    distanceMeters: JAYCEE_GAME_CONFIG.passive.zoneMeters,
     elements,
     fractal
   });
@@ -192,31 +201,22 @@ const getActiveFractals = (dynamicFractals, gameForm) => {
     getDisplayValue(gameForm?.ultimate_fractal)
   ].filter(Boolean));
 
-  return dynamicFractals
+  return JAYCEE_GAME_CONFIG.activeAbilities
+    .map((ability) => getFractalByLabel(dynamicFractals, ability.fractalLabel))
     .filter((fractal) => (
-      getDisplayValue(fractal.id)
+      fractal
+      && getDisplayValue(fractal.id)
       && getDisplayValue(fractal.skill)
       && !excludedIds.has(getDisplayValue(fractal.id))
-    ))
-    .slice()
-    .sort((first, second) => {
-      const firstTime = Number(first.time);
-      const secondTime = Number(second.time);
-      const firstHasTime = Number.isFinite(firstTime);
-      const secondHasTime = Number.isFinite(secondTime);
-
-      if (firstHasTime && secondHasTime && firstTime !== secondTime) return secondTime - firstTime;
-      if (firstHasTime !== secondHasTime) return firstHasTime ? -1 : 1;
-
-      return (getDisplayValue(first.label) || getDisplayValue(first.id))
-        .localeCompare(getDisplayValue(second.label) || getDisplayValue(second.id));
-    });
+    ));
 };
 
 const getFractalsForCoreGrid = ({ dynamicFractals, gameForm }) => ([
-  getFractalById(dynamicFractals, gameForm?.primary_fractal),
+  getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.passive.fractalLabel)
+    || getFractalById(dynamicFractals, gameForm?.primary_fractal),
   ...getActiveFractals(dynamicFractals, gameForm).slice(0, ACTIVE_RING_LIMIT),
-  getFractalById(dynamicFractals, gameForm?.ultimate_fractal)
+  getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.ultimate.fractalLabel)
+    || getFractalById(dynamicFractals, gameForm?.ultimate_fractal)
 ].filter(Boolean).slice(0, FRACTAL_GRID_DISPLAY_LIMIT));
 
 const getActiveFractalModels = ({
@@ -225,14 +225,15 @@ const getActiveFractalModels = ({
   gameForm,
   skillForms
 }) => {
-  let previousQuestSeconds = Number(gameForm.primary_time);
-  let previousDistanceMeters = Number(gameForm.primary_distance);
+  let previousQuestSeconds = Number(JAYCEE_GAME_CONFIG.passive.cycleSeconds);
+  let previousDistanceMeters = Number(JAYCEE_GAME_CONFIG.passive.zoneMeters);
 
   return getActiveFractals(dynamicFractals, gameForm)
     .slice(0, ACTIVE_RING_LIMIT)
-    .map((fractal) => {
+    .map((fractal, index) => {
+      const abilityConfig = JAYCEE_GAME_CONFIG.activeAbilities[index] || {};
       const skill = getSkillById(skillForms, fractal.skill);
-      const skillRatio = Number(skill?.ratio);
+      const skillRatio = Number(abilityConfig.ratio);
       const questSeconds = Number.isFinite(previousQuestSeconds) && Number.isFinite(skillRatio) && skillRatio > 0
         ? previousQuestSeconds / skillRatio
         : null;
@@ -250,7 +251,11 @@ const getActiveFractalModels = ({
         cycleSeconds: questSeconds,
         distanceMeters,
         elements,
-        fractal,
+        fractal: {
+          ...fractal,
+          label: abilityConfig.fractalLabel || fractal.label,
+          time: abilityConfig.cycleSeconds ?? fractal.time
+        },
         skill,
         skillLabel: getDisplayValue(skill.label) || "Active"
       });
@@ -259,15 +264,16 @@ const getActiveFractalModels = ({
 };
 
 const getPassiveModel = ({ dynamicFractals, gameForm }) => {
-  const fractal = getFractalById(dynamicFractals, gameForm?.primary_fractal);
-  const label = getDisplayValue(fractal?.label);
+  const fractal = getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.passive.fractalLabel)
+    || getFractalById(dynamicFractals, gameForm?.primary_fractal);
+  const label = getDisplayValue(JAYCEE_GAME_CONFIG.passive.fractalLabel || fractal?.label);
 
-  if (!label && !getDisplayValue(gameForm?.primary_time) && !getDisplayValue(gameForm?.primary_distance)) return null;
+  if (!label && !getDisplayValue(JAYCEE_GAME_CONFIG.passive.cycleSeconds) && !getDisplayValue(JAYCEE_GAME_CONFIG.passive.zoneMeters)) return null;
 
   return {
-    distanceMeters: Number(gameForm?.primary_distance),
+    distanceMeters: Number(JAYCEE_GAME_CONFIG.passive.zoneMeters),
     label: label || "Passive",
-    cycleSeconds: Number(gameForm?.primary_time)
+    cycleSeconds: Number(JAYCEE_GAME_CONFIG.passive.cycleSeconds)
   };
 };
 
@@ -436,18 +442,6 @@ const createGameForm = (settings) => ({
   ultimate_link: getDisplayValue(settings?.ultimate_link)
 });
 
-const getGamePayload = (form) => ({
-  primary_distance: Number.isFinite(Number(form?.primary_distance)) && getDisplayValue(form?.primary_distance)
-    ? Number(form.primary_distance)
-    : null,
-  primary_fractal: getDisplayValue(form?.primary_fractal) || null,
-  primary_time: Number.isFinite(Number(form?.primary_time)) && getDisplayValue(form?.primary_time)
-    ? Number(form.primary_time)
-    : null,
-  ultimate_fractal: getDisplayValue(form?.ultimate_fractal) || null,
-  ultimate_link: getDisplayValue(form?.ultimate_link) || null
-});
-
 const createSkillForms = (skills) => (
   (skills || []).map((skill) => ({
     id: skill.id,
@@ -470,41 +464,26 @@ const createLabeledGameInput = ({ ariaLabel, input, label }) => {
 
 const getSkillPayload = (form) => ({
   id: form.id,
-  label: getDisplayValue(form.label),
-  ratio: Number.isFinite(Number(form.ratio)) && getDisplayValue(form.ratio)
-    ? Number(form.ratio)
-    : null
-});
-
-const getDynamicFractalPayload = (fractal) => ({
-  id: fractal.id,
-  label: getDisplayValue(fractal.label),
-  skill: getDisplayValue(fractal.skill) || null,
-  time: Number.isFinite(Number(fractal.time)) && getDisplayValue(fractal.time)
-    ? Number(fractal.time)
-    : null
+  label: getDisplayValue(form.label)
 });
 
 const createPrimaryFractalPanel = ({
-  dynamicFractals,
-  gameForm,
-  onFieldChange,
-  onFractalFieldChange
+  dynamicFractals
 }) => {
   const section = document.createElement("section");
   const heading = document.createElement("h2");
   const content = document.createElement("div");
-  const primaryFractal = getFractalById(dynamicFractals, gameForm?.primary_fractal);
+  const primaryFractal = getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.passive.fractalLabel);
   const fields = [
     {
       disabled: !primaryFractal,
       key: "primary_fractal_label",
       label: "Fractal",
       type: "text",
-      value: getDisplayValue(primaryFractal?.label)
+      value: getDisplayValue(JAYCEE_GAME_CONFIG.passive.fractalLabel || primaryFractal?.label)
     },
-    { key: "primary_time", label: "Cycle (s)", type: "number", value: getDisplayValue(gameForm?.primary_time) },
-    { key: "primary_distance", label: "Zone (m)", type: "number", value: getDisplayValue(gameForm?.primary_distance) }
+    { key: "primary_time", label: "Cycle (s)", type: "number", value: getDisplayValue(JAYCEE_GAME_CONFIG.passive.cycleSeconds) },
+    { key: "primary_distance", label: "Zone (m)", type: "number", value: getDisplayValue(JAYCEE_GAME_CONFIG.passive.zoneMeters) }
   ];
   const fieldsRow = document.createElement("div");
 
@@ -523,19 +502,11 @@ const createPrimaryFractalPanel = ({
     labelText.textContent = field.label;
     input.type = field.type;
     input.value = field.value;
-    input.disabled = Boolean(field.disabled);
+    input.disabled = true;
     if (field.type === "number") {
       input.step = "any";
       input.inputMode = "decimal";
     }
-    input.addEventListener("input", () => {
-      if (field.disabled) return;
-      if (field.key === "primary_fractal_label") {
-        onFractalFieldChange(primaryFractal.id, "label", input.value);
-      } else {
-        onFieldChange(field.key, input.value);
-      }
-    });
     label.append(labelText, input);
     fieldsRow.append(label);
   });
@@ -548,7 +519,6 @@ const createPrimaryFractalPanel = ({
 const createUltimatePanel = ({
   dynamicFractals,
   gameForm,
-  onFractalFieldChange,
   onFieldChange,
   onSkillFieldChange,
   publicProfiles,
@@ -559,7 +529,8 @@ const createUltimatePanel = ({
   const content = document.createElement("div");
   const fractalLabel = document.createElement("label");
   const fractalInput = document.createElement("input");
-  const ultimateFractal = getFractalById(dynamicFractals, gameForm?.ultimate_fractal);
+  const ultimateFractal = getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.ultimate.fractalLabel)
+    || getFractalById(dynamicFractals, gameForm?.ultimate_fractal);
   const ultimateSkill = getSkillById(skillForms, ultimateFractal?.skill);
   const skillLabel = document.createElement("label");
   const skillInput = document.createElement("input");
@@ -576,18 +547,14 @@ const createUltimatePanel = ({
 
   fractalLabel.className = "profile-primary-fractal-field";
   fractalInput.type = "text";
-  fractalInput.value = getDisplayValue(ultimateFractal?.label);
-  fractalInput.disabled = !ultimateFractal;
-  fractalInput.addEventListener("input", () => {
-    if (!ultimateFractal) return;
-    onFractalFieldChange(ultimateFractal.id, "label", fractalInput.value);
-  });
+  fractalInput.value = getDisplayValue(JAYCEE_GAME_CONFIG.ultimate.fractalLabel || ultimateFractal?.label);
+  fractalInput.disabled = true;
   fractalLabel.append(document.createElement("span"), fractalInput);
   fractalLabel.firstElementChild.textContent = "Fractal";
 
   skillLabel.className = "profile-primary-fractal-field";
   skillInput.type = "text";
-  skillInput.value = getDisplayValue(ultimateSkill?.label);
+  skillInput.value = getDisplayValue(ultimateSkill?.label || JAYCEE_GAME_CONFIG.ultimate.skillLabel);
   skillInput.disabled = !ultimateSkill;
   skillInput.addEventListener("input", () => {
     if (!ultimateSkill) return;
@@ -624,7 +591,6 @@ const createUltimatePanel = ({
 const createSkillsPanel = ({
   dynamicFractals,
   gameForm,
-  onFractalFieldChange,
   onFieldChange,
   skillForms
 }) => {
@@ -648,6 +614,7 @@ const createSkillsPanel = ({
   }
 
   activeFractals.forEach((fractal, index) => {
+    const abilityConfig = JAYCEE_GAME_CONFIG.activeAbilities[index] || {};
     const skill = getSkillById(skillForms, fractal.skill);
     const item = document.createElement("article");
     const badge = document.createElement("span");
@@ -674,14 +641,14 @@ const createSkillsPanel = ({
     activeTitle.textContent = "Active";
 
     fractalInput.type = "text";
-    fractalInput.value = getDisplayValue(fractal.label);
-    fractalInput.addEventListener("input", () => onFractalFieldChange(fractal.id, "label", fractalInput.value));
+    fractalInput.value = getDisplayValue(abilityConfig.fractalLabel || fractal.label);
+    fractalInput.disabled = true;
 
     cycleInput.type = "number";
     cycleInput.step = "any";
     cycleInput.inputMode = "decimal";
-    cycleInput.value = getDisplayValue(fractal.time);
-    cycleInput.addEventListener("input", () => onFractalFieldChange(fractal.id, "time", cycleInput.value));
+    cycleInput.value = getDisplayValue(abilityConfig.cycleSeconds ?? fractal.time);
+    cycleInput.disabled = true;
 
     skillInput.type = "text";
     skillInput.value = getDisplayValue(skill?.label);
@@ -694,12 +661,8 @@ const createSkillsPanel = ({
     ratioInput.type = "number";
     ratioInput.step = "any";
     ratioInput.inputMode = "decimal";
-    ratioInput.value = getDisplayValue(skill?.ratio);
-    ratioInput.disabled = !skill;
-    ratioInput.addEventListener("input", () => {
-      if (!skill) return;
-      onFieldChange(skill.id, "ratio", ratioInput.value);
-    });
+    ratioInput.value = getDisplayValue(abilityConfig.ratio ?? skill?.ratio);
+    ratioInput.disabled = true;
 
     passiveLine.append(
       passiveTitle,
@@ -922,7 +885,8 @@ export const initJayceePage = async ({ surface = "combined" } = {}) => {
   );
 
   const getOwnUltimateSkillLabel = () => {
-    const ultimateFractal = getFractalById(dynamicFractals, gameForm?.ultimate_fractal);
+    const ultimateFractal = getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.ultimate.fractalLabel)
+      || getFractalById(dynamicFractals, gameForm?.ultimate_fractal);
     const skill = getSkillById(skillForms, ultimateFractal?.skill);
 
     return getDisplayValue(skill?.label);
@@ -944,7 +908,8 @@ export const initJayceePage = async ({ surface = "combined" } = {}) => {
 
     const linkedGame = await fetchUserGameSettings(supabaseClient, linkedProfile);
     const linkedFractals = await fetchUserDynamicFractals(supabaseClient, linkedProfile);
-    const linkedUltimateFractal = getFractalById(linkedFractals, linkedGame?.ultimate_fractal);
+    const linkedUltimateFractal = getFractalByLabel(linkedFractals, JAYCEE_GAME_CONFIG.ultimate.fractalLabel)
+      || getFractalById(linkedFractals, linkedGame?.ultimate_fractal);
     const [linkedSkill] = await fetchSkillsByIds(supabaseClient, [linkedUltimateFractal?.skill]);
 
     ultimateTeammateSkillLabel = getDisplayValue(linkedSkill?.label);
@@ -986,18 +951,6 @@ export const initJayceePage = async ({ surface = "combined" } = {}) => {
     renderDashboardSavePanel();
   };
 
-  const updateDynamicFractalField = (fractalId, field, value) => {
-    dynamicFractals = dynamicFractals.map((fractal) => (
-      String(fractal.id) === String(fractalId)
-        ? { ...fractal, [field]: getDisplayValue(value) }
-        : fractal
-    ));
-
-    markDashboardDirty();
-    renderCore();
-    renderCoreParameters();
-  };
-
   const saveDashboardSettings = async () => {
     if (!supabaseClient || !currentProfile || isDashboardSaving) return;
 
@@ -1013,20 +966,25 @@ export const initJayceePage = async ({ surface = "combined" } = {}) => {
       const updatedSettings = await upsertUserGameSettings(
         supabaseClient,
         currentProfile,
-        getGamePayload(gameForm)
+        {
+          ultimate_link: getDisplayValue(gameForm?.ultimate_link) || null
+        }
       );
-      const skillPayloads = skillForms.map(getSkillPayload);
-      const fractalPayloads = dynamicFractals.map(getDynamicFractalPayload);
-
-      gameSettings = updatedSettings || { ...gameSettings, ...getGamePayload(gameForm), user_id: currentProfile.id };
-      gameForm = createGameForm(gameSettings);
-      if (fractalPayloads.length) {
-        const updatedFractals = await updateUserDynamicFractals(supabaseClient, fractalPayloads);
-
-        dynamicFractals = dynamicFractals.map((fractal) => (
-          updatedFractals.find((updatedFractal) => updatedFractal.id === fractal.id) || fractal
-        ));
+      const activeSkillIds = new Set(getActiveFractals(dynamicFractals, gameForm)
+        .map((fractal) => getDisplayValue(fractal.skill))
+        .filter(Boolean));
+      const ultimateFractal = getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.ultimate.fractalLabel)
+        || getFractalById(dynamicFractals, gameForm?.ultimate_fractal);
+      const ultimateSkillId = getDisplayValue(ultimateFractal?.skill);
+      if (ultimateSkillId) {
+        activeSkillIds.add(ultimateSkillId);
       }
+      const skillPayloads = skillForms
+        .filter((skill) => activeSkillIds.has(getDisplayValue(skill.id)))
+        .map(getSkillPayload);
+
+      gameSettings = updatedSettings || { ...gameSettings, ultimate_link: getDisplayValue(gameForm?.ultimate_link) || null, user_id: currentProfile.id };
+      gameForm = createGameForm(gameSettings);
       if (skillPayloads.length) {
         const updatedSkills = await updateSkills(supabaseClient, skillPayloads);
 
@@ -1050,7 +1008,7 @@ export const initJayceePage = async ({ surface = "combined" } = {}) => {
     }
   };
 
-  const updatePrimaryFractalField = (field, value) => {
+  const updateGameField = (field, value) => {
     gameForm = {
       ...gameForm,
       [field]: getDisplayValue(value)
@@ -1130,23 +1088,18 @@ export const initJayceePage = async ({ surface = "combined" } = {}) => {
     list.replaceChildren(
       ...(isEditableProfilePage ? [
         createPrimaryFractalPanel({
-          dynamicFractals,
-          gameForm,
-          onFieldChange: updatePrimaryFractalField,
-          onFractalFieldChange: updateDynamicFractalField
+          dynamicFractals
         }),
         createSkillsPanel({
           dynamicFractals,
           gameForm,
-          onFractalFieldChange: updateDynamicFractalField,
           onFieldChange: updateSkillField,
           skillForms
         }),
         createUltimatePanel({
           dynamicFractals,
           gameForm,
-          onFractalFieldChange: updateDynamicFractalField,
-          onFieldChange: updatePrimaryFractalField,
+          onFieldChange: updateGameField,
           onSkillFieldChange: updateSkillField,
           publicProfiles,
           skillForms
