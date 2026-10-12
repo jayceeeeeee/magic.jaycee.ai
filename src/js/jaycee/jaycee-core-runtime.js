@@ -32,7 +32,7 @@ const PROFILE_RING_FILL_ALPHA = 0.26;
 const ACTIVE_RING_LIMIT = 3;
 const YEAR_SECONDS = JAYCEE_GAME_CONFIG.passive.cycleSeconds;
 const DAY_SECONDS = 24 * 60 * 60;
-const MANA_CYCLE_SECONDS = {
+const MANNA_CYCLE_SECONDS = {
   day: DAY_SECONDS,
   month: YEAR_SECONDS / 12,
   year: YEAR_SECONDS
@@ -136,19 +136,19 @@ const formatYearsFromSeconds = (secondsValue) => {
   return `${years.toLocaleString()}y`;
 };
 
-const normalizeManaCycle = (cycle) => (
-  Object.prototype.hasOwnProperty.call(MANA_CYCLE_SECONDS, getDisplayValue(cycle))
+const normalizeMannaCycle = (cycle) => (
+  Object.prototype.hasOwnProperty.call(MANNA_CYCLE_SECONDS, getDisplayValue(cycle))
     ? getDisplayValue(cycle)
     : "year"
 );
 
-const normalizeManaUnit = (unit) => (
+const normalizeMannaUnit = (unit) => (
   /^[A-Z]{3}$/.test(getDisplayValue(unit).toUpperCase())
     ? getDisplayValue(unit).toUpperCase()
     : "EUR"
 );
 
-const getManaCycleSeconds = (cycle, now = new Date()) => {
+const getMannaCycleSeconds = (cycle, now = new Date()) => {
   if (cycle === "month") {
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
     const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
@@ -156,11 +156,11 @@ const getManaCycleSeconds = (cycle, now = new Date()) => {
     return Math.max(1, (end.getTime() - start.getTime()) / 1000);
   }
 
-  return MANA_CYCLE_SECONDS[cycle] || MANA_CYCLE_SECONDS.year;
+  return MANNA_CYCLE_SECONDS[cycle] || MANNA_CYCLE_SECONDS.year;
 };
 
 const getCurrencySymbol = (unit) => {
-  const currency = normalizeManaUnit(unit);
+  const currency = normalizeMannaUnit(unit);
 
   try {
     const symbol = new Intl.NumberFormat(undefined, {
@@ -175,7 +175,7 @@ const getCurrencySymbol = (unit) => {
   }
 };
 
-const formatManaValue = (value, unit) => {
+const formatMannaValue = (value, unit) => {
   const numericValue = Number(value);
 
   if (!Number.isFinite(numericValue)) return "";
@@ -211,31 +211,31 @@ const getCurrentPeriodBounds = (level, now = new Date()) => {
   return { end, start };
 };
 
-const getManaModel = ({ player, playerProfile }) => {
+const getMannaModel = ({ player, playerProfile }) => {
   const level = Math.min(3, Math.max(1, Number(player?.level) || 1));
-  const manaTarget = Number(playerProfile?.mana_target);
-  const manaCycle = normalizeManaCycle(playerProfile?.mana_cycle);
-  const manaUnit = normalizeManaUnit(playerProfile?.mana_unit);
+  const mannaTarget = Number(playerProfile?.manna_target);
+  const mannaCycle = normalizeMannaCycle(playerProfile?.manna_cycle);
+  const mannaUnit = normalizeMannaUnit(playerProfile?.manna_unit);
   const now = new Date();
   const abilityConfig = JAYCEE_GAME_CONFIG.activeAbilities[level - 1] || JAYCEE_GAME_CONFIG.activeAbilities[0];
   const { end, start } = getCurrentPeriodBounds(level, now);
   const periodSeconds = Math.max(1, (end.getTime() - start.getTime()) / 1000);
   const elapsedSeconds = Math.min(periodSeconds, Math.max(0, (now.getTime() - start.getTime()) / 1000));
-  const periodTarget = Number.isFinite(manaTarget)
-    ? manaTarget * (periodSeconds / getManaCycleSeconds(manaCycle, now))
+  const periodTarget = Number.isFinite(mannaTarget)
+    ? mannaTarget * (periodSeconds / getMannaCycleSeconds(mannaCycle, now))
     : 0;
   const activeCycleSeconds = periodSeconds / Math.max(1, Number(abilityConfig?.ratio) || 1);
   const practiceSeconds = Number(player?.[`skill_${level}_practice`]) || 0;
-  const negativeMana = -periodTarget * (elapsedSeconds / periodSeconds);
-  const positiveMana = activeCycleSeconds > 0
+  const negativeManna = -periodTarget * (elapsedSeconds / periodSeconds);
+  const positiveManna = activeCycleSeconds > 0
     ? periodTarget * (practiceSeconds / activeCycleSeconds)
     : 0;
-  const value = negativeMana + positiveMana;
+  const value = negativeManna + positiveManna;
 
   return {
     maxAbs: Math.max(1, Math.abs(periodTarget)),
     target: periodTarget,
-    unit: manaUnit,
+    unit: mannaUnit,
     value
   };
 };
@@ -500,7 +500,7 @@ const createVitalsPanel = ({
   const lifeMaxSeconds = JAYCEE_GAME_CONFIG.lifeMaxYears * YEAR_SECONDS;
   const hasPlayer = Boolean(player);
   const lifeSeconds = Number(player?.life_bar) || 0;
-  const manaModel = hasPlayer ? getManaModel({ player, playerProfile }) : null;
+  const mannaModel = hasPlayer ? getMannaModel({ player, playerProfile }) : null;
   const questModel = getCurrentQuestModel({
     dynamicFractals,
     gameForm,
@@ -522,12 +522,12 @@ const createVitalsPanel = ({
     }),
     createVitalBar({
       centered: true,
-      current: manaModel?.value || 0,
-      label: "Mana",
-      max: manaModel?.maxAbs || 1,
-      tone: "mana",
-      valueText: hasPlayer && manaModel
-        ? `${formatManaValue(manaModel.value, manaModel.unit)} / ${formatManaValue(manaModel.target, manaModel.unit)}`
+      current: mannaModel?.value || 0,
+      label: "Manna",
+      max: mannaModel?.maxAbs || 1,
+      tone: "manna",
+      valueText: hasPlayer && mannaModel
+        ? `${formatMannaValue(mannaModel.value, mannaModel.unit)} / ${formatMannaValue(mannaModel.target, mannaModel.unit)}`
         : ""
     })
   );
@@ -597,6 +597,25 @@ const createSkillForms = (skills) => (
   }))
 );
 
+const createLockedIcon = (className = "profile-ability-lock-icon") => {
+  const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+
+  icon.classList.add(className);
+  icon.setAttribute("viewBox", "0 0 24 24");
+  icon.setAttribute("aria-hidden", "true");
+  rect.setAttribute("x", "5");
+  rect.setAttribute("y", "10");
+  rect.setAttribute("width", "14");
+  rect.setAttribute("height", "10");
+  rect.setAttribute("rx", "2");
+  path.setAttribute("d", "M8 10V7a4 4 0 0 1 8 0v3");
+  icon.append(rect, path);
+
+  return icon;
+};
+
 const createFractalParameterPanel = ({
   activeModels,
   currentLevel = 0,
@@ -617,7 +636,7 @@ const createFractalParameterPanel = ({
 
   section.className = "profile-parameter-panel";
   section.dataset.profileParameters = "";
-  heading.textContent = "Skills";
+  heading.textContent = "Abilities";
   buttons.className = "profile-ability-bar";
   description.className = "profile-parameter-section";
   list.className = "profile-parameter-list";
@@ -682,16 +701,28 @@ const createFractalParameterPanel = ({
   abilities.forEach((ability, index) => {
     const button = document.createElement("button");
     const isLocked = currentLevel < ability.unlockLevel;
+    const isActive = !isLocked && index === activeIndex;
 
     button.className = "profile-ability-button";
-    button.classList.toggle("is-active", index === activeIndex);
+    button.classList.toggle("is-active", isActive);
     button.classList.toggle("is-locked", isLocked);
     button.classList.add(ability.type === "active" ? "is-active-skill" : `is-${ability.type}`);
     button.type = "button";
+    button.dataset.state = ability.type === "passive" ? "Passive" : isLocked ? "" : ability.type === "ultimate" ? "Ultimate" : "Ready";
+    button.disabled = isLocked;
     button.textContent = ability.label;
-    button.dataset.state = ability.type === "passive" ? "Passive" : isLocked ? "Locked" : ability.type === "ultimate" ? "Ultimate" : "Ready";
-    button.setAttribute("aria-pressed", String(index === activeIndex));
-    button.addEventListener("click", () => onSelect?.(index));
+    button.setAttribute("aria-pressed", String(isActive));
+    if (isLocked) {
+      const lockStatus = document.createElement("span");
+      const lockText = document.createElement("span");
+
+      lockStatus.className = "profile-ability-lock-status";
+      lockText.textContent = "Locked";
+      lockStatus.append(createLockedIcon(), lockText);
+      button.append(lockStatus);
+    } else {
+      button.addEventListener("click", () => onSelect?.(index));
+    }
     buttons.append(button);
   });
 

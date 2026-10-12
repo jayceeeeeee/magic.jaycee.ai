@@ -19,9 +19,9 @@ const PROFILE_SELECT_COLUMNS = [
   "birth_place",
   "birth_place_position",
   "birth_timezone",
-  "mana_target",
-  "mana_unit",
-  "mana_cycle",
+  "manna_target",
+  "manna_unit",
+  "manna_cycle",
   "sex"
 ].join(", ");
 const SIGNED_IMAGE_URL_DURATION_SECONDS = 60 * 60;

@@ -180,7 +180,7 @@ const normalizeCurrencyValue = (value) => (
     : "EUR"
 );
 
-const MANA_CYCLE_OPTIONS = [
+const MANNA_CYCLE_OPTIONS = [
   { label: "Year", value: "year" },
   { label: "Month", value: "month" },
   { label: "Day", value: "day" }
@@ -333,30 +333,30 @@ const createMapsSection = ({ profile, status }) => {
   const timezoneDisplay = document.createElement("strong");
   const positionInput = document.createElement("input");
   const timezoneInput = document.createElement("input");
-  const manaTargetField = createTextField({
+  const mannaTargetField = createTextField({
     inputMode: "decimal",
-    label: "Mana target",
-    name: "mana_target",
+    label: "Manna target",
+    name: "manna_target",
     type: "number",
-    value: profile.mana_target
+    value: profile.manna_target
   });
-  const manaUnitField = createSelectField({
-    label: "Mana unit",
-    name: "mana_unit",
+  const mannaUnitField = createSelectField({
+    label: "Manna unit",
+    name: "manna_unit",
     options: getCurrencyOptions(),
-    value: normalizeCurrencyValue(profile.mana_unit)
+    value: normalizeCurrencyValue(profile.manna_unit)
   });
-  const manaCycleField = createSelectField({
-    label: "Mana cycle",
-    name: "mana_cycle",
-    options: MANA_CYCLE_OPTIONS,
-    value: getDisplayValue(profile.mana_cycle) || "year"
+  const mannaCycleField = createSelectField({
+    label: "Manna cycle",
+    name: "manna_cycle",
+    options: MANNA_CYCLE_OPTIONS,
+    value: getDisplayValue(profile.manna_cycle) || "year"
   });
-  const manaFields = document.createElement("div");
+  const mannaFields = document.createElement("div");
   let selectedLocation = getInitialBirthLocation(profile);
 
   form.className = "profile-details-controls jaycee-account-form";
-  manaFields.className = "profile-mana-fields";
+  mannaFields.className = "profile-manna-fields";
   birthDateField.input.max = new Date().toISOString().split("T")[0];
   locationWrapper.className = "location-field profile-location-field";
   results.className = "location-results";
@@ -367,7 +367,7 @@ const createMapsSection = ({ profile, status }) => {
   timezoneInput.type = "hidden";
   positionInput.value = getDisplayValue(profile.birth_place_position);
   timezoneInput.value = getDisplayValue(profile.birth_timezone);
-  manaTargetField.input.step = "any";
+  mannaTargetField.input.step = "any";
   setDerivedText(positionDisplay, positionInput.value);
   setDerivedText(timezoneDisplay, timezoneInput.value);
   derived.append(
@@ -377,13 +377,13 @@ const createMapsSection = ({ profile, status }) => {
   derived.children[0].append(positionDisplay);
   derived.children[1].append(timezoneDisplay);
   locationWrapper.append(birthPlaceField.wrapper, results);
-  manaFields.append(manaTargetField.wrapper, manaUnitField.wrapper, manaCycleField.wrapper);
+  mannaFields.append(mannaTargetField.wrapper, mannaUnitField.wrapper, mannaCycleField.wrapper);
   form.append(
     birthDateField.wrapper,
     birthTimeField.wrapper,
     locationWrapper,
     derived,
-    manaFields,
+    mannaFields,
     positionInput,
     timezoneInput
   );
@@ -457,11 +457,11 @@ const createMapsSection = ({ profile, status }) => {
           birth_place_position: getDisplayValue(positionInput.value) || null,
           birth_time: getDisplayValue(birthTimeField.input.value) || null,
           birth_timezone: getDisplayValue(timezoneInput.value) || null,
-          mana_target: Number.isFinite(Number(manaTargetField.input.value)) && getDisplayValue(manaTargetField.input.value)
-            ? Number(manaTargetField.input.value)
+          manna_target: Number.isFinite(Number(mannaTargetField.input.value)) && getDisplayValue(mannaTargetField.input.value)
+            ? Number(mannaTargetField.input.value)
             : 0,
-          mana_unit: normalizeCurrencyValue(manaUnitField.select.value),
-          mana_cycle: getDisplayValue(manaCycleField.select.value) || "year"
+          manna_unit: normalizeCurrencyValue(mannaUnitField.select.value),
+          manna_cycle: getDisplayValue(mannaCycleField.select.value) || "year"
         }
       };
     },

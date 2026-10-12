@@ -210,11 +210,11 @@
     linear-gradient(90deg, #1e8b41, #5bff74 68%, #caff75);
 }
 
-.profile-vital-bar.is-mana .profile-vital-header span:first-child {
+.profile-vital-bar.is-manna .profile-vital-header span:first-child {
   color: #9bd8ff;
 }
 
-.profile-vital-bar.is-mana .profile-vital-fill {
+.profile-vital-bar.is-manna .profile-vital-fill {
   color: rgba(76, 178, 255, 0.52);
   background:
     linear-gradient(90deg, #1a5fbf, #4cb2ff 70%, #b3f5ff);
@@ -352,19 +352,21 @@
 }
 
 .profile-ability-button.is-ultimate {
-  border-color: rgba(255, 215, 107, 0.46);
+  border-color: rgba(255, 215, 107, 0.58);
   background:
     linear-gradient(180deg, rgba(255, 215, 107, 0.18), rgba(var(--accent-rgb), 0.05)),
     rgba(0, 0, 0, 0.2);
   color: #ffd86f;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 0 12px rgba(255, 215, 107, 0.08);
 }
 
 .profile-ability-button.is-ultimate.is-active {
-  border-color: rgba(255, 225, 126, 0.78);
+  border-color: rgba(255, 225, 126, 0.92);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 0 18px rgba(255, 215, 107, 0.18);
+    0 0 22px rgba(255, 215, 107, 0.24);
 }
 
 .profile-ability-button.is-locked {
@@ -373,21 +375,50 @@
     linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 70%),
     rgba(0, 0, 0, 0.28);
   color: rgba(255, 255, 255, 0.48);
+  cursor: not-allowed;
   filter: saturate(0.35);
 }
 
 .profile-ability-button.is-ultimate.is-locked {
-  border-color: rgba(255, 215, 107, 0.2);
+  border-color: rgba(255, 215, 107, 0.34);
   color: rgba(255, 225, 150, 0.52);
-  box-shadow: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 12px rgba(255, 215, 107, 0.06);
 }
 
 .profile-ability-button.is-locked::after {
-  color: rgba(255, 255, 255, 0.42);
+  content: none;
 }
 
-.profile-ability-button:hover,
-.profile-ability-button:focus-visible {
+.profile-ability-lock-status {
+  position: absolute;
+  right: 6px;
+  bottom: 5px;
+  left: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: rgba(255, 255, 255, 0.42);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.58rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.profile-ability-lock-icon {
+  width: 11px;
+  height: 11px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.profile-ability-button:not(.is-locked):hover,
+.profile-ability-button:not(.is-locked):focus-visible {
   border-color: rgba(var(--accent-rgb), 0.58);
   outline: none;
   transform: translateY(-1px);
@@ -397,8 +428,10 @@
   transform: none;
 }
 
-.profile-ability-button.is-locked:hover {
-  border-color: rgba(255, 255, 255, 0.22);
+.profile-ability-button.is-locked:hover,
+.profile-ability-button.is-locked:focus-visible {
+  outline: none;
+  transform: none;
 }
 
 .profile-parameter-list {
@@ -560,7 +593,7 @@
 .profile-field-wide,
 .profile-gender-field,
 .profile-location-field,
-.profile-mana-fields,
+.profile-manna-fields,
 .profile-settings-actions {
   grid-column: 1 / -1;
 }
@@ -839,7 +872,7 @@
   box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
 }
 
-.profile-mana-fields {
+.profile-manna-fields {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
@@ -1387,7 +1420,7 @@
 
   .profile-gender-options,
   .profile-derived-birth-data,
-  .profile-mana-fields {
+  .profile-manna-fields {
     grid-template-columns: 1fr;
   }
 
