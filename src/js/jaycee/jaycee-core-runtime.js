@@ -17,9 +17,7 @@ import {
   getAvatarImageUrl,
   getDisplayValue,
   getThemeSettingsFromProfile,
-  loadOptionalImage,
-  updateSkills,
-  upsertUserGameSettings
+  loadOptionalImage
 } from "./jaycee-data.js";
 
 const PROFILE_CORE_METRICS = {
@@ -161,6 +159,7 @@ const createFractalMeasureModel = ({
   distanceMeters,
   elements,
   fractal,
+  passiveSeconds = null,
   skill = null,
   skillLabel = ""
 }) => {
@@ -172,6 +171,7 @@ const createFractalMeasureModel = ({
     elements,
     fractal,
     label: getDisplayValue(fractal.label) || "Fractal",
+    passiveSeconds,
     skill,
     skillLabel,
     questSeconds: cycleSeconds
@@ -253,9 +253,9 @@ const getActiveFractalModels = ({
         elements,
         fractal: {
           ...fractal,
-          label: abilityConfig.fractalLabel || fractal.label,
-          time: abilityConfig.cycleSeconds ?? fractal.time
+          label: abilityConfig.fractalLabel || fractal.label
         },
+        passiveSeconds: abilityConfig.cycleSeconds,
         skill,
         skillLabel: getDisplayValue(skill.label) || "Active"
       });
@@ -282,7 +282,8 @@ const getSkillById = (skillForms, skillId) => (
 );
 
 const getUltimateModel = ({ dynamicFractals, gameForm, publicProfiles, ultimateTeammateSkillLabel }) => {
-  const fractal = getFractalById(dynamicFractals, gameForm?.ultimate_fractal);
+  const fractal = getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.ultimate.fractalLabel)
+    || getFractalById(dynamicFractals, gameForm?.ultimate_fractal);
   const label = getDisplayValue(fractal?.label);
   const linkedProfile = publicProfiles.find((profile) => (
     getDisplayValue(profile.id) === getDisplayValue(gameForm?.ultimate_link)
@@ -427,17 +428,13 @@ const getPublicProfileUsernameFromUrl = () => {
 };
 
 const createEmptyGameSettings = () => ({
-  primary_distance: "",
   primary_fractal: "",
-  primary_time: "",
   ultimate_fractal: "",
   ultimate_link: ""
 });
 
 const createGameForm = (settings) => ({
-  primary_distance: getDisplayValue(settings?.primary_distance),
   primary_fractal: getDisplayValue(settings?.primary_fractal),
-  primary_time: getDisplayValue(settings?.primary_time),
   ultimate_fractal: getDisplayValue(settings?.ultimate_fractal),
   ultimate_link: getDisplayValue(settings?.ultimate_link)
 });
@@ -445,265 +442,9 @@ const createGameForm = (settings) => ({
 const createSkillForms = (skills) => (
   (skills || []).map((skill) => ({
     id: skill.id,
-    label: getDisplayValue(skill.label),
-    ratio: getDisplayValue(skill.ratio)
+    label: getDisplayValue(skill.label)
   }))
 );
-
-const createLabeledGameInput = ({ ariaLabel, input, label }) => {
-  const wrapper = document.createElement("label");
-  const text = document.createElement("span");
-
-  wrapper.className = "profile-skill-card-field";
-  text.textContent = label;
-  input.setAttribute("aria-label", ariaLabel || label);
-  wrapper.append(text, input);
-
-  return wrapper;
-};
-
-const getSkillPayload = (form) => ({
-  id: form.id,
-  label: getDisplayValue(form.label)
-});
-
-const createPrimaryFractalPanel = ({
-  dynamicFractals
-}) => {
-  const section = document.createElement("section");
-  const heading = document.createElement("h2");
-  const content = document.createElement("div");
-  const primaryFractal = getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.passive.fractalLabel);
-  const fields = [
-    {
-      disabled: !primaryFractal,
-      key: "primary_fractal_label",
-      label: "Fractal",
-      type: "text",
-      value: getDisplayValue(JAYCEE_GAME_CONFIG.passive.fractalLabel || primaryFractal?.label)
-    },
-    { key: "primary_time", label: "Cycle (s)", type: "number", value: getDisplayValue(JAYCEE_GAME_CONFIG.passive.cycleSeconds) },
-    { key: "primary_distance", label: "Zone (m)", type: "number", value: getDisplayValue(JAYCEE_GAME_CONFIG.passive.zoneMeters) }
-  ];
-  const fieldsRow = document.createElement("div");
-
-  section.className = "profile-resonance-column profile-primary-fractal-panel";
-  heading.className = "profile-resonance-column-title";
-  heading.textContent = "Passive";
-  content.className = "profile-primary-fractal-content";
-  fieldsRow.className = "profile-primary-fractal-fields";
-
-  fields.forEach((field) => {
-    const label = document.createElement("label");
-    const labelText = document.createElement("span");
-    const input = document.createElement("input");
-
-    label.className = "profile-primary-fractal-field";
-    labelText.textContent = field.label;
-    input.type = field.type;
-    input.value = field.value;
-    input.disabled = true;
-    if (field.type === "number") {
-      input.step = "any";
-      input.inputMode = "decimal";
-    }
-    label.append(labelText, input);
-    fieldsRow.append(label);
-  });
-  content.append(fieldsRow);
-  section.append(heading, content);
-
-  return section;
-};
-
-const createUltimatePanel = ({
-  dynamicFractals,
-  gameForm,
-  onFieldChange,
-  onSkillFieldChange,
-  publicProfiles,
-  skillForms
-}) => {
-  const section = document.createElement("section");
-  const heading = document.createElement("h2");
-  const content = document.createElement("div");
-  const fractalLabel = document.createElement("label");
-  const fractalInput = document.createElement("input");
-  const ultimateFractal = getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.ultimate.fractalLabel)
-    || getFractalById(dynamicFractals, gameForm?.ultimate_fractal);
-  const ultimateSkill = getSkillById(skillForms, ultimateFractal?.skill);
-  const skillLabel = document.createElement("label");
-  const skillInput = document.createElement("input");
-  const linkLabel = document.createElement("label");
-  const linkSelect = document.createElement("select");
-  const emptyLinkOption = document.createElement("option");
-  const fieldsRow = document.createElement("div");
-
-  section.className = "profile-resonance-column profile-primary-fractal-panel";
-  heading.className = "profile-resonance-column-title";
-  heading.textContent = "Ultimate Ability";
-  content.className = "profile-primary-fractal-content";
-  fieldsRow.className = "profile-primary-fractal-fields";
-
-  fractalLabel.className = "profile-primary-fractal-field";
-  fractalInput.type = "text";
-  fractalInput.value = getDisplayValue(JAYCEE_GAME_CONFIG.ultimate.fractalLabel || ultimateFractal?.label);
-  fractalInput.disabled = true;
-  fractalLabel.append(document.createElement("span"), fractalInput);
-  fractalLabel.firstElementChild.textContent = "Fractal";
-
-  skillLabel.className = "profile-primary-fractal-field";
-  skillInput.type = "text";
-  skillInput.value = getDisplayValue(ultimateSkill?.label || JAYCEE_GAME_CONFIG.ultimate.skillLabel);
-  skillInput.disabled = !ultimateSkill;
-  skillInput.addEventListener("input", () => {
-    if (!ultimateSkill) return;
-    onSkillFieldChange(ultimateSkill.id, "label", skillInput.value);
-  });
-  skillLabel.append(document.createElement("span"), skillInput);
-  skillLabel.firstElementChild.textContent = "Skill";
-
-  linkLabel.className = "profile-primary-fractal-field";
-  emptyLinkOption.value = "";
-  emptyLinkOption.textContent = "Choose a teammate";
-  linkSelect.className = "profile-primary-fractal-select";
-  linkSelect.replaceChildren(emptyLinkOption, ...publicProfiles.map((profile) => {
-    const option = document.createElement("option");
-    const username = getDisplayValue(profile.username);
-
-    option.value = getDisplayValue(profile.id);
-    option.textContent = username || "Untitled profile";
-
-    return option;
-  }));
-  linkSelect.value = getDisplayValue(gameForm?.ultimate_link);
-  linkSelect.addEventListener("change", () => onFieldChange("ultimate_link", linkSelect.value));
-  linkLabel.append(document.createElement("span"), linkSelect);
-  linkLabel.firstElementChild.textContent = "Teammate";
-
-  fieldsRow.append(fractalLabel, linkLabel, skillLabel);
-  content.append(fieldsRow);
-  section.append(heading, content);
-
-  return section;
-};
-
-const createSkillsPanel = ({
-  dynamicFractals,
-  gameForm,
-  onFieldChange,
-  skillForms
-}) => {
-  const section = document.createElement("section");
-  const heading = document.createElement("h2");
-  const content = document.createElement("div");
-  const activeFractals = getActiveFractals(dynamicFractals, gameForm)
-    .slice(0, ACTIVE_RING_LIMIT);
-
-  section.className = "profile-resonance-column profile-skills-panel";
-  heading.className = "profile-resonance-column-title";
-  heading.textContent = "Basic Abilities";
-  content.className = "profile-skills-content";
-
-  if (!activeFractals.length) {
-    const empty = document.createElement("p");
-
-    empty.className = "profile-primary-fractal-status";
-    empty.textContent = "No actives yet.";
-    content.append(empty);
-  }
-
-  activeFractals.forEach((fractal, index) => {
-    const abilityConfig = JAYCEE_GAME_CONFIG.activeAbilities[index] || {};
-    const skill = getSkillById(skillForms, fractal.skill);
-    const item = document.createElement("article");
-    const badge = document.createElement("span");
-    const body = document.createElement("div");
-    const passiveLine = document.createElement("div");
-    const activeLine = document.createElement("div");
-    const passiveTitle = document.createElement("span");
-    const activeTitle = document.createElement("span");
-    const fractalInput = document.createElement("input");
-    const cycleInput = document.createElement("input");
-    const skillInput = document.createElement("input");
-    const ratioInput = document.createElement("input");
-
-    badge.className = "profile-skill-badge";
-    badge.textContent = String(index + 1);
-
-    item.className = "profile-skill-row";
-    body.className = "profile-skill-card-body";
-    passiveLine.className = "profile-skill-card-line";
-    activeLine.className = "profile-skill-card-line";
-    passiveTitle.className = "profile-skill-card-line-title";
-    activeTitle.className = "profile-skill-card-line-title";
-    passiveTitle.textContent = "Passive";
-    activeTitle.textContent = "Active";
-
-    fractalInput.type = "text";
-    fractalInput.value = getDisplayValue(abilityConfig.fractalLabel || fractal.label);
-    fractalInput.disabled = true;
-
-    cycleInput.type = "number";
-    cycleInput.step = "any";
-    cycleInput.inputMode = "decimal";
-    cycleInput.value = getDisplayValue(abilityConfig.cycleSeconds ?? fractal.time);
-    cycleInput.disabled = true;
-
-    skillInput.type = "text";
-    skillInput.value = getDisplayValue(skill?.label);
-    skillInput.disabled = !skill;
-    skillInput.addEventListener("input", () => {
-      if (!skill) return;
-      onFieldChange(skill.id, "label", skillInput.value);
-    });
-
-    ratioInput.type = "number";
-    ratioInput.step = "any";
-    ratioInput.inputMode = "decimal";
-    ratioInput.value = getDisplayValue(abilityConfig.ratio ?? skill?.ratio);
-    ratioInput.disabled = true;
-
-    passiveLine.append(
-      passiveTitle,
-      createLabeledGameInput({ ariaLabel: "Fractal name", input: fractalInput, label: "Name" }),
-      createLabeledGameInput({ ariaLabel: "Fractal cycle", input: cycleInput, label: "Cycle (s)" })
-    );
-    activeLine.append(
-      activeTitle,
-      createLabeledGameInput({ ariaLabel: "Active skill", input: skillInput, label: "Name" }),
-      createLabeledGameInput({ ariaLabel: "Active ratio", input: ratioInput, label: "Ratio" })
-    );
-    body.append(passiveLine, activeLine);
-    item.append(badge, body);
-    content.append(item);
-  });
-  section.append(heading, content);
-
-  return section;
-};
-
-const createDashboardSavePanel = ({ onSave, saveDisabled, saveStatus }) => {
-  const section = document.createElement("section");
-  const button = document.createElement("button");
-  const statusText = document.createElement("p");
-
-  section.className = "profile-dashboard-save-panel";
-  section.dataset.profileDashboardSave = "";
-  button.className = "profile-primary-fractal-save";
-  button.type = "button";
-  button.textContent = "Save";
-  button.disabled = saveDisabled;
-  button.addEventListener("click", onSave);
-  section.append(button);
-  if (saveStatus) {
-    statusText.className = "profile-primary-fractal-status";
-    statusText.textContent = saveStatus;
-    section.append(statusText);
-  }
-
-  return section;
-};
 
 const createFractalParameterPanel = ({ activeModels, passiveModel, ultimateModel }) => {
   if (!passiveModel && !activeModels.length && !ultimateModel) return null;
@@ -747,7 +488,7 @@ const createFractalParameterPanel = ({ activeModels, passiveModel, ultimateModel
     const list = document.createElement("dl");
     const rows = [{
       label: "Passive",
-      value: formatDuration(fractalModel.fractal.time, { compact: false }) || "00:00:00"
+      value: formatDuration(fractalModel.passiveSeconds, { compact: false }) || "00:00:00"
     }, {
       label: "Active",
       value: formatDuration(fractalModel.questSeconds, { compact: false }) || "00:00:00"
@@ -836,36 +577,24 @@ const createProfileCoreState = ({
   };
 };
 
-export const initJayceePage = async ({ surface = "combined" } = {}) => {
+export const initJayceePage = async () => {
   const shell = document.querySelector("[data-profile-shell]");
-  const rendersCore = surface !== "dashboard";
-  const rendersDashboard = surface !== "profile";
-  const canvas = rendersCore ? document.querySelector("[data-profile-canvas]") : null;
-  const status = rendersDashboard ? document.querySelector("[data-profile-status]") : null;
-  const list = rendersDashboard ? document.querySelector("[data-profile-resonances]") : null;
+  const canvas = document.querySelector("[data-profile-canvas]");
   const publicUsername = getDisplayValue(shell?.dataset.profileUsername) || getPublicProfileUsernameFromUrl();
   const pageMode = getDisplayValue(shell?.dataset.profileMode) || (publicUsername ? "public" : "profile");
   const isPresentPage = pageMode === "present";
   const isEditableProfilePage = pageMode === "profile" && !publicUsername;
   const hasUserProfile = Boolean(publicUsername) || isEditableProfilePage;
-  const setStatus = (message) => {
-    if (status) {
-      status.textContent = message;
-    }
-  };
 
-  if (!shell || (rendersCore && !canvas) || (rendersDashboard && (!status || !list))) return;
+  if (!shell || !canvas) return;
 
   let dynamicFractalElements = [];
   let dynamicFractals = [];
   let publicProfiles = [];
   let avatarImage = null;
   let currentProfile = null;
-  let dashboardSaveStatus = "";
-  let dashboardSaveStatusTimer = null;
   let gameForm = createEmptyGameSettings();
   let gameSettings = null;
-  let isDashboardSaving = false;
   let supabaseClient = null;
   let skillForms = [];
   let skills = [];
@@ -915,128 +644,6 @@ export const initJayceePage = async ({ surface = "combined" } = {}) => {
     ultimateTeammateSkillLabel = getDisplayValue(linkedSkill?.label);
   };
 
-  const refreshUltimateTeammateSkillLabel = async () => {
-    const teammateId = getDisplayValue(gameForm?.ultimate_link);
-
-    try {
-      await loadUltimateTeammateSkillLabel();
-      if (teammateId === getDisplayValue(gameForm?.ultimate_link)) {
-        renderCoreParameters();
-      }
-    } catch (error) {
-      console.warn("Ultimate teammate skill could not be loaded", error);
-      if (teammateId === getDisplayValue(gameForm?.ultimate_link)) {
-        ultimateTeammateSkillLabel = "";
-        renderCoreParameters();
-      }
-    }
-  };
-
-  const renderDashboardSavePanel = () => {
-    if (!list) return;
-
-    const existingPanel = list.querySelector("[data-profile-dashboard-save]");
-
-    if (!existingPanel || !isEditableProfilePage) return;
-
-    existingPanel.replaceWith(createDashboardSavePanel({
-      onSave: saveDashboardSettings,
-      saveDisabled: !currentProfile || isDashboardSaving,
-      saveStatus: dashboardSaveStatus
-    }));
-  };
-
-  const markDashboardDirty = () => {
-    dashboardSaveStatus = "Unsaved changes";
-    renderDashboardSavePanel();
-  };
-
-  const saveDashboardSettings = async () => {
-    if (!supabaseClient || !currentProfile || isDashboardSaving) return;
-
-    if (dashboardSaveStatusTimer) {
-      window.clearTimeout(dashboardSaveStatusTimer);
-      dashboardSaveStatusTimer = null;
-    }
-    isDashboardSaving = true;
-    dashboardSaveStatus = "Saving...";
-    renderResonances();
-
-    try {
-      const updatedSettings = await upsertUserGameSettings(
-        supabaseClient,
-        currentProfile,
-        {
-          ultimate_link: getDisplayValue(gameForm?.ultimate_link) || null
-        }
-      );
-      const activeSkillIds = new Set(getActiveFractals(dynamicFractals, gameForm)
-        .map((fractal) => getDisplayValue(fractal.skill))
-        .filter(Boolean));
-      const ultimateFractal = getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.ultimate.fractalLabel)
-        || getFractalById(dynamicFractals, gameForm?.ultimate_fractal);
-      const ultimateSkillId = getDisplayValue(ultimateFractal?.skill);
-      if (ultimateSkillId) {
-        activeSkillIds.add(ultimateSkillId);
-      }
-      const skillPayloads = skillForms
-        .filter((skill) => activeSkillIds.has(getDisplayValue(skill.id)))
-        .map(getSkillPayload);
-
-      gameSettings = updatedSettings || { ...gameSettings, ultimate_link: getDisplayValue(gameForm?.ultimate_link) || null, user_id: currentProfile.id };
-      gameForm = createGameForm(gameSettings);
-      if (skillPayloads.length) {
-        const updatedSkills = await updateSkills(supabaseClient, skillPayloads);
-
-        skills = skills.map((skill) => updatedSkills.find((updatedSkill) => updatedSkill.id === skill.id) || skill);
-        skillForms = createSkillForms(skills);
-      }
-      dashboardSaveStatus = "Saved";
-      isDashboardSaving = false;
-      renderResonances();
-      dashboardSaveStatusTimer = window.setTimeout(() => {
-        dashboardSaveStatus = "";
-        dashboardSaveStatusTimer = null;
-        renderResonances();
-      }, 1600);
-    } catch (error) {
-      console.error("Dashboard settings could not be updated", error);
-      dashboardSaveStatus = "Could not save";
-      isDashboardSaving = false;
-      renderResonances();
-      setStatus(error?.message || "Dashboard settings could not be updated.");
-    }
-  };
-
-  const updateGameField = (field, value) => {
-    gameForm = {
-      ...gameForm,
-      [field]: getDisplayValue(value)
-    };
-    markDashboardDirty();
-    renderCore();
-    renderCoreParameters();
-    if (field === "ultimate_link") {
-      ultimateTeammateSkillLabel = "";
-      refreshUltimateTeammateSkillLabel();
-      renderResonances();
-    }
-  };
-
-  const updateSkillField = (skillId, field, value) => {
-    skillForms = skillForms.map((skill) => (
-      skill.id === skillId
-        ? { ...skill, [field]: getDisplayValue(value) }
-        : skill
-    ));
-    if (getDisplayValue(currentProfile?.id) === getDisplayValue(gameForm?.ultimate_link)) {
-      ultimateTeammateSkillLabel = getOwnUltimateSkillLabel();
-    }
-    markDashboardDirty();
-    renderCore();
-    renderCoreParameters();
-  };
-
   const renderPresentControls = () => {
     if (!canvas) return;
 
@@ -1079,38 +686,6 @@ export const initJayceePage = async ({ surface = "combined" } = {}) => {
     } else {
       corePanel.insertBefore(panel, corePanel.firstChild);
     }
-  };
-
-  const renderResonances = () => {
-    if (!list) return;
-
-    setStatus("");
-    list.replaceChildren(
-      ...(isEditableProfilePage ? [
-        createPrimaryFractalPanel({
-          dynamicFractals
-        }),
-        createSkillsPanel({
-          dynamicFractals,
-          gameForm,
-          onFieldChange: updateSkillField,
-          skillForms
-        }),
-        createUltimatePanel({
-          dynamicFractals,
-          gameForm,
-          onFieldChange: updateGameField,
-          onSkillFieldChange: updateSkillField,
-          publicProfiles,
-          skillForms
-        }),
-        createDashboardSavePanel({
-          onSave: saveDashboardSettings,
-          saveDisabled: !currentProfile || isDashboardSaving,
-          saveStatus: dashboardSaveStatus
-        })
-      ] : [])
-    );
   };
 
   const renderCoreParameters = () => {
@@ -1173,12 +748,6 @@ export const initJayceePage = async ({ surface = "combined" } = {}) => {
     window.requestAnimationFrame(renderCore);
   };
 
-  const syncProfileView = () => {
-    renderCore();
-    renderCoreParameters();
-    renderResonances();
-  };
-
   try {
     const client = await window.JayceeAuth.getSupabaseClient();
     supabaseClient = client;
@@ -1199,7 +768,7 @@ export const initJayceePage = async ({ surface = "combined" } = {}) => {
 
     if (hasUserProfile && !profile) {
       shell.hidden = false;
-      setStatus("Profile not found.");
+      console.warn("Jaycee profile not found.");
       return;
     }
 
@@ -1209,7 +778,7 @@ export const initJayceePage = async ({ surface = "combined" } = {}) => {
     }
 
     dynamicFractals = hasUserProfile ? await fetchUserDynamicFractals(client, profile) : [];
-    dynamicFractalElements = rendersCore && hasUserProfile
+    dynamicFractalElements = hasUserProfile
       ? await fetchDynamicFractalElements(client, dynamicFractals.map((fractal) => fractal.id))
       : [];
     skills = hasUserProfile
@@ -1220,10 +789,8 @@ export const initJayceePage = async ({ surface = "combined" } = {}) => {
     gameForm = createGameForm(gameSettings);
 
     publicProfiles = (isPresentPage || hasUserProfile) ? await fetchPublicProfiles(client) : [];
-    if (rendersCore) {
-      await loadUltimateTeammateSkillLabel();
-    }
-    avatarImage = rendersCore && hasUserProfile
+    await loadUltimateTeammateSkillLabel();
+    avatarImage = hasUserProfile
       ? await loadOptionalImage(await getAvatarImageUrl(client, profile))
       : null;
     renderCore();
@@ -1240,27 +807,21 @@ export const initJayceePage = async ({ surface = "combined" } = {}) => {
     renderVitalsPanel();
     renderPresentControls();
     renderCoreParameters();
-    renderResonances();
     scheduleRenderCore();
   } catch (error) {
     console.error("Jaycee profile load failed", error);
     shell.hidden = false;
-    setStatus(error?.message || "Profile could not be loaded.");
   }
 };
 
-export const startJayceePage = (options) => {
+export const startJayceePage = () => {
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => initJayceePage(options), { once: true });
+    document.addEventListener("DOMContentLoaded", initJayceePage, { once: true });
   } else {
-    initJayceePage(options);
+    initJayceePage();
   }
 };
 
 export const startJayceeProfilePage = () => {
-  startJayceePage({ surface: "profile" });
-};
-
-export const startJayceeDashboardPage = () => {
-  startJayceePage({ surface: "dashboard" });
+  startJayceePage();
 };

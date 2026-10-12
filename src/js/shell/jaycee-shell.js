@@ -7,8 +7,7 @@
         home: "/",
         login: "/src/html/auth/auth.html",
         signup: "/src/html/auth/auth.html?mode=signup",
-        dashboard: "/src/html/jaycee-dashboard.html",
-        editProfile: "/src/html/jaycee-edit-profile.html",
+        account: "/src/html/jaycee-account.html",
         contact: "/profile.html",
         donate: "https://buy.stripe.com/14A14o70HbZXdtr73FfQI01",
         services: "/profile.html",
@@ -73,8 +72,7 @@
                             ${isSignedIn
                                 ? `
                                     <button class="account-button account-button-ghost" type="button" data-header-logout>Log out</button>
-                                    <a class="account-button account-button-ghost" href="${routes.dashboard}">Dashboard</a>
-                                    <a class="account-button account-button-ghost" href="${routes.editProfile}">Edit profile</a>
+                                    <a class="account-button account-button-ghost" href="${routes.account}">Account</a>
                                     ${publicProfileUrl
                                         ? `<a class="account-button account-button-ghost" href="${publicProfileUrl}">Public profile</a>`
                                         : ""}
@@ -120,7 +118,7 @@
 
                 button.disabled = true;
                 await window.JayceeAuth?.signOut?.();
-                if ([routes.dashboard, routes.editProfile].includes(window.location.pathname)) {
+                if (window.location.pathname === routes.account) {
                     window.location.href = routes.login;
                     return;
                 }

@@ -121,7 +121,7 @@ export const fetchUserDynamicFractals = async (client, profile) => {
 
   const { data, error } = await client
     .from(JAYCEE_FRACTALS_TABLE)
-    .select("id, label, user_id, image, created_at, skill, time")
+    .select("id, label, user_id, created_at, skill")
     .eq("user_id", profile.id)
     .order("created_at", { ascending: true });
 
@@ -151,7 +151,7 @@ export const fetchUserGameSettings = async (client, profile) => {
 
   const { data, error } = await client
     .from(JAYCEE_GAME_TABLE)
-    .select("id, user_id, primary_fractal, primary_time, primary_distance, ultimate_fractal, ultimate_link, created_at")
+    .select("id, user_id, primary_fractal, ultimate_fractal, ultimate_link, created_at")
     .eq("user_id", profile.id)
     .maybeSingle();
 
@@ -160,16 +160,14 @@ export const fetchUserGameSettings = async (client, profile) => {
   return data || null;
 };
 
-export const upsertUserGameSettings = async (client, profile, values) => {
+export const updateUserGameSettings = async (client, profile, values) => {
   if (!profile?.id) return null;
 
   const { data, error } = await client
     .from(JAYCEE_GAME_TABLE)
-    .upsert({
-      ...values,
-      user_id: profile.id
-    }, { onConflict: "user_id" })
-    .select("id, user_id, primary_fractal, primary_time, primary_distance, ultimate_fractal, ultimate_link, created_at")
+    .update(values)
+    .eq("user_id", profile.id)
+    .select("id, user_id, primary_fractal, ultimate_fractal, ultimate_link, created_at")
     .maybeSingle();
 
   if (error) throw error;
@@ -184,7 +182,7 @@ export const fetchSkillsByIds = async (client, skillIds) => {
 
   const { data, error } = await client
     .from(JAYCEE_SKILLS_TABLE)
-    .select("id, label, ratio, created_at")
+    .select("id, label, created_at")
     .in("id", ids)
     .order("label", { ascending: true });
 
@@ -203,7 +201,28 @@ export const updateSkills = async (client, skillUpdates) => {
       .from(JAYCEE_SKILLS_TABLE)
       .update(values)
       .eq("id", id)
-      .select("id, label, ratio, created_at")
+      .select("id, label, created_at")
+      .maybeSingle();
+
+    if (error) throw error;
+
+    return data;
+  }));
+
+  return updatedRows.filter(Boolean);
+};
+
+export const updateFractalElements = async (client, elementUpdates) => {
+  const updates = (elementUpdates || []).filter((element) => element?.id);
+
+  if (!updates.length) return [];
+
+  const updatedRows = await Promise.all(updates.map(async ({ id, ...values }) => {
+    const { data, error } = await client
+      .from(JAYCEE_FRACTAL_ELEMENTS_TABLE)
+      .update(values)
+      .eq("id", id)
+      .select("*")
       .maybeSingle();
 
     if (error) throw error;

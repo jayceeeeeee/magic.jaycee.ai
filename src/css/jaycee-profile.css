@@ -14,8 +14,7 @@
   padding: calc(var(--banner-space) + 24px) 0 calc(var(--footer-space) + 24px);
 }
 
-.jaycee-profile-page.is-profile-view,
-.jaycee-profile-page.is-dashboard-view {
+.jaycee-profile-page.is-profile-view {
   width: min(100% - 28px, 560px);
   grid-template-columns: minmax(0, 1fr);
 }
@@ -27,6 +26,10 @@
   align-items: start;
   margin: 0 auto;
   padding: calc(var(--banner-space) + 24px) 0 calc(var(--footer-space) + 24px);
+}
+
+.jaycee-settings-page.is-account-page {
+  width: min(100% - 28px, 980px);
 }
 
 .jaycee-profile-core,
@@ -97,8 +100,7 @@
     var(--card);
 }
 
-.jaycee-profile-page.is-profile-view .jaycee-profile-core,
-.jaycee-profile-page.is-dashboard-view .jaycee-profile-resonances {
+.jaycee-profile-page.is-profile-view .jaycee-profile-core {
   width: 100%;
 }
 
@@ -415,6 +417,68 @@
 .profile-location-field,
 .profile-settings-actions {
   grid-column: 1 / -1;
+}
+
+.jaycee-account-sections {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.jaycee-account-section {
+  min-width: 0;
+}
+
+.jaycee-account-section.is-character,
+.jaycee-account-section.is-items,
+.jaycee-account-section.is-maps,
+.jaycee-account-section.is-skills {
+  grid-column: 1 / -1;
+}
+
+.jaycee-account-section-content {
+  display: grid;
+  gap: 12px;
+}
+
+.jaycee-account-theme,
+.jaycee-account-form {
+  width: 100%;
+}
+
+.jaycee-account-form {
+  margin: 0;
+}
+
+.jaycee-item-elements-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.jaycee-account-skill-list {
+  display: grid;
+  gap: 10px;
+}
+
+.jaycee-account-skill-row {
+  align-items: center;
+}
+
+.jaycee-account-skill-row label {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.jaycee-account-skill-row span:not(.profile-skill-badge) {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 .profile-details-controls h2 {
@@ -784,17 +848,6 @@
   pointer-events: none;
 }
 
-.profile-primary-fractal-panel,
-.profile-skills-panel,
-.profile-dashboard-save-panel {
-  grid-column: 1 / -1;
-}
-
-.profile-dashboard-save-panel {
-  display: grid;
-  gap: 7px;
-}
-
 .profile-resonance-column-title {
   margin: 0;
   color: var(--text);
@@ -844,8 +897,7 @@
 
 .profile-primary-fractal-select,
 .profile-primary-fractal-field select,
-.profile-primary-fractal-field input,
-.profile-primary-fractal-save {
+.profile-primary-fractal-field input {
   width: 100%;
   min-width: 0;
   min-height: 38px;
@@ -860,8 +912,7 @@
 
 .profile-primary-fractal-select:focus,
 .profile-primary-fractal-field select:focus,
-.profile-primary-fractal-field input:focus,
-.profile-primary-fractal-save:focus-visible {
+.profile-primary-fractal-field input:focus {
   border-color: rgba(var(--accent-rgb), 0.58);
 }
 
@@ -1012,50 +1063,6 @@
     grid-template-columns: 1fr;
   }
 
-}
-
-.profile-primary-fractal-save {
-  background:
-    linear-gradient(90deg, rgba(var(--accent-rgb), 0.24), rgba(var(--accent-rgb), 0.08)),
-    rgba(0, 0, 0, 0.18);
-  cursor: pointer;
-  font-weight: 700;
-  transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 120ms ease;
-}
-
-.profile-primary-fractal-save:hover,
-.profile-primary-fractal-save:focus-visible {
-  border-color: rgba(124, 255, 120, 0.62);
-  background:
-    linear-gradient(90deg, rgba(124, 255, 120, 0.24), rgba(var(--accent-rgb), 0.12)),
-    rgba(0, 0, 0, 0.22);
-  color: rgba(124, 255, 120, 0.96);
-}
-
-.profile-primary-fractal-save:active {
-  transform: translateY(1px);
-}
-
-.profile-primary-fractal-save:disabled {
-  cursor: default;
-  opacity: 0.56;
-  transform: none;
-}
-
-.profile-primary-fractal-save:disabled:hover {
-  border-color: var(--field-border-soft);
-  background:
-    linear-gradient(90deg, rgba(var(--accent-rgb), 0.24), rgba(var(--accent-rgb), 0.08)),
-    rgba(0, 0, 0, 0.18);
-  color: var(--text);
-}
-
-.profile-primary-fractal-status {
-  margin: 0;
-  color: var(--muted);
-  font-family: "Share Tech Mono", monospace;
-  font-size: 0.72rem;
-  line-height: 1.2;
 }
 
 .profile-resonance-item {

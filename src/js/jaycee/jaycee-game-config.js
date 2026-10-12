@@ -22,7 +22,6 @@ export const JAYCEE_GAME_CONFIG = {
     }
   ],
   ultimate: {
-    fractalLabel: "Body",
-    skillLabel: "Love Algorithm"
+    fractalLabel: "Body"
   }
 };
