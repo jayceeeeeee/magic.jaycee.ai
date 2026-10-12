@@ -237,9 +237,9 @@
   z-index: 1;
   width: min(100%, 540px);
   display: grid;
-  gap: 9px;
+  gap: 11px;
   margin-top: 14px;
-  padding: 10px 12px;
+  padding: 11px 12px 12px;
   border: 1px solid rgba(var(--accent-rgb), 0.28);
   border-radius: 7px;
   background:
@@ -258,7 +258,9 @@
 
 .profile-parameter-section {
   display: grid;
-  gap: 5px;
+  gap: 7px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(var(--accent-rgb), 0.18);
 }
 
 .profile-parameter-section h3 {
@@ -274,6 +276,7 @@
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
+  padding-bottom: 2px;
 }
 
 .profile-ability-button {
@@ -294,7 +297,7 @@
   line-height: 0.95;
   overflow-wrap: anywhere;
   text-transform: uppercase;
-  transition: border-color 160ms ease, color 160ms ease, background 160ms ease, transform 120ms ease;
+  transition: border-color 160ms ease, box-shadow 160ms ease, color 160ms ease, background 160ms ease, opacity 160ms ease, transform 120ms ease;
 }
 
 .profile-ability-button::after {
@@ -318,9 +321,69 @@
   color: rgba(124, 255, 120, 0.98);
 }
 
+.profile-ability-button.is-passive {
+  border-color: rgba(255, 255, 255, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 70%),
+    rgba(0, 0, 0, 0.24);
+  color: rgba(255, 255, 255, 0.76);
+  cursor: default;
+}
+
+.profile-ability-button.is-active-skill {
+  border-color: rgba(var(--accent-rgb), 0.32);
+  background:
+    linear-gradient(180deg, rgba(var(--accent-rgb), 0.15), rgba(255, 255, 255, 0.02)),
+    rgba(0, 0, 0, 0.18);
+}
+
+.profile-ability-button.is-active-skill.is-active {
+  border-color: rgba(124, 255, 120, 0.62);
+  background:
+    linear-gradient(180deg, rgba(124, 255, 120, 0.2), rgba(var(--accent-rgb), 0.06)),
+    rgba(0, 0, 0, 0.24);
+  color: rgba(124, 255, 120, 0.98);
+}
+
+.profile-ability-button.is-active:not(.is-passive) {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 16px rgba(124, 255, 120, 0.12);
+}
+
+.profile-ability-button.is-ultimate {
+  border-color: rgba(255, 215, 107, 0.46);
+  background:
+    linear-gradient(180deg, rgba(255, 215, 107, 0.18), rgba(var(--accent-rgb), 0.05)),
+    rgba(0, 0, 0, 0.2);
+  color: #ffd86f;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.profile-ability-button.is-ultimate.is-active {
+  border-color: rgba(255, 225, 126, 0.78);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 0 18px rgba(255, 215, 107, 0.18);
+}
+
 .profile-ability-button.is-locked {
-  color: var(--muted);
-  filter: saturate(0.52);
+  border-color: rgba(255, 255, 255, 0.13);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 70%),
+    rgba(0, 0, 0, 0.28);
+  color: rgba(255, 255, 255, 0.48);
+  filter: saturate(0.35);
+}
+
+.profile-ability-button.is-ultimate.is-locked {
+  border-color: rgba(255, 215, 107, 0.2);
+  color: rgba(255, 225, 150, 0.52);
+  box-shadow: none;
+}
+
+.profile-ability-button.is-locked::after {
+  color: rgba(255, 255, 255, 0.42);
 }
 
 .profile-ability-button:hover,
@@ -328,6 +391,14 @@
   border-color: rgba(var(--accent-rgb), 0.58);
   outline: none;
   transform: translateY(-1px);
+}
+
+.profile-ability-button.is-passive:hover {
+  transform: none;
+}
+
+.profile-ability-button.is-locked:hover {
+  border-color: rgba(255, 255, 255, 0.22);
 }
 
 .profile-parameter-list {

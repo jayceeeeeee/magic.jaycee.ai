@@ -492,7 +492,7 @@ const createFractalParameterPanel = ({
 
   section.className = "profile-parameter-panel";
   section.dataset.profileParameters = "";
-  heading.textContent = "Description";
+  heading.textContent = "Skills";
   buttons.className = "profile-ability-bar";
   description.className = "profile-parameter-section";
   list.className = "profile-parameter-list";
@@ -507,6 +507,7 @@ const createFractalParameterPanel = ({
         label: "Zone",
         value: formatDistance(passiveModel.distanceMeters) || "0m"
       }],
+      type: "passive",
       unlockLevel: 0
     });
   }
@@ -526,6 +527,7 @@ const createFractalParameterPanel = ({
         label: "Skill",
         value: fractalModel.skillLabel
       }],
+      type: "active",
       unlockLevel: abilities.length
     });
   });
@@ -544,6 +546,7 @@ const createFractalParameterPanel = ({
         label: "Skill",
         value: ultimateModel.skillLabel || "No skill"
       }],
+      type: "ultimate",
       unlockLevel: 4
     });
   }
@@ -558,15 +561,17 @@ const createFractalParameterPanel = ({
     button.className = "profile-ability-button";
     button.classList.toggle("is-active", index === activeIndex);
     button.classList.toggle("is-locked", isLocked);
+    button.classList.add(ability.type === "active" ? "is-active-skill" : `is-${ability.type}`);
     button.type = "button";
     button.textContent = ability.label;
-    button.dataset.state = isLocked ? "Locked" : "Ready";
+    button.dataset.state = ability.type === "passive" ? "Passive" : isLocked ? "Locked" : ability.type === "ultimate" ? "Ultimate" : "Ready";
+    button.setAttribute("aria-pressed", String(index === activeIndex));
     button.addEventListener("click", () => onSelect?.(index));
     buttons.append(button);
   });
 
-  if (activeAbility) {
-    descriptionTitle.textContent = activeAbility.label;
+  if (activeAbility && currentLevel >= activeAbility.unlockLevel) {
+    descriptionTitle.textContent = "Description";
     activeAbility.rows.forEach((row) => {
       const label = document.createElement("dt");
       const value = document.createElement("dd");
@@ -587,7 +592,11 @@ const createFractalParameterPanel = ({
     description.append(descriptionTitle, list);
   }
 
-  section.append(heading, buttons, description);
+  section.append(heading, buttons);
+
+  if (description.childElementCount) {
+    section.append(description);
+  }
 
   return section;
 };
@@ -604,8 +613,10 @@ const createProfileCoreState = ({
     activeSquareNumber: 0,
     metrics: PROFILE_CORE_METRICS,
     squareBorderAlpha: 0.46,
-    squareFillAlpha: hasUserProfile ? undefined : PROFILE_RING_FILL_ALPHA,
+    squareFillAlpha: hasUserProfile ? 0 : PROFILE_RING_FILL_ALPHA,
     squareCellBorderAlpha: 0.34,
+    squareSubCellBorderAlpha: hasUserProfile ? 0.18 : undefined,
+    showSquareInteriorFractals: hasUserProfile,
     mapSquare: null,
     squareBackgroundImage: null,
     squareCenterBackgroundImage: avatarImage

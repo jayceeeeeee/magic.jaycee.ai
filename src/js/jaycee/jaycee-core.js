@@ -741,6 +741,8 @@ const drawRing = (context, metrics, options) => {
 };
 
 const drawGradientSquareCell = (context, x, y, size, colors) => {
+  if ((colors.alpha ?? 1) <= 0) return;
+
   const gradient = context.createLinearGradient(x, y, x + size, y + size);
 
   gradient.addColorStop(0, colors.start);
@@ -750,6 +752,29 @@ const drawGradientSquareCell = (context, x, y, size, colors) => {
   context.globalAlpha = colors.alpha ?? 1;
   context.fillStyle = gradient;
   context.fillRect(x, y, size, size);
+  context.restore();
+};
+
+const drawSquareInteriorFractal = (context, x, y, size, colors) => {
+  const subCellSize = size / SQUARE_GRID_SIZE;
+
+  context.save();
+  context.shadowColor = "transparent";
+  context.shadowBlur = 0;
+  context.strokeStyle = colors.subCellBorder || colors.cellBorder;
+  context.lineWidth = 1;
+
+  for (let index = 1; index < SQUARE_GRID_SIZE; index += 1) {
+    const offset = subCellSize * index;
+
+    context.beginPath();
+    context.moveTo(x + offset, y);
+    context.lineTo(x + offset, y + size);
+    context.moveTo(x, y + offset);
+    context.lineTo(x + size, y + offset);
+    context.stroke();
+  }
+
   context.restore();
 };
 
@@ -1178,6 +1203,10 @@ const drawSquare = (context, metrics, colors, labels = getEmptyLabels(RING_SEGME
         drawCoverImage(context, colors.centerBackgroundImage, cellX, cellY, cellSize, cellSize);
         context.restore();
       }
+
+      if (!isCenterCell && colors.showInteriorFractals) {
+        drawSquareInteriorFractal(context, cellX, cellY, cellSize, colors);
+      }
     }
   }
 
@@ -1394,10 +1423,14 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
     backgroundImage: state.squareBackgroundImage,
     centerBackgroundImage: state.squareCenterBackgroundImage,
     cellBorder: squareCellBorderColor,
+    subCellBorder: state.squareSubCellBorderAlpha === undefined
+      ? rgbToCss(squareLineRgb, 0.12)
+      : rgbToCss(squareLineRgb, state.squareSubCellBorderAlpha),
     activeFillAlpha: ACTIVE_FILL_ALPHA,
     activeSquareNumber: state.activeSquareNumber ?? 5,
     fillAlpha: state.squareFillAlpha ?? SURFACE_FILL_ALPHA,
     glow: "rgba(116, 247, 209, 0.14)",
+    showInteriorFractals: state.showSquareInteriorFractals === true,
     showMapCenterSelection: isMapCenterPositionSelected(metrics, state.mapSquare?.selectedPosition),
     palette,
     coreText: {
