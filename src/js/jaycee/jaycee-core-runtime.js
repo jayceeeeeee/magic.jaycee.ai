@@ -257,20 +257,19 @@ const getSkillById = (skillForms, skillId) => (
   (skillForms || []).find((skill) => getDisplayValue(skill.id) === getDisplayValue(skillId)) || null
 );
 
-const getUltimateModel = ({ dynamicFractals, gameForm, publicProfiles, skillForms }) => {
+const getUltimateModel = ({ dynamicFractals, gameForm, publicProfiles, ultimateTeammateSkillLabel }) => {
   const fractal = getFractalById(dynamicFractals, gameForm?.ultimate_fractal);
   const label = getDisplayValue(fractal?.label);
-  const skill = getSkillById(skillForms, fractal?.skill);
   const linkedProfile = publicProfiles.find((profile) => (
     getDisplayValue(profile.id) === getDisplayValue(gameForm?.ultimate_link)
   ));
 
-  if (!label && !skill && !linkedProfile) return null;
+  if (!label && !ultimateTeammateSkillLabel && !linkedProfile) return null;
 
   return {
     label: label || "Ultimate",
     linkedProfile,
-    skillLabel: getDisplayValue(skill?.label)
+    skillLabel: ultimateTeammateSkillLabel
   };
 };
 
@@ -831,6 +830,7 @@ export const initJayceePage = async () => {
   let supabaseClient = null;
   let skillForms = [];
   let skills = [];
+  let ultimateTeammateSkillLabel = "";
   const getElementsByFractalId = () => (
     dynamicFractalElements.reduce((elementsById, element) => {
       const fractalId = getDisplayValue(element.fractal_id) || getDisplayValue(element.fractal);
@@ -844,6 +844,52 @@ export const initJayceePage = async () => {
       return elementsById;
     }, new Map())
   );
+
+  const getOwnUltimateSkillLabel = () => {
+    const ultimateFractal = getFractalById(dynamicFractals, gameForm?.ultimate_fractal);
+    const skill = getSkillById(skillForms, ultimateFractal?.skill);
+
+    return getDisplayValue(skill?.label);
+  };
+
+  const loadUltimateTeammateSkillLabel = async () => {
+    const teammateId = getDisplayValue(gameForm?.ultimate_link);
+    const linkedProfile = publicProfiles.find((profile) => getDisplayValue(profile.id) === teammateId);
+
+    if (!teammateId || !linkedProfile || !supabaseClient) {
+      ultimateTeammateSkillLabel = "";
+      return;
+    }
+
+    if (getDisplayValue(currentProfile?.id) === teammateId) {
+      ultimateTeammateSkillLabel = getOwnUltimateSkillLabel();
+      return;
+    }
+
+    const linkedGame = await fetchUserGameSettings(supabaseClient, linkedProfile);
+    const linkedFractals = await fetchUserDynamicFractals(supabaseClient, linkedProfile);
+    const linkedUltimateFractal = getFractalById(linkedFractals, linkedGame?.ultimate_fractal);
+    const [linkedSkill] = await fetchSkillsByIds(supabaseClient, [linkedUltimateFractal?.skill]);
+
+    ultimateTeammateSkillLabel = getDisplayValue(linkedSkill?.label);
+  };
+
+  const refreshUltimateTeammateSkillLabel = async () => {
+    const teammateId = getDisplayValue(gameForm?.ultimate_link);
+
+    try {
+      await loadUltimateTeammateSkillLabel();
+      if (teammateId === getDisplayValue(gameForm?.ultimate_link)) {
+        renderCoreParameters();
+      }
+    } catch (error) {
+      console.warn("Ultimate teammate skill could not be loaded", error);
+      if (teammateId === getDisplayValue(gameForm?.ultimate_link)) {
+        ultimateTeammateSkillLabel = "";
+        renderCoreParameters();
+      }
+    }
+  };
 
   const renderDashboardSavePanel = () => {
     const existingPanel = list.querySelector("[data-profile-dashboard-save]");
@@ -870,7 +916,6 @@ export const initJayceePage = async () => {
     ));
 
     markDashboardDirty();
-    saveProfileViewState();
     renderCore();
     renderCoreParameters();
   };
@@ -936,6 +981,8 @@ export const initJayceePage = async () => {
     renderCore();
     renderCoreParameters();
     if (field === "ultimate_link") {
+      ultimateTeammateSkillLabel = "";
+      refreshUltimateTeammateSkillLabel();
       renderResonances();
     }
   };
@@ -946,6 +993,9 @@ export const initJayceePage = async () => {
         ? { ...skill, [field]: getDisplayValue(value) }
         : skill
     ));
+    if (getDisplayValue(currentProfile?.id) === getDisplayValue(gameForm?.ultimate_link)) {
+      ultimateTeammateSkillLabel = getOwnUltimateSkillLabel();
+    }
     markDashboardDirty();
     renderCore();
     renderCoreParameters();
@@ -1022,7 +1072,12 @@ export const initJayceePage = async () => {
       elementsByFractalId: getElementsByFractalId(),
       gameForm
     }) || getPassiveModel({ dynamicFractals, gameForm });
-    const ultimateModel = getUltimateModel({ dynamicFractals, gameForm, publicProfiles, skillForms });
+    const ultimateModel = getUltimateModel({
+      dynamicFractals,
+      gameForm,
+      publicProfiles,
+      ultimateTeammateSkillLabel
+    });
     const panel = createFractalParameterPanel({ activeModels, passiveModel, ultimateModel });
 
     if (!corePanel || !panel) {
@@ -1104,6 +1159,7 @@ export const initJayceePage = async () => {
     gameForm = createGameForm(gameSettings);
 
     publicProfiles = (isPresentPage || hasUserProfile) ? await fetchPublicProfiles(client) : [];
+    await loadUltimateTeammateSkillLabel();
     avatarImage = !hasUserProfile ? null : await loadOptionalImage(await getAvatarImageUrl(client, profile));
     renderCore();
     const resizeObserver = new ResizeObserver(scheduleRenderCore);
