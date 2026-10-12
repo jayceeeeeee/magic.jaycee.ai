@@ -1091,6 +1091,7 @@ const drawSquare = (context, metrics, colors, labels = getEmptyLabels(RING_SEGME
     Math.max(isCompact ? 9 : 13, metrics.ringWidth * (isCompact ? 0.28 : 0.38))
   );
   const hasBackgroundImage = Boolean(colors.backgroundImage);
+  const centerCellIndex = Math.floor(SQUARE_GRID_SIZE / 2);
   let activeCell = null;
 
   const strokeSquareLine = (drawPath, foreground, underlayWidth = 2.4) => {
@@ -1125,12 +1126,15 @@ const drawSquare = (context, metrics, colors, labels = getEmptyLabels(RING_SEGME
   for (let row = 0; row < SQUARE_GRID_SIZE; row += 1) {
     for (let column = 0; column < SQUARE_GRID_SIZE; column += 1) {
       const orderIndex = (row * SQUARE_GRID_SIZE) + column;
+      const cellX = start + (column * cellSize);
+      const cellY = start + (row * cellSize);
+      const isCenterCell = row === centerCellIndex && column === centerCellIndex;
 
       if (JAYCEE_ORDER[orderIndex] !== colors.activeSquareNumber) {
         drawGradientSquareCell(
           context,
-          start + (column * cellSize),
-          start + (row * cellSize),
+          cellX,
+          cellY,
           cellSize,
           {
             start: getSquarePaletteColor(column, row, colors.palette),
@@ -1140,8 +1144,8 @@ const drawSquare = (context, metrics, colors, labels = getEmptyLabels(RING_SEGME
         );
       } else {
         activeCell = {
-          x: start + (column * cellSize),
-          y: start + (row * cellSize)
+          x: cellX,
+          y: cellY
         };
         drawGradientSquareCell(
           context,
@@ -1164,6 +1168,15 @@ const drawSquare = (context, metrics, colors, labels = getEmptyLabels(RING_SEGME
             colors.inset
           );
         }
+      }
+
+      if (isCenterCell && colors.centerBackgroundImage) {
+        context.save();
+        context.beginPath();
+        context.rect(cellX, cellY, cellSize, cellSize);
+        context.clip();
+        drawCoverImage(context, colors.centerBackgroundImage, cellX, cellY, cellSize, cellSize);
+        context.restore();
       }
     }
   }
@@ -1379,6 +1392,7 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
   drawSquare(context, metrics, {
     border: squareBorderColor,
     backgroundImage: state.squareBackgroundImage,
+    centerBackgroundImage: state.squareCenterBackgroundImage,
     cellBorder: squareCellBorderColor,
     activeFillAlpha: ACTIVE_FILL_ALPHA,
     activeSquareNumber: state.activeSquareNumber ?? 5,

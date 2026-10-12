@@ -270,6 +270,66 @@
   text-transform: uppercase;
 }
 
+.profile-ability-bar {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.profile-ability-button {
+  position: relative;
+  min-width: 0;
+  min-height: 64px;
+  padding: 9px 7px 17px;
+  border: 1px solid rgba(var(--accent-rgb), 0.22);
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(var(--accent-rgb), 0.12), transparent 72%),
+    rgba(0, 0, 0, 0.18);
+  color: var(--text);
+  cursor: pointer;
+  font-family: "Rajdhani", sans-serif;
+  font-size: clamp(0.78rem, 2.6vw, 1rem);
+  font-weight: 800;
+  line-height: 0.95;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease, transform 120ms ease;
+}
+
+.profile-ability-button::after {
+  content: attr(data-state);
+  position: absolute;
+  right: 6px;
+  bottom: 5px;
+  left: 6px;
+  color: var(--muted);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.58rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.profile-ability-button.is-active {
+  border-color: rgba(124, 255, 120, 0.62);
+  background:
+    linear-gradient(180deg, rgba(124, 255, 120, 0.2), rgba(var(--accent-rgb), 0.06)),
+    rgba(0, 0, 0, 0.24);
+  color: rgba(124, 255, 120, 0.98);
+}
+
+.profile-ability-button.is-locked {
+  color: var(--muted);
+  filter: saturate(0.52);
+}
+
+.profile-ability-button:hover,
+.profile-ability-button:focus-visible {
+  border-color: rgba(var(--accent-rgb), 0.58);
+  outline: none;
+  transform: translateY(-1px);
+}
+
 .profile-parameter-list {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
@@ -435,6 +495,17 @@
 
 .profile-vital-bar.is-empty .profile-vital-fill {
   display: none;
+}
+
+.profile-player-level {
+  margin: 0;
+  color: var(--accent-soft);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
 }
 
 .profile-play-button {
@@ -1105,6 +1176,15 @@
 }
 
 @media (max-width: 720px) {
+  .profile-ability-bar {
+    gap: 6px;
+  }
+
+  .profile-ability-button {
+    min-height: 58px;
+    padding-inline: 4px;
+  }
+
   .profile-primary-fractal-fields,
   .profile-skill-row,
   .profile-skill-card-line {

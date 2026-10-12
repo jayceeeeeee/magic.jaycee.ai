@@ -9,7 +9,6 @@ import {
 import {
   createPlayerForGame,
   fetchPlayerForGame,
-  fetchDynamicFractalElements,
   fetchProfileByUserId,
   fetchProfileByUsername,
   fetchPublicProfiles,
@@ -30,9 +29,6 @@ const PROFILE_CORE_METRICS = {
 };
 const PROFILE_RING_FILL_ALPHA = 0.26;
 const ACTIVE_RING_LIMIT = 3;
-const FRACTAL_SQUARE_GRID_SIZE = 3;
-const FRACTAL_GRID_DISPLAY_LIMIT = 5;
-const TRAILING_GLYPH_PATTERN = /((?:\p{Extended_Pictographic}|\p{S})(?:\uFE0F|\uFE0E)?(?:\u200D(?:\p{Extended_Pictographic}|\p{S})(?:\uFE0F|\uFE0E)?)*)\s*$/u;
 const YEAR_SECONDS = 365 * 24 * 60 * 60;
 
 const applyProfileTheme = (profile) => {
@@ -176,38 +172,10 @@ const getManaModel = ({ player, playerProfile }) => {
 
   return {
     maxAbs: Math.max(1, Math.abs(periodTarget)),
+    target: periodTarget,
     value
   };
 };
-
-const getElementLabel = (element, fallback = "") => (
-  getDisplayValue(element?.label)
-  || getDisplayValue(element?.value)
-  || getDisplayValue(element?.name)
-  || fallback
-);
-
-const getTrailingGlyph = (value) => {
-  const label = getDisplayValue(value).trim();
-  const match = label.match(TRAILING_GLYPH_PATTERN);
-
-  return match?.[1] || "";
-};
-
-const getFractalElements = (elementsByFractalId, fractalId) => (
-  (elementsByFractalId.get(getDisplayValue(fractalId)) || [])
-    .slice()
-    .sort((first, second) => {
-      const firstPosition = Number(first.position);
-      const secondPosition = Number(second.position);
-
-      if (Number.isFinite(firstPosition) && Number.isFinite(secondPosition)) {
-        return firstPosition - secondPosition;
-      }
-
-      return getDisplayValue(first.id).localeCompare(getDisplayValue(second.id));
-    })
-);
 
 const getFractalById = (dynamicFractals, fractalId) => (
   dynamicFractals.find((fractal) => getDisplayValue(fractal.id) === getDisplayValue(fractalId)) || null
@@ -222,7 +190,6 @@ const getFractalByLabel = (dynamicFractals, label) => (
 const createFractalMeasureModel = ({
   cycleSeconds,
   distanceMeters,
-  elements,
   fractal,
   passiveSeconds = null,
   skill = null,
@@ -233,7 +200,6 @@ const createFractalMeasureModel = ({
   return {
     cycleSeconds,
     distanceMeters,
-    elements,
     fractal,
     label: getDisplayValue(fractal.label) || "Fractal",
     passiveSeconds,
@@ -245,17 +211,14 @@ const createFractalMeasureModel = ({
 
 const getPassiveFractalModel = ({
   dynamicFractals,
-  elementsByFractalId,
   gameForm
 }) => {
   const fractal = getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.passive.fractalLabel)
     || getFractalById(dynamicFractals, gameForm?.primary_fractal);
-  const elements = getFractalElements(elementsByFractalId, fractal?.id);
 
   return createFractalMeasureModel({
     cycleSeconds: JAYCEE_GAME_CONFIG.passive.cycleSeconds,
     distanceMeters: JAYCEE_GAME_CONFIG.passive.zoneMeters,
-    elements,
     fractal
   });
 };
@@ -276,17 +239,8 @@ const getActiveFractals = (dynamicFractals, gameForm) => {
     ));
 };
 
-const getFractalsForCoreGrid = ({ dynamicFractals, gameForm }) => ([
-  getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.passive.fractalLabel)
-    || getFractalById(dynamicFractals, gameForm?.primary_fractal),
-  ...getActiveFractals(dynamicFractals, gameForm).slice(0, ACTIVE_RING_LIMIT),
-  getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.ultimate.fractalLabel)
-    || getFractalById(dynamicFractals, gameForm?.ultimate_fractal)
-].filter(Boolean).slice(0, FRACTAL_GRID_DISPLAY_LIMIT));
-
 const getActiveFractalModels = ({
   dynamicFractals,
-  elementsByFractalId,
   gameForm,
   skillForms
 }) => {
@@ -305,9 +259,8 @@ const getActiveFractalModels = ({
       const distanceMeters = Number.isFinite(previousDistanceMeters) && Number.isFinite(skillRatio) && skillRatio > 0
         ? previousDistanceMeters / skillRatio
         : null;
-      const elements = getFractalElements(elementsByFractalId, fractal?.id);
 
-      if (!fractal || !elements.length) return null;
+      if (!fractal) return null;
 
       previousQuestSeconds = questSeconds;
       previousDistanceMeters = distanceMeters;
@@ -315,7 +268,6 @@ const getActiveFractalModels = ({
       return createFractalMeasureModel({
         cycleSeconds: questSeconds,
         distanceMeters,
-        elements,
         fractal: {
           ...fractal,
           label: abilityConfig.fractalLabel || fractal.label
@@ -367,35 +319,6 @@ const getPublicProfileUrl = (profile) => {
   const username = getDisplayValue(profile?.username);
 
   return username ? `/src/html/jaycee-profile.html?username=${encodeURIComponent(username)}` : "";
-};
-
-const getJayceeOrderedElementGlyphs = (elements) => (
-  JAYCEE_ORDER.map((number) => getTrailingGlyph(getElementLabel(elements[number - 1])))
-);
-
-const getFractalGridSquareModel = ({ dynamicFractals, elementsByFractalId, gameForm }) => {
-  const fractals = getFractalsForCoreGrid({ dynamicFractals, gameForm });
-  const subCellLabelsByPosition = {};
-
-  fractals.forEach((fractal, index) => {
-    const position = JAYCEE_ORDER[index];
-    const elements = getFractalElements(elementsByFractalId, fractal.id);
-    const labels = getJayceeOrderedElementGlyphs(elements);
-
-    if (position && labels.some(Boolean)) {
-      subCellLabelsByPosition[position] = labels;
-    }
-  });
-
-  if (!Object.keys(subCellLabelsByPosition).length) return null;
-
-  return {
-    coreStyle: true,
-    fillAlpha: 0.08,
-    gridSize: FRACTAL_SQUARE_GRID_SIZE,
-    labels: getEmptyLabels(FRACTAL_SQUARE_GRID_SIZE * FRACTAL_SQUARE_GRID_SIZE),
-    subCellLabelsByPosition
-  };
 };
 
 const createGameSelect = (profiles, selectedUsername = "") => {
@@ -469,6 +392,8 @@ const createVitalBar = ({ centered = false, current, label, max, tone, valueText
 
 const createVitalsPanel = ({ onPlay, player, playerProfile }) => {
   const panel = document.createElement("section");
+  const level = Number(player?.level) || 0;
+  const levelText = document.createElement("p");
   const playButton = document.createElement("button");
   const lifeMaxSeconds = JAYCEE_GAME_CONFIG.lifeMaxYears * YEAR_SECONDS;
   const hasPlayer = Boolean(player);
@@ -494,10 +419,16 @@ const createVitalsPanel = ({ onPlay, player, playerProfile }) => {
       max: manaModel?.maxAbs || 1,
       tone: "mana",
       valueText: hasPlayer && manaModel
-        ? `${Number(manaModel.value.toFixed(2))}`
+        ? `${Number(manaModel.value.toFixed(2))} / ${Number(manaModel.target.toFixed(2))}`
         : ""
     })
   );
+
+  if (hasPlayer) {
+    levelText.className = "profile-player-level";
+    levelText.textContent = `Level ${level}`;
+    panel.append(levelText);
+  }
 
   if (!hasPlayer) {
     playButton.className = "profile-play-button";
@@ -541,94 +472,102 @@ const createSkillForms = (skills) => (
   }))
 );
 
-const createFractalParameterPanel = ({ activeModels, passiveModel, ultimateModel }) => {
+const createFractalParameterPanel = ({
+  activeModels,
+  currentLevel = 0,
+  onSelect,
+  passiveModel,
+  selectedIndex = 0,
+  ultimateModel
+}) => {
   if (!passiveModel && !activeModels.length && !ultimateModel) return null;
 
   const section = document.createElement("section");
   const heading = document.createElement("h2");
+  const buttons = document.createElement("div");
+  const description = document.createElement("article");
+  const descriptionTitle = document.createElement("h3");
+  const list = document.createElement("dl");
+  const abilities = [];
 
   section.className = "profile-parameter-panel";
   section.dataset.profileParameters = "";
-  heading.textContent = "Parameters";
-  section.append(heading);
+  heading.textContent = "Description";
+  buttons.className = "profile-ability-bar";
+  description.className = "profile-parameter-section";
+  list.className = "profile-parameter-list";
+
   if (passiveModel) {
-    const group = document.createElement("article");
-    const title = document.createElement("h3");
-    const list = document.createElement("dl");
-    const rows = [{
-      label: "Passive",
-      value: formatDuration(passiveModel.cycleSeconds, { compact: false }) || "00:00:00"
-    }, {
-      label: "Zone",
-      value: formatDistance(passiveModel.distanceMeters) || "0m"
-    }];
-
-    group.className = "profile-parameter-section";
-    title.textContent = passiveModel.label;
-    list.className = "profile-parameter-list";
-    rows.forEach((row) => {
-      const label = document.createElement("dt");
-      const value = document.createElement("dd");
-
-      label.textContent = row.label;
-      value.textContent = row.value;
-      list.append(label, value);
+    abilities.push({
+      label: passiveModel.label,
+      rows: [{
+        label: "Passive",
+        value: formatDuration(passiveModel.cycleSeconds, { compact: false }) || "00:00:00"
+      }, {
+        label: "Zone",
+        value: formatDistance(passiveModel.distanceMeters) || "0m"
+      }],
+      unlockLevel: 0
     });
-    group.append(title, list);
-    section.append(group);
   }
   activeModels.forEach((fractalModel) => {
-    const group = document.createElement("article");
-    const title = document.createElement("h3");
-    const list = document.createElement("dl");
-    const rows = [{
-      label: "Passive",
-      value: formatDuration(fractalModel.passiveSeconds, { compact: false }) || "00:00:00"
-    }, {
-      label: "Active",
-      value: formatDuration(fractalModel.questSeconds, { compact: false }) || "00:00:00"
-    }, {
-      label: "Zone",
-      value: formatDistance(fractalModel.distanceMeters) || "0m"
-    }, {
-      label: "Skill",
-      value: fractalModel.skillLabel
-    }];
-
-    group.className = "profile-parameter-section";
-    title.textContent = fractalModel.label;
-    list.className = "profile-parameter-list";
-    rows.forEach((row) => {
-      const label = document.createElement("dt");
-      const value = document.createElement("dd");
-
-      label.textContent = row.label;
-      value.textContent = row.value;
-      list.append(label, value);
+    abilities.push({
+      label: fractalModel.label,
+      rows: [{
+        label: "Passive",
+        value: formatDuration(fractalModel.passiveSeconds, { compact: false }) || "00:00:00"
+      }, {
+        label: "Active",
+        value: formatDuration(fractalModel.questSeconds, { compact: false }) || "00:00:00"
+      }, {
+        label: "Zone",
+        value: formatDistance(fractalModel.distanceMeters) || "0m"
+      }, {
+        label: "Skill",
+        value: fractalModel.skillLabel
+      }],
+      unlockLevel: abilities.length
     });
-    group.append(title, list);
-    section.append(group);
   });
 
   if (ultimateModel) {
-    const group = document.createElement("article");
-    const title = document.createElement("h3");
-    const list = document.createElement("dl");
     const profileUrl = getPublicProfileUrl(ultimateModel.linkedProfile);
-    const rows = [{
-      href: profileUrl,
-      isProfileLink: true,
-      label: "Teammate",
-      value: getDisplayValue(ultimateModel.linkedProfile?.username) || "No teammate"
-    }, {
-      label: "Skill",
-      value: ultimateModel.skillLabel || "No skill"
-    }];
 
-    group.className = "profile-parameter-section";
-    title.textContent = ultimateModel.label;
-    list.className = "profile-parameter-list";
-    rows.forEach((row) => {
+    abilities.push({
+      label: ultimateModel.label,
+      rows: [{
+        href: profileUrl,
+        isProfileLink: true,
+        label: "Teammate",
+        value: getDisplayValue(ultimateModel.linkedProfile?.username) || "No teammate"
+      }, {
+        label: "Skill",
+        value: ultimateModel.skillLabel || "No skill"
+      }],
+      unlockLevel: 4
+    });
+  }
+
+  const activeIndex = Math.min(Math.max(0, selectedIndex), Math.max(0, abilities.length - 1));
+  const activeAbility = abilities[activeIndex];
+
+  abilities.forEach((ability, index) => {
+    const button = document.createElement("button");
+    const isLocked = currentLevel < ability.unlockLevel;
+
+    button.className = "profile-ability-button";
+    button.classList.toggle("is-active", index === activeIndex);
+    button.classList.toggle("is-locked", isLocked);
+    button.type = "button";
+    button.textContent = ability.label;
+    button.dataset.state = isLocked ? "Locked" : "Ready";
+    button.addEventListener("click", () => onSelect?.(index));
+    buttons.append(button);
+  });
+
+  if (activeAbility) {
+    descriptionTitle.textContent = activeAbility.label;
+    activeAbility.rows.forEach((row) => {
       const label = document.createElement("dt");
       const value = document.createElement("dd");
 
@@ -645,16 +584,16 @@ const createFractalParameterPanel = ({ activeModels, passiveModel, ultimateModel
       }
       list.append(label, value);
     });
-    group.append(title, list);
-    section.append(group);
+    description.append(descriptionTitle, list);
   }
+
+  section.append(heading, buttons, description);
 
   return section;
 };
 
 const createProfileCoreState = ({
   avatarImage,
-  fractalSquare,
   hasUserProfile
 }) => {
   return {
@@ -667,8 +606,9 @@ const createProfileCoreState = ({
     squareBorderAlpha: 0.46,
     squareFillAlpha: hasUserProfile ? undefined : PROFILE_RING_FILL_ALPHA,
     squareCellBorderAlpha: 0.34,
-    mapSquare: fractalSquare,
-    squareBackgroundImage: avatarImage
+    mapSquare: null,
+    squareBackgroundImage: null,
+    squareCenterBackgroundImage: avatarImage
   };
 };
 
@@ -683,7 +623,6 @@ export const initJayceePage = async () => {
 
   if (!shell || !canvas) return;
 
-  let dynamicFractalElements = [];
   let dynamicFractals = [];
   let publicProfiles = [];
   let avatarImage = null;
@@ -693,24 +632,11 @@ export const initJayceePage = async () => {
   let gameSettings = null;
   let isPlayerSaving = false;
   let playerProfile = null;
+  let selectedAbilityIndex = 0;
   let supabaseClient = null;
   let skillForms = [];
   let skills = [];
   let ultimateTeammateSkillLabel = "";
-  const getElementsByFractalId = () => (
-    dynamicFractalElements.reduce((elementsById, element) => {
-      const fractalId = getDisplayValue(element.fractal_id) || getDisplayValue(element.fractal);
-
-    if (!fractalId) return elementsById;
-      if (!elementsById.has(fractalId)) {
-        elementsById.set(fractalId, []);
-      }
-      elementsById.get(fractalId).push(element);
-
-      return elementsById;
-    }, new Map())
-  );
-
   const getOwnUltimateSkillLabel = () => {
     const ultimateFractal = getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.ultimate.fractalLabel)
       || getFractalById(dynamicFractals, gameForm?.ultimate_fractal);
@@ -764,6 +690,7 @@ export const initJayceePage = async () => {
     } finally {
       isPlayerSaving = false;
       renderVitalsPanel();
+      renderCoreParameters();
     }
   };
 
@@ -822,13 +749,11 @@ export const initJayceePage = async () => {
     const existingPanel = corePanel?.querySelector("[data-profile-parameters]");
     const activeModels = getActiveFractalModels({
       dynamicFractals,
-      elementsByFractalId: getElementsByFractalId(),
       gameForm,
       skillForms
     });
     const passiveModel = getPassiveFractalModel({
       dynamicFractals,
-      elementsByFractalId: getElementsByFractalId(),
       gameForm
     }) || getPassiveModel({ dynamicFractals, gameForm });
     const ultimateModel = getUltimateModel({
@@ -837,7 +762,17 @@ export const initJayceePage = async () => {
       publicProfiles,
       ultimateTeammateSkillLabel
     });
-    const panel = createFractalParameterPanel({ activeModels, passiveModel, ultimateModel });
+    const panel = createFractalParameterPanel({
+      activeModels,
+      currentLevel: Number(currentPlayer?.level) || 0,
+      onSelect: (index) => {
+        selectedAbilityIndex = index;
+        renderCoreParameters();
+      },
+      passiveModel,
+      selectedIndex: selectedAbilityIndex,
+      ultimateModel
+    });
 
     if (!corePanel || !panel) {
       existingPanel?.remove();
@@ -854,16 +789,8 @@ export const initJayceePage = async () => {
   const renderCore = () => {
     if (!canvas) return;
 
-    const elementsByFractalId = getElementsByFractalId();
-    const fractalSquare = getFractalGridSquareModel({
-      dynamicFractals,
-      elementsByFractalId,
-      gameForm
-    });
-
     const coreState = createProfileCoreState({
       avatarImage,
-      fractalSquare,
       hasUserProfile
     });
     drawJaycee(canvas, coreState);
@@ -910,9 +837,6 @@ export const initJayceePage = async () => {
     }
 
     dynamicFractals = hasUserProfile ? await fetchUserDynamicFractals(client, profile) : [];
-    dynamicFractalElements = hasUserProfile
-      ? await fetchDynamicFractalElements(client, dynamicFractals.map((fractal) => fractal.id))
-      : [];
     skills = hasUserProfile
       ? await fetchSkillsByIds(client, dynamicFractals.map((fractal) => fractal.skill))
       : [];
