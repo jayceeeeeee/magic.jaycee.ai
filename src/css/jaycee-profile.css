@@ -164,6 +164,7 @@
 }
 
 .profile-vital-track {
+  position: relative;
   height: 14px;
   overflow: hidden;
   border: 1px solid rgba(0, 0, 0, 0.58);
@@ -176,7 +177,20 @@
     0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
+.profile-vital-bar.is-centered .profile-vital-track::after {
+  content: "";
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  left: 50%;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.34);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.26);
+}
+
 .profile-vital-fill {
+  position: absolute;
+  left: 0;
   height: 100%;
   min-width: 3px;
   display: block;
@@ -417,6 +431,40 @@
 .profile-location-field,
 .profile-settings-actions {
   grid-column: 1 / -1;
+}
+
+.profile-vital-bar.is-empty .profile-vital-fill {
+  display: none;
+}
+
+.profile-play-button {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid rgba(124, 255, 120, 0.48);
+  border-radius: 6px;
+  background:
+    linear-gradient(90deg, rgba(124, 255, 120, 0.24), rgba(var(--accent-rgb), 0.08)),
+    rgba(0, 0, 0, 0.22);
+  color: rgba(124, 255, 120, 0.96);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  transition: border-color 160ms ease, background 160ms ease, transform 120ms ease;
+}
+
+.profile-play-button:hover,
+.profile-play-button:focus-visible {
+  border-color: rgba(124, 255, 120, 0.72);
+  background:
+    linear-gradient(90deg, rgba(124, 255, 120, 0.32), rgba(var(--accent-rgb), 0.12)),
+    rgba(0, 0, 0, 0.26);
+  outline: none;
+}
+
+.profile-play-button:active {
+  transform: translateY(1px);
 }
 
 .jaycee-account-sections {

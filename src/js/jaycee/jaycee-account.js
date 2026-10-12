@@ -19,15 +19,6 @@ import {
 import { getTimezoneForCoordinates } from "../services/timezone.js";
 import { createLocationSearch } from "../ui/locationSearch.js";
 
-const CHARACTER_FIELDS = ["username", "avatar_path", "full_name", "sex"];
-const MAP_FIELDS = [
-  "birth_date",
-  "birth_time",
-  "birth_place",
-  "birth_place_position",
-  "birth_timezone"
-];
-
 const getLoginUrl = () => (
   new URL(
     window.JayceeAuth?.getLoginUrl
@@ -280,6 +271,13 @@ const createMapsSection = ({ profile, status }) => {
   const timezoneDisplay = document.createElement("strong");
   const positionInput = document.createElement("input");
   const timezoneInput = document.createElement("input");
+  const manaTargetField = createTextField({
+    inputMode: "decimal",
+    label: "Mana target",
+    name: "mana_target",
+    type: "number",
+    value: profile.mana_target
+  });
   let selectedLocation = getInitialBirthLocation(profile);
 
   form.className = "profile-details-controls jaycee-account-form";
@@ -293,6 +291,7 @@ const createMapsSection = ({ profile, status }) => {
   timezoneInput.type = "hidden";
   positionInput.value = getDisplayValue(profile.birth_place_position);
   timezoneInput.value = getDisplayValue(profile.birth_timezone);
+  manaTargetField.input.step = "any";
   setDerivedText(positionDisplay, positionInput.value);
   setDerivedText(timezoneDisplay, timezoneInput.value);
   derived.append(
@@ -302,7 +301,7 @@ const createMapsSection = ({ profile, status }) => {
   derived.children[0].append(positionDisplay);
   derived.children[1].append(timezoneDisplay);
   locationWrapper.append(birthPlaceField.wrapper, results);
-  form.append(birthDateField.wrapper, birthTimeField.wrapper, locationWrapper, derived, positionInput, timezoneInput);
+  form.append(birthDateField.wrapper, birthTimeField.wrapper, locationWrapper, derived, manaTargetField.wrapper, positionInput, timezoneInput);
   content.append(form);
 
   const setDerivedBirthPlaceFields = async (location) => {
@@ -372,7 +371,10 @@ const createMapsSection = ({ profile, status }) => {
           birth_place: getDisplayValue(birthPlaceField.input.value) || null,
           birth_place_position: getDisplayValue(positionInput.value) || null,
           birth_time: getDisplayValue(birthTimeField.input.value) || null,
-          birth_timezone: getDisplayValue(timezoneInput.value) || null
+          birth_timezone: getDisplayValue(timezoneInput.value) || null,
+          mana_target: Number.isFinite(Number(manaTargetField.input.value)) && getDisplayValue(manaTargetField.input.value)
+            ? Number(manaTargetField.input.value)
+            : 0
         }
       };
     },

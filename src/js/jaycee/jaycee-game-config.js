@@ -1,4 +1,5 @@
 export const JAYCEE_GAME_CONFIG = {
+  lifeMaxYears: 1000000,
   passive: {
     cycleSeconds: 31556926.08,
     fractalLabel: "Stars",

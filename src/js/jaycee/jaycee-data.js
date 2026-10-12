@@ -1,6 +1,7 @@
 export const JAYCEE_FRACTALS_TABLE = "jaycee_fractals";
 export const JAYCEE_FRACTAL_ELEMENTS_TABLE = "jaycee_fractal_elements";
 export const JAYCEE_GAME_TABLE = "jaycee_game";
+export const JAYCEE_PLAYER_TABLE = "jaycee_player";
 export const JAYCEE_SKILLS_TABLE = "jaycee_skills";
 export const PROFILE_TABLE = "profiles";
 export const USER_IMAGES_BUCKET = "users";
@@ -18,6 +19,7 @@ const PROFILE_SELECT_COLUMNS = [
   "birth_place",
   "birth_place_position",
   "birth_timezone",
+  "mana_target",
   "sex"
 ].join(", ");
 const SIGNED_IMAGE_URL_DURATION_SECONDS = 60 * 60;
@@ -168,6 +170,44 @@ export const updateUserGameSettings = async (client, profile, values) => {
     .update(values)
     .eq("user_id", profile.id)
     .select("id, user_id, primary_fractal, ultimate_fractal, ultimate_link, created_at")
+    .maybeSingle();
+
+  if (error) throw error;
+
+  return data || null;
+};
+
+export const fetchPlayerForGame = async (client, userProfile, gameProfile) => {
+  if (!userProfile?.id || !gameProfile?.id) return null;
+
+  const { data, error } = await client
+    .from(JAYCEE_PLAYER_TABLE)
+    .select("id, user_id, game_id, level, life_bar, skill_1_practice, skill_2_practice, skill_3_practice")
+    .eq("user_id", userProfile.id)
+    .eq("game_id", gameProfile.id)
+    .limit(1);
+
+  if (error) throw error;
+
+  return data?.[0] || null;
+};
+
+export const createPlayerForGame = async (client, userProfile, gameProfile, values = {}) => {
+  if (!userProfile?.id || !gameProfile?.id) return null;
+
+  const { data, error } = await client
+    .from(JAYCEE_PLAYER_TABLE)
+    .insert({
+      game_id: gameProfile.id,
+      level: 1,
+      life_bar: 0,
+      skill_1_practice: 0,
+      skill_2_practice: 0,
+      skill_3_practice: 0,
+      ...values,
+      user_id: userProfile.id
+    })
+    .select("id, user_id, game_id, level, life_bar, skill_1_practice, skill_2_practice, skill_3_practice")
     .maybeSingle();
 
   if (error) throw error;

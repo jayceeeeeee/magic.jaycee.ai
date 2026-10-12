@@ -7,6 +7,8 @@ import {
   JAYCEE_GAME_CONFIG
 } from "./jaycee-game-config.js";
 import {
+  createPlayerForGame,
+  fetchPlayerForGame,
   fetchDynamicFractalElements,
   fetchProfileByUserId,
   fetchProfileByUsername,
@@ -31,7 +33,7 @@ const ACTIVE_RING_LIMIT = 3;
 const FRACTAL_SQUARE_GRID_SIZE = 3;
 const FRACTAL_GRID_DISPLAY_LIMIT = 5;
 const TRAILING_GLYPH_PATTERN = /((?:\p{Extended_Pictographic}|\p{S})(?:\uFE0F|\uFE0E)?(?:\u200D(?:\p{Extended_Pictographic}|\p{S})(?:\uFE0F|\uFE0E)?)*)\s*$/u;
-const HEALTH_MAX_YEARS = 1000000;
+const YEAR_SECONDS = 365 * 24 * 60 * 60;
 
 const applyProfileTheme = (profile) => {
   const theme = getThemeSettingsFromProfile(profile).theme;
@@ -51,7 +53,7 @@ const getLoginUrl = () => (
 const redirectToLogin = () => {
   const loginUrl = getLoginUrl();
 
-  loginUrl.searchParams.set("redirect", window.location.pathname);
+  loginUrl.searchParams.set("redirect", `${window.location.pathname}${window.location.search}`);
   window.location.href = loginUrl.href;
 };
 
@@ -113,6 +115,69 @@ const getAgeInYears = (birthDate) => {
   }
 
   return Math.max(0, age);
+};
+
+const getAgeInSeconds = (birthDate) => {
+  const age = getAgeInYears(birthDate);
+
+  return age === null ? null : age * YEAR_SECONDS;
+};
+
+const formatYearsFromSeconds = (secondsValue) => {
+  const seconds = Number(secondsValue);
+
+  if (!Number.isFinite(seconds) || seconds <= 0) return "0y";
+
+  const years = seconds / YEAR_SECONDS;
+
+  return `${Number.isInteger(years) ? years : Number(years.toFixed(2))}y`;
+};
+
+const getCurrentPeriodBounds = (level, now = new Date()) => {
+  if (level === 1) {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+    return { end, start };
+  }
+
+  if (level === 2) {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+
+    return { end, start };
+  }
+
+  const start = new Date(now);
+  start.setMinutes(0, 0, 0);
+  const end = new Date(start);
+  end.setHours(start.getHours() + 1);
+
+  return { end, start };
+};
+
+const getManaModel = ({ player, playerProfile }) => {
+  const level = Math.min(3, Math.max(1, Number(player?.level) || 1));
+  const manaTarget = Number(playerProfile?.mana_target);
+  const abilityConfig = JAYCEE_GAME_CONFIG.activeAbilities[level - 1] || JAYCEE_GAME_CONFIG.activeAbilities[0];
+  const { end, start } = getCurrentPeriodBounds(level);
+  const periodSeconds = Math.max(1, (end.getTime() - start.getTime()) / 1000);
+  const elapsedSeconds = Math.min(periodSeconds, Math.max(0, (Date.now() - start.getTime()) / 1000));
+  const periodTarget = Number.isFinite(manaTarget)
+    ? manaTarget * (periodSeconds / YEAR_SECONDS)
+    : 0;
+  const activeCycleSeconds = periodSeconds / Math.max(1, Number(abilityConfig?.ratio) || 1);
+  const practiceSeconds = Number(player?.[`skill_${level}_practice`]) || 0;
+  const negativeMana = -periodTarget * (elapsedSeconds / periodSeconds);
+  const positiveMana = activeCycleSeconds > 0
+    ? periodTarget * (practiceSeconds / activeCycleSeconds)
+    : 0;
+  const value = negativeMana + positiveMana;
+
+  return {
+    maxAbs: Math.max(1, Math.abs(periodTarget)),
+    value
+  };
 };
 
 const getElementLabel = (element, fallback = "") => (
@@ -364,24 +429,37 @@ const createGameSelect = (profiles, selectedUsername = "") => {
   return label;
 };
 
-const createVitalBar = ({ current, label, max, tone, valueText }) => {
+const createVitalBar = ({ centered = false, current, label, max, tone, valueText }) => {
   const bar = document.createElement("div");
   const header = document.createElement("div");
   const name = document.createElement("span");
   const value = document.createElement("span");
   const track = document.createElement("div");
   const fill = document.createElement("span");
-  const progress = Number.isFinite(Number(current)) && Number.isFinite(Number(max)) && Number(max) > 0
-    ? Math.min(1, Math.max(0, Number(current) / Number(max)))
+  const numericCurrent = Number(current);
+  const numericMax = Number(max);
+  const progress = Number.isFinite(numericCurrent) && Number.isFinite(numericMax) && numericMax > 0
+    ? centered
+      ? Math.min(1, Math.max(0, (numericCurrent / numericMax + 1) / 2))
+      : Math.min(1, Math.max(0, numericCurrent / numericMax))
     : 0;
 
   bar.className = `profile-vital-bar is-${tone}`;
+  bar.classList.toggle("is-centered", centered);
+  bar.classList.toggle("is-empty", !valueText);
   header.className = "profile-vital-header";
   name.textContent = label;
   value.textContent = valueText;
   track.className = "profile-vital-track";
   fill.className = "profile-vital-fill";
-  fill.style.width = `${progress * 100}%`;
+  if (centered) {
+    const offset = Math.abs(progress - 0.5) * 100;
+
+    fill.style.left = progress >= 0.5 ? "50%" : `${50 - offset}%`;
+    fill.style.width = `${offset}%`;
+  } else {
+    fill.style.width = `${progress * 100}%`;
+  }
   header.append(name, value);
   track.append(fill);
   bar.append(header, track);
@@ -389,28 +467,45 @@ const createVitalBar = ({ current, label, max, tone, valueText }) => {
   return bar;
 };
 
-const createVitalsPanel = (profile) => {
+const createVitalsPanel = ({ onPlay, player, playerProfile }) => {
   const panel = document.createElement("section");
-  const age = getAgeInYears(profile?.birth_date);
+  const playButton = document.createElement("button");
+  const lifeMaxSeconds = JAYCEE_GAME_CONFIG.lifeMaxYears * YEAR_SECONDS;
+  const hasPlayer = Boolean(player);
+  const lifeSeconds = Number(player?.life_bar) || 0;
+  const manaModel = hasPlayer ? getManaModel({ player, playerProfile }) : null;
 
   panel.className = "profile-vitals-panel";
   panel.dataset.profileVitals = "";
   panel.replaceChildren(
     createVitalBar({
-      current: age || 0,
+      current: hasPlayer ? lifeSeconds : 0,
       label: "Health",
-      max: HEALTH_MAX_YEARS,
+      max: lifeMaxSeconds,
       tone: "health",
-      valueText: age === null ? `0 / ${HEALTH_MAX_YEARS.toLocaleString()}y` : `${age} / ${HEALTH_MAX_YEARS.toLocaleString()}y`
+      valueText: hasPlayer
+        ? `${formatYearsFromSeconds(lifeSeconds)} / ${JAYCEE_GAME_CONFIG.lifeMaxYears.toLocaleString()}y`
+        : ""
     }),
     createVitalBar({
-      current: 0,
+      centered: true,
+      current: manaModel?.value || 0,
       label: "Mana",
-      max: 1,
+      max: manaModel?.maxAbs || 1,
       tone: "mana",
-      valueText: "0 / daily quests"
+      valueText: hasPlayer && manaModel
+        ? `${Number(manaModel.value.toFixed(2))}`
+        : ""
     })
   );
+
+  if (!hasPlayer) {
+    playButton.className = "profile-play-button";
+    playButton.type = "button";
+    playButton.textContent = "Play";
+    playButton.addEventListener("click", onPlay);
+    panel.append(playButton);
+  }
 
   return panel;
 };
@@ -593,8 +688,11 @@ export const initJayceePage = async () => {
   let publicProfiles = [];
   let avatarImage = null;
   let currentProfile = null;
+  let currentPlayer = null;
   let gameForm = createEmptyGameSettings();
   let gameSettings = null;
+  let isPlayerSaving = false;
+  let playerProfile = null;
   let supabaseClient = null;
   let skillForms = [];
   let skills = [];
@@ -644,6 +742,31 @@ export const initJayceePage = async () => {
     ultimateTeammateSkillLabel = getDisplayValue(linkedSkill?.label);
   };
 
+  const handlePlayClick = async () => {
+    if (isPlayerSaving) return;
+
+    if (!playerProfile) {
+      redirectToLogin();
+      return;
+    }
+
+    if (!supabaseClient || !currentProfile) return;
+
+    isPlayerSaving = true;
+    renderVitalsPanel();
+
+    try {
+      currentPlayer = await createPlayerForGame(supabaseClient, playerProfile, currentProfile, {
+        life_bar: getAgeInSeconds(playerProfile.birth_date) || 0
+      });
+    } catch (error) {
+      console.error("Jaycee player could not be created", error);
+    } finally {
+      isPlayerSaving = false;
+      renderVitalsPanel();
+    }
+  };
+
   const renderPresentControls = () => {
     if (!canvas) return;
 
@@ -679,7 +802,11 @@ export const initJayceePage = async () => {
       return;
     }
 
-    const panel = createVitalsPanel(currentProfile);
+    const panel = createVitalsPanel({
+      onPlay: handlePlayClick,
+      player: currentPlayer,
+      playerProfile
+    });
 
     if (existingPanel) {
       existingPanel.replaceWith(panel);
@@ -765,6 +892,11 @@ export const initJayceePage = async () => {
         ? await fetchProfileByUsername(client, publicUsername)
         : await fetchProfileByUserId(client, user.id);
     currentProfile = profile;
+    playerProfile = user
+      ? getDisplayValue(profile?.id) === getDisplayValue(user.id)
+        ? profile
+        : await fetchProfileByUserId(client, user.id)
+      : null;
 
     if (hasUserProfile && !profile) {
       shell.hidden = false;
@@ -787,6 +919,9 @@ export const initJayceePage = async () => {
     skillForms = createSkillForms(skills);
     gameSettings = hasUserProfile ? await fetchUserGameSettings(client, profile) : null;
     gameForm = createGameForm(gameSettings);
+    currentPlayer = hasUserProfile && playerProfile
+      ? await fetchPlayerForGame(client, playerProfile, profile)
+      : null;
 
     publicProfiles = (isPresentPage || hasUserProfile) ? await fetchPublicProfiles(client) : [];
     await loadUltimateTeammateSkillLabel();
