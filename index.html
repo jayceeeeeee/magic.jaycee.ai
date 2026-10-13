@@ -11,25 +11,20 @@
   <link rel="stylesheet" href="./src/css/index.css">
 </head>
 <body data-theme="aurora">
-  <jaycee-banner></jaycee-banner>
+  <main class="game-title-screen" aria-label="Jaycee.ai title screen">
+    <div class="game-grid" aria-hidden="true"></div>
+    <div class="game-vignette" aria-hidden="true"></div>
 
-  <main class="home-frame-main">
-    <section class="home-game-room" aria-label="Game room initialization">
-      <div class="home-console is-booting" data-home-console aria-live="polite">
-        <p class="home-command-line"><span>Jaycee.ai</span><span aria-hidden="true"> &gt; </span><span>game room initialization...</span></p>
-        <p class="home-level-line" data-console-line="Unknown user..."><span aria-hidden="true">&gt;</span>Unknown user...</p>
-        <p class="home-level-line" data-console-line="New game initialized..."><span aria-hidden="true">&gt;</span>You are at level 1...<span class="cursor" aria-hidden="true">_</span></p>
-      </div>
-      <div class="home-start-panel">
-        <button class="timeline-link home-start-button" type="button" data-start-game>Start a new game</button>
-      </div>
+    <section class="game-title-stage">
+      <h1>jaycee.ai</h1>
+      <button class="game-play-button" type="button" data-start-game aria-label="Play jaycee.ai">
+        <span class="game-play-ring" aria-hidden="true"></span>
+        <img src="./src/assets/brand/logo_trans_white.png" alt="">
+        <span class="game-play-label">Play</span>
+      </button>
     </section>
   </main>
 
-  <jaycee-footer></jaycee-footer>
-
-  <script src="./src/js/shell/shell.js"></script>
-  <script src="./src/js/auth/auth.js"></script>
   <script src="./src/js/index.js"></script>
 </body>
 </html>
