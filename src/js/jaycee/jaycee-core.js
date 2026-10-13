@@ -158,7 +158,10 @@ const getCanvasMetrics = (canvas, ringCount, options = {}) => {
   const safeRingCount = Math.max(0, ringCount);
   const mapSquareGridSize = Math.max(1, Number(options.mapSquareGridSize) || 1);
   const mapSquareCoreSpan = mapSquareGridSize % 2 === 0 ? 2 : 1;
-  const padding = Math.max(14, size * 0.035);
+  const usesFullSquare = options.fullSquare === true && safeRingCount === 0;
+  const padding = usesFullSquare
+    ? Math.max(6, size * 0.012)
+    : Math.max(14, size * 0.035);
   const outerRadius = center - padding;
   const ringWidthMax = options.ringWidthMax ?? CORE_RING_WIDTH_MAX;
   const ringWidthMin = options.ringWidthMin ?? CORE_RING_WIDTH_MIN;
@@ -175,7 +178,9 @@ const getCanvasMetrics = (canvas, ringCount, options = {}) => {
     )
     : 0;
   const squareOuterRadius = outerRadius - (ringWidth * safeRingCount);
-  const mapSquareSize = (squareOuterRadius * 2) / Math.SQRT2;
+  const mapSquareSize = usesFullSquare
+    ? Math.max(1, size - (padding * 2))
+    : (squareOuterRadius * 2) / Math.SQRT2;
   const mapSquareCellSize = mapSquareSize / mapSquareGridSize;
   const squareSize = mapSquareCellSize * mapSquareCoreSpan;
 

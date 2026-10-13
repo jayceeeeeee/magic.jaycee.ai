@@ -88,10 +88,10 @@
   display: grid;
   align-content: start;
   justify-items: center;
-  gap: 16px;
+  gap: 10px;
   overflow-x: hidden;
   overflow-y: auto;
-  padding: clamp(18px, 4vw, 42px);
+  padding: clamp(10px, 2vw, 20px);
   background:
     linear-gradient(90deg, transparent, var(--neon-line), transparent) top / 100% 2px no-repeat,
     linear-gradient(120deg, transparent, var(--neon-sheen), transparent),
@@ -109,13 +109,13 @@
 }
 
 .jaycee-profile-page.is-profile-view .jaycee-profile-canvas {
-  width: min(100%, 620px, calc(100svh - var(--banner-space) - var(--footer-space) - 190px));
+  width: 100%;
 }
 
 .jaycee-profile-canvas {
   position: relative;
   z-index: 1;
-  width: min(100%, 540px, calc(100svh - var(--banner-space) - var(--footer-space) - 132px));
+  width: 100%;
   height: auto;
   aspect-ratio: 1;
   display: block;
@@ -126,23 +126,76 @@
 .profile-vitals-panel {
   position: relative;
   z-index: 1;
-  width: min(100%, 540px);
+  width: 100%;
   display: grid;
-  gap: 8px;
+  gap: 9px;
+}
+
+.profile-player-hud {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  align-items: stretch;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid rgba(var(--accent-rgb), 0.24);
+  border-radius: 7px;
+  background:
+    linear-gradient(135deg, rgba(var(--accent-rgb), 0.1), transparent 58%),
+    rgba(0, 0, 0, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 10px 26px rgba(0, 0, 0, 0.2);
+}
+
+.profile-quest-panel {
+  border: 1px solid rgba(var(--accent-rgb), 0.24);
+  border-radius: 7px;
+}
+
+.profile-player-identity {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 4px;
+  padding: 0;
+}
+
+.profile-player-avatar {
+  width: 54px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background:
+    radial-gradient(circle, rgba(155, 216, 255, 0.18), transparent 58%),
+    rgba(0, 0, 0, 0.3);
+  color: var(--accent-soft);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 1.2rem;
+  font-weight: 800;
+  overflow: hidden;
+}
+
+.profile-player-avatar img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.profile-vital-stack {
+  display: grid;
+  align-content: center;
+  gap: 7px;
+  min-width: 0;
 }
 
 .profile-vital-bar {
   display: grid;
   gap: 4px;
-  padding: 7px 9px;
-  border: 1px solid rgba(255, 255, 255, 0.13);
-  border-radius: 6px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent),
-    rgba(0, 0, 0, 0.22);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 8px 24px rgba(0, 0, 0, 0.2);
+  min-width: 0;
 }
 
 .profile-vital-header {
@@ -165,7 +218,7 @@
 
 .profile-vital-track {
   position: relative;
-  height: 14px;
+  height: 12px;
   overflow: hidden;
   border: 1px solid rgba(0, 0, 0, 0.58);
   border-radius: 4px;
@@ -220,34 +273,19 @@
     linear-gradient(90deg, #1a5fbf, #4cb2ff 70%, #b3f5ff);
 }
 
-.jaycee-profile-core.has-theme-controls .jaycee-profile-canvas {
-  width: min(100%, clamp(300px, calc(100svh - var(--banner-space) - var(--footer-space) - 220px), 500px));
-}
-
-.jaycee-profile-core.has-fractal-controls .jaycee-profile-canvas {
-  width: min(100%, clamp(290px, calc(100svh - var(--banner-space) - var(--footer-space) - 238px), 500px));
-}
-
-.jaycee-profile-core.has-theme-controls.has-fractal-controls .jaycee-profile-canvas {
-  width: min(100%, clamp(270px, calc(100svh - var(--banner-space) - var(--footer-space) - 306px), 460px));
-}
-
 .profile-parameter-panel {
   position: relative;
   z-index: 1;
-  width: min(100%, 540px);
+  width: 100%;
   display: grid;
-  gap: 11px;
-  margin-top: 14px;
-  padding: 11px 12px 12px;
-  border: 1px solid rgba(var(--accent-rgb), 0.28);
-  border-radius: 7px;
-  background:
-    linear-gradient(90deg, rgba(var(--accent-rgb), 0.1), transparent 72%),
-    rgba(0, 0, 0, 0.16);
+  gap: 8px;
+  margin-top: 4px;
+  padding: 0;
 }
 
-.profile-parameter-panel h2 {
+.profile-parameter-panel h2,
+.profile-inventory-title {
+  width: 100%;
   margin: 0;
   color: var(--accent-soft);
   font-family: "Share Tech Mono", monospace;
@@ -256,11 +294,30 @@
   text-transform: uppercase;
 }
 
+.profile-inventory-title {
+  position: relative;
+  z-index: 1;
+  margin-top: 2px;
+}
+
 .profile-parameter-section {
   display: grid;
   gap: 7px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(var(--accent-rgb), 0.18);
+  margin-top: 2px;
+  padding: 10px 11px 11px;
+  border: 1px solid rgba(var(--accent-rgb), 0.26);
+  border-radius: 7px;
+  background:
+    linear-gradient(90deg, rgba(var(--accent-rgb), 0.11), transparent 72%),
+    rgba(0, 0, 0, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 12px 28px rgba(0, 0, 0, 0.2);
+  animation: profile-ability-description-in 180ms ease-out both;
+}
+
+.profile-parameter-section.is-closing {
+  animation: profile-ability-description-out 180ms ease-in both;
 }
 
 .profile-parameter-section h3 {
@@ -275,15 +332,15 @@
 .profile-ability-bar {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
   padding-bottom: 2px;
 }
 
 .profile-ability-button {
   position: relative;
   min-width: 0;
-  min-height: 64px;
-  padding: 9px 7px 17px;
+  min-height: 52px;
+  padding: 7px 6px 15px;
   border: 1px solid rgba(var(--accent-rgb), 0.22);
   border-radius: 6px;
   background:
@@ -292,7 +349,7 @@
   color: var(--text);
   cursor: pointer;
   font-family: "Rajdhani", sans-serif;
-  font-size: clamp(0.78rem, 2.6vw, 1rem);
+  font-size: clamp(0.74rem, 2.2vw, 0.92rem);
   font-weight: 800;
   line-height: 0.95;
   overflow-wrap: anywhere;
@@ -327,7 +384,7 @@
     linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 70%),
     rgba(0, 0, 0, 0.24);
   color: rgba(255, 255, 255, 0.76);
-  cursor: default;
+  cursor: pointer;
 }
 
 .profile-ability-button.is-active-skill {
@@ -394,7 +451,7 @@
 .profile-ability-lock-status {
   position: absolute;
   right: 6px;
-  bottom: 5px;
+  bottom: 4px;
   left: 6px;
   display: inline-flex;
   align-items: center;
@@ -602,32 +659,81 @@
   display: none;
 }
 
-.profile-player-status {
+.profile-quest-panel {
   position: relative;
   display: grid;
-  gap: 7px;
-  padding: 10px 12px 12px;
-  border: 1px solid rgba(124, 255, 120, 0.34);
-  border-radius: 7px;
-  background:
-    linear-gradient(90deg, rgba(124, 255, 120, 0.14), rgba(var(--accent-rgb), 0.06) 54%, transparent),
-    radial-gradient(circle at 50% 0, rgba(155, 216, 255, 0.16), transparent 62%),
-    rgba(0, 0, 0, 0.24);
+  gap: 8px;
+  padding: 10px 12px 11px;
+  border-color: rgba(155, 216, 255, 0.34);
+  background: rgba(0, 0, 0, 0.24);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.09),
     0 12px 28px rgba(0, 0, 0, 0.24),
-    0 0 18px rgba(124, 255, 120, 0.08);
+    0 0 18px rgba(76, 178, 255, 0.08);
 }
 
-.profile-player-status::before {
+@keyframes profile-ability-description-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes profile-ability-description-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.profile-quest-panel::before {
   content: "";
   position: absolute;
   top: -1px;
   right: 14%;
   left: 14%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(124, 255, 120, 0.88), transparent);
-  box-shadow: 0 0 12px rgba(124, 255, 120, 0.45);
+  background: linear-gradient(90deg, transparent, rgba(155, 216, 255, 0.88), transparent);
+  box-shadow: 0 0 12px rgba(76, 178, 255, 0.45);
+}
+
+.profile-quest-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(155, 216, 255, 0.18);
+  color: #9bd8ff;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.profile-quest-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(155, 216, 255, 0.62);
+  border-radius: 999px;
+  background: rgba(76, 178, 255, 0.14);
+  color: #b3f5ff;
+  font-size: 0.72rem;
+  box-shadow: 0 0 12px rgba(76, 178, 255, 0.18);
 }
 
 .profile-player-level {
@@ -635,16 +741,11 @@
   max-width: 100%;
   justify-self: center;
   margin: 0;
-  padding: 5px 12px;
-  border: 1px solid rgba(124, 255, 120, 0.38);
-  border-radius: 999px;
-  background:
-    linear-gradient(90deg, rgba(124, 255, 120, 0.18), rgba(255, 255, 255, 0.04)),
-    rgba(0, 0, 0, 0.22);
   color: var(--accent-soft);
   font-family: "Share Tech Mono", monospace;
-  font-size: 0.76rem;
-  font-weight: 800;
+  font-size: 0.72rem;
+  font-weight: 500;
+  font-style: italic;
   line-height: 1;
   text-align: center;
   text-transform: uppercase;
@@ -652,11 +753,11 @@
 
 .profile-player-quest {
   margin: 0;
-  color: var(--text);
-  font-family: "Rajdhani", sans-serif;
-  font-size: clamp(0.94rem, 2.4vw, 1.05rem);
-  font-weight: 650;
-  line-height: 1.25;
+  color: var(--muted);
+  font-family: "Share Tech Mono", monospace;
+  font-size: clamp(0.76rem, 2vw, 0.88rem);
+  font-weight: 500;
+  line-height: 1.35;
   text-align: center;
 }
 
@@ -1361,7 +1462,7 @@
   }
 
   .profile-ability-button {
-    min-height: 58px;
+    min-height: 50px;
     padding-inline: 4px;
   }
 
@@ -1419,7 +1520,7 @@
   }
 
   .jaycee-profile-core {
-    padding: 18px;
+    padding: 14px;
   }
 
   .profile-theme-controls {
@@ -1440,8 +1541,16 @@
     grid-template-columns: 1fr;
   }
 
+  .profile-player-hud {
+    grid-template-columns: 82px minmax(0, 1fr);
+  }
+
+  .profile-player-avatar {
+    width: 48px;
+  }
+
   .jaycee-profile-canvas {
-    width: min(100%, 420px);
+    width: 100%;
   }
 
   .profile-resonance-list {

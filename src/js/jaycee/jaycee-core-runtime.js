@@ -23,10 +23,7 @@ import {
 } from "./jaycee-data.js";
 
 const PROFILE_CORE_METRICS = {
-  ringMaxRadialShare: 0.34,
-  ringWidthMax: 32,
-  ringWidthMin: 14,
-  ringWidthRatio: 0.072
+  fullSquare: true
 };
 const PROFILE_RING_FILL_ALPHA = 0.26;
 const ACTIVE_RING_LIMIT = 3;
@@ -187,6 +184,10 @@ const formatMannaValue = (value, unit) => {
 
   return `${amount} ${getCurrencySymbol(unit)}`;
 };
+
+const getProfileInitial = (profile) => (
+  (getDisplayValue(profile?.username) || getDisplayValue(profile?.full_name) || "?").slice(0, 1).toUpperCase()
+);
 
 const getCurrentPeriodBounds = (level, now = new Date()) => {
   if (level === 1) {
@@ -499,14 +500,21 @@ const createVitalsPanel = ({
   gameForm,
   onPlay,
   player,
+  playerAvatarUrl = "",
   playerProfile,
   selectedAbilityIndex,
   skillForms
 }) => {
   const panel = document.createElement("section");
   const level = Number(player?.level) || 0;
-  const status = document.createElement("div");
+  const hud = document.createElement("div");
+  const identity = document.createElement("div");
+  const avatar = document.createElement("div");
   const levelBadge = document.createElement("p");
+  const bars = document.createElement("div");
+  const questPanel = document.createElement("article");
+  const questHeader = document.createElement("h2");
+  const questIcon = document.createElement("span");
   const quest = document.createElement("p");
   const playButton = document.createElement("button");
   const lifeMaxSeconds = JAYCEE_GAME_CONFIG.lifeMaxYears * YEAR_SECONDS;
@@ -523,7 +531,8 @@ const createVitalsPanel = ({
 
   panel.className = "profile-vitals-panel";
   panel.dataset.profileVitals = "";
-  panel.replaceChildren(
+  bars.className = "profile-vital-stack";
+  bars.replaceChildren(
     createVitalBar({
       current: hasPlayer ? lifeSeconds : 0,
       label: "Health",
@@ -544,14 +553,33 @@ const createVitalsPanel = ({
         : ""
     })
   );
+  panel.replaceChildren();
 
   if (hasPlayer) {
-    status.className = "profile-player-status";
+    hud.className = "profile-player-hud";
+    identity.className = "profile-player-identity";
+    avatar.className = "profile-player-avatar";
+    if (playerAvatarUrl) {
+      const image = document.createElement("img");
+
+      image.alt = "";
+      image.src = playerAvatarUrl;
+      avatar.append(image);
+    } else {
+      avatar.textContent = getProfileInitial(playerProfile);
+    }
     levelBadge.className = "profile-player-level";
     levelBadge.textContent = `Level ${level}`;
-    status.append(levelBadge);
+    identity.append(avatar, levelBadge);
+    hud.append(identity, bars);
+    panel.append(hud);
 
     if (questModel) {
+      questPanel.className = "profile-quest-panel";
+      questHeader.className = "profile-quest-title";
+      questIcon.className = "profile-quest-icon";
+      questIcon.textContent = "!";
+      questHeader.replaceChildren(questIcon, "Quest");
       quest.className = "profile-player-quest";
       quest.replaceChildren(
         "You have ",
@@ -562,13 +590,13 @@ const createVitalsPanel = ({
         Object.assign(document.createElement("strong"), { textContent: questModel.skillName }),
         "."
       );
-      status.append(quest);
+      questPanel.append(questHeader, quest);
+      panel.append(questPanel);
     }
-
-    panel.append(status);
   }
 
   if (!hasPlayer) {
+    panel.append(bars);
     playButton.className = "profile-play-button";
     playButton.type = "button";
     playButton.textContent = "Play";
@@ -632,9 +660,10 @@ const createLockedIcon = (className = "profile-ability-lock-icon") => {
 const createFractalParameterPanel = ({
   activeModels,
   currentLevel = 0,
+  isDescriptionClosing = false,
   onSelect,
   passiveModel,
-  selectedIndex = 0,
+  selectedIndex = null,
   ultimateModel
 }) => {
   if (!passiveModel && !activeModels.length && !ultimateModel) return null;
@@ -708,13 +737,15 @@ const createFractalParameterPanel = ({
     });
   }
 
-  const activeIndex = Math.min(Math.max(0, selectedIndex), Math.max(0, abilities.length - 1));
-  const activeAbility = abilities[activeIndex];
+  const activeIndex = selectedIndex === null || selectedIndex === undefined
+    ? null
+    : Math.min(Math.max(0, selectedIndex), Math.max(0, abilities.length - 1));
+  const activeAbility = activeIndex === null ? null : abilities[activeIndex];
 
   abilities.forEach((ability, index) => {
     const button = document.createElement("button");
     const isLocked = currentLevel < ability.unlockLevel;
-    const isActive = !isLocked && index === activeIndex;
+    const isActive = !isLocked && !isDescriptionClosing && index === activeIndex;
 
     button.className = "profile-ability-button";
     button.classList.toggle("is-active", isActive);
@@ -741,6 +772,7 @@ const createFractalParameterPanel = ({
 
   if (activeAbility && currentLevel >= activeAbility.unlockLevel) {
     descriptionTitle.textContent = "Description";
+    description.classList.toggle("is-closing", isDescriptionClosing);
     activeAbility.rows.forEach((row) => {
       const label = document.createElement("dt");
       const value = document.createElement("dd");
@@ -811,8 +843,11 @@ export const initJayceePage = async () => {
   let gameForm = createEmptyGameSettings();
   let gameSettings = null;
   let isPlayerSaving = false;
+  let playerAvatarUrl = "";
   let playerProfile = null;
-  let selectedAbilityIndex = 0;
+  let closingAbilityIndex = null;
+  let descriptionCloseTimer = 0;
+  let selectedAbilityIndex = null;
   let supabaseClient = null;
   let skillForms = [];
   let skills = [];
@@ -914,6 +949,7 @@ export const initJayceePage = async () => {
       gameForm,
       onPlay: handlePlayClick,
       player: currentPlayer,
+      playerAvatarUrl,
       playerProfile,
       selectedAbilityIndex,
       skillForms
@@ -931,6 +967,7 @@ export const initJayceePage = async () => {
 
     const corePanel = canvas.closest(".jaycee-profile-core");
     const existingPanel = corePanel?.querySelector("[data-profile-parameters]");
+    const existingInventoryTitle = corePanel?.querySelector("[data-profile-inventory-title]");
     const activeModels = getActiveFractalModels({
       dynamicFractals,
       gameForm,
@@ -950,24 +987,54 @@ export const initJayceePage = async () => {
       activeModels,
       currentLevel: Number(currentPlayer?.level) || 0,
       onSelect: (index) => {
+        if (descriptionCloseTimer) {
+          window.clearTimeout(descriptionCloseTimer);
+          descriptionCloseTimer = 0;
+        }
+
+        if (selectedAbilityIndex === index) {
+          closingAbilityIndex = index;
+          selectedAbilityIndex = null;
+          renderCoreParameters();
+          renderVitalsPanel();
+          descriptionCloseTimer = window.setTimeout(() => {
+            closingAbilityIndex = null;
+            descriptionCloseTimer = 0;
+            renderCoreParameters();
+          }, 180);
+          return;
+        }
+
+        closingAbilityIndex = null;
         selectedAbilityIndex = index;
-        renderVitalsPanel();
         renderCoreParameters();
+        renderVitalsPanel();
       },
+      isDescriptionClosing: closingAbilityIndex !== null,
       passiveModel,
-      selectedIndex: selectedAbilityIndex,
+      selectedIndex: closingAbilityIndex ?? selectedAbilityIndex,
       ultimateModel
     });
 
     if (!corePanel || !panel) {
       existingPanel?.remove();
+      existingInventoryTitle?.remove();
       return;
     }
 
     if (existingPanel) {
       existingPanel.replaceWith(panel);
     } else {
-      canvas.insertAdjacentElement("afterend", panel);
+      corePanel.insertBefore(panel, canvas);
+    }
+
+    if (!existingInventoryTitle) {
+      const inventoryTitle = document.createElement("h2");
+
+      inventoryTitle.className = "profile-inventory-title";
+      inventoryTitle.dataset.profileInventoryTitle = "";
+      inventoryTitle.textContent = "Inventory";
+      corePanel.insertBefore(inventoryTitle, canvas);
     }
   };
 
@@ -1031,6 +1098,14 @@ export const initJayceePage = async () => {
     currentPlayer = hasUserProfile && playerProfile
       ? await fetchPlayerForGame(client, playerProfile, profile)
       : null;
+    if (playerProfile) {
+      try {
+        playerAvatarUrl = await getAvatarImageUrl(client, playerProfile);
+      } catch (error) {
+        console.warn("Jaycee player avatar could not be loaded", error);
+        playerAvatarUrl = "";
+      }
+    }
 
     publicProfiles = (isPresentPage || hasUserProfile) ? await fetchPublicProfiles(client) : [];
     await loadUltimateTeammateSkillLabel();
