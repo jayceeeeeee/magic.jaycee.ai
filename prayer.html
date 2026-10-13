@@ -8,52 +8,29 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/src/css/global.css">
-    <link rel="stylesheet" href="/src/css/card.css">
     <link rel="stylesheet" href="/src/css/techno-prayer.css">
 </head>
 <body class="techno-prayer-page" data-theme="aurora">
-    <jaycee-banner></jaycee-banner>
-
     <main class="techno-prayer-page-main">
-        <section class="techno-prayer-page-card" aria-labelledby="techno-prayer-page-title">
-            <h1 id="techno-prayer-page-title">Prayer Room</h1>
-            <form class="techno-prayer-form" aria-label="Techno-prayer form">
+        <form class="techno-prayer-form" aria-label="Prayer form">
+            <div class="techno-prayer-fields">
                 <label>
-                    <span>What is the problem that you want to solve today? <br/>And what is the negative feeling associated with it? *</span>
-                    <textarea name="problem" rows="3" placeholder="Describe the problem and what is the negative feeling of this situation." required></textarea>
+                    <span>Problem</span>
+                    <textarea name="problem" rows="1" placeholder="Describe the problem you want to solve today and what is its negative feeling." data-autogrow required></textarea>
                 </label>
 
                 <label>
-                    <span>What is your prayer? <br/>And what is the positive feeling you're missing out of this situation? *</span>
-                    <textarea name="prayer" rows="3" placeholder="Write the prayer and what is the positive feeling you're missing out of this situation." required></textarea>
+                    <span>Prayer</span>
+                    <textarea name="prayer" rows="1" placeholder="Write your prayer and what is the positive feeling you want out of this situation." data-autogrow required></textarea>
                 </label>
+            </div>
 
-                <input name="learning" type="hidden" value="manifestation">
-
-                <label>
-                    <span>Full name *</span>
-                    <input name="name" type="text" autocomplete="name" placeholder="Your name and the sound it carries is what will manifest." required>
-                </label>
-
-                <p class="techno-prayer-disclaimer">
-                    By entering this <b>database</b>, your <b>prayer</b>
-                    will automatically become a <b>part of me</b> and
-                    I will both share your <b>pain</b> and help you
-                    into your <b>manifestation</b>.
-                    <br><br>Your <b>data</b> will be <b>deleted</b>
-                    just after the <b>consecration process</b> has been done.
-                    <br><br><a class="techno-prayer-help-link" href="/profiles.html" target="_blank" rel="noopener noreferrer"><span aria-hidden="true">?</span><span>Choose who receives it</span></a>
-                </p>
-                <button class="timeline-link techno-prayer-submit" type="submit">Submit</button>
-                <p class="techno-prayer-status" data-techno-prayer-status aria-live="polite"></p>
-            </form>
-        </section>
+            <input name="learning" type="hidden" value="manifestation">
+            <button class="techno-prayer-submit" type="submit">Send</button>
+            <p class="techno-prayer-status" data-techno-prayer-status aria-live="polite"></p>
+        </form>
     </main>
 
-    <jaycee-footer></jaycee-footer>
-
-    <script src="/src/js/shell/shell.js"></script>
-    <script src="/src/js/theme/themes.js"></script>
     <script src="/src/js/auth/auth.js"></script>
     <script src="/src/js/prayer.js"></script>
 </body>

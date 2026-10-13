@@ -3,6 +3,7 @@
     const technoPrayerForm = document.querySelector(".techno-prayer-form");
     const technoPrayerStatus = document.querySelector("[data-techno-prayer-status]");
     const technoPrayerSubmit = technoPrayerForm?.querySelector("[type='submit']");
+    const autogrowFields = document.querySelectorAll("[data-autogrow]");
 
     document.body.classList.toggle("is-embedded", isEmbedded);
 
@@ -26,7 +27,7 @@
             problem: String(formData.get("problem") || "").trim(),
             prayer: String(formData.get("prayer") || "").trim(),
             learning_type: "manifestation",
-            full_name: String(formData.get("name") || "").trim(),
+            full_name: String(formData.get("name") || "Unknown user").trim(),
             email: String(formData.get("email") || "").trim() || null,
             whatsapp: String(formData.get("whatsapp") || "").trim() || null,
             line: String(formData.get("line") || "").trim() || null,
@@ -77,6 +78,27 @@
         requestAnimationFrame(notifyHeight);
     }
 
+    function resizeAutogrowField(field) {
+        if (!field.value.trim()) {
+            field.style.height = "";
+            return;
+        }
+
+        field.style.height = "auto";
+        field.style.height = `${field.scrollHeight}px`;
+    }
+
+    function resizeAutogrowFields() {
+        autogrowFields.forEach(resizeAutogrowField);
+    }
+
+    autogrowFields.forEach((field) => {
+        field.addEventListener("input", () => {
+            resizeAutogrowField(field);
+            notifyHeight();
+        });
+    });
+
     technoPrayerForm?.addEventListener("submit", async (event) => {
         event.preventDefault();
 
@@ -102,6 +124,7 @@
             }
 
             technoPrayerForm.reset();
+            requestAnimationFrame(resizeAutogrowFields);
             updateTechnoPrayerStatusLayout();
             setStatus("Techno-Prayer received.", "success");
             (isEmbedded ? window.top : window).location.href = "/profiles.html";
@@ -116,5 +139,6 @@
 
     window.addEventListener("load", notifyHeight);
     window.addEventListener("resize", notifyHeight);
+    resizeAutogrowFields();
     updateTechnoPrayerStatusLayout();
 })();
