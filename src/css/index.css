@@ -130,17 +130,60 @@ body {
 .home-start-panel {
   display: grid;
   gap: 0;
-  justify-items: center;
+  justify-items: stretch;
   padding: 6px 0 2px;
   text-align: center;
 }
 
 .home-start-button {
+  width: 100%;
   min-height: 54px;
-  min-width: min(100%, 260px);
-  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: stretch;
   padding: 13px 28px;
+  border: 1px solid var(--neon-border);
+  border-radius: 6px;
+  background:
+    var(--button-glow),
+    var(--surface);
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
   font-size: 1.08rem;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  text-transform: uppercase;
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.home-start-button:hover,
+.home-start-button:focus-visible {
+  border-color: var(--neon-border-strong);
+  background:
+    var(--active-button-bg),
+    var(--accent);
+  color: var(--accent-ink);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.home-start-button:disabled {
+  border-color: var(--field-border-soft);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.72;
+  transform: none;
 }
 
 .cursor {
