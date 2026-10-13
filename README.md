@@ -5,15 +5,15 @@ Main Jaycee.ai app.
 ## Structure
 
 - `index.html` is the home page.
-- `profile.html` is Cedric's public profile page, migrated from the old card site.
+- `card.html` is Cedric's public card page, migrated from the old card site.
 - Root HTML pages contain the public workflow: `index.html`, `prayer.html`, `profiles.html`, `account.html`, and `auth.html`.
-- `profile.html` contains the existing Cedric/Jaycee information profile.
+- `card.html` contains the existing Cedric/Jaycee information card.
 - `src/css/global.css` contains app-wide themes, header, footer, auth page, and account page styles.
-- Root page scripts live in `src/js/` (`index.js`, `prayer.js`, `profile.js`) or their matching feature folder.
+- Root page scripts live in `src/js/` (`index.js`, `prayer.js`, `card.js`) or their matching feature folder.
 - `src/js/config/` contains shared Jaycee data access and game configuration modules.
 - `src/js/shell/shell.js` contains the app shell web components.
 - `src/js/theme/themes.js` contains theme handling.
 - `src/js/auth/` contains Supabase auth and the auth page script.
 - `src/js/jaycee/` contains the account page, profiles page, profile runtime, and profile canvas core modules.
 - `src/assets/brand/` contains Jaycee.ai logo assets.
-- `src/css/profile.css`, `src/js/profile.js`, and `src/assets/profile/` contain profile page files.
+- `src/css/card.css`, `src/js/card.js`, and `src/assets/profile/` contain card page files.

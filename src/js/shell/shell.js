@@ -8,10 +8,10 @@
         login: "/auth.html",
         signup: "/auth.html?mode=signup",
         account: "/account.html",
-        contact: "/profile.html",
+        contact: "/card.html",
         donate: "https://buy.stripe.com/14A14o70HbZXdtr73FfQI01",
-        services: "/profile.html",
-        about: "/profile.html#about",
+        services: "/card.html",
+        about: "/card.html#about",
     };
     const lightLogoSrc = new URL("assets/brand/logo_trans_black.png", assetBase).href;
     const darkLogoSrc = new URL("assets/brand/logo_trans_white.png", assetBase).href;

@@ -9,7 +9,7 @@
             "Welcome to the ",
             {
                 text: "Techno-Temple",
-                href: "./profile.html",
+                href: "./card.html",
             },
             "!...",
         ],
