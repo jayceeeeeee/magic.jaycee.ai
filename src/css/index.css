@@ -17,8 +17,32 @@ body {
 }
 
 .home-game-room {
+  position: relative;
+  width: 100%;
   display: grid;
   gap: 18px;
+  margin: 0 auto;
+  padding: 24px;
+  border: 1px solid var(--field-border);
+  border-radius: 8px;
+  background:
+    var(--panel-light),
+    var(--panel-aura),
+    var(--card);
+  box-shadow:
+    0 20px 70px rgba(0, 0, 0, 0.52),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.home-game-room::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent, var(--neon-line), transparent) top / 100% 2px no-repeat,
+    linear-gradient(120deg, transparent, var(--neon-sheen), transparent);
 }
 
 .home-console {
@@ -132,35 +156,6 @@ body {
   50% {
     opacity: 0;
   }
-}
-
-.home-techno-prayer-frame {
-  width: 100%;
-  min-height: 560px;
-  display: block;
-  border: 0;
-  background: transparent;
-}
-
-.home-form-shell {
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
-  transform: translateY(-8px);
-  transition:
-    max-height 560ms ease,
-    opacity 300ms ease,
-    transform 420ms ease;
-}
-
-.home-form-shell[hidden] {
-  display: none;
-}
-
-.home-form-shell.is-revealed {
-  max-height: var(--home-frame-height, 720px);
-  opacity: 1;
-  transform: translateY(0);
 }
 
 @media (max-width: 620px) {

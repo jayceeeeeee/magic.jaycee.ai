@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jaycee Profile | jaycee.ai</title>
+  <title>Profiles | jaycee.ai</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@500;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -13,6 +13,18 @@
 <body data-theme="aurora">
   <jaycee-banner></jaycee-banner>
 
+  <main class="jaycee-settings-page profiles-list-page" data-profiles-list-shell hidden>
+    <section class="jaycee-settings-panel profiles-list-panel" aria-labelledby="profiles-list-title">
+      <div class="profile-settings-header">
+        <p class="profile-kicker">jaycee.ai &gt; prayer target</p>
+        <h1 id="profiles-list-title">Profiles</h1>
+        <p class="profiles-list-question">To whom would you like to send this prayer?</p>
+      </div>
+      <div class="profile-resonance-status" data-profiles-list-status aria-live="polite">Loading profiles...</div>
+      <div class="profiles-grid" data-profiles-list></div>
+    </section>
+  </main>
+
   <main class="jaycee-profile-page is-profile-view" data-profile-shell data-profile-mode="public" hidden>
     <section class="jaycee-profile-core" aria-label="Jaycee public profile core">
       <canvas class="jaycee-profile-canvas" data-profile-canvas aria-label="Jaycee public profile core"></canvas>
@@ -21,9 +33,9 @@
 
   <jaycee-footer></jaycee-footer>
 
-  <script src="/src/js/shell/jaycee-shell.js"></script>
-  <script src="/src/js/theme/jaycee-themes.js"></script>
+  <script src="/src/js/shell/shell.js"></script>
+  <script src="/src/js/theme/themes.js"></script>
   <script src="/src/js/auth/auth.js"></script>
-  <script type="module" src="/src/js/jaycee/jaycee-public-profile.js"></script>
+  <script type="module" src="/src/js/jaycee/profiles.js"></script>
 </body>
 </html>

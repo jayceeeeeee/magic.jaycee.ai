@@ -1,6 +1,6 @@
 import {
   JAYCEE_GAME_CONFIG
-} from "./jaycee-game-config.js";
+} from "../config/game-config.js";
 import {
   PROFILE_TABLE,
   fetchDynamicFractalElements,
@@ -15,7 +15,7 @@ import {
   updateFractalElements,
   updateSkills,
   updateUserGameSettings
-} from "./jaycee-data.js";
+} from "../config/data.js";
 import { getTimezoneForCoordinates } from "../services/timezone.js";
 import { createLocationSearch } from "../ui/locationSearch.js";
 
@@ -23,7 +23,7 @@ const getLoginUrl = () => (
   new URL(
     window.JayceeAuth?.getLoginUrl
       ? window.JayceeAuth.getLoginUrl()
-      : "/src/html/auth/auth.html",
+      : "/auth.html",
     window.location.origin
   ).href
 );

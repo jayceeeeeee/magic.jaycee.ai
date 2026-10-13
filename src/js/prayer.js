@@ -1,11 +1,8 @@
 (function () {
     const isEmbedded = window.self !== window.top;
     const technoPrayerForm = document.querySelector(".techno-prayer-form");
-    const technoPrayerLearning = document.querySelector("[data-techno-prayer-learning]");
-    const technoPrayerContact = document.querySelector("[data-techno-prayer-contact]");
     const technoPrayerStatus = document.querySelector("[data-techno-prayer-status]");
     const technoPrayerSubmit = technoPrayerForm?.querySelector("[type='submit']");
-    const technoPrayerEmail = technoPrayerForm?.elements.email;
 
     document.body.classList.toggle("is-embedded", isEmbedded);
 
@@ -22,39 +19,18 @@
         }, targetOrigin);
     }
 
-    function needsTechnoPrayerContact() {
-        return Number(technoPrayerLearning?.selectedIndex || 0) > 0;
-    }
-
-    function getTechnoPrayerContactEmail() {
-        if (!technoPrayerForm) {
-            return "";
-        }
-
-        const formData = new FormData(technoPrayerForm);
-
-        return String(formData.get("email") || "").trim();
-    }
-
     function getTechnoPrayerPayload() {
         const formData = new FormData(technoPrayerForm);
 
         return {
             problem: String(formData.get("problem") || "").trim(),
             prayer: String(formData.get("prayer") || "").trim(),
-            learning_type: getLearningTypeValue(String(formData.get("learning") || "").trim()),
+            learning_type: "manifestation",
             full_name: String(formData.get("name") || "").trim(),
             email: String(formData.get("email") || "").trim() || null,
             whatsapp: String(formData.get("whatsapp") || "").trim() || null,
             line: String(formData.get("line") || "").trim() || null,
         };
-    }
-
-    function getLearningTypeValue(learningChoice) {
-        const optionIndex = Array.from(technoPrayerLearning?.options || [])
-            .findIndex((option) => option.value === learningChoice || option.textContent.trim() === learningChoice);
-
-        return ["manifestation", "advice", "initiation"][Math.max(0, optionIndex)] || "manifestation";
     }
 
     function setStatus(message, type = "info") {
@@ -93,17 +69,7 @@
         return client.from("techno_prayers").insert(row);
     }
 
-    function updateTechnoPrayerContactVisibility() {
-        if (!technoPrayerContact) {
-            return;
-        }
-
-        technoPrayerContact.hidden = !needsTechnoPrayerContact();
-
-        if (technoPrayerEmail) {
-            technoPrayerEmail.required = needsTechnoPrayerContact();
-        }
-
+    function updateTechnoPrayerStatusLayout() {
         if (technoPrayerStatus) {
             technoPrayerStatus.textContent = "";
         }
@@ -111,18 +77,11 @@
         requestAnimationFrame(notifyHeight);
     }
 
-    technoPrayerLearning?.addEventListener("change", updateTechnoPrayerContactVisibility);
-
     technoPrayerForm?.addEventListener("submit", async (event) => {
         event.preventDefault();
 
         if (!technoPrayerForm.reportValidity()) {
             notifyHeight();
-            return;
-        }
-
-        if (needsTechnoPrayerContact() && !getTechnoPrayerContactEmail()) {
-            setStatus("Please add your email.", "error");
             return;
         }
 
@@ -143,8 +102,9 @@
             }
 
             technoPrayerForm.reset();
-            updateTechnoPrayerContactVisibility();
+            updateTechnoPrayerStatusLayout();
             setStatus("Techno-Prayer received.", "success");
+            (isEmbedded ? window.top : window).location.href = "/profiles.html";
         } catch (error) {
             setStatus(error.message || "Unable to send your Techno-Prayer.", "error");
         } finally {
@@ -156,5 +116,5 @@
 
     window.addEventListener("load", notifyHeight);
     window.addEventListener("resize", notifyHeight);
-    updateTechnoPrayerContactVisibility();
+    updateTechnoPrayerStatusLayout();
 })();

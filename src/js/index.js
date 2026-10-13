@@ -4,8 +4,6 @@
     const linePause = 90;
     const startGameButton = document.querySelector("[data-start-game]");
     const homeConsole = document.querySelector("[data-home-console]");
-    const formShell = document.querySelector("[data-home-form-shell]");
-    const frame = document.querySelector("[data-techno-prayer-frame]");
     const gameStartLines = [
         [
             "Welcome to the ",
@@ -139,47 +137,16 @@
         return lines;
     }
 
-    function revealForm() {
-        if (!formShell) {
-            return;
-        }
-
-        formShell.hidden = false;
-
-        requestAnimationFrame(() => {
-            formShell.classList.add("is-revealed");
-        });
-    }
-
     startGameButton?.addEventListener("click", () => {
-        if (!frame || startGameButton.disabled) {
+        if (startGameButton.disabled) {
             return;
         }
 
         startGameButton.disabled = true;
         startGameButton.closest(".home-start-panel")?.setAttribute("hidden", "");
         appendConsoleLines(gameStartLines).then(() => {
-            revealForm();
-            frame.contentWindow?.focus();
-            frame.addEventListener("load", () => frame.contentWindow?.focus(), { once: true });
+            window.location.href = "/prayer.html";
         });
-    });
-
-    window.addEventListener("message", (event) => {
-        if (window.location.origin !== "null" && event.origin !== window.location.origin) {
-            return;
-        }
-
-        if (event.data?.type !== "techno-prayer:height") {
-            return;
-        }
-
-        const height = Number(event.data.height);
-
-        if (frame && Number.isFinite(height)) {
-            frame.style.height = `${height}px`;
-            formShell?.style.setProperty("--home-frame-height", `${height}px`);
-        }
     });
 
     appendConsoleLines(getFallbackConsoleLines());

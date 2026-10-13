@@ -146,25 +146,6 @@
     color: var(--accent);
 }
 
-.techno-prayer-contact {
-    display: grid;
-    gap: 10px;
-    margin: 2px 0 0;
-    padding: 12px;
-    border: 1px solid var(--field-border-soft);
-    border-radius: 6px;
-}
-
-.techno-prayer-contact[hidden] {
-    display: none;
-}
-
-.techno-prayer-contact legend {
-    padding: 0 6px;
-    color: var(--accent);
-    font-weight: 700;
-}
-
 .techno-prayer-disclaimer {
     margin: 2px 0 0;
     padding: 12px 14px;
@@ -177,10 +158,6 @@
     font-size: 0.96rem;
     font-weight: 600;
     line-height: 1.45;
-}
-
-.techno-prayer-contact + .techno-prayer-disclaimer {
-    margin-top: 8px;
 }
 
 .techno-prayer-submit {

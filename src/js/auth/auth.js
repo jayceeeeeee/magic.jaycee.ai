@@ -1,9 +1,9 @@
 (function () {
     const supabaseUrl = "https://ndtnfwyfdfdcxljvvjfd.supabase.co";
     const supabasePublishableKey = "sb_publishable_lMEHC2xjlGGmTnkI5G-okg_0AVRhiDd";
-    const defaultLoginPath = "/src/html/auth/auth.html";
-    const defaultAccountPath = "/src/html/jaycee-account.html";
-    const defaultAfterSignInPath = "/src/html/jaycee-account.html";
+    const defaultLoginPath = "/auth.html";
+    const defaultAccountPath = "/account.html";
+    const defaultAfterSignInPath = "/account.html";
     const themeConfig = window.JayceeThemes || {
         normalizeTheme: () => "aurora",
     };
@@ -71,7 +71,7 @@
     function getPublicProfileUrl(username) {
         const value = getDisplayValue(username);
 
-        return value ? `/src/html/jaycee-profile.html?username=${encodeURIComponent(value)}` : "";
+        return value ? `/profiles.html?username=${encodeURIComponent(value)}` : "";
     }
 
     function getDisplayValue(value) {

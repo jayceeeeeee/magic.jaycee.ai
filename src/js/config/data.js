@@ -73,7 +73,7 @@ export const fetchProfileByUsername = async (client, username) => {
 export const fetchPublicProfiles = async (client, limit = 100) => {
   const { data, error } = await client
     .from(PROFILE_TABLE)
-    .select("id, username")
+    .select("id, username, full_name, avatar_path, theme, primary_color, secondary_color")
     .not("username", "is", null)
     .order("username", { ascending: true })
     .limit(limit);

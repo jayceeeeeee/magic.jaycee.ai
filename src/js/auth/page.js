@@ -60,7 +60,7 @@
 
         function showExistingAccountMessage() {
             status.textContent = "An account with this email already exists.";
-            switcher.innerHTML = 'Already have an account? <a href="/src/html/auth/auth.html" data-auth-mode="login">Log in instead</a>.';
+            switcher.innerHTML = 'Already have an account? <a href="/auth.html" data-auth-mode="login">Log in instead</a>.';
         }
 
         function renderMode() {
@@ -76,8 +76,8 @@
             form.hidden = false;
             switcher.hidden = false;
             switcher.innerHTML = isSignup
-                ? 'Already have an account? <a href="/src/html/auth/auth.html" data-auth-mode="login">Log in</a>'
-                : 'No account yet? <a href="/src/html/auth/auth.html?mode=signup" data-auth-mode="signup">Sign up</a>';
+                ? 'Already have an account? <a href="/auth.html" data-auth-mode="login">Log in</a>'
+                : 'No account yet? <a href="/auth.html?mode=signup" data-auth-mode="signup">Sign up</a>';
             status.textContent = "";
         }
 

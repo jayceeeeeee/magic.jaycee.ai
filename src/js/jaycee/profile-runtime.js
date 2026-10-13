@@ -2,11 +2,11 @@ import {
   JAYCEE_ORDER,
   createJayceeState,
   drawJaycee
-} from "./jaycee-core.js";
+} from "./profile-core.js";
 import {
   JAYCEE_GAME_CYCLE_LABELS,
   JAYCEE_GAME_CONFIG
-} from "./jaycee-game-config.js";
+} from "../config/game-config.js";
 import {
   createPlayerForGame,
   fetchPlayerForGame,
@@ -20,7 +20,7 @@ import {
   getDisplayValue,
   getThemeSettingsFromProfile,
   loadOptionalImage
-} from "./jaycee-data.js";
+} from "../config/data.js";
 
 const PROFILE_CORE_METRICS = {
   fullSquare: true
@@ -45,7 +45,7 @@ const getLoginUrl = () => (
   new URL(
     window.JayceeAuth?.getLoginUrl
       ? window.JayceeAuth.getLoginUrl()
-      : "/src/html/auth/auth.html",
+      : "/auth.html",
     window.location.origin
   )
 );
@@ -423,7 +423,7 @@ const getUltimateModel = ({ dynamicFractals, gameForm, publicProfiles, ultimateT
 const getPublicProfileUrl = (profile) => {
   const username = getDisplayValue(profile?.username);
 
-  return username ? `/src/html/jaycee-profile.html?username=${encodeURIComponent(username)}` : "";
+  return username ? `/profiles.html?username=${encodeURIComponent(username)}` : "";
 };
 
 const createGameSelect = (profiles, selectedUsername = "") => {
@@ -450,7 +450,7 @@ const createGameSelect = (profiles, selectedUsername = "") => {
     const username = getDisplayValue(select.value);
 
     if (!username) return;
-    window.location.href = `/src/html/jaycee-profile.html?username=${encodeURIComponent(username)}`;
+    window.location.href = `/profiles.html?username=${encodeURIComponent(username)}`;
   });
   label.append(text, select);
 
@@ -519,6 +519,7 @@ const createVitalsPanel = ({
   const playButton = document.createElement("button");
   const lifeMaxSeconds = JAYCEE_GAME_CONFIG.lifeMaxYears * YEAR_SECONDS;
   const hasPlayer = Boolean(player);
+  const hasPlayerProfile = Boolean(playerProfile);
   const lifeSeconds = Number(player?.life_bar) || 0;
   const mannaModel = hasPlayer ? getMannaModel({ player, playerProfile, selectedAbilityIndex }) : null;
   const questModel = getCurrentQuestModel({
@@ -555,21 +556,21 @@ const createVitalsPanel = ({
   );
   panel.replaceChildren();
 
-  if (hasPlayer) {
+  if (hasPlayer || !hasPlayerProfile) {
     hud.className = "profile-player-hud";
     identity.className = "profile-player-identity";
     avatar.className = "profile-player-avatar";
-    if (playerAvatarUrl) {
+    if (hasPlayer && playerAvatarUrl) {
       const image = document.createElement("img");
 
       image.alt = "";
       image.src = playerAvatarUrl;
       avatar.append(image);
     } else {
-      avatar.textContent = getProfileInitial(playerProfile);
+      avatar.textContent = hasPlayer ? getProfileInitial(playerProfile) : "?";
     }
     levelBadge.className = "profile-player-level";
-    levelBadge.textContent = `Level ${level}`;
+    levelBadge.textContent = hasPlayer ? `Level ${level}` : "Unknown user - Level 0";
     identity.append(avatar, levelBadge);
     hud.append(identity, bars);
     panel.append(hud);
@@ -595,11 +596,14 @@ const createVitalsPanel = ({
     }
   }
 
-  if (!hasPlayer) {
+  if (!hasPlayer && hasPlayerProfile) {
     panel.append(bars);
+  }
+
+  if (!hasPlayer) {
     playButton.className = "profile-play-button";
     playButton.type = "button";
-    playButton.textContent = "Play";
+    playButton.textContent = hasPlayerProfile ? "Play" : "Log in / create account";
     playButton.addEventListener("click", onPlay);
     panel.append(playButton);
   }
@@ -612,7 +616,7 @@ const getPublicProfileUsernameFromUrl = () => {
   const queryUsername = getDisplayValue(params.get("username"));
 
   if (queryUsername) return queryUsername;
-  if (!window.location.pathname.endsWith("/jaycee-profile.html")) return "";
+  if (!window.location.pathname.endsWith("/profiles.html")) return "";
 
   const match = window.location.pathname.match(/\/jaycee-([^/]+)\.html$/);
 
