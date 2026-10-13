@@ -9,7 +9,7 @@
         startGameButton.disabled = true;
         document.body.classList.add("is-game-launching");
         window.setTimeout(() => {
-            window.location.href = "/prayer.html";
+            window.location.href = "/lore.html";
         }, 260);
     });
 })();

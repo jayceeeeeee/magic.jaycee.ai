@@ -22,12 +22,13 @@
 
     function getTechnoPrayerPayload() {
         const formData = new FormData(technoPrayerForm);
+        const storedUsername = window.localStorage.getItem("jaycee_username");
 
         return {
             problem: String(formData.get("problem") || "").trim(),
             prayer: String(formData.get("prayer") || "").trim(),
             learning_type: "manifestation",
-            full_name: String(formData.get("name") || "Unknown user").trim(),
+            full_name: String(formData.get("name") || storedUsername || "Unknown user").trim(),
             email: String(formData.get("email") || "").trim() || null,
             whatsapp: String(formData.get("whatsapp") || "").trim() || null,
             line: String(formData.get("line") || "").trim() || null,

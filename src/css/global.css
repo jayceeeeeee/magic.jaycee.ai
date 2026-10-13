@@ -157,6 +157,20 @@ body[data-theme="aurora"] {
     box-sizing: border-box;
 }
 
+@view-transition {
+    navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: 420ms;
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.game-brand-title {
+    view-transition-name: jaycee-title;
+}
+
 [hidden] {
     display: none !important;
 }
@@ -836,6 +850,11 @@ body::after {
 @media (prefers-reduced-motion: reduce) {
     html {
         scroll-behavior: auto;
+    }
+
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+        animation-duration: 1ms;
     }
 
     .temple-header-track {

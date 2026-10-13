@@ -32,8 +32,24 @@ body {
 .techno-prayer-page-main {
     min-height: 100svh;
     display: grid;
+    align-content: center;
     place-items: center;
+    gap: clamp(30px, 7svh, 58px);
     padding: 24px;
+}
+
+.techno-prayer-title {
+    margin: 0;
+    color: var(--text);
+    font-family: "Rajdhani", sans-serif;
+    font-size: clamp(3.2rem, 12vw, 6.5rem);
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: 0.8;
+    text-transform: lowercase;
+    text-shadow:
+        0 0 22px rgba(var(--accent-rgb), 0.34),
+        0 12px 46px rgba(0, 0, 0, 0.42);
 }
 
 .techno-prayer-form {
