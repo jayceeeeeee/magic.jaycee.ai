@@ -148,6 +148,33 @@ const createSelectField = ({ label, name, options, value = "" }) => {
   return { select, wrapper };
 };
 
+const createSexField = (profile) => {
+  const field = document.createElement("fieldset");
+  const legend = document.createElement("legend");
+  const options = document.createElement("div");
+
+  field.className = "profile-gender-field";
+  legend.textContent = "Sex";
+  options.className = "profile-gender-options";
+  ["male", "female"].forEach((sex) => {
+    const label = document.createElement("label");
+    const input = document.createElement("input");
+    const text = document.createElement("span");
+
+    label.className = "profile-gender-option";
+    input.name = "sex";
+    input.type = "radio";
+    input.value = sex;
+    input.checked = getDisplayValue(profile.sex) === sex;
+    text.textContent = sex;
+    label.append(input, text);
+    options.append(label);
+  });
+  field.append(legend, options);
+
+  return field;
+};
+
 const getCurrencyOptions = () => {
   const fallbackCurrencies = ["EUR", "USD", "JPY", "GBP", "CHF", "CAD", "AUD", "NZD", "CNY", "HKD", "SGD", "KRW", "INR", "BRL", "MXN", "ZAR"];
   let currencies = fallbackCurrencies;
@@ -250,9 +277,6 @@ const createCharacterSection = ({ profile, themeSettings }) => {
   const usernameField = createTextField({ label: "Username", name: "username", value: profile.username });
   const avatarField = createTextField({ label: "Avatar path", name: "avatar_path", value: profile.avatar_path });
   const nameField = createTextField({ label: "Full name", name: "full_name", value: profile.full_name });
-  const genderField = document.createElement("fieldset");
-  const genderLegend = document.createElement("legend");
-  const genderOptions = document.createElement("div");
 
   themeForm.className = "profile-theme-controls jaycee-account-theme";
   detailsForm.className = "profile-details-controls jaycee-account-form";
@@ -270,27 +294,8 @@ const createCharacterSection = ({ profile, themeSettings }) => {
   themeSelectLabel.append(themeLabelText, themeSelect);
   themeForm.append(themeSelectLabel, primaryField.wrapper, secondaryField.wrapper);
 
-  genderField.className = "profile-gender-field";
-  genderLegend.textContent = "Sex";
-  genderOptions.className = "profile-gender-options";
-  ["male", "female"].forEach((sex) => {
-    const label = document.createElement("label");
-    const input = document.createElement("input");
-    const text = document.createElement("span");
-
-    label.className = "profile-gender-option";
-    input.name = "sex";
-    input.type = "radio";
-    input.value = sex;
-    input.checked = getDisplayValue(profile.sex) === sex;
-    text.textContent = sex;
-    label.append(input, text);
-    genderOptions.append(label);
-  });
-  genderField.append(genderLegend, genderOptions);
-
   nameField.wrapper.classList.add("profile-field-wide");
-  detailsForm.append(usernameField.wrapper, avatarField.wrapper, nameField.wrapper, genderField);
+  detailsForm.append(usernameField.wrapper, avatarField.wrapper, nameField.wrapper);
   content.append(themeForm, detailsForm);
 
   const syncTheme = () => {
@@ -312,7 +317,6 @@ const createCharacterSection = ({ profile, themeSettings }) => {
       full_name: getDisplayValue(nameField.input.value) || null,
       primary_color: themeSettings.primary_color || null,
       secondary_color: themeSettings.secondary_color || null,
-      sex: getDisplayValue(new FormData(detailsForm).get("sex")) || null,
       theme: themeSettings.theme,
       username: getDisplayValue(usernameField.input.value) || null
     }),
@@ -323,6 +327,7 @@ const createCharacterSection = ({ profile, themeSettings }) => {
 const createMapsSection = ({ profile, status }) => {
   const { content, section } = createSection("Maps", "is-maps");
   const form = document.createElement("form");
+  const sexField = createSexField(profile);
   const birthDateField = createTextField({ label: "Birth date", name: "birth_date", type: "date", value: profile.birth_date });
   const birthTimeField = createTextField({ label: "Birth time", name: "birth_time", type: "time", value: getDisplayValue(profile.birth_time).slice(0, 5) });
   const locationWrapper = document.createElement("div");
@@ -379,6 +384,7 @@ const createMapsSection = ({ profile, status }) => {
   locationWrapper.append(birthPlaceField.wrapper, results);
   mannaFields.append(mannaTargetField.wrapper, mannaUnitField.wrapper, mannaCycleField.wrapper);
   form.append(
+    sexField,
     birthDateField.wrapper,
     birthTimeField.wrapper,
     locationWrapper,
@@ -457,6 +463,7 @@ const createMapsSection = ({ profile, status }) => {
           birth_place_position: getDisplayValue(positionInput.value) || null,
           birth_time: getDisplayValue(birthTimeField.input.value) || null,
           birth_timezone: getDisplayValue(timezoneInput.value) || null,
+          sex: getDisplayValue(new FormData(form).get("sex")) || null,
           manna_target: Number.isFinite(Number(mannaTargetField.input.value)) && getDisplayValue(mannaTargetField.input.value)
             ? Number(mannaTargetField.input.value)
             : 0,
@@ -557,10 +564,10 @@ const createSkillsSection = ({ fractals, gameForm, publicProfiles, skillRows }) 
   });
 
   teammateLabel.className = "profile-primary-fractal-field";
-  teammateText.textContent = "Teammate";
+  teammateText.textContent = "Follows";
   teammateSelect.className = "profile-primary-fractal-select";
   emptyOption.value = "";
-  emptyOption.textContent = "Choose a teammate";
+  emptyOption.textContent = "Choose a follow";
   teammateSelect.replaceChildren(emptyOption, ...publicProfiles.map((profile) => {
     const option = document.createElement("option");
 

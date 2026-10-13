@@ -211,8 +211,16 @@ const getCurrentPeriodBounds = (level, now = new Date()) => {
   return { end, start };
 };
 
-const getMannaModel = ({ player, playerProfile }) => {
-  const level = Math.min(3, Math.max(1, Number(player?.level) || 1));
+const getSelectedActiveLevel = (player, selectedAbilityIndex = 0) => {
+  const level = Math.min(ACTIVE_RING_LIMIT, Math.max(1, Number(player?.level) || 1));
+
+  return selectedAbilityIndex >= 1 && selectedAbilityIndex <= level
+    ? selectedAbilityIndex
+    : level;
+};
+
+const getMannaModel = ({ player, playerProfile, selectedAbilityIndex = 0 }) => {
+  const level = getSelectedActiveLevel(player, selectedAbilityIndex);
   const mannaTarget = Number(playerProfile?.manna_target);
   const mannaCycle = normalizeMannaCycle(playerProfile?.manna_cycle);
   const mannaUnit = normalizeMannaUnit(playerProfile?.manna_unit);
@@ -365,16 +373,19 @@ const getCurrentQuestModel = ({
   dynamicFractals = [],
   gameForm = {},
   player,
+  selectedAbilityIndex = 0,
   skillForms = []
 }) => {
   if (!player) return null;
 
-  const level = Math.min(ACTIVE_RING_LIMIT, Math.max(1, Number(player?.level) || 1));
-  const activeModel = getActiveFractalModels({
+  const level = getSelectedActiveLevel(player, selectedAbilityIndex);
+  const activeModels = getActiveFractalModels({
     dynamicFractals,
     gameForm,
     skillForms
-  })[level - 1] || null;
+  });
+  const questActiveIndex = Math.min(level, activeModels.length) - 1;
+  const activeModel = activeModels[questActiveIndex] || null;
 
   if (!activeModel) return null;
 
@@ -489,6 +500,7 @@ const createVitalsPanel = ({
   onPlay,
   player,
   playerProfile,
+  selectedAbilityIndex,
   skillForms
 }) => {
   const panel = document.createElement("section");
@@ -500,11 +512,12 @@ const createVitalsPanel = ({
   const lifeMaxSeconds = JAYCEE_GAME_CONFIG.lifeMaxYears * YEAR_SECONDS;
   const hasPlayer = Boolean(player);
   const lifeSeconds = Number(player?.life_bar) || 0;
-  const mannaModel = hasPlayer ? getMannaModel({ player, playerProfile }) : null;
+  const mannaModel = hasPlayer ? getMannaModel({ player, playerProfile, selectedAbilityIndex }) : null;
   const questModel = getCurrentQuestModel({
     dynamicFractals,
     gameForm,
     player,
+    selectedAbilityIndex,
     skillForms
   });
 
@@ -684,8 +697,8 @@ const createFractalParameterPanel = ({
       rows: [{
         href: profileUrl,
         isProfileLink: true,
-        label: "Teammate",
-        value: getDisplayValue(ultimateModel.linkedProfile?.username) || "No teammate"
+        label: "Follows",
+        value: getDisplayValue(ultimateModel.linkedProfile?.username) || "No follows"
       }, {
         label: "Skill",
         value: ultimateModel.skillLabel || "No skill"
@@ -902,6 +915,7 @@ export const initJayceePage = async () => {
       onPlay: handlePlayClick,
       player: currentPlayer,
       playerProfile,
+      selectedAbilityIndex,
       skillForms
     });
 
@@ -937,6 +951,7 @@ export const initJayceePage = async () => {
       currentLevel: Number(currentPlayer?.level) || 0,
       onSelect: (index) => {
         selectedAbilityIndex = index;
+        renderVitalsPanel();
         renderCoreParameters();
       },
       passiveModel,
