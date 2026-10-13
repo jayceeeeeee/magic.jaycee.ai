@@ -146,28 +146,6 @@ body {
     box-shadow: 0 0 28px rgba(var(--accent-rgb), 0.2);
 }
 
-.lore-login-note {
-    position: fixed;
-    right: 24px;
-    bottom: 20px;
-    margin: 0;
-    color: rgba(242, 255, 251, 0.58);
-    font-size: 0.92rem;
-    font-weight: 600;
-}
-
-.lore-login-note a {
-    color: var(--accent-soft);
-    text-decoration: none;
-}
-
-.lore-login-note a:hover,
-.lore-login-note a:focus-visible {
-    color: var(--accent);
-    text-decoration: underline;
-    text-underline-offset: 3px;
-}
-
 .lore-page.is-lore-launching .lore-main {
     animation: lore-launch 240ms ease forwards;
 }
@@ -197,10 +175,4 @@ body {
         width: 100%;
     }
 
-    .lore-login-note {
-        right: 0;
-        bottom: 14px;
-        left: 0;
-        text-align: center;
-    }
 }
