@@ -3,12 +3,6 @@ import {
   getAvatarImageUrl,
   getDisplayValue
 } from "../config/data.js";
-import { startJayceeProfilePage } from "./profile-runtime.js";
-
-const getRequestedUsername = () => (
-  getDisplayValue(new URLSearchParams(window.location.search).get("username"))
-);
-
 const setPendingPrayerTarget = (profile) => {
   const rawPrayer = window.localStorage.getItem("jaycee_pending_prayer");
 
@@ -38,7 +32,7 @@ const createProfileCard = ({ avatarUrl = "", profile }) => {
   const meta = document.createElement("span");
 
   link.className = "profiles-card";
-  link.href = `/profiles.html?username=${encodeURIComponent(username)}`;
+  link.href = `/game.html?username=${encodeURIComponent(username)}`;
   avatar.className = "profiles-card-avatar";
   if (avatarUrl) {
     const image = document.createElement("img");
@@ -104,9 +98,7 @@ const initProfilesList = async () => {
   }
 };
 
-if (getRequestedUsername()) {
-  startJayceeProfilePage();
-} else if (document.readyState === "loading") {
+if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initProfilesList, { once: true });
 } else {
   initProfilesList();

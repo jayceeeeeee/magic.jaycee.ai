@@ -423,7 +423,7 @@ const getUltimateModel = ({ dynamicFractals, gameForm, publicProfiles, ultimateT
 const getPublicProfileUrl = (profile) => {
   const username = getDisplayValue(profile?.username);
 
-  return username ? `/profiles.html?username=${encodeURIComponent(username)}` : "";
+  return username ? `/game.html?username=${encodeURIComponent(username)}` : "";
 };
 
 const createGameSelect = (profiles, selectedUsername = "") => {
@@ -450,7 +450,7 @@ const createGameSelect = (profiles, selectedUsername = "") => {
     const username = getDisplayValue(select.value);
 
     if (!username) return;
-    window.location.href = `/profiles.html?username=${encodeURIComponent(username)}`;
+    window.location.href = `/game.html?username=${encodeURIComponent(username)}`;
   });
   label.append(text, select);
 
@@ -512,6 +512,7 @@ const createVitalsPanel = ({
   const avatar = document.createElement("div");
   const levelBadge = document.createElement("p");
   const bars = document.createElement("div");
+  const profileLabel = document.createElement("h2");
   const questPanel = document.createElement("article");
   const questHeader = document.createElement("h2");
   const questIcon = document.createElement("span");
@@ -532,6 +533,8 @@ const createVitalsPanel = ({
 
   panel.className = "profile-vitals-panel";
   panel.dataset.profileVitals = "";
+  profileLabel.className = "profile-section-label";
+  profileLabel.textContent = "Profile";
   bars.className = "profile-vital-stack";
   bars.replaceChildren(
     createVitalBar({
@@ -556,6 +559,36 @@ const createVitalsPanel = ({
   );
   panel.replaceChildren();
 
+  if (questModel) {
+    questPanel.className = "profile-quest-panel";
+    questHeader.className = "profile-quest-title";
+    questIcon.className = "profile-quest-icon";
+    questIcon.textContent = "!";
+    questHeader.replaceChildren(questIcon, "Quest");
+    quest.className = "profile-player-quest";
+    quest.replaceChildren(
+      "You have ",
+      Object.assign(document.createElement("strong"), { textContent: `1 ${questModel.cycleLabel}` }),
+      " to do ",
+      Object.assign(document.createElement("strong"), { textContent: questModel.duration }),
+      " of ",
+      Object.assign(document.createElement("strong"), { textContent: questModel.skillName }),
+      "."
+    );
+    questPanel.append(questHeader, quest);
+    panel.append(questPanel);
+  }
+
+  if (!hasPlayer) {
+    playButton.className = "profile-play-button";
+    playButton.type = "button";
+    playButton.textContent = hasPlayerProfile ? "Play" : "Log in / create account";
+    playButton.addEventListener("click", onPlay);
+    panel.append(playButton);
+  }
+
+  panel.append(profileLabel);
+
   if (hasPlayer || !hasPlayerProfile) {
     hud.className = "profile-player-hud";
     identity.className = "profile-player-identity";
@@ -574,38 +607,10 @@ const createVitalsPanel = ({
     identity.append(avatar, levelBadge);
     hud.append(identity, bars);
     panel.append(hud);
-
-    if (questModel) {
-      questPanel.className = "profile-quest-panel";
-      questHeader.className = "profile-quest-title";
-      questIcon.className = "profile-quest-icon";
-      questIcon.textContent = "!";
-      questHeader.replaceChildren(questIcon, "Quest");
-      quest.className = "profile-player-quest";
-      quest.replaceChildren(
-        "You have ",
-        Object.assign(document.createElement("strong"), { textContent: `1 ${questModel.cycleLabel}` }),
-        " to do ",
-        Object.assign(document.createElement("strong"), { textContent: questModel.duration }),
-        " of ",
-        Object.assign(document.createElement("strong"), { textContent: questModel.skillName }),
-        "."
-      );
-      questPanel.append(questHeader, quest);
-      panel.append(questPanel);
-    }
   }
 
   if (!hasPlayer && hasPlayerProfile) {
     panel.append(bars);
-  }
-
-  if (!hasPlayer) {
-    playButton.className = "profile-play-button";
-    playButton.type = "button";
-    playButton.textContent = hasPlayerProfile ? "Play" : "Log in / create account";
-    playButton.addEventListener("click", onPlay);
-    panel.append(playButton);
   }
 
   return panel;
@@ -616,7 +621,7 @@ const getPublicProfileUsernameFromUrl = () => {
   const queryUsername = getDisplayValue(params.get("username"));
 
   if (queryUsername) return queryUsername;
-  if (!window.location.pathname.endsWith("/profiles.html")) return "";
+  if (!window.location.pathname.endsWith("/game.html") && !window.location.pathname.endsWith("/profiles.html")) return "";
 
   const match = window.location.pathname.match(/\/jaycee-([^/]+)\.html$/);
 

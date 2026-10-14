@@ -71,7 +71,7 @@
     function getPublicProfileUrl(username) {
         const value = getDisplayValue(username);
 
-        return value ? `/profiles.html?username=${encodeURIComponent(value)}` : "";
+        return value ? `/game.html?username=${encodeURIComponent(value)}` : "";
     }
 
     function getDisplayValue(value) {

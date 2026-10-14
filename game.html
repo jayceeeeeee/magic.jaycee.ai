@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game | jaycee.ai</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@500;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/css/global.css">
+  <link rel="stylesheet" href="/src/css/jaycee-profile.css">
+  <link rel="stylesheet" href="/src/css/game.css">
+</head>
+<body class="game-page" data-theme="aurora">
+  <jaycee-banner></jaycee-banner>
+
+  <main class="jaycee-profile-page is-profile-view game-shell" data-profile-shell data-profile-mode="public" hidden>
+    <section class="jaycee-profile-core" aria-label="Jaycee game">
+      <canvas class="jaycee-profile-canvas" data-profile-canvas aria-label="Jaycee game core"></canvas>
+    </section>
+  </main>
+
+  <jaycee-footer></jaycee-footer>
+
+  <script src="/src/js/shell/shell.js"></script>
+  <script src="/src/js/theme/themes.js"></script>
+  <script src="/src/js/auth/auth.js"></script>
+  <script type="module" src="/src/js/game.js"></script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+
+.game-page {
+  min-height: 100vh;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 50% 26%, rgba(var(--accent-rgb), 0.16), transparent 34%),
+    radial-gradient(circle at 50% 90%, rgba(255, 213, 107, 0.07), transparent 34%),
+    linear-gradient(180deg, #080d12 0%, #05070a 58%, #030405 100%);
+}
+
+.game-page::before {
+  content: "";
+  position: fixed;
+  inset: auto -12vw -16vh;
+  height: 58vh;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(var(--accent-rgb), 0.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--accent-rgb), 0.12) 1px, transparent 1px);
+  background-size: 44px 44px;
+  opacity: 0.34;
+  transform: perspective(620px) rotateX(62deg);
+  transform-origin: bottom center;
+  mask-image: linear-gradient(to top, black, transparent 78%);
+}
+
+.game-page > jaycee-banner,
+.game-page > jaycee-footer {
+  display: none;
+}
+
+.game-shell.jaycee-profile-page.is-profile-view {
+  width: min(100% - 28px, 600px);
+  min-height: 100svh;
+  padding: 24px 0;
+}
+
+.game-page .jaycee-profile-core {
+  height: min(760px, calc(100svh - 48px));
+  min-height: 0;
+  border-color: rgba(var(--accent-rgb), 0.26);
+  border-radius: 0;
+  background:
+    linear-gradient(90deg, transparent, var(--neon-line), transparent) top / 100% 2px no-repeat,
+    linear-gradient(120deg, rgba(var(--accent-rgb), 0.08), transparent 42%),
+    rgba(0, 0, 0, 0.2);
+  box-shadow:
+    0 0 0 1px rgba(var(--accent-rgb), 0.08),
+    0 20px 70px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.profile-section-label {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  margin: 0;
+  color: var(--accent-soft);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.72rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+@media (max-width: 620px) {
+  .game-shell.jaycee-profile-page.is-profile-view {
+    width: min(100% - 20px, 460px);
+    padding: 10px 0;
+  }
+
+  .game-page .jaycee-profile-core {
+    height: calc(100svh - 20px);
+  }
+}

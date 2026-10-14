@@ -42,14 +42,6 @@ body {
   padding: 28px 0;
 }
 
-.profiles-page .jaycee-profile-page.is-profile-view {
-  padding: 24px 0;
-}
-
-.profiles-page .jaycee-profile-page.is-profile-view .jaycee-profile-core {
-  height: min(720px, calc(100svh - 48px));
-}
-
 .profiles-list-panel {
   width: 100%;
   display: grid;
