@@ -36,24 +36,42 @@ body {
 }
 
 .game-shell.jaycee-profile-page.is-profile-view {
-  width: min(100% - 28px, 600px);
+  width: min(100% - 32px, 720px);
   min-height: 100svh;
+  align-content: center;
+  gap: clamp(18px, 4svh, 30px);
   padding: 24px 0;
 }
 
+.game-title {
+  margin: 0;
+  color: var(--text);
+  font-family: "Rajdhani", sans-serif;
+  font-size: clamp(2rem, 7vw, 3.8rem);
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 0.8;
+  text-align: center;
+  text-transform: lowercase;
+  text-shadow:
+    0 0 18px rgba(var(--accent-rgb), 0.28),
+    0 10px 34px rgba(0, 0, 0, 0.36);
+}
+
 .game-page .jaycee-profile-core {
-  height: min(760px, calc(100svh - 48px));
+  height: auto;
   min-height: 0;
-  border-color: rgba(var(--accent-rgb), 0.26);
-  border-radius: 0;
-  background:
-    linear-gradient(90deg, transparent, var(--neon-line), transparent) top / 100% 2px no-repeat,
-    linear-gradient(120deg, rgba(var(--accent-rgb), 0.08), transparent 42%),
-    rgba(0, 0, 0, 0.2);
-  box-shadow:
-    0 0 0 1px rgba(var(--accent-rgb), 0.08),
-    0 20px 70px rgba(0, 0, 0, 0.32),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.game-page .jaycee-profile-canvas {
+  display: none;
+  max-width: 560px;
+  justify-self: center;
 }
 
 .profile-section-label {
@@ -68,6 +86,188 @@ body {
   text-transform: uppercase;
 }
 
+.game-page .profile-notice-panel {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px 11px;
+  border: 1px solid rgba(155, 216, 255, 0.34);
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 12px 28px rgba(0, 0, 0, 0.24),
+    0 0 18px rgba(76, 178, 255, 0.08);
+}
+
+.game-page .profile-notice-panel::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  right: 14%;
+  left: 14%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(155, 216, 255, 0.88), transparent);
+  box-shadow: 0 0 12px rgba(76, 178, 255, 0.45);
+}
+
+.game-page .profile-notice-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(155, 216, 255, 0.18);
+  color: #9bd8ff;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.game-page .profile-notice-icon {
+  width: 18px;
+  height: 18px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(155, 216, 255, 0.62);
+  border-radius: 999px;
+  background: rgba(76, 178, 255, 0.14);
+  color: #b3f5ff;
+  font-size: 0.72rem;
+  box-shadow: 0 0 12px rgba(76, 178, 255, 0.18);
+}
+
+.game-page .profile-notice-copy {
+  margin: 0;
+  color: var(--muted);
+  font-family: "Share Tech Mono", monospace;
+  font-size: clamp(0.76rem, 2vw, 0.88rem);
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.game-page .profile-notice-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(155, 216, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.22);
+  color: rgba(242, 255, 251, 0.72);
+  cursor: pointer;
+  font: inherit;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.game-page .profile-notice-close:hover,
+.game-page .profile-notice-close:focus-visible {
+  border-color: rgba(155, 216, 255, 0.62);
+  color: #b3f5ff;
+  outline: none;
+}
+
+.game-page .profile-notice-panel.is-unlocked {
+  border-color: rgba(124, 255, 120, 0.36);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 12px 28px rgba(0, 0, 0, 0.24),
+    0 0 18px rgba(124, 255, 120, 0.08);
+}
+
+.game-page .profile-notice-panel.is-unlocked::before {
+  background: linear-gradient(90deg, transparent, rgba(124, 255, 120, 0.88), transparent);
+  box-shadow: 0 0 12px rgba(124, 255, 120, 0.45);
+}
+
+.game-page .profile-notice-panel.is-unlocked .profile-notice-title,
+.game-page .profile-notice-panel.is-unlocked .profile-notice-icon {
+  color: rgba(124, 255, 120, 0.96);
+}
+
+.game-page .profile-notice-panel.is-unlocked .profile-notice-title {
+  border-bottom-color: rgba(124, 255, 120, 0.18);
+}
+
+.game-page .profile-notice-panel.is-unlocked .profile-notice-icon {
+  border-color: rgba(124, 255, 120, 0.62);
+  background: rgba(124, 255, 120, 0.12);
+  box-shadow: 0 0 12px rgba(124, 255, 120, 0.18);
+}
+
+.game-page .profile-notice-panel.is-quest {
+  border-color: rgba(255, 191, 96, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 12px 28px rgba(0, 0, 0, 0.24),
+    0 0 20px rgba(255, 177, 66, 0.09);
+}
+
+.game-page .profile-notice-panel.is-quest::before {
+  background: linear-gradient(90deg, transparent, rgba(255, 191, 96, 0.9), transparent);
+  box-shadow: 0 0 12px rgba(255, 177, 66, 0.46);
+}
+
+.game-page .profile-notice-panel.is-quest .profile-notice-title,
+.game-page .profile-notice-panel.is-quest .profile-notice-icon {
+  color: #ffd56b;
+}
+
+.game-page .profile-notice-panel.is-quest .profile-notice-title {
+  border-bottom-color: rgba(255, 191, 96, 0.2);
+}
+
+.game-page .profile-notice-panel.is-quest .profile-notice-icon {
+  border-color: rgba(255, 191, 96, 0.66);
+  background: rgba(255, 177, 66, 0.14);
+  box-shadow: 0 0 12px rgba(255, 177, 66, 0.2);
+}
+
+.game-page .profile-notice-panel .profile-play-button {
+  margin-top: 2px;
+}
+
+.game-page .profile-notice-panel.is-quest .profile-play-button {
+  border-color: rgba(255, 191, 96, 0.56);
+  background:
+    linear-gradient(90deg, rgba(255, 191, 96, 0.28), rgba(255, 177, 66, 0.1)),
+    rgba(0, 0, 0, 0.24);
+  color: #ffd56b;
+}
+
+.game-page .profile-notice-panel.is-quest .profile-play-button:hover,
+.game-page .profile-notice-panel.is-quest .profile-play-button:focus-visible {
+  border-color: rgba(255, 213, 107, 0.84);
+  background:
+    linear-gradient(90deg, rgba(255, 191, 96, 0.36), rgba(255, 177, 66, 0.14)),
+    rgba(0, 0, 0, 0.28);
+  color: #ffe59a;
+}
+
+.game-page .profile-notice-panel.is-dismissing {
+  animation: profile-notice-dismiss 180ms ease forwards;
+  pointer-events: none;
+}
+
+@keyframes profile-notice-dismiss {
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+}
+
 @media (max-width: 620px) {
   .game-shell.jaycee-profile-page.is-profile-view {
     width: min(100% - 20px, 460px);
@@ -75,6 +275,12 @@ body {
   }
 
   .game-page .jaycee-profile-core {
-    height: calc(100svh - 20px);
+    height: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-page .profile-notice-panel.is-dismissing {
+    animation-duration: 1ms;
   }
 }

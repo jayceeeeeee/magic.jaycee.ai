@@ -495,6 +495,48 @@ const createVitalBar = ({ centered = false, current, label, max, tone, valueText
   return bar;
 };
 
+const createProfileNotice = ({
+  action = null,
+  closable = false,
+  text,
+  title,
+  tone = "notification"
+}) => {
+  const panel = document.createElement("article");
+  const header = document.createElement("h2");
+  const icon = document.createElement("span");
+  const copy = document.createElement("p");
+
+  panel.className = `profile-notice-panel is-${tone}`;
+  header.className = "profile-notice-title";
+  icon.className = "profile-notice-icon";
+  icon.textContent = tone === "unlocked" ? "+" : tone === "quest" ? "!" : "i";
+  header.replaceChildren(icon, title);
+  copy.className = "profile-notice-copy";
+  copy.textContent = text;
+  panel.append(header, copy);
+
+  if (action) {
+    panel.append(action);
+  }
+
+  if (closable) {
+    const closeButton = document.createElement("button");
+
+    closeButton.className = "profile-notice-close";
+    closeButton.type = "button";
+    closeButton.textContent = "x";
+    closeButton.setAttribute("aria-label", "Dismiss notification");
+    closeButton.addEventListener("click", () => {
+      panel.classList.add("is-dismissing");
+      window.setTimeout(() => panel.remove(), 180);
+    });
+    panel.append(closeButton);
+  }
+
+  return panel;
+};
+
 const createVitalsPanel = ({
   dynamicFractals,
   gameForm,
@@ -502,27 +544,32 @@ const createVitalsPanel = ({
   player,
   playerAvatarUrl = "",
   playerProfile,
+  profile,
   selectedAbilityIndex,
   skillForms
 }) => {
   const panel = document.createElement("section");
-  const level = Number(player?.level) || 0;
   const hud = document.createElement("div");
   const identity = document.createElement("div");
   const avatar = document.createElement("div");
   const levelBadge = document.createElement("p");
   const bars = document.createElement("div");
   const profileLabel = document.createElement("h2");
-  const questPanel = document.createElement("article");
-  const questHeader = document.createElement("h2");
-  const questIcon = document.createElement("span");
-  const quest = document.createElement("p");
   const playButton = document.createElement("button");
   const lifeMaxSeconds = JAYCEE_GAME_CONFIG.lifeMaxYears * YEAR_SECONDS;
-  const hasPlayer = Boolean(player);
+  const lifeMaxYears = JAYCEE_GAME_CONFIG.lifeMaxYears;
+  const isGuestPlayer = !player;
+  const hasPlayer = Boolean(player) || isGuestPlayer;
   const hasPlayerProfile = Boolean(playerProfile);
-  const lifeSeconds = Number(player?.life_bar) || 0;
-  const mannaModel = hasPlayer ? getMannaModel({ player, playerProfile, selectedAbilityIndex }) : null;
+  const guestLifeYears = 1;
+  const guestLifeSeconds = guestLifeYears * YEAR_SECONDS;
+  const level = Number(player?.level) || 1;
+  const storedUsername = getDisplayValue(window.localStorage.getItem("jaycee_username"));
+  const lifeSeconds = player ? Number(player.life_bar) || 0 : guestLifeSeconds;
+  const channelUsername = getDisplayValue(profile?.username)
+    || getDisplayValue(window.localStorage.getItem("jaycee_pending_prayer_target_username"))
+    || "";
+  const mannaModel = player ? getMannaModel({ player, playerProfile, selectedAbilityIndex }) : null;
   const questModel = getCurrentQuestModel({
     dynamicFractals,
     gameForm,
@@ -538,13 +585,11 @@ const createVitalsPanel = ({
   bars.className = "profile-vital-stack";
   bars.replaceChildren(
     createVitalBar({
-      current: hasPlayer ? lifeSeconds : 0,
+      current: lifeSeconds,
       label: "Health",
       max: lifeMaxSeconds,
       tone: "health",
-      valueText: hasPlayer
-        ? `${formatYearsFromSeconds(lifeSeconds)} / ${JAYCEE_GAME_CONFIG.lifeMaxYears.toLocaleString()}y`
-        : ""
+      valueText: `${formatYearsFromSeconds(lifeSeconds)} / ${JAYCEE_GAME_CONFIG.lifeMaxYears.toLocaleString()}y`
     }),
     createVitalBar({
       centered: true,
@@ -552,39 +597,53 @@ const createVitalsPanel = ({
       label: "Manna",
       max: mannaModel?.maxAbs || 1,
       tone: "manna",
-      valueText: hasPlayer && mannaModel
+      valueText: player && mannaModel
         ? `${formatMannaValue(mannaModel.value, mannaModel.unit)} / ${formatMannaValue(mannaModel.target, mannaModel.unit)}`
-        : ""
+        : "0 € / 0 €"
     })
   );
   panel.replaceChildren();
 
-  if (questModel) {
-    questPanel.className = "profile-quest-panel";
-    questHeader.className = "profile-quest-title";
-    questIcon.className = "profile-quest-icon";
-    questIcon.textContent = "!";
-    questHeader.replaceChildren(questIcon, "Quest");
-    quest.className = "profile-player-quest";
-    quest.replaceChildren(
-      "You have ",
-      Object.assign(document.createElement("strong"), { textContent: `1 ${questModel.cycleLabel}` }),
-      " to do ",
-      Object.assign(document.createElement("strong"), { textContent: questModel.duration }),
-      " of ",
-      Object.assign(document.createElement("strong"), { textContent: questModel.skillName }),
-      "."
+  if (player && questModel) {
+    panel.append(createProfileNotice({
+      text: `You have 1 ${questModel.cycleLabel} to do ${questModel.duration} of ${questModel.skillName}.`,
+      title: "Quest",
+      tone: "quest"
+    }));
+  } else if (!player) {
+    panel.append(
+      createProfileNotice({
+        closable: true,
+        text: `You have ${lifeMaxYears.toLocaleString()} years left to live on this Earth.`,
+        title: "Notification",
+        tone: "notification"
+      }),
+      createProfileNotice({
+        closable: true,
+        text: `Congratulations! You have Unlocked Level 1! You have burned ${guestLifeYears} year of Karma. ${(lifeMaxYears - guestLifeYears).toLocaleString()} years left.`,
+        title: "Unlocked",
+        tone: "unlocked"
+      }),
+      createProfileNotice({
+        closable: true,
+        text: `You have unlocked ${channelUsername || "this profile"} and your prayer will be sent to him.`,
+        title: "Unlocked",
+        tone: "unlocked"
+      })
     );
-    questPanel.append(questHeader, quest);
-    panel.append(questPanel);
   }
 
-  if (!hasPlayer) {
+  if (!player) {
     playButton.className = "profile-play-button";
     playButton.type = "button";
     playButton.textContent = hasPlayerProfile ? "Play" : "Log in / create account";
     playButton.addEventListener("click", onPlay);
-    panel.append(playButton);
+    panel.append(createProfileNotice({
+      action: playButton,
+      text: `Unlock Level 2: Save your progress, obtain a new ability, burn more Karma and obtain more resources from ${channelUsername || "this profile"}.`,
+      title: "Quest",
+      tone: "quest"
+    }));
   }
 
   panel.append(profileLabel);
@@ -593,23 +652,23 @@ const createVitalsPanel = ({
     hud.className = "profile-player-hud";
     identity.className = "profile-player-identity";
     avatar.className = "profile-player-avatar";
-    if (hasPlayer && playerAvatarUrl) {
+    if (player && playerAvatarUrl) {
       const image = document.createElement("img");
 
       image.alt = "";
       image.src = playerAvatarUrl;
       avatar.append(image);
     } else {
-      avatar.textContent = hasPlayer ? getProfileInitial(playerProfile) : "?";
+      avatar.textContent = player ? getProfileInitial(playerProfile) : (storedUsername || "?").slice(0, 1).toUpperCase();
     }
     levelBadge.className = "profile-player-level";
-    levelBadge.textContent = hasPlayer ? `Level ${level}` : "Unknown user - Level 0";
+    levelBadge.textContent = `${storedUsername || getDisplayValue(playerProfile?.username) || "Player"} - Level ${level}`;
     identity.append(avatar, levelBadge);
     hud.append(identity, bars);
     panel.append(hud);
   }
 
-  if (!hasPlayer && hasPlayerProfile) {
+  if (!player && hasPlayerProfile) {
     panel.append(bars);
   }
 
@@ -960,6 +1019,7 @@ export const initJayceePage = async () => {
       player: currentPlayer,
       playerAvatarUrl,
       playerProfile,
+      profile: currentProfile,
       selectedAbilityIndex,
       skillForms
     });
@@ -994,7 +1054,7 @@ export const initJayceePage = async () => {
     });
     const panel = createFractalParameterPanel({
       activeModels,
-      currentLevel: Number(currentPlayer?.level) || 0,
+      currentLevel: Number(currentPlayer?.level) || (document.body.classList.contains("game-page") ? 1 : 0),
       onSelect: (index) => {
         if (descriptionCloseTimer) {
           window.clearTimeout(descriptionCloseTimer);
@@ -1037,18 +1097,12 @@ export const initJayceePage = async () => {
       corePanel.insertBefore(panel, canvas);
     }
 
-    if (!existingInventoryTitle) {
-      const inventoryTitle = document.createElement("h2");
-
-      inventoryTitle.className = "profile-inventory-title";
-      inventoryTitle.dataset.profileInventoryTitle = "";
-      inventoryTitle.textContent = "Inventory";
-      corePanel.insertBefore(inventoryTitle, canvas);
-    }
+    existingInventoryTitle?.remove();
   };
 
   const renderCore = () => {
     if (!canvas) return;
+    if (document.body.classList.contains("game-page")) return;
 
     const coreState = createProfileCoreState({
       avatarImage,

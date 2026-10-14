@@ -17,6 +17,7 @@ const setPendingPrayerTarget = (profile) => {
       target_profile_username: getDisplayValue(profile.username),
       target_profile_name: getDisplayValue(profile.full_name),
     }));
+    window.localStorage.setItem("jaycee_pending_prayer_target_username", getDisplayValue(profile.username));
   } catch {
     window.localStorage.removeItem("jaycee_pending_prayer");
   }
