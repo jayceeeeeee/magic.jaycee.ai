@@ -21,7 +21,7 @@ const PROFILE_SELECT_COLUMNS = [
   "sex"
 ].join(", ");
 const SIGNED_IMAGE_URL_DURATION_SECONDS = 60 * 60;
-const PLAYER_SELECT_COLUMNS = "id, user_id, game_id, level, skill_1_practice, skill_2_practice, skill_3_practice";
+const PLAYER_SELECT_COLUMNS = "id, user_id, game_id, level, skill_1_practice, skill_2_practice, skill_3_practice, skill_1_start, skill_2_start, skill_3_start";
 
 export const getDisplayValue = (value) => (
   value === null || value === undefined ? "" : String(value).trim()
@@ -226,6 +226,7 @@ export const createPlayerForGame = async (client, userProfile, masterProfile, va
       skill_1_practice: 0,
       skill_2_practice: 0,
       skill_3_practice: 0,
+      skill_1_start: new Date().toISOString(),
       ...values,
       user_id: userProfile.id
     })
@@ -252,6 +253,25 @@ export const updateProfileActiveGame = async (client, profile, playerId) => {
   return data || null;
 };
 
+export const startPlayerFirstQuest = async (client, userProfile, player) => {
+  if (!userProfile?.id || !player?.id || player.skill_1_start || Number(player.level) !== 1) return player;
+
+  const { data, error } = await client
+    .from(JAYCEE_PLAYER_TABLE)
+    .update({ skill_1_start: new Date().toISOString() })
+    .eq("id", player.id)
+    .eq("user_id", userProfile.id)
+    .eq("level", 1)
+    .is("skill_1_start", null)
+    .select(PLAYER_SELECT_COLUMNS)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  // Another request may already have started this quest.
+  return data || await fetchPlayerById(client, player.id);
+};
+
 export const fetchSkillsByIds = async (client, skillIds) => {
   const ids = [...new Set((skillIds || []).map(getDisplayValue).filter(Boolean))];
 
@@ -259,7 +279,7 @@ export const fetchSkillsByIds = async (client, skillIds) => {
 
   const { data, error } = await client
     .from(JAYCEE_SKILLS_TABLE)
-    .select("id, label")
+    .select("id, label, description")
     .in("id", ids)
     .order("label", { ascending: true });
 
@@ -278,7 +298,7 @@ export const updateSkills = async (client, skillUpdates) => {
       .from(JAYCEE_SKILLS_TABLE)
       .update(values)
       .eq("id", id)
-      .select("id, label")
+      .select("id, label, description")
       .maybeSingle();
 
     if (error) throw error;

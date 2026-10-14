@@ -21,6 +21,7 @@ import {
   getAvatarImageUrl,
   getDisplayValue,
   loadOptionalImage,
+  startPlayerFirstQuest,
   updateProfileActiveGame
 } from "../config/data.js";
 
@@ -210,29 +211,6 @@ const getPlayerLevelTotal = (players = []) => {
   return Math.max(1, total);
 };
 
-const getCurrentPeriodBounds = (level, now = new Date()) => {
-  if (level === 1) {
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-
-    return { end, start };
-  }
-
-  if (level === 2) {
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-
-    return { end, start };
-  }
-
-  const start = new Date(now);
-  start.setMinutes(0, 0, 0);
-  const end = new Date(start);
-  end.setHours(start.getHours() + 1);
-
-  return { end, start };
-};
-
 const getSelectedActiveLevel = (player, selectedAbilityIndex = 0) => {
   const level = Math.min(ACTIVE_RING_LIMIT, Math.max(1, Number(player?.level) || 1));
 
@@ -241,20 +219,24 @@ const getSelectedActiveLevel = (player, selectedAbilityIndex = 0) => {
     : level;
 };
 
-const getMannaModel = ({ player, playerProfile, selectedAbilityIndex = 0 }) => {
+const getMannaModel = ({ activeModels = [], player, playerProfile, selectedAbilityIndex = 0, now = new Date() }) => {
   const level = getSelectedActiveLevel(player, selectedAbilityIndex);
   const mannaTarget = Number(playerProfile?.manna_target);
   const mannaCycle = normalizeMannaCycle(playerProfile?.manna_cycle);
   const mannaUnit = normalizeMannaUnit(playerProfile?.manna_unit);
-  const now = new Date();
-  const abilityConfig = JAYCEE_GAME_CONFIG.activeAbilities[level - 1] || JAYCEE_GAME_CONFIG.activeAbilities[0];
-  const { end, start } = getCurrentPeriodBounds(level, now);
-  const periodSeconds = Math.max(1, (end.getTime() - start.getTime()) / 1000);
-  const elapsedSeconds = Math.min(periodSeconds, Math.max(0, (now.getTime() - start.getTime()) / 1000));
+  const activeModel = activeModels[level - 1];
+  const questStart = new Date(player?.[`skill_${level}_start`] || "");
+  const periodSeconds = Number(activeModel?.passiveSeconds);
+  const activeCycleSeconds = Number(activeModel?.questSeconds);
+
+  if (!Number.isFinite(questStart.getTime()) || !(periodSeconds > 0) || !(activeCycleSeconds > 0)) {
+    return { maxAbs: 1, target: 0, unit: mannaUnit, value: 0 };
+  }
+
+  const elapsedSeconds = Math.min(periodSeconds, Math.max(0, (now.getTime() - questStart.getTime()) / 1000));
   const periodTarget = Number.isFinite(mannaTarget)
-    ? mannaTarget * (periodSeconds / getMannaCycleSeconds(mannaCycle, now))
+    ? mannaTarget * (periodSeconds / getMannaCycleSeconds(mannaCycle, questStart))
     : 0;
-  const activeCycleSeconds = periodSeconds / Math.max(1, Number(abilityConfig?.ratio) || 1);
   const practiceSeconds = Number(player?.[`skill_${level}_practice`]) || 0;
   const negativeManna = -periodTarget * (elapsedSeconds / periodSeconds);
   const positiveManna = activeCycleSeconds > 0
@@ -304,7 +286,9 @@ const createFractalMeasureModel = ({
 
 const getPassiveFractalModel = ({
   dynamicFractals,
-  gameForm
+  gameForm,
+  skillForms = [],
+  hasLinkedMaster = false
 }) => {
   const fractal = getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.passive.fractalLabel)
     || getFractalById(dynamicFractals, gameForm?.primary_fractal);
@@ -312,7 +296,8 @@ const getPassiveFractalModel = ({
   return createFractalMeasureModel({
     cycleSeconds: JAYCEE_GAME_CONFIG.passive.cycleSeconds,
     distanceMeters: JAYCEE_GAME_CONFIG.passive.zoneMeters,
-    fractal
+    fractal,
+    skill: hasLinkedMaster ? getSkillById(skillForms, fractal?.skill) : null
   });
 };
 
@@ -399,7 +384,7 @@ const getSkillById = (skillForms, skillId) => (
   (skillForms || []).find((skill) => getDisplayValue(skill.id) === getDisplayValue(skillId)) || null
 );
 
-const getUltimateModel = ({ dynamicFractals, gameForm, publicProfiles, ultimateTeammateSkillLabel }) => {
+const getUltimateModel = ({ dynamicFractals, gameForm, publicProfiles, ultimateTeammateSkillLabel, ultimateTeammateSkillDescription }) => {
   const fractal = getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.ultimate.fractalLabel)
     || getFractalById(dynamicFractals, gameForm?.ultimate_fractal);
   const label = getDisplayValue(fractal?.label) || getDisplayValue(JAYCEE_GAME_CONFIG.ultimate.fractalLabel);
@@ -412,7 +397,8 @@ const getUltimateModel = ({ dynamicFractals, gameForm, publicProfiles, ultimateT
   return {
     label: label || "Ultimate",
     linkedProfile,
-    skillLabel: ultimateTeammateSkillLabel
+    skillLabel: ultimateTeammateSkillLabel,
+    skillDescription: ultimateTeammateSkillDescription
   };
 };
 
@@ -490,6 +476,17 @@ const createVitalBar = ({ centered = false, current, label, max, tone, valueText
 
   return bar;
 };
+
+const createMannaBar = (mannaModel) => createVitalBar({
+  centered: true,
+  current: mannaModel?.value || 0,
+  label: "Manna",
+  max: mannaModel?.maxAbs || 1,
+  tone: "manna",
+  valueText: mannaModel
+    ? `${formatMannaValue(mannaModel.value, mannaModel.unit)} / ${formatMannaValue(mannaModel.target, mannaModel.unit)}`
+    : "0 € / 0 €"
+});
 
 const createProfileNotice = ({
   action = null,
@@ -593,11 +590,22 @@ const getActiveQuestInfo = ({ activeModels = [], player = null, selectedAbilityI
     };
   }
 
+  const startedAt = Date.parse(player?.[`skill_${level}_start`] || "");
+
   return {
     activeTime: formatDuration(activeModel.questSeconds, { compact: false }) || "0s",
+    deadline: Number.isFinite(startedAt) ? startedAt + activeModel.passiveSeconds * 1000 : null,
     passiveTime: formatDuration(activeModel.passiveSeconds, { compact: false }) || "0s",
     skillName: getDisplayValue(activeModel.skillLabel) || getDisplayValue(activeModel.label) || "your skill"
   };
+};
+
+const updateQuestCountdown = (element, now = Date.now()) => {
+  const remainingSeconds = Math.max(0, Math.ceil((Number(element.dataset.questDeadline) - now) / 1000));
+
+  element.textContent = remainingSeconds > 0
+    ? `Time remaining: ${formatDuration(remainingSeconds, { compact: false })}`
+    : "Quest time expired.";
 };
 
 const createLinkedMasterNoticeContent = ({ masterProfile, questInfo }) => {
@@ -610,8 +618,16 @@ const createLinkedMasterNoticeContent = ({ masterProfile, questInfo }) => {
     createNoticeMasterBadge(masterProfile, "a Master"),
     document.createTextNode(".")
   );
-  secondLine.textContent = `You have ${questInfo.passiveTime} to do ${questInfo.activeTime} of ${questInfo.skillName}. If you fail your account will be deleted automatically.`;
+  secondLine.textContent = `You have ${questInfo.passiveTime} to do ${questInfo.activeTime} of ${questInfo.skillName}. During this time you cannot link yourself to another Master.If you fail, your account will be deleted automatically.`;
   fragment.append(firstLine, secondLine);
+
+  if (Number.isFinite(questInfo.deadline)) {
+    const countdown = document.createElement("p");
+
+    countdown.dataset.questDeadline = String(questInfo.deadline);
+    updateQuestCountdown(countdown);
+    fragment.append(countdown);
+  }
 
   return fragment;
 };
@@ -677,10 +693,7 @@ const createVitalsPanel = ({
   const hasPlayerProfile = Boolean(playerProfile);
   const displayLevel = Math.max(1, Number(totalLevel) || 1);
   const effectivePlayer = player
-    ? {
-      ...player,
-      level: displayLevel
-    }
+    ? player
     : hasPlayerProfile
       ? {
         level: displayLevel,
@@ -706,7 +719,7 @@ const createVitalsPanel = ({
   const noticeMasterUsernameElement = document.createElement("i");
   const noticeMasterContent = document.createDocumentFragment();
   const mannaModel = effectivePlayer && playerProfile
-    ? getMannaModel({ player: effectivePlayer, playerProfile, selectedAbilityIndex })
+    ? getMannaModel({ activeModels, player: effectivePlayer, playerProfile, selectedAbilityIndex })
     : null;
   const prayerActiveMs = getPendingPrayerActiveMs();
   const firstActiveSkillMs = getFirstActiveSkillMs();
@@ -747,16 +760,7 @@ const createVitalsPanel = ({
       tone: "health",
       valueText: `${lifeValueText} / ${JAYCEE_GAME_CONFIG.lifeMaxYears.toLocaleString()}y`
     }),
-    createVitalBar({
-      centered: true,
-      current: mannaModel?.value || 0,
-      label: "Manna",
-      max: mannaModel?.maxAbs || 1,
-      tone: "manna",
-      valueText: effectivePlayer && mannaModel
-        ? `${formatMannaValue(mannaModel.value, mannaModel.unit)} / ${formatMannaValue(mannaModel.target, mannaModel.unit)}`
-        : "0 € / 0 €"
-    })
+    createMannaBar(mannaModel)
   );
   panel.replaceChildren();
 
@@ -789,7 +793,7 @@ const createVitalsPanel = ({
       });
       panel.append(createProfileNotice({
         action: acceptButton,
-        text: `Reach level 2: You can now choose the help of a Master. Each one has different a different path and will give you different quests and therefore different benefits. You have ${firstActivePassiveTime} to choose a Master below and get a first quest, after that your account will be deleted automatically. Click on accept once you're done.`,
+        text: `Reach level 2: You can now choose the help of a Master. Each one has different a different path and will give you different quests and therefore different benefits. You have ${firstActivePassiveTime} to choose a Master below and get a first quest. Beyond that timing your account will be deleted automatically. Click on accept once you're done.`,
         title: "Quest",
         tone: "quest"
       }));
@@ -877,7 +881,8 @@ const createGameForm = (settings) => ({
 const createSkillForms = (skills) => (
   (skills || []).map((skill) => ({
     id: skill.id,
-    label: getDisplayValue(skill.label)
+    label: getDisplayValue(skill.label),
+    description: getDisplayValue(skill.description)
   }))
 );
 
@@ -935,7 +940,13 @@ const createFractalParameterPanel = ({
       }, {
         label: "Zone",
         value: formatDistance(passiveModel.distanceMeters) || "0m"
-      }],
+      }, ...(getDisplayValue(passiveModel.skill?.label) ? [{
+        label: "Skill",
+        value: passiveModel.skill.label
+      }] : []), ...(getDisplayValue(passiveModel.skill?.description) ? [{
+        label: "Description",
+        value: passiveModel.skill.description
+      }] : [])],
       type: "passive",
       unlockLevel: 0
     });
@@ -955,7 +966,10 @@ const createFractalParameterPanel = ({
       }, {
         label: "Skill",
         value: fractalModel.skillLabel
-      }],
+      }, ...(getDisplayValue(fractalModel.skill?.description) ? [{
+        label: "Description",
+        value: fractalModel.skill.description
+      }] : [])],
       type: "active",
       unlockLevel: abilities.length
     });
@@ -974,7 +988,10 @@ const createFractalParameterPanel = ({
       }, {
         label: "Skill",
         value: ultimateModel.skillLabel || "No skill"
-      }],
+      }, ...(getDisplayValue(ultimateModel.skillDescription) ? [{
+        label: "Description",
+        value: ultimateModel.skillDescription
+      }] : [])],
       type: "ultimate",
       unlockLevel: 4
     });
@@ -1186,11 +1203,13 @@ export const initJayceePage = async () => {
   let skillForms = [];
   let skills = [];
   let ultimateTeammateSkillLabel = "";
+  let ultimateTeammateSkillDescription = "";
   const getOwnUltimateSkillLabel = () => {
     const ultimateFractal = getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.ultimate.fractalLabel)
       || getFractalById(dynamicFractals, gameForm?.ultimate_fractal);
     const skill = getSkillById(skillForms, ultimateFractal?.skill);
 
+    ultimateTeammateSkillDescription = getDisplayValue(skill?.description);
     return getDisplayValue(skill?.label);
   };
 
@@ -1200,6 +1219,7 @@ export const initJayceePage = async () => {
 
     if (!teammateId || !linkedProfile || !supabaseClient) {
       ultimateTeammateSkillLabel = "";
+      ultimateTeammateSkillDescription = "";
       return;
     }
 
@@ -1215,6 +1235,7 @@ export const initJayceePage = async () => {
     const [linkedSkill] = await fetchSkillsByIds(supabaseClient, [linkedUltimateFractal?.skill]);
 
     ultimateTeammateSkillLabel = getDisplayValue(linkedSkill?.label);
+    ultimateTeammateSkillDescription = getDisplayValue(linkedSkill?.description);
   };
 
   const loadMasterGame = async (masterProfile, masterGame = null) => {
@@ -1334,18 +1355,21 @@ export const initJayceePage = async () => {
     });
     const passiveModel = getPassiveFractalModel({
       dynamicFractals,
-      gameForm
+      gameForm,
+      skillForms,
+      hasLinkedMaster: Boolean(activeMasterProfile && currentPlayer)
     }) || getPassiveModel({ dynamicFractals, gameForm });
     const ultimateModel = getUltimateModel({
       dynamicFractals,
       gameForm,
       publicProfiles,
-      ultimateTeammateSkillLabel
+      ultimateTeammateSkillLabel,
+      ultimateTeammateSkillDescription
     });
     const panel = createFractalParameterPanel({
       activeModels,
       currentLevel: playerProfile
-        ? getPlayerLevelTotal(playerRows)
+        ? Math.max(0, Number(currentPlayer?.level) || 0)
         : (document.body.classList.contains("game-page") ? 1 : 0),
       onSelect: (index) => {
         if (descriptionCloseTimer) {
@@ -1453,6 +1477,8 @@ export const initJayceePage = async () => {
       if (!player?.id) {
         throw new Error("The Master link could not be created.");
       }
+
+      player = await startPlayerFirstQuest(supabaseClient, playerProfile, player);
 
       const updatedProfile = await updateProfileActiveGame(supabaseClient, playerProfile, player.id);
 
@@ -1631,6 +1657,25 @@ export const initJayceePage = async () => {
     renderPresentControls();
     renderCoreParameters();
     scheduleRenderCore();
+    const questClock = window.setInterval(() => {
+      shell.querySelectorAll("[data-quest-deadline]").forEach((element) => updateQuestCountdown(element));
+      const mannaBar = shell.querySelector("[data-profile-vitals] .is-manna");
+
+      if (mannaBar) {
+        const mannaModel = currentPlayer && playerProfile
+          ? getMannaModel({
+            activeModels: getActiveFractalModels({ dynamicFractals, gameForm, skillForms }),
+            player: currentPlayer,
+            playerProfile,
+            selectedAbilityIndex
+          })
+          : null;
+
+        mannaBar.replaceWith(createMannaBar(mannaModel));
+      }
+    }, 1000);
+
+    window.addEventListener("pagehide", () => window.clearInterval(questClock), { once: true });
   } catch (error) {
     console.error("Jaycee profile load failed", error);
     shell.hidden = false;
