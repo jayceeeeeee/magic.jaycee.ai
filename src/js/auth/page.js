@@ -22,26 +22,6 @@
         return /already|registered|exists/i.test(error?.message || "");
     }
 
-    async function saveSignupProfile(userId, fullName) {
-        if (!userId || !fullName) {
-            return;
-        }
-
-        const client = await window.JayceeAuth.getSupabaseClient();
-        const { error } = await client
-            .from("profiles")
-            .upsert({
-                id: userId,
-                full_name: fullName,
-            }, {
-                onConflict: "id",
-            });
-
-        if (error) {
-            throw error;
-        }
-    }
-
     function getDisplayValue(value) {
         return value === null || value === undefined ? "" : String(value).trim();
     }
@@ -269,15 +249,6 @@
             if (mode === "signup" && !result.data.session) {
                 status.textContent = "Check your email to confirm your account.";
                 return;
-            }
-
-            if (mode === "signup") {
-                try {
-                    await saveSignupProfile(result.data.user?.id, fullNameValue);
-                } catch (error) {
-                    status.textContent = error?.message || "Your account was created, but the full name could not be saved.";
-                    return;
-                }
             }
 
             status.textContent = "You are logged in.";
