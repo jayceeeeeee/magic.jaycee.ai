@@ -9,6 +9,7 @@ export const JAYCEE_GAME_CONFIG = {
     {
       cycleSeconds: 2551442.803,
       fractalLabel: "Moon",
+      skillLabel: "Prayer",
       ratio: 1826.211
     },
     {

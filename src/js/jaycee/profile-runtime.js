@@ -354,7 +354,7 @@ const getActiveFractalModels = ({
         },
         passiveSeconds: abilityConfig.cycleSeconds,
         skill,
-        skillLabel: getDisplayValue(skill.label) || getDisplayValue(abilityConfig.skillLabel) || "Active"
+        skillLabel: getDisplayValue(skill?.label) || getDisplayValue(abilityConfig.skillLabel) || "Active"
       });
     })
     .filter(Boolean);
@@ -414,7 +414,7 @@ const getCurrentQuestModel = ({
 const getUltimateModel = ({ dynamicFractals, gameForm, publicProfiles, ultimateTeammateSkillLabel }) => {
   const fractal = getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.ultimate.fractalLabel)
     || getFractalById(dynamicFractals, gameForm?.ultimate_fractal);
-  const label = getDisplayValue(fractal?.label);
+  const label = getDisplayValue(fractal?.label) || getDisplayValue(JAYCEE_GAME_CONFIG.ultimate.fractalLabel);
   const linkedProfile = publicProfiles.find((profile) => (
     getDisplayValue(profile.id) === getDisplayValue(gameForm?.ultimate_link)
   ));
@@ -671,7 +671,7 @@ const createVitalsPanel = ({
     playButton.addEventListener("click", onPlay);
     panel.append(createProfileNotice({
       action: playButton,
-      text: `Unlock Level 2: Save your progress, obtain a new ability, burn more Karma and obtain more resources from ${channelUsername || "this profile"}.`,
+      text: `Unlock Level 2: burn Karma faster, save your progress, and get new resources from a Master.`,
       title: "Quest",
       tone: "quest"
     }));
@@ -901,6 +901,69 @@ const createFractalParameterPanel = ({
   return section;
 };
 
+const createMasterPanel = (profiles = []) => {
+  if (!profiles.length) return null;
+
+  const section = document.createElement("section");
+  const heading = document.createElement("h2");
+  const masters = document.createElement("div");
+
+  section.className = "profile-master-panel";
+  section.dataset.profileMasters = "";
+  heading.textContent = "Get the help of a Master";
+  masters.className = "profile-master-list";
+
+  profiles.forEach((profile) => {
+    const button = document.createElement("button");
+    const avatar = document.createElement("span");
+    const name = document.createElement("span");
+    const lockStatus = document.createElement("span");
+    const lockText = document.createElement("span");
+    const username = getDisplayValue(profile.username);
+
+    button.className = "profile-ability-button profile-master-button is-locked";
+    button.type = "button";
+    button.disabled = true;
+    avatar.className = "profile-master-avatar";
+    name.className = "profile-master-name";
+    name.textContent = username;
+    if (profile.avatarUrl) {
+      const image = document.createElement("img");
+
+      image.alt = "";
+      image.src = profile.avatarUrl;
+      avatar.append(image);
+    } else {
+      avatar.textContent = username.slice(0, 1).toUpperCase();
+    }
+    lockStatus.className = "profile-ability-lock-status";
+    lockText.textContent = "Locked";
+    lockStatus.append(createLockedIcon(), lockText);
+    button.append(avatar, name, lockStatus);
+    masters.append(button);
+  });
+
+  section.append(heading, masters);
+
+  return section;
+};
+
+const attachProfileAvatarUrls = async (client, profiles) => Promise.all(
+  profiles.map(async (profile) => {
+    try {
+      return {
+        ...profile,
+        avatarUrl: await getAvatarImageUrl(client, profile)
+      };
+    } catch {
+      return {
+        ...profile,
+        avatarUrl: ""
+      };
+    }
+  })
+);
+
 const createProfileCoreState = ({
   avatarImage,
   hasUserProfile
@@ -1069,6 +1132,7 @@ export const initJayceePage = async () => {
 
     const corePanel = canvas.closest(".jaycee-profile-core");
     const existingPanel = corePanel?.querySelector("[data-profile-parameters]");
+    const existingMasterPanel = corePanel?.querySelector("[data-profile-masters]");
     const existingInventoryTitle = corePanel?.querySelector("[data-profile-inventory-title]");
     const activeModels = getActiveFractalModels({
       dynamicFractals,
@@ -1117,9 +1181,11 @@ export const initJayceePage = async () => {
       selectedIndex: closingAbilityIndex ?? selectedAbilityIndex,
       ultimateModel
     });
+    const masterPanel = createMasterPanel(publicProfiles);
 
     if (!corePanel || !panel) {
       existingPanel?.remove();
+      existingMasterPanel?.remove();
       existingInventoryTitle?.remove();
       return;
     }
@@ -1128,6 +1194,16 @@ export const initJayceePage = async () => {
       existingPanel.replaceWith(panel);
     } else {
       corePanel.insertBefore(panel, canvas);
+    }
+
+    if (masterPanel) {
+      if (existingMasterPanel) {
+        existingMasterPanel.replaceWith(masterPanel);
+      } else {
+        corePanel.insertBefore(masterPanel, canvas);
+      }
+    } else {
+      existingMasterPanel?.remove();
     }
 
     existingInventoryTitle?.remove();
@@ -1149,6 +1225,13 @@ export const initJayceePage = async () => {
 
     window.requestAnimationFrame(renderCore);
   };
+
+  if (isGamePage && !hasUserProfile) {
+    shell.hidden = false;
+    renderVitalsPanel();
+    renderPresentControls();
+    renderCoreParameters();
+  }
 
   try {
     const client = await window.JayceeAuth.getSupabaseClient();
@@ -1203,7 +1286,14 @@ export const initJayceePage = async () => {
       }
     }
 
-    publicProfiles = (isPresentPage || hasUserProfile) ? await fetchPublicProfiles(client) : [];
+    if (isPresentPage || hasUserProfile || isGamePage) {
+      try {
+        publicProfiles = await attachProfileAvatarUrls(client, await fetchPublicProfiles(client));
+      } catch (error) {
+        console.warn("Jaycee public profiles could not be loaded", error);
+        publicProfiles = [];
+      }
+    }
     await loadUltimateTeammateSkillLabel();
     avatarImage = hasUserProfile
       ? await loadOptionalImage(await getAvatarImageUrl(client, profile))

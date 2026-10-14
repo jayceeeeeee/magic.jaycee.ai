@@ -372,7 +372,17 @@
   padding: 0;
 }
 
+.profile-master-panel {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+}
+
 .profile-parameter-panel h2,
+.profile-master-panel h2,
 .profile-inventory-title {
   width: 100%;
   margin: 0;
@@ -425,6 +435,13 @@
   padding-bottom: 2px;
 }
 
+.profile-master-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-bottom: 2px;
+}
+
 .profile-ability-button {
   position: relative;
   min-width: 0;
@@ -444,6 +461,50 @@
   overflow-wrap: anywhere;
   text-transform: uppercase;
   transition: border-color 160ms ease, box-shadow 160ms ease, color 160ms ease, background 160ms ease, opacity 160ms ease, transform 120ms ease;
+}
+
+.profile-master-button {
+  width: 112px;
+  min-height: 112px;
+  flex: 0 0 112px;
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: 6px;
+  padding: 10px 8px 18px;
+}
+
+.profile-master-avatar {
+  width: 56px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(var(--accent-rgb), 0.24);
+  border-radius: 6px;
+  background:
+    linear-gradient(180deg, rgba(var(--accent-rgb), 0.12), transparent 72%),
+    rgba(0, 0, 0, 0.24);
+  color: rgba(255, 255, 255, 0.62);
+  font-family: "Rajdhani", sans-serif;
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.profile-master-avatar img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.profile-master-name {
+  max-width: 100%;
+  color: inherit;
+  font-size: 0.84rem;
+  line-height: 0.95;
+  overflow-wrap: anywhere;
 }
 
 .profile-ability-button::after {
