@@ -9,6 +9,7 @@ import {
 } from "../config/game-config.js";
 import {
   createPlayerForGame,
+  fetchAdminProfile,
   fetchPlayerForGame,
   fetchProfileByUserId,
   fetchProfileByUsername,
@@ -630,6 +631,7 @@ const createVitalsPanel = ({
   playerAvatarUrl = "",
   playerProfile,
   profile,
+  adminProfile = null,
   publicProfiles = [],
   selectedAbilityIndex,
   skillForms
@@ -653,8 +655,8 @@ const createVitalsPanel = ({
   const channelUsername = getDisplayValue(profile?.username)
     || getDisplayValue(window.localStorage.getItem("jaycee_pending_prayer_target_username"))
     || "";
-  const noticeMasterProfile = publicProfiles.find((publicProfile) => (
-    getDisplayValue(publicProfile.username).toLowerCase() === "cedricjbt"
+  const noticeMasterProfile = adminProfile || publicProfiles.find((publicProfile) => (
+    getDisplayValue(publicProfile.role).toLowerCase() === "admin"
   )) || publicProfiles[0] || null;
   const noticeMasterUsername = getDisplayValue(noticeMasterProfile?.username) || "Cedricjbt";
   const noticeMasterUsernameElement = document.createElement("i");
@@ -723,16 +725,16 @@ const createVitalsPanel = ({
     panel.append(
       createProfileNotice({
         closable: true,
-        text: `Congratulations! You have unlocked level 1. It has been calculated by the great Masters of this game that it takes approximately ${lifeMaxYears.toLocaleString()} years for an average Human being to burn all his Karma and leave the Earth. Your prayer has burned ${formatKarmaYears(prayerKarmaYears)} years of Karma. You have more than ${formatKarmaYears(remainingKarmaYears)} years left.`,
-        title: "Unlocked",
-        tone: "unlocked"
+        content: noticeMasterContent,
+        text: "Oh! It looks like you're not alone in the game room already!",
+        title: "Notification",
+        tone: "notification"
       }),
       createProfileNotice({
         closable: true,
-        content: noticeMasterContent,
-        text: "Oh! It looks like some Masters have been there before!",
-        title: "Notification",
-        tone: "notification"
+        text: `Congratulations! You have unlocked level 1. It has been calculated by the great Masters of this game that it takes approximately ${lifeMaxYears.toLocaleString()} years for an average Human being to burn all his Karma and leave the Earth. Your prayer has burned ${formatKarmaYears(prayerKarmaYears)} years of Karma. You have more than ${formatKarmaYears(remainingKarmaYears)} years left.`,
+        title: "Unlocked",
+        tone: "unlocked"
       })
     );
   }
@@ -740,11 +742,11 @@ const createVitalsPanel = ({
   if (!player) {
     playButton.className = "profile-play-button";
     playButton.type = "button";
-    playButton.textContent = hasPlayerProfile ? "Play" : "Create an account";
+    playButton.textContent = hasPlayerProfile ? "Play" : "Accept";
     playButton.addEventListener("click", onPlay);
     panel.append(createProfileNotice({
       action: playButton,
-      text: `Unlock Level 2: burn Karma faster and get enlightened, save your progress, and connect directly with a Master.`,
+      text: `Unlock Level 2: burn Karma faster and try to get enlightened in this life, save your progress and connect directly with a Master.`,
       title: "Quest",
       tone: "quest"
     }));
@@ -1075,6 +1077,7 @@ export const initJayceePage = async () => {
   let dynamicFractals = [];
   let publicProfiles = [];
   let avatarImage = null;
+  let adminProfile = null;
   let currentProfile = null;
   let currentPlayer = null;
   let gameForm = createEmptyGameSettings();
@@ -1186,6 +1189,7 @@ export const initJayceePage = async () => {
       gameForm,
       onPlay: handlePlayClick,
       player: currentPlayer,
+      adminProfile,
       playerAvatarUrl,
       playerProfile,
       profile: currentProfile,
@@ -1367,6 +1371,19 @@ export const initJayceePage = async () => {
         console.warn("Jaycee public profiles could not be loaded", error);
         publicProfiles = [];
       }
+    }
+    try {
+      const fetchedAdminProfile = await fetchAdminProfile(client);
+      const [profileWithAvatar] = fetchedAdminProfile
+        ? await attachProfileAvatarUrls(client, [fetchedAdminProfile])
+        : [];
+
+      adminProfile = profileWithAvatar || null;
+    } catch (error) {
+      console.warn("Jaycee admin profile could not be loaded", error);
+      adminProfile = publicProfiles.find((publicProfile) => (
+        getDisplayValue(publicProfile.role).toLowerCase() === "admin"
+      )) || null;
     }
     await loadUltimateTeammateSkillLabel();
     avatarImage = hasUserProfile

@@ -1,5 +1,6 @@
 (function () {
     const birthProfileKey = "birthProfile";
+    const userImagesBucket = "users";
 
     function loadBirthProfile() {
         try {
@@ -38,6 +39,108 @@
 
         if (error) {
             throw error;
+        }
+    }
+
+    function getDisplayValue(value) {
+        return value === null || value === undefined ? "" : String(value).trim();
+    }
+
+    function getStoragePathFromImage(image, bucketName) {
+        if (/^https?:\/\//i.test(image)) {
+            const url = new URL(image);
+            const bucketPrefix = `/storage/v1/object/public/${bucketName}/`;
+            const prefixIndex = url.pathname.indexOf(bucketPrefix);
+
+            if (prefixIndex === -1) return "";
+
+            return url.pathname.slice(prefixIndex + bucketPrefix.length);
+        }
+
+        return getDisplayValue(image).replace(new RegExp(`^${bucketName}/`), "");
+    }
+
+    async function getAvatarImageUrl(client, profile) {
+        const image = getDisplayValue(profile?.avatar_path);
+
+        if (!profile?.id || !image) return "";
+
+        const rawStoragePath = getStoragePathFromImage(image, userImagesBucket)
+            .replace(/^\/+/, "")
+            .replace(/\+/g, " ");
+        const storagePath = rawStoragePath.includes("/")
+            ? rawStoragePath
+            : `${profile.id}/${rawStoragePath}`;
+
+        if (!storagePath) return "";
+
+        const { data, error } = await client.storage
+            .from(userImagesBucket)
+            .createSignedUrl(storagePath, 60 * 60);
+
+        if (error) throw error;
+
+        return data?.signedUrl || "";
+    }
+
+    async function fetchAdminProfile(client) {
+        const { data, error } = await client
+            .from("profiles")
+            .select("id, username, avatar_path, role")
+            .eq("role", "admin")
+            .not("username", "is", null)
+            .limit(1);
+
+        if (error) throw error;
+
+        return (data || []).find((profile) => getDisplayValue(profile.username)) || null;
+    }
+
+    function createAdminCard(profile, avatarUrl = "") {
+        const card = document.createElement("span");
+        const avatar = document.createElement("span");
+        const name = document.createElement("span");
+        const username = getDisplayValue(profile?.username) || "Cedricjbt";
+
+        card.className = "auth-admin-card";
+        avatar.className = "auth-admin-card-avatar";
+        name.className = "auth-admin-card-name";
+        name.textContent = username;
+
+        if (avatarUrl) {
+            const image = document.createElement("img");
+
+            image.alt = "";
+            image.src = avatarUrl;
+            avatar.append(image);
+        } else {
+            avatar.textContent = username.slice(0, 1).toUpperCase();
+        }
+
+        card.append(avatar, name);
+
+        return card;
+    }
+
+    async function renderSignupAdminConsole() {
+        const usernameElement = document.querySelector("[data-signup-admin-username]");
+        const cardTarget = document.querySelector("[data-signup-admin-card]");
+
+        if (!cardTarget || !window.JayceeAuth) return;
+
+        try {
+            const client = await window.JayceeAuth.getSupabaseClient();
+            const profile = await fetchAdminProfile(client);
+            const username = getDisplayValue(profile?.username) || "Cedricjbt";
+            const avatarUrl = profile ? await getAvatarImageUrl(client, profile) : "";
+
+            if (usernameElement) {
+                usernameElement.textContent = username;
+            }
+            cardTarget.replaceWith(createAdminCard(profile, avatarUrl));
+        } catch (error) {
+            console.warn("Jaycee signup admin profile could not be loaded", error);
+            cardTarget.replaceWith(createAdminCard(null));
         }
     }
 
@@ -186,6 +289,9 @@
         });
 
         renderMode();
+        if (mode === "signup") {
+            renderSignupAdminConsole();
+        }
     }
 
     if (document.readyState === "loading") {

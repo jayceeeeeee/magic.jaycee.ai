@@ -714,6 +714,72 @@ body::after {
     text-shadow: 0 0 16px rgba(var(--accent-rgb), 0.28);
 }
 
+.auth-game-page .auth-admin-console {
+    display: grid;
+    gap: 9px;
+    color: var(--accent-soft);
+}
+
+.auth-game-page .auth-admin-console p {
+    margin: 0;
+}
+
+.auth-game-page .auth-jaycee-speaker {
+    color: var(--accent);
+}
+
+.auth-game-page .auth-admin-speaker {
+    color: #ffd56b;
+}
+
+.auth-game-page .auth-admin-card,
+.auth-game-page .auth-admin-card-placeholder {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-inline: 4px;
+    padding: 5px 8px 5px 5px;
+    border: 1px solid rgba(var(--accent-rgb), 0.24);
+    border-radius: 7px;
+    background:
+        linear-gradient(90deg, rgba(var(--accent-rgb), 0.1), transparent 72%),
+        rgba(0, 0, 0, 0.22);
+    color: var(--text);
+    font-family: "Rajdhani", sans-serif;
+    font-size: 0.88rem;
+    font-weight: 800;
+    line-height: 1;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+
+.auth-game-page .auth-admin-card-avatar {
+    width: 30px;
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid rgba(var(--accent-rgb), 0.24);
+    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.24);
+    color: rgba(255, 255, 255, 0.68);
+    font-size: 0.95rem;
+}
+
+.auth-game-page .auth-admin-card-avatar img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+}
+
+.auth-game-page .auth-admin-card-name {
+    max-width: 112px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .auth-game-page .auth-panel h1 {
     margin: 0;
     color: var(--text);
@@ -867,6 +933,10 @@ body::after {
     line-height: 1.3;
 }
 
+.auth-game-page .signup-page-main .auth-status:empty {
+    display: none;
+}
+
 .auth-game-page .auth-status,
 .auth-game-page .auth-switch {
     text-align: center;
@@ -877,6 +947,10 @@ body::after {
     color: var(--muted);
     font-size: 0.92rem;
     line-height: 1.3;
+}
+
+.auth-game-page .signup-page-main .auth-panel:has(.auth-status:empty) .auth-switch {
+    margin-top: calc(-1 * clamp(12px, 3svh, 28px));
 }
 
 .auth-switch a {

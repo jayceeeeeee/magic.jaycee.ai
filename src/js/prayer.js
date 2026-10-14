@@ -33,11 +33,7 @@
         return {
             problem: String(formData.get("problem") || "").trim(),
             prayer: String(formData.get("prayer") || "").trim(),
-            learning_type: "manifestation",
-            full_name: String(formData.get("name") || storedUsername || "Unknown user").trim(),
-            email: String(formData.get("email") || "").trim() || null,
-            whatsapp: String(formData.get("whatsapp") || "").trim() || null,
-            line: String(formData.get("line") || "").trim() || null,
+            username: String(storedUsername || "Unknown user").trim(),
         };
     }
 
@@ -83,6 +79,29 @@
         lastTypingAt = now;
     }
 
+    async function submitPrayerToDatabase(payload) {
+        const client = await window.JayceeAuth.getSupabaseClient();
+        const { data: sessionData } = await client.auth.getSession();
+        const userId = sessionData?.session?.user?.id || null;
+        const prayerRow = {
+            problem: payload.problem,
+            prayer: payload.prayer,
+            username: payload.username,
+        };
+
+        if (userId) {
+            prayerRow.user_id = userId;
+        }
+
+        const { error } = await client
+            .from("prayers")
+            .insert(prayerRow);
+
+        if (error) {
+            throw error;
+        }
+    }
+
     autogrowFields.forEach((field) => {
         field.addEventListener("input", () => {
             trackActiveTyping();
@@ -91,7 +110,7 @@
         });
     });
 
-    prayerForm?.addEventListener("submit", (event) => {
+    prayerForm?.addEventListener("submit", async (event) => {
         event.preventDefault();
 
         if (!prayerForm.reportValidity()) {
@@ -100,13 +119,27 @@
         }
 
         const payload = getPrayerPayload();
+        const submitButton = prayerForm.querySelector("button[type='submit']");
 
-        window.localStorage.setItem("jaycee_pending_prayer", JSON.stringify({
-            ...payload,
-            active_typing_ms: Math.round(activeTypingMs),
-            created_at: new Date().toISOString(),
-        }));
-        (isEmbedded ? window.top : window).location.href = "/game.html";
+        if (submitButton) {
+            submitButton.disabled = true;
+        }
+
+        try {
+            await submitPrayerToDatabase(payload);
+            window.localStorage.setItem("jaycee_pending_prayer", JSON.stringify({
+                ...payload,
+                active_typing_ms: Math.round(activeTypingMs),
+                created_at: new Date().toISOString(),
+            }));
+            (isEmbedded ? window.top : window).location.href = "/game.html";
+        } catch (error) {
+            console.error("Jaycee prayer could not be saved", error);
+            setStatus(error?.message || "Prayer could not be sent.", "error");
+            if (submitButton) {
+                submitButton.disabled = false;
+            }
+        }
     });
 
     window.addEventListener("load", notifyHeight);

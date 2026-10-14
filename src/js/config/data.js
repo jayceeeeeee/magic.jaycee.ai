@@ -1,8 +1,8 @@
-export const JAYCEE_FRACTALS_TABLE = "jaycee_fractals";
-export const JAYCEE_FRACTAL_ELEMENTS_TABLE = "jaycee_fractal_elements";
-export const JAYCEE_GAME_TABLE = "jaycee_game";
-export const JAYCEE_PLAYER_TABLE = "jaycee_player";
-export const JAYCEE_SKILLS_TABLE = "jaycee_skills";
+export const JAYCEE_FRACTALS_TABLE = "fractals";
+export const JAYCEE_FRACTAL_ELEMENTS_TABLE = "fractal_elements";
+export const JAYCEE_GAME_TABLE = "game";
+export const JAYCEE_PLAYER_TABLE = "player";
+export const JAYCEE_SKILLS_TABLE = "skills";
 export const PROFILE_TABLE = "profiles";
 export const USER_IMAGES_BUCKET = "users";
 
@@ -22,6 +22,7 @@ const PROFILE_SELECT_COLUMNS = [
   "manna_target",
   "manna_unit",
   "manna_cycle",
+  "role",
   "sex"
 ].join(", ");
 const SIGNED_IMAGE_URL_DURATION_SECONDS = 60 * 60;
@@ -73,7 +74,7 @@ export const fetchProfileByUsername = async (client, username) => {
 export const fetchPublicProfiles = async (client, limit = 100) => {
   const { data, error } = await client
     .from(PROFILE_TABLE)
-    .select("id, username, full_name, avatar_path, theme, primary_color, secondary_color")
+    .select("id, username, full_name, avatar_path, theme, primary_color, secondary_color, role")
     .not("username", "is", null)
     .eq("visibility", true)
     .order("username", { ascending: true })
@@ -82,6 +83,19 @@ export const fetchPublicProfiles = async (client, limit = 100) => {
   if (error) throw error;
 
   return (data || []).filter((profile) => getDisplayValue(profile.username));
+};
+
+export const fetchAdminProfile = async (client) => {
+  const { data, error } = await client
+    .from(PROFILE_TABLE)
+    .select("id, username, full_name, avatar_path, theme, primary_color, secondary_color, role")
+    .eq("role", "admin")
+    .not("username", "is", null)
+    .limit(1);
+
+  if (error) throw error;
+
+  return (data || []).find((profile) => getDisplayValue(profile.username)) || null;
 };
 
 const getStoragePathFromImage = (image, bucketName) => {
