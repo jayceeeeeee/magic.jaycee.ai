@@ -532,6 +532,10 @@ const createProfileNotice = ({
   const header = document.createElement("h2");
   const icon = document.createElement("span");
   const copy = document.createElement("p");
+  const dismissPanel = () => {
+    panel.classList.add("is-dismissing");
+    window.setTimeout(() => panel.remove(), 180);
+  };
 
   panel.className = `profile-notice-panel is-${tone}`;
   header.className = "profile-notice-title";
@@ -551,16 +555,18 @@ const createProfileNotice = ({
 
   if (closable) {
     const closeButton = document.createElement("button");
+    const okButton = document.createElement("button");
 
     closeButton.className = "profile-notice-close";
     closeButton.type = "button";
     closeButton.textContent = "x";
     closeButton.setAttribute("aria-label", "Dismiss notification");
-    closeButton.addEventListener("click", () => {
-      panel.classList.add("is-dismissing");
-      window.setTimeout(() => panel.remove(), 180);
-    });
-    panel.append(closeButton);
+    closeButton.addEventListener("click", dismissPanel);
+    okButton.className = "profile-notice-ok";
+    okButton.type = "button";
+    okButton.textContent = "Ok";
+    okButton.addEventListener("click", dismissPanel);
+    panel.append(okButton, closeButton);
   }
 
   return panel;

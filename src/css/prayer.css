@@ -7,7 +7,8 @@ body {
 
 .prayer-page {
     min-height: 100vh;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     background:
         radial-gradient(circle at 50% 38%, rgba(var(--accent-rgb), 0.16), transparent 34%),
         linear-gradient(180deg, #080d12 0%, #05070a 58%, #030405 100%);
@@ -210,6 +211,8 @@ body {
 
 @media (max-width: 620px) {
     .prayer-page-main {
+        min-height: auto;
+        align-content: start;
         padding: 18px;
     }
 
@@ -222,9 +225,16 @@ body {
     }
 
     .prayer-form textarea {
-        height: 52px;
-        min-height: 52px;
-        padding: 13px 17px;
+        height: 58px;
+        min-height: 58px;
+        padding: 12px 17px;
+        font-size: 0.92rem;
+        line-height: 1.2;
+    }
+
+    .prayer-form textarea::placeholder {
+        font-size: 0.78rem;
+        line-height: 1.2;
     }
 
     .prayer-form label span {

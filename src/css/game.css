@@ -226,6 +226,38 @@ body {
   outline: none;
 }
 
+.game-page .profile-notice-ok {
+  justify-self: center;
+  min-height: 30px;
+  margin-top: 3px;
+  padding: 0 18px;
+  border: 1px solid rgba(155, 216, 255, 0.32);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.24);
+  color: #9bd8ff;
+  cursor: pointer;
+  font: inherit;
+  font-family: "Rajdhani", sans-serif;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+  transition:
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.game-page .profile-notice-ok:hover,
+.game-page .profile-notice-ok:focus-visible {
+  border-color: rgba(155, 216, 255, 0.64);
+  color: #b3f5ff;
+  outline: none;
+  transform: translateY(-1px);
+  box-shadow: 0 0 18px rgba(76, 178, 255, 0.16);
+}
+
 .game-page .profile-notice-panel.is-unlocked {
   border-color: rgba(124, 255, 120, 0.36);
   box-shadow:
@@ -252,6 +284,18 @@ body {
   border-color: rgba(124, 255, 120, 0.62);
   background: rgba(124, 255, 120, 0.12);
   box-shadow: 0 0 12px rgba(124, 255, 120, 0.18);
+}
+
+.game-page .profile-notice-panel.is-unlocked .profile-notice-ok {
+  border-color: rgba(124, 255, 120, 0.36);
+  color: rgba(124, 255, 120, 0.96);
+}
+
+.game-page .profile-notice-panel.is-unlocked .profile-notice-ok:hover,
+.game-page .profile-notice-panel.is-unlocked .profile-notice-ok:focus-visible {
+  border-color: rgba(124, 255, 120, 0.66);
+  color: #cbffc9;
+  box-shadow: 0 0 18px rgba(124, 255, 120, 0.16);
 }
 
 .game-page .profile-notice-panel.is-quest {

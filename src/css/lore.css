@@ -7,7 +7,8 @@ body {
 
 .lore-page {
     min-height: 100vh;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
     background:
         radial-gradient(circle at 50% 28%, rgba(var(--accent-rgb), 0.18), transparent 32%),
         radial-gradient(circle at 50% 90%, rgba(255, 213, 107, 0.08), transparent 34%),
@@ -180,9 +181,16 @@ body {
 }
 
 @media (max-width: 620px) {
+    .lore-page {
+        min-height: 100svh;
+    }
+
     .lore-main {
         width: min(100% - 24px, 460px);
+        min-height: auto;
+        align-content: start;
         gap: 24px;
+        padding: 28px 0 76px;
     }
 
     .lore-console {
@@ -198,9 +206,8 @@ body {
     }
 
     .lore-login-note {
-        right: 0;
-        bottom: 14px;
-        left: 0;
+        position: static;
+        padding-top: 2px;
         text-align: center;
     }
 }
