@@ -52,6 +52,26 @@ body {
         0 12px 46px rgba(0, 0, 0, 0.42);
 }
 
+.prayer-console {
+    width: min(100%, 780px);
+    display: grid;
+    gap: 9px;
+    padding-inline: 22px;
+    color: var(--accent-soft);
+    font-family: "Share Tech Mono", monospace;
+    font-size: clamp(0.86rem, 2.3vw, 1.08rem);
+    line-height: 1.45;
+    text-shadow: 0 0 16px rgba(var(--accent-rgb), 0.28);
+}
+
+.prayer-console p {
+    margin: 0;
+}
+
+.prayer-console p:first-child {
+    color: var(--accent);
+}
+
 .prayer-form {
     width: min(100%, 780px);
     display: grid;
@@ -195,6 +215,10 @@ body {
 
     .prayer-form {
         gap: 14px;
+    }
+
+    .prayer-console {
+        padding-inline: 17px;
     }
 
     .prayer-form textarea {

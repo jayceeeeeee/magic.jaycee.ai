@@ -2,9 +2,13 @@
     const isEmbedded = window.self !== window.top;
     const prayerForm = document.querySelector(".prayer-form");
     const prayerStatus = document.querySelector("[data-prayer-status]");
+    const prayerUsername = document.querySelector("[data-prayer-username]");
     const autogrowFields = document.querySelectorAll("[data-autogrow]");
 
     document.body.classList.toggle("is-embedded", isEmbedded);
+    if (prayerUsername) {
+        prayerUsername.textContent = window.localStorage.getItem("jaycee_username") || "Player";
+    }
 
     function notifyHeight() {
         if (!isEmbedded) {
@@ -87,7 +91,6 @@
             ...payload,
             created_at: new Date().toISOString(),
         }));
-        setStatus("Prayer ready. Choose a target.", "success");
         (isEmbedded ? window.top : window).location.href = "/profiles.html";
     });
 
