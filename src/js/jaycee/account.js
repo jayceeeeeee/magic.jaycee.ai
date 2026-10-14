@@ -23,7 +23,7 @@ const getLoginUrl = () => (
   new URL(
     window.JayceeAuth?.getLoginUrl
       ? window.JayceeAuth.getLoginUrl()
-      : "/auth.html",
+      : "/login.html",
     window.location.origin
   ).href
 );

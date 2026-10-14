@@ -45,16 +45,31 @@ const getLoginUrl = () => (
   new URL(
     window.JayceeAuth?.getLoginUrl
       ? window.JayceeAuth.getLoginUrl()
-      : "/auth.html",
+      : "/login.html",
     window.location.origin
   )
 );
+
+const getSignupUrl = () => {
+  return new URL("/signup.html", window.location.origin);
+};
 
 const redirectToLogin = () => {
   const loginUrl = getLoginUrl();
 
   loginUrl.searchParams.set("redirect", `${window.location.pathname}${window.location.search}`);
   window.location.href = loginUrl.href;
+};
+
+const redirectToSignup = () => {
+  const signupUrl = getSignupUrl();
+  const storedUsername = getDisplayValue(window.localStorage.getItem("jaycee_username"));
+
+  signupUrl.searchParams.set("redirect", `${window.location.pathname}${window.location.search}`);
+  if (storedUsername) {
+    signupUrl.searchParams.set("username", storedUsername);
+  }
+  window.location.href = signupUrl.href;
 };
 
 const getEmptyLabels = (count) => Array.from({ length: count }, () => "");
@@ -505,6 +520,7 @@ const createVitalBar = ({ centered = false, current, label, max, tone, valueText
 
 const createProfileNotice = ({
   action = null,
+  content = null,
   closable = false,
   text,
   title,
@@ -522,6 +538,9 @@ const createProfileNotice = ({
   header.replaceChildren(icon, title);
   copy.className = "profile-notice-copy";
   copy.textContent = text;
+  if (content) {
+    copy.append(document.createElement("br"), content);
+  }
   panel.append(header, copy);
 
   if (action) {
@@ -543,6 +562,32 @@ const createProfileNotice = ({
   }
 
   return panel;
+};
+
+const createNoticeMasterBadge = (profile, fallbackUsername = "Cedricjbt") => {
+  const badge = document.createElement("span");
+  const avatar = document.createElement("span");
+  const name = document.createElement("span");
+  const username = getDisplayValue(profile?.username) || fallbackUsername;
+
+  badge.className = "profile-notice-master-card";
+  avatar.className = "profile-notice-master-avatar";
+  name.className = "profile-notice-master-name";
+  name.textContent = username;
+
+  if (profile?.avatarUrl) {
+    const image = document.createElement("img");
+
+    image.alt = "";
+    image.src = profile.avatarUrl;
+    avatar.append(image);
+  } else {
+    avatar.textContent = username.slice(0, 1).toUpperCase();
+  }
+
+  badge.append(avatar, name);
+
+  return badge;
 };
 
 const getPendingPrayerActiveMs = () => {
@@ -585,6 +630,7 @@ const createVitalsPanel = ({
   playerAvatarUrl = "",
   playerProfile,
   profile,
+  publicProfiles = [],
   selectedAbilityIndex,
   skillForms
 }) => {
@@ -607,6 +653,12 @@ const createVitalsPanel = ({
   const channelUsername = getDisplayValue(profile?.username)
     || getDisplayValue(window.localStorage.getItem("jaycee_pending_prayer_target_username"))
     || "";
+  const noticeMasterProfile = publicProfiles.find((publicProfile) => (
+    getDisplayValue(publicProfile.username).toLowerCase() === "cedricjbt"
+  )) || publicProfiles[0] || null;
+  const noticeMasterUsername = getDisplayValue(noticeMasterProfile?.username) || "Cedricjbt";
+  const noticeMasterUsernameElement = document.createElement("i");
+  const noticeMasterContent = document.createDocumentFragment();
   const mannaModel = player ? getMannaModel({ player, playerProfile, selectedAbilityIndex }) : null;
   const prayerActiveMs = getPendingPrayerActiveMs();
   const firstActiveSkillMs = getFirstActiveSkillMs();
@@ -625,6 +677,18 @@ const createVitalsPanel = ({
 
   panel.className = "profile-vitals-panel";
   panel.dataset.profileVitals = "";
+  noticeMasterUsernameElement.textContent = noticeMasterUsername;
+  noticeMasterContent.append(
+    document.createTextNode("You have crossed path with "),
+    createNoticeMasterBadge(noticeMasterProfile),
+    document.createTextNode(","),
+    document.createElement("br"),
+    document.createTextNode("and he has decided to take charge of your karma!"),
+    document.createElement("br"),
+    document.createElement("br"),
+    noticeMasterUsernameElement,
+    document.createTextNode(" has the special ability to connect his energy to technology. If your prayer has been done faithfully he will be able to take your karma and help you from the spirit world. Your data will be deleted right after.")
+  );
   profileLabel.className = "profile-section-label";
   profileLabel.textContent = "Profile";
   bars.className = "profile-vital-stack";
@@ -656,22 +720,31 @@ const createVitalsPanel = ({
       tone: "quest"
     }));
   } else if (!player) {
-    panel.append(createProfileNotice({
-      closable: true,
-      text: `Congratulations! You have unlocked level 1. It has been calculated by the great Masters of this game that it takes approximately ${lifeMaxYears.toLocaleString()} years for an average Human being to burn all his Karma and leave the Earth. Your prayer has burned ${formatKarmaYears(prayerKarmaYears)} years of Karma. You have more than ${formatKarmaYears(remainingKarmaYears)} years left.`,
-      title: "Unlocked",
-      tone: "unlocked"
-    }));
+    panel.append(
+      createProfileNotice({
+        closable: true,
+        text: `Congratulations! You have unlocked level 1. It has been calculated by the great Masters of this game that it takes approximately ${lifeMaxYears.toLocaleString()} years for an average Human being to burn all his Karma and leave the Earth. Your prayer has burned ${formatKarmaYears(prayerKarmaYears)} years of Karma. You have more than ${formatKarmaYears(remainingKarmaYears)} years left.`,
+        title: "Unlocked",
+        tone: "unlocked"
+      }),
+      createProfileNotice({
+        closable: true,
+        content: noticeMasterContent,
+        text: "Oh! It looks like some Masters have been there before!",
+        title: "Notification",
+        tone: "notification"
+      })
+    );
   }
 
   if (!player) {
     playButton.className = "profile-play-button";
     playButton.type = "button";
-    playButton.textContent = hasPlayerProfile ? "Play" : "Log in / create account";
+    playButton.textContent = hasPlayerProfile ? "Play" : "Create an account";
     playButton.addEventListener("click", onPlay);
     panel.append(createProfileNotice({
       action: playButton,
-      text: `Unlock Level 2: burn Karma faster, save your progress, and get new resources from a Master.`,
+      text: `Unlock Level 2: burn Karma faster and get enlightened, save your progress, and connect directly with a Master.`,
       title: "Quest",
       tone: "quest"
     }));
@@ -1051,7 +1124,7 @@ export const initJayceePage = async () => {
     if (isPlayerSaving) return;
 
     if (!playerProfile) {
-      redirectToLogin();
+      redirectToSignup();
       return;
     }
 
@@ -1116,6 +1189,7 @@ export const initJayceePage = async () => {
       playerAvatarUrl,
       playerProfile,
       profile: currentProfile,
+      publicProfiles,
       selectedAbilityIndex,
       skillForms
     });

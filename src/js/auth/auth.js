@@ -1,7 +1,8 @@
 (function () {
     const supabaseUrl = "https://ndtnfwyfdfdcxljvvjfd.supabase.co";
     const supabasePublishableKey = "sb_publishable_lMEHC2xjlGGmTnkI5G-okg_0AVRhiDd";
-    const defaultLoginPath = "/auth.html";
+    const defaultLoginPath = "/login.html";
+    const defaultSignupPath = "/signup.html";
     const defaultAccountPath = "/account.html";
     const defaultAfterSignInPath = "/account.html";
     const themeConfig = window.JayceeThemes || {
@@ -52,9 +53,9 @@
         return getCurrentUrl(path);
     }
 
-    function getAuthUrl(mode = "login", path = defaultLoginPath) {
+    function getAuthUrl(mode = "login", path = mode === "signup" ? defaultSignupPath : defaultLoginPath) {
         const url = new URL(path, window.location.origin);
-        if (mode !== "login") {
+        if (mode !== "login" && path === defaultLoginPath) {
             url.searchParams.set("mode", mode);
         }
         return url.href;

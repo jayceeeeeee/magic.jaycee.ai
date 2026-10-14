@@ -44,7 +44,7 @@
     function initAuthPage() {
         const params = new URLSearchParams(window.location.search);
         const form = document.querySelector("[data-auth-form]");
-        let mode = params.get("mode") === "signup" ? "signup" : form?.dataset.authMode || "login";
+        let mode = form?.dataset.authMode || (params.get("mode") === "signup" ? "signup" : "login");
         const title = document.querySelector("#auth-title");
         const submit = document.querySelector(".auth-submit");
         const status = document.querySelector("[data-auth-status]");
@@ -53,20 +53,39 @@
         const username = form?.elements.username;
         const signupFields = [...document.querySelectorAll("[data-auth-signup-field]")];
         const redirectPath = params.get("redirect");
+        const usernameParam = String(params.get("username") || "").trim();
 
         if (!form || !title || !submit || !status || !switcher || !password || !username || !window.JayceeAuth) {
             return;
         }
 
+        if (usernameParam) {
+            username.value = usernameParam;
+        }
+
+        function createAuthHref(path, nextMode) {
+            const nextParams = new URLSearchParams();
+
+            if (redirectPath?.startsWith("/") && !redirectPath.startsWith("//")) {
+                nextParams.set("redirect", redirectPath);
+            }
+            if (nextMode === "signup" && username.value.trim()) {
+                nextParams.set("username", username.value.trim());
+            }
+
+            const query = nextParams.toString();
+
+            return query ? `${path}?${query}` : path;
+        }
+
         function showExistingAccountMessage() {
             status.textContent = "An account with this email already exists.";
-            switcher.innerHTML = 'Already have an account? <a href="/auth.html" data-auth-mode="login">Log in instead</a>.';
+            switcher.innerHTML = `Already have an account? <a href="${createAuthHref("/login.html", "login")}" data-auth-mode="login">Log in instead</a>.`;
         }
 
         function renderMode() {
             const isSignup = mode === "signup";
 
-            title.textContent = isSignup ? "Create an account" : "Log in";
             submit.textContent = isSignup ? "Sign up" : "Log in";
             password.autocomplete = isSignup ? "new-password" : "current-password";
             username.required = isSignup;
@@ -76,8 +95,8 @@
             form.hidden = false;
             switcher.hidden = false;
             switcher.innerHTML = isSignup
-                ? 'Already have an account? <a href="/auth.html" data-auth-mode="login">Log in</a>'
-                : 'No account yet? <a href="/auth.html?mode=signup" data-auth-mode="signup">Sign up</a>';
+                ? `Already have an account? <a href="${createAuthHref("/login.html", "login")}" data-auth-mode="login">Log in</a>`
+                : `No account yet? <a href="${createAuthHref("/signup.html", "signup")}" data-auth-mode="signup">Sign up</a>`;
             status.textContent = "";
         }
 
@@ -90,6 +109,10 @@
 
             event.preventDefault();
             mode = link.dataset.authMode === "signup" ? "signup" : "login";
+            if (link.pathname !== window.location.pathname) {
+                window.location.href = link.href;
+                return;
+            }
             const nextParams = new URLSearchParams(window.location.search);
 
             if (mode === "signup") {
