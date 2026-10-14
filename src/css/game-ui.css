@@ -516,6 +516,16 @@
   animation: profile-ability-description-out 180ms ease-in both;
 }
 
+.profile-skill-description {
+  margin: 0;
+  color: var(--text);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .profile-parameter-section h3 {
   margin: 0;
   color: var(--muted);

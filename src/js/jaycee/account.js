@@ -210,7 +210,7 @@ const createCharacterSection = ({ avatarUrl = "", profile }) => {
 };
 
 const createMapsSection = ({ profile }) => {
-  const { content, section } = createSection("Maps", "is-maps");
+  const { content, section } = createSection("Map", "is-maps");
   const form = document.createElement("form");
   const birthDateField = createTextField({ label: "Birth date", name: "birth_date", type: "date", value: profile.birth_date });
   const birthTimeField = createTextField({ label: "Birth time", name: "birth_time", type: "time", value: getDisplayValue(profile.birth_time).slice(0, 5) });

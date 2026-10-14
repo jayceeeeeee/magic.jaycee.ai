@@ -384,28 +384,19 @@ const getSkillById = (skillForms, skillId) => (
   (skillForms || []).find((skill) => getDisplayValue(skill.id) === getDisplayValue(skillId)) || null
 );
 
-const getUltimateModel = ({ dynamicFractals, gameForm, publicProfiles, ultimateTeammateSkillLabel, ultimateTeammateSkillDescription }) => {
+const getUltimateModel = ({ dynamicFractals, gameForm, skillForms }) => {
   const fractal = getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.ultimate.fractalLabel)
     || getFractalById(dynamicFractals, gameForm?.ultimate_fractal);
   const label = getDisplayValue(fractal?.label) || getDisplayValue(JAYCEE_GAME_CONFIG.ultimate.fractalLabel);
-  const linkedProfile = publicProfiles.find((profile) => (
-    getDisplayValue(profile.id) === getDisplayValue(gameForm?.ultimate_link)
-  ));
+  const skill = getSkillById(skillForms, fractal?.skill);
 
-  if (!label && !ultimateTeammateSkillLabel && !linkedProfile) return null;
+  if (!label && !skill) return null;
 
   return {
     label: label || "Ultimate",
-    linkedProfile,
-    skillLabel: ultimateTeammateSkillLabel,
-    skillDescription: ultimateTeammateSkillDescription
+    skillLabel: getDisplayValue(skill?.label),
+    skillDescription: getDisplayValue(skill?.description)
   };
-};
-
-const getPublicProfileUrl = (profile) => {
-  const username = getDisplayValue(profile?.username);
-
-  return username ? `/game.html?username=${encodeURIComponent(username)}` : "";
 };
 
 const createGameSelect = (profiles, selectedUsername = "") => {
@@ -676,6 +667,16 @@ const updateQuestCountdown = (element, now = Date.now()) => {
     : "Quest time expired.";
 };
 
+const createQuestCountdown = (deadline) => {
+  if (!Number.isFinite(deadline)) return null;
+
+  const countdown = document.createElement("p");
+
+  countdown.dataset.questDeadline = String(deadline);
+  updateQuestCountdown(countdown);
+  return countdown;
+};
+
 const createLinkedMasterNoticeContent = ({ masterProfile, questInfo }) => {
   const fragment = document.createDocumentFragment();
   const firstLine = document.createElement("p");
@@ -689,13 +690,9 @@ const createLinkedMasterNoticeContent = ({ masterProfile, questInfo }) => {
   secondLine.textContent = `You have ${questInfo.passiveTime} to do ${questInfo.activeTime} of ${questInfo.skillName}. During this time you cannot link yourself to another Master.If you fail, your account will be deleted automatically.`;
   fragment.append(firstLine, secondLine);
 
-  if (Number.isFinite(questInfo.deadline)) {
-    const countdown = document.createElement("p");
+  const countdown = createQuestCountdown(questInfo.deadline);
 
-    countdown.dataset.questDeadline = String(questInfo.deadline);
-    updateQuestCountdown(countdown);
-    fragment.append(countdown);
-  }
+  if (countdown) fragment.append(countdown);
 
   return fragment;
 };
@@ -733,6 +730,7 @@ const formatKarmaYears = (yearsValue) => {
 };
 
 const createVitalsPanel = ({
+  accountCreatedAt = "",
   activeMasterProfile = null,
   activeModels = [],
   isMasterSaving = false,
@@ -816,8 +814,8 @@ const createVitalsPanel = ({
   );
   profileLabel.className = "profile-section-label";
   profileLabel.textContent = "Profile";
-  profileLabel.hidden = true;
-  hud.hidden = true;
+  profileLabel.hidden = !hasPlayerProfile;
+  hud.hidden = !hasPlayerProfile;
   bars.className = "profile-vital-stack";
   bars.replaceChildren(
     createVitalBar({
@@ -834,7 +832,7 @@ const createVitalsPanel = ({
   if (hasPlayerProfile) {
     panel.append(createProfileNotice({
       closable: true,
-      text: "Congratulations! You have learned to pray! You can now save your progress and connect with a Master to continue to play.",
+      text: "Congratulations! You have learned to pray! You can now save your progress and connect with a Master to continue to play. Click on the top right icon to add your informations.",
       title: "Unlocked",
       tone: "unlocked"
     }));
@@ -854,14 +852,18 @@ const createVitalsPanel = ({
         isSaving: isMasterSaving
       });
       const linkStatus = document.createElement("p");
+      const createdAt = Date.parse(accountCreatedAt);
+      const selectionDurationSeconds = Number(activeModels[0]?.passiveSeconds);
+      const countdown = createQuestCountdown(createdAt + selectionDurationSeconds * 1000);
 
+      if (countdown) masterChoices.prepend(countdown);
       linkStatus.className = "profile-master-link-status";
       linkStatus.setAttribute("role", "status");
       linkStatus.textContent = masterLinkError || (isMasterSaving ? "Linking..." : publicProfiles.length ? "" : "No Masters available yet.");
       masterChoices.append(linkStatus);
       panel.append(createProfileNotice({
         content: masterChoices,
-        text: `Unlock level 1 in a Master's game: Each Master offers a different path, with different quests and benefits. You have ${firstActivePassiveTime} to choose a Master and get your first quest. Beyond that timing your account will be deleted automatically. Click on a Master below to link to their game.`,
+        text: `Connect with a Master: Each Master offers a different path, with different quests and benefits. You have ${firstActivePassiveTime} to choose a Master and get your first quest. Beyond that timing your account will be deleted automatically. Click on a Master below to link to their game.`,
         title: "Quest",
         tone: "quest"
       }));
@@ -995,79 +997,35 @@ const createFractalParameterPanel = ({
   const heading = document.createElement("h2");
   const buttons = document.createElement("div");
   const description = document.createElement("article");
-  const descriptionTitle = document.createElement("h3");
-  const list = document.createElement("dl");
   const abilities = [];
 
   section.className = "profile-parameter-panel";
-  section.hidden = true;
   section.dataset.profileParameters = "";
   heading.textContent = "Abilities";
   buttons.className = "profile-ability-bar";
   description.className = "profile-parameter-section";
-  list.className = "profile-parameter-list";
 
   if (passiveModel) {
     abilities.push({
-      label: passiveModel.label,
-      rows: [{
-        label: "Passive",
-        value: formatDuration(passiveModel.cycleSeconds, { compact: false }) || "00:00:00"
-      }, {
-        label: "Zone",
-        value: formatDistance(passiveModel.distanceMeters) || "0m"
-      }, ...(getDisplayValue(passiveModel.skill?.label) ? [{
-        label: "Skill",
-        value: passiveModel.skill.label
-      }] : []), ...(getDisplayValue(passiveModel.skill?.description) ? [{
-        label: "Description",
-        value: passiveModel.skill.description
-      }] : [])],
+      label: getDisplayValue(passiveModel.skill?.label) || "No skill",
+      description: getDisplayValue(passiveModel.skill?.description),
       type: "passive",
       unlockLevel: 0
     });
   }
-  activeModels.forEach((fractalModel) => {
+  activeModels.forEach((fractalModel, index) => {
     abilities.push({
-      label: fractalModel.label,
-      rows: [{
-        label: "Passive",
-        value: formatDuration(fractalModel.passiveSeconds, { compact: false }) || "00:00:00"
-      }, {
-        label: "Active",
-        value: formatDuration(fractalModel.questSeconds, { compact: false }) || "00:00:00"
-      }, {
-        label: "Zone",
-        value: formatDistance(fractalModel.distanceMeters) || "0m"
-      }, {
-        label: "Skill",
-        value: fractalModel.skillLabel
-      }, ...(getDisplayValue(fractalModel.skill?.description) ? [{
-        label: "Description",
-        value: fractalModel.skill.description
-      }] : [])],
+      label: getDisplayValue(fractalModel.skillLabel) || "No skill",
+      description: getDisplayValue(fractalModel.skill?.description),
       type: "active",
-      unlockLevel: abilities.length
+      unlockLevel: index + 1
     });
   });
 
   if (ultimateModel) {
-    const profileUrl = getPublicProfileUrl(ultimateModel.linkedProfile);
-
     abilities.push({
-      label: ultimateModel.label,
-      rows: [{
-        href: profileUrl,
-        isProfileLink: true,
-        label: "Follows",
-        value: getDisplayValue(ultimateModel.linkedProfile?.username) || "No follows"
-      }, {
-        label: "Skill",
-        value: ultimateModel.skillLabel || "No skill"
-      }, ...(getDisplayValue(ultimateModel.skillDescription) ? [{
-        label: "Description",
-        value: ultimateModel.skillDescription
-      }] : [])],
+      label: getDisplayValue(ultimateModel.skillLabel) || "No skill",
+      description: getDisplayValue(ultimateModel.skillDescription),
       type: "ultimate",
       unlockLevel: 4
     });
@@ -1106,27 +1064,13 @@ const createFractalParameterPanel = ({
     buttons.append(button);
   });
 
-  if (activeAbility && currentLevel >= activeAbility.unlockLevel) {
-    descriptionTitle.textContent = "Description";
+  if (activeAbility?.description && currentLevel >= activeAbility.unlockLevel) {
+    const text = document.createElement("p");
+
+    text.className = "profile-skill-description";
+    text.textContent = activeAbility.description;
     description.classList.toggle("is-closing", isDescriptionClosing);
-    activeAbility.rows.forEach((row) => {
-      const label = document.createElement("dt");
-      const value = document.createElement("dd");
-
-      label.textContent = row.label;
-      if (row.href) {
-        const link = document.createElement("a");
-
-        link.className = row.isProfileLink ? "profile-parameter-profile-link" : "";
-        link.href = row.href;
-        link.textContent = row.value;
-        value.append(link);
-      } else {
-        value.textContent = row.value;
-      }
-      list.append(label, value);
-    });
-    description.append(descriptionTitle, list);
+    description.append(text);
   }
 
   section.append(heading, buttons);
@@ -1202,6 +1146,7 @@ export const initJayceePage = async () => {
   let isPlayerSaving = false;
   let playerAvatarUrl = "";
   let playerProfile = null;
+  let accountCreatedAt = "";
   let playerRows = [];
   let closingAbilityIndex = null;
   let descriptionCloseTimer = 0;
@@ -1211,42 +1156,6 @@ export const initJayceePage = async () => {
   let supabaseClient = null;
   let skillForms = [];
   let skills = [];
-  let ultimateTeammateSkillLabel = "";
-  let ultimateTeammateSkillDescription = "";
-  const getOwnUltimateSkillLabel = () => {
-    const ultimateFractal = getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.ultimate.fractalLabel)
-      || getFractalById(dynamicFractals, gameForm?.ultimate_fractal);
-    const skill = getSkillById(skillForms, ultimateFractal?.skill);
-
-    ultimateTeammateSkillDescription = getDisplayValue(skill?.description);
-    return getDisplayValue(skill?.label);
-  };
-
-  const loadUltimateTeammateSkillLabel = async () => {
-    const teammateId = getDisplayValue(gameForm?.ultimate_link);
-    const linkedProfile = publicProfiles.find((profile) => getDisplayValue(profile.id) === teammateId);
-
-    if (!teammateId || !linkedProfile || !supabaseClient) {
-      ultimateTeammateSkillLabel = "";
-      ultimateTeammateSkillDescription = "";
-      return;
-    }
-
-    if (getDisplayValue(currentProfile?.id) === teammateId) {
-      ultimateTeammateSkillLabel = getOwnUltimateSkillLabel();
-      return;
-    }
-
-    const linkedGame = await fetchUserGameSettings(supabaseClient, linkedProfile);
-    const linkedFractals = await fetchUserDynamicFractals(supabaseClient, linkedProfile);
-    const linkedUltimateFractal = getFractalByLabel(linkedFractals, JAYCEE_GAME_CONFIG.ultimate.fractalLabel)
-      || getFractalById(linkedFractals, linkedGame?.ultimate_fractal);
-    const [linkedSkill] = await fetchSkillsByIds(supabaseClient, [linkedUltimateFractal?.skill]);
-
-    ultimateTeammateSkillLabel = getDisplayValue(linkedSkill?.label);
-    ultimateTeammateSkillDescription = getDisplayValue(linkedSkill?.description);
-  };
-
   const loadMasterGame = async (masterProfile, masterGame = null) => {
     if (!supabaseClient || !masterProfile) return;
 
@@ -1258,7 +1167,6 @@ export const initJayceePage = async () => {
     skillForms = createSkillForms(skills);
     gameSettings = activeMasterGame;
     gameForm = createGameForm(gameSettings);
-    await loadUltimateTeammateSkillLabel();
   };
 
   const handlePlayClick = async () => {
@@ -1327,6 +1235,7 @@ export const initJayceePage = async () => {
       skillForms
     });
     const panel = createVitalsPanel({
+      accountCreatedAt,
       activeMasterProfile,
       activeModels,
       isMasterSaving,
@@ -1356,6 +1265,13 @@ export const initJayceePage = async () => {
     const corePanel = canvas.closest(".game-core-panel");
     const existingPanel = corePanel?.querySelector("[data-profile-parameters]");
     const existingInventoryTitle = corePanel?.querySelector("[data-profile-inventory-title]");
+
+    if (!corePanel || !playerProfile || !activeMasterProfile || !currentPlayer) {
+      existingPanel?.remove();
+      existingInventoryTitle?.remove();
+      return;
+    }
+
     const activeModels = getActiveFractalModels({
       dynamicFractals,
       gameForm,
@@ -1370,9 +1286,7 @@ export const initJayceePage = async () => {
     const ultimateModel = getUltimateModel({
       dynamicFractals,
       gameForm,
-      publicProfiles,
-      ultimateTeammateSkillLabel,
-      ultimateTeammateSkillDescription
+      skillForms
     });
     const panel = createFractalParameterPanel({
       activeModels,
@@ -1492,6 +1406,8 @@ export const initJayceePage = async () => {
 
     if (!user) return;
 
+    accountCreatedAt = getDisplayValue(user.created_at);
+
     const refreshedProfile = await fetchProfileByUserId(supabaseClient, user.id);
 
     if (!refreshedProfile) return;
@@ -1542,6 +1458,8 @@ export const initJayceePage = async () => {
     supabaseClient = client;
     const sessionResult = await window.JayceeAuth?.getSession?.();
     const user = sessionResult?.data?.session?.user;
+
+    accountCreatedAt = getDisplayValue(user?.created_at);
 
     if (isEditableProfilePage && !user) {
       redirectToLogin();
@@ -1622,7 +1540,6 @@ export const initJayceePage = async () => {
         getDisplayValue(publicProfile.role).toLowerCase() === "admin"
       )) || null;
     }
-    await loadUltimateTeammateSkillLabel();
     avatarImage = hasUserProfile
       ? await loadOptionalImage(await getAvatarImageUrl(client, profile))
       : null;
