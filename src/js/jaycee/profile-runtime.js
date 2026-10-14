@@ -318,8 +318,16 @@ const getActiveFractalModels = ({
 }) => {
   let previousQuestSeconds = Number(JAYCEE_GAME_CONFIG.passive.cycleSeconds);
   let previousDistanceMeters = Number(JAYCEE_GAME_CONFIG.passive.zoneMeters);
+  const activeFractals = getActiveFractals(dynamicFractals, gameForm);
+  const models = activeFractals.length
+    ? activeFractals
+    : JAYCEE_GAME_CONFIG.activeAbilities.map((ability, index) => ({
+      id: `default-active-${index + 1}`,
+      label: ability.fractalLabel,
+      skill: ""
+    }));
 
-  return getActiveFractals(dynamicFractals, gameForm)
+  return models
     .slice(0, ACTIVE_RING_LIMIT)
     .map((fractal, index) => {
       const abilityConfig = JAYCEE_GAME_CONFIG.activeAbilities[index] || {};
@@ -346,7 +354,7 @@ const getActiveFractalModels = ({
         },
         passiveSeconds: abilityConfig.cycleSeconds,
         skill,
-        skillLabel: getDisplayValue(skill.label) || "Active"
+        skillLabel: getDisplayValue(skill.label) || getDisplayValue(abilityConfig.skillLabel) || "Active"
       });
     })
     .filter(Boolean);
@@ -537,6 +545,38 @@ const createProfileNotice = ({
   return panel;
 };
 
+const getPendingPrayerActiveMs = () => {
+  try {
+    const pendingPrayer = JSON.parse(window.localStorage.getItem("jaycee_pending_prayer") || "{}");
+    const activeMs = Number(pendingPrayer.active_typing_ms);
+
+    if (Number.isFinite(activeMs)) {
+      return Math.max(0, activeMs);
+    }
+
+    return Math.max(0, (Number(pendingPrayer.active_typing_seconds) || 0) * 1000);
+  } catch {
+    return 0;
+  }
+};
+
+const getFirstActiveSkillMs = () => {
+  const firstActiveAbility = JAYCEE_GAME_CONFIG.activeAbilities?.[0];
+  const ratio = Number(firstActiveAbility?.ratio) || 1;
+
+  return (JAYCEE_GAME_CONFIG.passive.cycleSeconds / ratio) * 1000;
+};
+
+const formatKarmaYears = (yearsValue) => {
+  const years = Number(yearsValue);
+
+  if (!Number.isFinite(years) || years <= 0) return "0";
+
+  return years.toLocaleString(undefined, {
+    maximumFractionDigits: years < 1 ? 8 : 2
+  });
+};
+
 const createVitalsPanel = ({
   dynamicFractals,
   gameForm,
@@ -561,15 +601,20 @@ const createVitalsPanel = ({
   const isGuestPlayer = !player;
   const hasPlayer = Boolean(player) || isGuestPlayer;
   const hasPlayerProfile = Boolean(playerProfile);
-  const guestLifeYears = 1;
-  const guestLifeSeconds = guestLifeYears * YEAR_SECONDS;
+  const guestLevelYears = 1;
   const level = Number(player?.level) || 1;
   const storedUsername = getDisplayValue(window.localStorage.getItem("jaycee_username"));
-  const lifeSeconds = player ? Number(player.life_bar) || 0 : guestLifeSeconds;
   const channelUsername = getDisplayValue(profile?.username)
     || getDisplayValue(window.localStorage.getItem("jaycee_pending_prayer_target_username"))
     || "";
   const mannaModel = player ? getMannaModel({ player, playerProfile, selectedAbilityIndex }) : null;
+  const prayerActiveMs = getPendingPrayerActiveMs();
+  const firstActiveSkillMs = getFirstActiveSkillMs();
+  const prayerKarmaYears = firstActiveSkillMs > 0 ? prayerActiveMs / firstActiveSkillMs : 0;
+  const guestLifeSeconds = prayerKarmaYears * YEAR_SECONDS;
+  const lifeSeconds = player ? Number(player.life_bar) || 0 : guestLifeSeconds;
+  const lifeValueText = player ? formatYearsFromSeconds(lifeSeconds) : `${formatKarmaYears(prayerKarmaYears)}y`;
+  const remainingKarmaYears = Math.max(0, lifeMaxYears - guestLevelYears - prayerKarmaYears);
   const questModel = getCurrentQuestModel({
     dynamicFractals,
     gameForm,
@@ -589,7 +634,7 @@ const createVitalsPanel = ({
       label: "Health",
       max: lifeMaxSeconds,
       tone: "health",
-      valueText: `${formatYearsFromSeconds(lifeSeconds)} / ${JAYCEE_GAME_CONFIG.lifeMaxYears.toLocaleString()}y`
+      valueText: `${lifeValueText} / ${JAYCEE_GAME_CONFIG.lifeMaxYears.toLocaleString()}y`
     }),
     createVitalBar({
       centered: true,
@@ -611,26 +656,12 @@ const createVitalsPanel = ({
       tone: "quest"
     }));
   } else if (!player) {
-    panel.append(
-      createProfileNotice({
-        closable: true,
-        text: `You have ${lifeMaxYears.toLocaleString()} years left to live on this Earth.`,
-        title: "Notification",
-        tone: "notification"
-      }),
-      createProfileNotice({
-        closable: true,
-        text: `Congratulations! You have Unlocked Level 1! You have burned ${guestLifeYears} year of Karma. ${(lifeMaxYears - guestLifeYears).toLocaleString()} years left.`,
-        title: "Unlocked",
-        tone: "unlocked"
-      }),
-      createProfileNotice({
-        closable: true,
-        text: `You have unlocked ${channelUsername || "this profile"} and your prayer will be sent to him.`,
-        title: "Unlocked",
-        tone: "unlocked"
-      })
-    );
+    panel.append(createProfileNotice({
+      closable: true,
+      text: `Congratulations! You have unlocked level 1. It has been calculated by the great Masters of this game that it takes approximately ${lifeMaxYears.toLocaleString()} years for an average Human being to burn all his Karma and leave the Earth. Your prayer has burned ${formatKarmaYears(prayerKarmaYears)} years of Karma. You have more than ${formatKarmaYears(remainingKarmaYears)} years left.`,
+      title: "Unlocked",
+      tone: "unlocked"
+    }));
   }
 
   if (!player) {
@@ -680,7 +711,7 @@ const getPublicProfileUsernameFromUrl = () => {
   const queryUsername = getDisplayValue(params.get("username"));
 
   if (queryUsername) return queryUsername;
-  if (!window.location.pathname.endsWith("/game.html") && !window.location.pathname.endsWith("/profiles.html")) return "";
+  if (!window.location.pathname.endsWith("/game.html")) return "";
 
   const match = window.location.pathname.match(/\/jaycee-([^/]+)\.html$/);
 
@@ -897,9 +928,11 @@ export const initJayceePage = async () => {
   const canvas = document.querySelector("[data-profile-canvas]");
   const publicUsername = getDisplayValue(shell?.dataset.profileUsername) || getPublicProfileUsernameFromUrl();
   const pageMode = getDisplayValue(shell?.dataset.profileMode) || (publicUsername ? "public" : "profile");
+  const isGamePage = document.body.classList.contains("game-page");
   const isPresentPage = pageMode === "present";
   const isEditableProfilePage = pageMode === "profile" && !publicUsername;
   const hasUserProfile = Boolean(publicUsername) || isEditableProfilePage;
+  const shouldRenderGameInterface = isGamePage || hasUserProfile;
 
   if (!shell || !canvas) return;
 
@@ -1007,7 +1040,7 @@ export const initJayceePage = async () => {
     const corePanel = canvas.closest(".jaycee-profile-core");
     const existingPanel = corePanel?.querySelector("[data-profile-vitals]");
 
-    if (!corePanel || !hasUserProfile) {
+    if (!corePanel || !shouldRenderGameInterface) {
       existingPanel?.remove();
       return;
     }

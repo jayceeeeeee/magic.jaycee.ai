@@ -4,6 +4,9 @@
     const prayerStatus = document.querySelector("[data-prayer-status]");
     const prayerUsername = document.querySelector("[data-prayer-username]");
     const autogrowFields = document.querySelectorAll("[data-autogrow]");
+    const ACTIVE_TYPING_GAP_MS = 2000;
+    let activeTypingMs = 0;
+    let lastTypingAt = 0;
 
     document.body.classList.toggle("is-embedded", isEmbedded);
     if (prayerUsername) {
@@ -70,8 +73,19 @@
         autogrowFields.forEach(resizeAutogrowField);
     }
 
+    function trackActiveTyping() {
+        const now = performance.now();
+
+        if (lastTypingAt) {
+            activeTypingMs += Math.min(now - lastTypingAt, ACTIVE_TYPING_GAP_MS);
+        }
+
+        lastTypingAt = now;
+    }
+
     autogrowFields.forEach((field) => {
         field.addEventListener("input", () => {
+            trackActiveTyping();
             resizeAutogrowField(field);
             notifyHeight();
         });
@@ -89,9 +103,10 @@
 
         window.localStorage.setItem("jaycee_pending_prayer", JSON.stringify({
             ...payload,
+            active_typing_ms: Math.round(activeTypingMs),
             created_at: new Date().toISOString(),
         }));
-        (isEmbedded ? window.top : window).location.href = "/profiles.html";
+        (isEmbedded ? window.top : window).location.href = "/game.html";
     });
 
     window.addEventListener("load", notifyHeight);
