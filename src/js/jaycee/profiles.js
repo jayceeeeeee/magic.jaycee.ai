@@ -9,6 +9,25 @@ const getRequestedUsername = () => (
   getDisplayValue(new URLSearchParams(window.location.search).get("username"))
 );
 
+const setPendingPrayerTarget = (profile) => {
+  const rawPrayer = window.localStorage.getItem("jaycee_pending_prayer");
+
+  if (!rawPrayer) return;
+
+  try {
+    const pendingPrayer = JSON.parse(rawPrayer);
+
+    window.localStorage.setItem("jaycee_pending_prayer", JSON.stringify({
+      ...pendingPrayer,
+      target_profile_id: getDisplayValue(profile.id),
+      target_profile_username: getDisplayValue(profile.username),
+      target_profile_name: getDisplayValue(profile.full_name),
+    }));
+  } catch {
+    window.localStorage.removeItem("jaycee_pending_prayer");
+  }
+};
+
 const createProfileCard = ({ avatarUrl = "", profile }) => {
   const username = getDisplayValue(profile.username);
   const fullName = getDisplayValue(profile.full_name);
@@ -35,6 +54,7 @@ const createProfileCard = ({ avatarUrl = "", profile }) => {
   meta.textContent = fullName || "Manifestation target";
   body.append(name, meta);
   link.append(avatar, body);
+  link.addEventListener("click", () => setPendingPrayerTarget(profile));
 
   return link;
 };

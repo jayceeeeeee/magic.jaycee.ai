@@ -9,16 +9,21 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@500;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/src/css/global.css">
   <link rel="stylesheet" href="/src/css/jaycee-profile.css">
+  <link rel="stylesheet" href="/src/css/profiles.css">
 </head>
-<body data-theme="aurora">
+<body class="profiles-page" data-theme="aurora">
   <jaycee-banner></jaycee-banner>
 
   <main class="jaycee-settings-page profiles-list-page" data-profiles-list-shell hidden>
-    <section class="jaycee-settings-panel profiles-list-panel" aria-labelledby="profiles-list-title">
-      <div class="profile-settings-header">
-        <p class="profile-kicker">jaycee.ai &gt; prayer target</p>
-        <h1 id="profiles-list-title">Profiles</h1>
-        <p class="profiles-list-question">To whom would you like to send this prayer?</p>
+    <section class="profiles-list-panel" aria-labelledby="profiles-list-title">
+      <div class="profiles-list-header">
+        <h1 id="profiles-list-title">Choose a channel</h1>
+        <div class="profiles-console" aria-label="Prayer information">
+          <p class="profiles-console-prompt">Jaycee.ai&gt; saving...</p>
+          <p>Oh! It looks like you were not the first here!</p>
+          <p>Some players have joined the Game already before.</p>
+          <p>In their Divine Grace they allow you to choose one of them to guide you on the path:</p>
+        </div>
       </div>
       <div class="profile-resonance-status" data-profiles-list-status aria-live="polite">Loading profiles...</div>
       <div class="profiles-grid" data-profiles-list></div>

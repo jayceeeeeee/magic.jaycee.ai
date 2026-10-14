@@ -1,8 +1,7 @@
 (function () {
     const isEmbedded = window.self !== window.top;
-    const technoPrayerForm = document.querySelector(".techno-prayer-form");
-    const technoPrayerStatus = document.querySelector("[data-techno-prayer-status]");
-    const technoPrayerSubmit = technoPrayerForm?.querySelector("[type='submit']");
+    const prayerForm = document.querySelector(".prayer-form");
+    const prayerStatus = document.querySelector("[data-prayer-status]");
     const autogrowFields = document.querySelectorAll("[data-autogrow]");
 
     document.body.classList.toggle("is-embedded", isEmbedded);
@@ -15,13 +14,13 @@
         const targetOrigin = window.location.origin === "null" ? "*" : window.location.origin;
 
         window.parent?.postMessage({
-            type: "techno-prayer:height",
+            type: "prayer:height",
             height: document.documentElement.scrollHeight,
         }, targetOrigin);
     }
 
-    function getTechnoPrayerPayload() {
-        const formData = new FormData(technoPrayerForm);
+    function getPrayerPayload() {
+        const formData = new FormData(prayerForm);
         const storedUsername = window.localStorage.getItem("jaycee_username");
 
         return {
@@ -36,44 +35,18 @@
     }
 
     function setStatus(message, type = "info") {
-        if (!technoPrayerStatus) {
+        if (!prayerStatus) {
             return;
         }
 
-        technoPrayerStatus.textContent = message;
-        technoPrayerStatus.dataset.type = type;
+        prayerStatus.textContent = message;
+        prayerStatus.dataset.type = type;
         notifyHeight();
     }
 
-    async function getCurrentUserId() {
-        if (!window.JayceeAuth) {
-            return null;
-        }
-
-        try {
-            const { data } = await window.JayceeAuth.getSession();
-
-            return data?.session?.user?.id || null;
-        } catch {
-            return null;
-        }
-    }
-
-    async function insertTechnoPrayer(payload) {
-        if (!window.JayceeAuth) {
-            throw new Error("The prayer service is not available yet.");
-        }
-
-        const client = await window.JayceeAuth.getSupabaseClient();
-        const userId = await getCurrentUserId();
-        const row = userId ? { ...payload, user_id: userId } : payload;
-
-        return client.from("techno_prayers").insert(row);
-    }
-
-    function updateTechnoPrayerStatusLayout() {
-        if (technoPrayerStatus) {
-            technoPrayerStatus.textContent = "";
+    function updatePrayerStatusLayout() {
+        if (prayerStatus) {
+            prayerStatus.textContent = "";
         }
 
         requestAnimationFrame(notifyHeight);
@@ -100,46 +73,26 @@
         });
     });
 
-    technoPrayerForm?.addEventListener("submit", async (event) => {
+    prayerForm?.addEventListener("submit", (event) => {
         event.preventDefault();
 
-        if (!technoPrayerForm.reportValidity()) {
+        if (!prayerForm.reportValidity()) {
             notifyHeight();
             return;
         }
 
-        const payload = getTechnoPrayerPayload();
+        const payload = getPrayerPayload();
 
-        setStatus("Sending your Techno-Prayer...", "info");
-
-        if (technoPrayerSubmit) {
-            technoPrayerSubmit.disabled = true;
-        }
-
-        try {
-            const { error } = await insertTechnoPrayer(payload);
-
-            if (error) {
-                setStatus(error.message || "Unable to send your Techno-Prayer.", "error");
-                return;
-            }
-
-            technoPrayerForm.reset();
-            requestAnimationFrame(resizeAutogrowFields);
-            updateTechnoPrayerStatusLayout();
-            setStatus("Techno-Prayer received.", "success");
-            (isEmbedded ? window.top : window).location.href = "/profiles.html";
-        } catch (error) {
-            setStatus(error.message || "Unable to send your Techno-Prayer.", "error");
-        } finally {
-            if (technoPrayerSubmit) {
-                technoPrayerSubmit.disabled = false;
-            }
-        }
+        window.localStorage.setItem("jaycee_pending_prayer", JSON.stringify({
+            ...payload,
+            created_at: new Date().toISOString(),
+        }));
+        setStatus("Prayer ready. Choose a target.", "success");
+        (isEmbedded ? window.top : window).location.href = "/profiles.html";
     });
 
     window.addEventListener("load", notifyHeight);
     window.addEventListener("resize", notifyHeight);
     resizeAutogrowFields();
-    updateTechnoPrayerStatusLayout();
+    updatePrayerStatusLayout();
 })();
