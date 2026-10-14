@@ -773,10 +773,6 @@ const createVitalsPanel = ({
     panel.append(hud);
   }
 
-  if (!player && hasPlayerProfile) {
-    panel.append(bars);
-  }
-
   return panel;
 };
 

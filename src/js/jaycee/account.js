@@ -42,7 +42,7 @@ const createSection = (title, className = "") => {
   const content = document.createElement("div");
 
   section.className = ["profile-resonance-column", "jaycee-account-section", className].filter(Boolean).join(" ");
-  heading.className = "profile-resonance-column-title";
+  heading.className = "profile-section-label";
   heading.textContent = title;
   content.className = "jaycee-account-section-content";
   section.append(heading, content);
