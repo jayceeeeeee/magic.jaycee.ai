@@ -6,7 +6,7 @@
     const routes = {
         home: "/",
         login: "/login.html",
-        signup: "/signup.html",
+        signup: "/",
         account: "/game.html",
         contact: "/",
         donate: "https://buy.stripe.com/14A14o70HbZXdtr73FfQI01",

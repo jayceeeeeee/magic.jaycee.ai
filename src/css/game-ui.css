@@ -62,11 +62,11 @@
   display: none;
 }
 
-:is(.account-overlay-page, .game-page) [hidden] {
+.has-account-panel [hidden] {
   display: none !important;
 }
 
-:is(.account-overlay-page, .game-page) .jaycee-settings-page.is-account-page {
+.has-account-panel .jaycee-settings-page.is-account-page {
   position: fixed;
   inset: 0;
   z-index: 10;
@@ -125,7 +125,7 @@
   box-shadow: 0 0 30px rgba(var(--accent-rgb), 0.2);
 }
 
-:is(.account-overlay-page, .game-page) .account-side-panel {
+.has-account-panel .account-side-panel {
   position: fixed;
   top: 0;
   right: 0;
@@ -152,27 +152,27 @@
     transform 220ms ease;
 }
 
-:is(.account-overlay-page, .game-page) .is-account-panel-collapsed .account-side-panel {
+.has-account-panel .is-account-panel-collapsed .account-side-panel {
   transform: translateX(calc(100% + 24px));
   opacity: 0;
   pointer-events: none;
 }
 
-:is(.account-overlay-page, .game-page) .profile-settings-header {
+.has-account-panel .profile-settings-header {
   position: relative;
   z-index: 1;
 }
 
-:is(.account-overlay-page, .game-page) .profile-settings-header h1 {
+.has-account-panel .profile-settings-header h1 {
   font-size: clamp(1.35rem, 4vw, 2rem);
   line-height: 0.95;
 }
 
-:is(.account-overlay-page, .game-page) .profile-resonance-status {
+.has-account-panel .profile-resonance-status {
   min-height: 1.1em;
 }
 
-:is(.account-overlay-page, .game-page) .jaycee-account-sections {
+.has-account-panel .jaycee-account-sections {
   flex: 0 1 auto;
   grid-template-columns: 1fr;
   align-content: start;
@@ -180,20 +180,20 @@
   padding-right: 3px;
 }
 
-:is(.account-overlay-page, .game-page) .jaycee-account-section {
+.has-account-panel .jaycee-account-section {
   border-color: transparent;
   background: transparent;
   box-shadow: none;
 }
 
-:is(.account-overlay-page, .game-page) .profile-settings-actions {
+.has-account-panel .profile-settings-actions {
   flex: 0 0 auto;
   display: grid;
   gap: 6px;
   margin-top: -2px;
 }
 
-:is(.account-overlay-page, .game-page) .profile-settings-actions button {
+.has-account-panel .profile-settings-actions button {
   width: 100%;
   min-height: 42px;
   border-radius: 3px;
@@ -211,7 +211,7 @@
     right: 10px;
   }
 
-  :is(.account-overlay-page, .game-page) .account-side-panel {
+  .has-account-panel .account-side-panel {
     top: 0;
     right: 0;
     bottom: 0;
@@ -219,7 +219,7 @@
     padding: 50px 12px 12px;
   }
 
-  :is(.account-overlay-page, .game-page) .profile-manna-fields {
+  .has-account-panel .profile-manna-fields {
     grid-template-columns: 1fr;
   }
 }

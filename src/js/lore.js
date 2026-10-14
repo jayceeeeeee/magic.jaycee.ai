@@ -10,6 +10,7 @@
         }
 
         window.localStorage.setItem("player_full_name", name);
+        window.localStorage.removeItem("pending_prayer");
         document.body.classList.add("is-lore-launching");
         window.setTimeout(() => {
             window.location.href = "/prayer.html";

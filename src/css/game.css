@@ -192,7 +192,7 @@ body {
 .game-page .profile-masters-track {
   display: flex;
   width: max-content;
-  animation: profile-masters-passing 28s linear infinite;
+  animation: profile-masters-passing 60s linear infinite;
 }
 
 .game-page .profile-masters-group {

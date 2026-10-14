@@ -293,7 +293,68 @@ const uploadProfileAvatar = async ({ client, file, profile }) => {
   return fileName;
 };
 
+const mountAccountPanel = () => {
+  document.body.classList.add("has-account-panel");
+  if (document.querySelector("[data-account-shell]")) return;
+
+  const shell = document.createElement("aside");
+
+  shell.className = "jaycee-settings-page is-account-page is-account-panel-collapsed";
+  shell.dataset.accountShell = "";
+  shell.innerHTML = `
+    <button class="account-hud-trigger" type="button" data-account-toggle aria-controls="account-panel" aria-expanded="false" aria-label="Open account">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"></path><path d="M4.5 20a7.5 7.5 0 0 1 15 0"></path></svg>
+    </button>
+    <section class="jaycee-settings-panel account-side-panel" id="account-panel" aria-labelledby="account-title" tabindex="-1">
+      <div class="profile-settings-header"><p class="profile-kicker">jaycee.ai &gt; account</p><h1 id="account-title">Account</h1></div>
+      <div class="profile-resonance-status" data-account-status aria-live="polite">Loading account...</div>
+      <div class="jaycee-account-sections" data-account-sections></div>
+      <div class="profile-settings-actions" data-account-actions hidden>
+        <button type="button" data-account-save>Save</button>
+        <button type="button" data-account-logout>Log out</button>
+        <p data-account-save-status aria-live="polite"></p>
+      </div>
+    </section>`;
+  document.body.append(shell);
+};
+
+const createGuestLoginSection = () => {
+  const { content, section } = createSection("Log in");
+  const form = document.createElement("form");
+
+  form.className = "profile-details-controls jaycee-account-form";
+  form.innerHTML = `
+    <label class="profile-field-wide"><span>Email</span><input type="email" name="email" autocomplete="email" required></label>
+    <label class="profile-field-wide"><span>Password</span><input type="password" name="password" autocomplete="current-password" required></label>
+    <button class="account-button account-button-primary profile-field-wide" type="submit">Log in</button>
+    <p class="profile-field-wide" role="status" data-panel-login-status></p>
+    <p class="profile-field-wide">No account yet? <a href="/">Sign up</a></p>`;
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!form.reportValidity()) return;
+    const submit = form.querySelector("button[type='submit']");
+    const status = form.querySelector("[data-panel-login-status]");
+    if (submit.disabled) return;
+    submit.disabled = true;
+    setStatus(status, "Logging in...");
+
+    try {
+      const { error } = await window.JayceeAuth.signIn(form.elements.email.value.trim(), form.elements.password.value);
+
+      if (error) throw error;
+      form.elements.password.value = "";
+      window.location.assign(window.JayceeAuth.getAfterSignInUrl());
+    } catch (error) {
+      setStatus(status, error?.message || "Could not log in. Please try again.", true);
+      submit.disabled = false;
+    }
+  });
+  content.append(form);
+  return section;
+};
+
 export const initJayceeAccountPage = async () => {
+  mountAccountPanel();
   const shell = document.querySelector("[data-account-shell]");
   const sections = document.querySelector("[data-account-sections]");
   const status = document.querySelector("[data-account-status]");
@@ -305,14 +366,28 @@ export const initJayceeAccountPage = async () => {
   const toggleButton = document.querySelector("[data-account-toggle]");
 
   if (!shell || !sections || !saveButton) return;
+  if (shell.dataset.accountInitialized) return;
+  shell.dataset.accountInitialized = "true";
+  shell.hidden = false;
+  panel.inert = true;
+  sections.replaceChildren(createGuestLoginSection());
 
-  toggleButton?.addEventListener("click", () => {
-    const isCollapsed = shell.classList.toggle("is-account-panel-collapsed");
-
-    toggleButton.setAttribute("aria-expanded", String(!isCollapsed));
-    if (!isCollapsed) {
+  const setPanelOpen = (isOpen) => {
+    shell.classList.toggle("is-account-panel-collapsed", !isOpen);
+    toggleButton.setAttribute("aria-expanded", String(isOpen));
+    toggleButton.setAttribute("aria-label", isOpen ? "Close account" : "Open account");
+    panel.inert = !isOpen;
+    if (isOpen) {
       panel?.focus?.();
+    } else {
+      toggleButton.focus();
     }
+  };
+  toggleButton?.addEventListener("click", () => {
+    setPanelOpen(shell.classList.contains("is-account-panel-collapsed"));
+  });
+  shell.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") setPanelOpen(false);
   });
 
   logoutButton?.addEventListener("click", async () => {
@@ -342,16 +417,17 @@ export const initJayceeAccountPage = async () => {
     const user = sessionResult?.data?.session?.user;
 
     if (!user) {
-      if (window.location.pathname.endsWith("/account.html")) {
-        window.location.href = getLoginUrl();
-      }
+      setStatus(status, "");
       return;
     }
 
+    sections.replaceChildren();
     const profile = await fetchProfileByUserId(client, user.id);
 
     if (!profile) {
       shell.hidden = false;
+      saveButton.hidden = true;
+      actions.hidden = false;
       setStatus(status, "Profile not found.", true);
       return;
     }

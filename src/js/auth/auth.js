@@ -7,6 +7,35 @@
     const defaultAfterSignInPath = "/game.html";
     let supabaseClientPromise = null;
 
+    function canAccessSignup(now = Date.now()) {
+        try {
+            const prayer = JSON.parse(window.localStorage.getItem("pending_prayer") || "null");
+            const name = window.localStorage.getItem("player_full_name")?.trim();
+            const submittedAt = Date.parse(prayer?.created_at || "");
+
+            return Boolean(name && prayer && !prayer.signup_consumed_at
+                && typeof prayer.problem === "string" && prayer.problem.trim()
+                && typeof prayer.prayer === "string" && prayer.prayer.trim()
+                && prayer.username === name && Number.isFinite(submittedAt)
+                && submittedAt <= now && now - submittedAt <= 24 * 60 * 60 * 1000);
+        } catch {
+            return false;
+        }
+    }
+
+    function consumeSignupEligibility() {
+        try {
+            const prayer = JSON.parse(window.localStorage.getItem("pending_prayer") || "null");
+
+            if (prayer) {
+                prayer.signup_consumed_at = new Date().toISOString();
+                window.localStorage.setItem("pending_prayer", JSON.stringify(prayer));
+            }
+        } catch {
+            // Account creation has succeeded even if browser storage is unavailable.
+        }
+    }
+
     function loadScript(src) {
         return new Promise((resolve, reject) => {
             const existingScript = document.querySelector(`script[src="${src}"]`);
@@ -139,8 +168,11 @@
     }
 
     async function signUp(email, password, options = {}) {
+        if (!canAccessSignup()) {
+            return { data: { user: null, session: null }, error: { message: "Please complete the prayer first.", code: "prayer_required" } };
+        }
         const client = await getSupabaseClient();
-        return client.auth.signUp({
+        const result = await client.auth.signUp({
             email,
             password,
             options: {
@@ -148,6 +180,12 @@
                 data: options.data || {},
             },
         });
+
+        if (!result.error && result.data?.user && result.data.user.identities?.length !== 0) {
+            consumeSignupEligibility();
+        }
+
+        return result;
     }
 
     async function signIn(email, password) {
@@ -188,6 +226,7 @@
     }
 
     window.JayceeAuth = {
+        canAccessSignup,
         getSupabaseClient,
         getAfterSignInUrl,
         getAccountUrl,

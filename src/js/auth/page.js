@@ -142,6 +142,19 @@
             return;
         }
 
+        function guardSignup() {
+            if (mode === "signup" && !window.JayceeAuth.canAccessSignup()) {
+                window.location.replace("/");
+                return false;
+            }
+            return true;
+        }
+
+        if (!guardSignup()) return;
+        const signupGate = document.querySelector("[data-signup-gate]");
+        if (signupGate) signupGate.hidden = false;
+        window.addEventListener("pageshow", guardSignup);
+
         if (fullNameParam) {
             fullName.value = fullNameParam;
         }
@@ -179,7 +192,7 @@
             switcher.hidden = false;
             switcher.innerHTML = isSignup
                 ? `Already have an account? <a href="${createAuthHref("/login.html", "login")}" data-auth-mode="login">Log in</a>`
-                : `No account yet? <a href="${createAuthHref("/signup.html", "signup")}" data-auth-mode="signup">Sign up</a>`;
+                : 'No account yet? <a href="/">Sign up</a>';
             status.textContent = "";
         }
 
@@ -211,6 +224,8 @@
 
         form.addEventListener("submit", async (event) => {
             event.preventDefault();
+            if (!guardSignup()) return;
+            if (submit.disabled) return;
             status.textContent = "";
             submit.disabled = true;
 
@@ -220,18 +235,28 @@
             const passwordValue = String(formData.get("password"));
             const birthProfile = loadBirthProfile();
 
-            const result = mode === "signup"
-                ? await window.JayceeAuth.signUp(email, passwordValue, {
-                    data: {
-                        full_name: fullNameValue || birthProfile?.fullName || "",
-                        birth_profile: birthProfile,
-                    },
-                })
-                : await window.JayceeAuth.signIn(email, passwordValue);
-
-            submit.disabled = false;
+            let result;
+            try {
+                result = mode === "signup"
+                    ? await window.JayceeAuth.signUp(email, passwordValue, {
+                        data: {
+                            full_name: fullNameValue || birthProfile?.fullName || "",
+                            birth_profile: birthProfile,
+                        },
+                    })
+                    : await window.JayceeAuth.signIn(email, passwordValue);
+            } catch (error) {
+                status.textContent = error?.message || "Could not connect. Please try again.";
+                return;
+            } finally {
+                submit.disabled = false;
+            }
 
             if (result.error) {
+                if (result.error.code === "prayer_required") {
+                    window.location.replace("/");
+                    return;
+                }
                 if (mode === "signup" && isExistingAccountError(result.error)) {
                     showExistingAccountMessage();
                     return;

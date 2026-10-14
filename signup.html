@@ -8,11 +8,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/src/css/global.css">
+  <link rel="stylesheet" href="/src/css/game-ui.css">
 </head>
 <body class="auth-game-page">
   <jaycee-banner></jaycee-banner>
 
-  <main class="auth-page signup-page-main">
+  <main class="auth-page signup-page-main" data-signup-gate hidden>
     <section class="auth-panel" aria-labelledby="auth-title">
       <h1 class="game-brand-title" id="auth-title">jaycee.ai</h1>
       <div class="auth-eyebrow auth-admin-console" data-signup-admin-console>
@@ -49,5 +50,6 @@
   <script src="/src/js/shell/shell.js"></script>
   <script src="/src/js/auth/auth.js"></script>
   <script src="/src/js/auth/page.js"></script>
+  <script type="module" src="/src/js/jaycee/account.js"></script>
 </body>
 </html>
