@@ -12,7 +12,7 @@ const CORE_RING_WIDTH_MAX = 58;
 const CORE_RING_WIDTH_MIN = 18;
 const CORE_RING_WIDTH_RATIO = 0.11;
 const getSegmentIndices = (count) => Array.from({ length: count }, (_, index) => index);
-const THEME_PALETTE_MIXES = {
+const CORE_PALETTE_MIXES = {
   bottomLeft: 0.08,
   bottomRight: 0.24,
   topLeft: 0.08,
@@ -31,7 +31,7 @@ const RING_TEMPLATES = [
   ...ring
 }));
 
-const getThemeColor = (name, fallback) => {
+const getCssColor = (name, fallback) => {
   const value = getComputedStyle(document.body).getPropertyValue(name).trim()
     || getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   return value || fallback;
@@ -80,19 +80,19 @@ const mixRgb = (start, end, amount) => ({
   blue: start.blue + ((end.blue - start.blue) * amount)
 });
 
-const getThemePaletteCorners = (accent, accentSoft) => {
+const getCorePaletteCorners = (accent, accentSoft) => {
   const accentRgb = hexToRgb(accent);
   const accentSoftRgb = hexToRgb(accentSoft);
 
   return {
-    bottomLeft: rgbToHex(mixRgb(accentSoftRgb, accentRgb, THEME_PALETTE_MIXES.bottomLeft)),
-    bottomRight: rgbToHex(mixRgb(accentSoftRgb, accentRgb, THEME_PALETTE_MIXES.bottomRight)),
-    topLeft: rgbToHex(mixRgb(accentRgb, accentSoftRgb, THEME_PALETTE_MIXES.topLeft)),
-    topRight: rgbToHex(mixRgb(accentRgb, accentSoftRgb, THEME_PALETTE_MIXES.topRight))
+    bottomLeft: rgbToHex(mixRgb(accentSoftRgb, accentRgb, CORE_PALETTE_MIXES.bottomLeft)),
+    bottomRight: rgbToHex(mixRgb(accentSoftRgb, accentRgb, CORE_PALETTE_MIXES.bottomRight)),
+    topLeft: rgbToHex(mixRgb(accentRgb, accentSoftRgb, CORE_PALETTE_MIXES.topLeft)),
+    topRight: rgbToHex(mixRgb(accentRgb, accentSoftRgb, CORE_PALETTE_MIXES.topRight))
   };
 };
 
-const getThemeBorderColors = (accent, accentSoft) => {
+const getCoreBorderColors = (accent, accentSoft) => {
   const borderRgb = mixRgb(hexToRgb(accent), hexToRgb(accentSoft), 0.5);
 
   return {
@@ -1319,11 +1319,11 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
     ...state.metrics,
     mapSquareGridSize: state.mapSquare?.gridSize
   });
-  const accent = getThemeColor("--accent", "#74f7d1");
-  const accentSoft = getThemeColor("--accent-soft", "#a7ffe7");
+  const accent = getCssColor("--accent", "#74f7d1");
+  const accentSoft = getCssColor("--accent-soft", "#a7ffe7");
   const accentSoftRgb = getColorRgb(accentSoft, "255, 213, 107");
-  const palette = getThemePaletteCorners(accent, accentSoft);
-  const borderColors = getThemeBorderColors(accent, accentSoft);
+  const palette = getCorePaletteCorners(accent, accentSoft);
+  const borderColors = getCoreBorderColors(accent, accentSoft);
   const squareLineRgb = mixRgb(hexToRgb(accent), hexToRgb(accentSoft), 0.5);
   const squareBorderColor = state.squareBorderAlpha === undefined
     ? borderColors.square

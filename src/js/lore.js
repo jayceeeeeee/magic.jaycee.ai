@@ -9,8 +9,7 @@
             return;
         }
 
-        window.localStorage.setItem("jaycee_full_name", name);
-        window.localStorage.setItem("jaycee_username", name);
+        window.localStorage.setItem("player_full_name", name);
         document.body.classList.add("is-lore-launching");
         window.setTimeout(() => {
             window.location.href = "/prayer.html";

@@ -8,24 +8,45 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@500;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/src/css/global.css">
-  <link rel="stylesheet" href="/src/css/jaycee-profile.css">
+  <link rel="stylesheet" href="/src/css/game-ui.css">
   <link rel="stylesheet" href="/src/css/game.css">
 </head>
-<body class="game-page" data-theme="aurora">
+<body class="game-page">
   <jaycee-banner></jaycee-banner>
 
-  <main class="jaycee-profile-page is-profile-view game-shell" data-profile-shell data-profile-mode="public" hidden>
+  <main class="game-ui-page is-profile-view game-shell" data-profile-shell data-profile-mode="public" hidden>
     <h1 class="game-brand-title game-title">jaycee.ai</h1>
-    <section class="jaycee-profile-core" aria-label="Jaycee game">
-      <canvas class="jaycee-profile-canvas" data-profile-canvas aria-label="Jaycee game core"></canvas>
+    <section class="game-core-panel" aria-label="Jaycee game">
+      <canvas class="game-core-canvas" data-profile-canvas aria-label="Jaycee game core"></canvas>
     </section>
   </main>
+
+  <aside class="jaycee-settings-page is-account-page is-account-panel-collapsed" data-account-shell hidden>
+    <button class="account-hud-trigger" type="button" data-account-toggle aria-controls="account-panel" aria-expanded="false">
+      Account
+    </button>
+
+    <section class="jaycee-settings-panel account-side-panel" id="account-panel" aria-labelledby="account-title" tabindex="-1">
+      <div class="profile-settings-header">
+        <p class="profile-kicker">jaycee.ai &gt; account</p>
+        <h1 id="account-title">Account</h1>
+      </div>
+
+      <div class="profile-resonance-status" data-account-status aria-live="polite">Loading account...</div>
+      <div class="jaycee-account-sections" data-account-sections></div>
+      <div class="profile-settings-actions" data-account-actions hidden>
+        <button type="button" data-account-save>Save</button>
+        <p data-account-save-status></p>
+      </div>
+    </section>
+  </aside>
 
   <jaycee-footer></jaycee-footer>
 
   <script src="/src/js/shell/shell.js"></script>
-  <script src="/src/js/theme/themes.js"></script>
   <script src="/src/js/auth/auth.js"></script>
   <script type="module" src="/src/js/game.js"></script>
+  <script type="module" src="/src/js/jaycee/account.js"></script>
 </body>
 </html>
+

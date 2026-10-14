@@ -19,7 +19,6 @@ import {
   fetchUserGameSettings,
   getAvatarImageUrl,
   getDisplayValue,
-  getThemeSettingsFromProfile,
   loadOptionalImage
 } from "../config/data.js";
 
@@ -34,12 +33,6 @@ const MANNA_CYCLE_SECONDS = {
   day: DAY_SECONDS,
   month: YEAR_SECONDS / 12,
   year: YEAR_SECONDS
-};
-
-const applyProfileTheme = (profile) => {
-  const theme = getThemeSettingsFromProfile(profile).theme;
-
-  document.body.dataset.theme = theme;
 };
 
 const getLoginUrl = () => (
@@ -64,8 +57,7 @@ const redirectToLogin = () => {
 
 const redirectToSignup = () => {
   const signupUrl = getSignupUrl();
-  const storedFullName = getDisplayValue(window.localStorage.getItem("jaycee_full_name"))
-    || getDisplayValue(window.localStorage.getItem("jaycee_username"));
+  const storedFullName = getDisplayValue(window.localStorage.getItem("player_full_name"));
 
   signupUrl.searchParams.set("redirect", `${window.location.pathname}${window.location.search}`);
   if (storedFullName) {
@@ -600,7 +592,7 @@ const createNoticeMasterBadge = (profile, fallbackUsername = "Cedricjbt") => {
 
 const getPendingPrayerActiveMs = () => {
   try {
-    const pendingPrayer = JSON.parse(window.localStorage.getItem("jaycee_pending_prayer") || "{}");
+    const pendingPrayer = JSON.parse(window.localStorage.getItem("pending_prayer") || "{}");
     const activeMs = Number(pendingPrayer.active_typing_ms);
 
     if (Number.isFinite(activeMs)) {
@@ -658,9 +650,9 @@ const createVitalsPanel = ({
   const hasPlayerProfile = Boolean(playerProfile);
   const guestLevelYears = 1;
   const level = Number(player?.level) || 1;
-  const storedUsername = getDisplayValue(window.localStorage.getItem("jaycee_username"));
+  const storedUsername = getDisplayValue(window.localStorage.getItem("player_full_name"));
   const channelUsername = getDisplayValue(profile?.username)
-    || getDisplayValue(window.localStorage.getItem("jaycee_pending_prayer_target_username"))
+    || getDisplayValue(window.localStorage.getItem("pending_prayer_target_username"))
     || "";
   const noticeMasterProfile = adminProfile || publicProfiles.find((publicProfile) => (
     getDisplayValue(publicProfile.role).toLowerCase() === "admin"
@@ -1159,7 +1151,7 @@ export const initJayceePage = async () => {
   const renderPresentControls = () => {
     if (!canvas) return;
 
-    const corePanel = canvas.closest(".jaycee-profile-core");
+    const corePanel = canvas.closest(".game-core-panel");
     const existingControls = corePanel?.querySelector("[data-profile-present-controls]");
 
     if (!corePanel || !isPresentPage) {
@@ -1183,7 +1175,7 @@ export const initJayceePage = async () => {
   const renderVitalsPanel = () => {
     if (!canvas) return;
 
-    const corePanel = canvas.closest(".jaycee-profile-core");
+    const corePanel = canvas.closest(".game-core-panel");
     const existingPanel = corePanel?.querySelector("[data-profile-vitals]");
 
     if (!corePanel || !shouldRenderGameInterface) {
@@ -1215,7 +1207,7 @@ export const initJayceePage = async () => {
   const renderCoreParameters = () => {
     if (!canvas) return;
 
-    const corePanel = canvas.closest(".jaycee-profile-core");
+    const corePanel = canvas.closest(".game-core-panel");
     const existingPanel = corePanel?.querySelector("[data-profile-parameters]");
     const existingMasterPanel = corePanel?.querySelector("[data-profile-masters]");
     const existingInventoryTitle = corePanel?.querySelector("[data-profile-inventory-title]");
@@ -1348,9 +1340,6 @@ export const initJayceePage = async () => {
     }
 
     shell.hidden = false;
-    if (isEditableProfilePage) {
-      applyProfileTheme(profile);
-    }
 
     dynamicFractals = hasUserProfile ? await fetchUserDynamicFractals(client, profile) : [];
     skills = hasUserProfile
@@ -1428,3 +1417,4 @@ export const startJayceePage = () => {
 export const startJayceeProfilePage = () => {
   startJayceePage();
 };
+

@@ -3,7 +3,7 @@
   --footer-space: 68px;
 }
 
-.jaycee-profile-page {
+.game-ui-page {
   width: min(100% - 28px, 1040px);
   min-height: 100svh;
   display: grid;
@@ -14,7 +14,7 @@
   padding: calc(var(--banner-space) + 24px) 0 calc(var(--footer-space) + 24px);
 }
 
-.jaycee-profile-page.is-profile-view {
+.game-ui-page.is-profile-view {
   width: min(100% - 28px, 560px);
   grid-template-columns: minmax(0, 1fr);
 }
@@ -32,12 +32,168 @@
   width: min(100% - 28px, 980px);
 }
 
-.profiles-list-page {
-  width: min(100% - 28px, 860px);
+:is(.account-overlay-page, .game-page) {
+  min-height: 100vh;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 78% 18%, rgba(var(--accent-rgb), 0.16), transparent 28%),
+    radial-gradient(circle at 50% 90%, rgba(255, 213, 107, 0.07), transparent 34%),
+    linear-gradient(180deg, #080d12 0%, #05070a 58%, #030405 100%);
 }
 
-.jaycee-profile-core,
-.jaycee-profile-resonances,
+:is(.account-overlay-page, .game-page)::before {
+  content: "";
+  position: fixed;
+  inset: auto -12vw -16vh;
+  height: 58vh;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(var(--accent-rgb), 0.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--accent-rgb), 0.12) 1px, transparent 1px);
+  background-size: 44px 44px;
+  opacity: 0.34;
+  transform: perspective(620px) rotateX(62deg);
+  transform-origin: bottom center;
+  mask-image: linear-gradient(to top, black, transparent 78%);
+}
+
+:is(.account-overlay-page, .game-page) > jaycee-banner,
+:is(.account-overlay-page, .game-page) > jaycee-footer {
+  display: none;
+}
+
+:is(.account-overlay-page, .game-page) [hidden] {
+  display: none !important;
+}
+
+:is(.account-overlay-page, .game-page) .jaycee-settings-page.is-account-page {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  width: 100%;
+  min-height: 100svh;
+  display: block;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+}
+
+.account-hud-trigger {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 12;
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid rgba(var(--accent-rgb), 0.36);
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, rgba(var(--accent-rgb), 0.12), transparent 72%),
+    rgba(0, 0, 0, 0.28);
+  color: var(--accent);
+  cursor: pointer;
+  font-family: "Rajdhani", sans-serif;
+  font-size: 0.92rem;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: uppercase;
+  pointer-events: auto;
+  box-shadow:
+    0 0 22px rgba(var(--accent-rgb), 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition:
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.account-hud-trigger:hover,
+.account-hud-trigger:focus-visible {
+  border-color: var(--neon-border-strong);
+  color: var(--accent-soft);
+  outline: none;
+  transform: translateY(-1px);
+  box-shadow: 0 0 30px rgba(var(--accent-rgb), 0.2);
+}
+
+:is(.account-overlay-page, .game-page) .account-side-panel {
+  position: fixed;
+  top: 72px;
+  right: 18px;
+  bottom: 18px;
+  z-index: 11;
+  width: min(420px, calc(100vw - 28px));
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 14px;
+  padding: 16px;
+  border-color: rgba(var(--accent-rgb), 0.3);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(var(--accent-rgb), 0.08), transparent 72%),
+    rgba(5, 9, 12, 0.86);
+  backdrop-filter: blur(16px);
+  pointer-events: auto;
+  transform: translateX(0);
+  opacity: 1;
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
+}
+
+:is(.account-overlay-page, .game-page) .is-account-panel-collapsed .account-side-panel {
+  transform: translateX(calc(100% + 24px));
+  opacity: 0;
+  pointer-events: none;
+}
+
+:is(.account-overlay-page, .game-page) .profile-settings-header {
+  position: relative;
+  z-index: 1;
+}
+
+:is(.account-overlay-page, .game-page) .profile-settings-header h1 {
+  font-size: clamp(1.8rem, 6vw, 3rem);
+}
+
+:is(.account-overlay-page, .game-page) .profile-resonance-status {
+  min-height: 1.1em;
+}
+
+:is(.account-overlay-page, .game-page) .jaycee-account-sections {
+  grid-template-columns: 1fr;
+  align-content: start;
+  overflow-y: auto;
+  padding-right: 3px;
+}
+
+:is(.account-overlay-page, .game-page) .jaycee-account-section {
+  background:
+    linear-gradient(90deg, rgba(var(--accent-rgb), 0.08), transparent 72%),
+    rgba(0, 0, 0, 0.18);
+}
+
+@media (max-width: 620px) {
+  .account-hud-trigger {
+    top: 12px;
+    right: 12px;
+  }
+
+  :is(.account-overlay-page, .game-page) .account-side-panel {
+    top: 62px;
+    right: 10px;
+    bottom: 10px;
+    width: calc(100vw - 20px);
+    padding: 14px;
+  }
+
+  :is(.account-overlay-page, .game-page) .profile-manna-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+.game-core-panel,
 .jaycee-settings-panel {
   position: relative;
   overflow: hidden;
@@ -52,7 +208,6 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-.jaycee-profile-resonances::after,
 .jaycee-settings-panel::after {
   content: "";
   position: absolute;
@@ -86,92 +241,7 @@
   text-transform: uppercase;
 }
 
-.profiles-list-question {
-  margin: 0;
-  color: var(--accent-soft);
-  font-family: "Share Tech Mono", monospace;
-  line-height: 1.35;
-}
-
-.profiles-grid {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 12px;
-}
-
-.profiles-card {
-  min-height: 104px;
-  display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
-  align-items: center;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid rgba(var(--accent-rgb), 0.3);
-  border-radius: 7px;
-  background:
-    linear-gradient(135deg, rgba(var(--accent-rgb), 0.13), transparent 64%),
-    rgba(0, 0, 0, 0.18);
-  color: var(--text);
-  text-decoration: none;
-  transition:
-    border-color 160ms ease,
-    box-shadow 160ms ease,
-    transform 160ms ease;
-}
-
-.profiles-card:hover,
-.profiles-card:focus-visible {
-  border-color: rgba(var(--accent-rgb), 0.62);
-  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.26);
-  transform: translateY(-2px);
-}
-
-.profiles-card-avatar {
-  width: 58px;
-  aspect-ratio: 1;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgba(var(--accent-rgb), 0.32);
-  border-radius: 7px;
-  background: rgba(0, 0, 0, 0.28);
-  color: var(--accent-soft);
-  font-family: "Share Tech Mono", monospace;
-  font-size: 1.5rem;
-  font-weight: 800;
-  overflow: hidden;
-}
-
-.profiles-card-avatar img {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: cover;
-}
-
-.profiles-card-body {
-  min-width: 0;
-  display: grid;
-  gap: 4px;
-}
-
-.profiles-card-body strong {
-  color: var(--accent);
-  font-family: "Rajdhani", sans-serif;
-  font-size: 1.3rem;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.profiles-card-body span {
-  color: var(--muted);
-  font-size: 0.86rem;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.jaycee-profile-core {
+.game-core-panel {
   height: calc(100svh - var(--banner-space) - var(--footer-space) - 48px);
   min-height: 460px;
   display: grid;
@@ -189,19 +259,19 @@
     var(--card);
 }
 
-.jaycee-profile-page.is-profile-view .jaycee-profile-core {
+.game-ui-page.is-profile-view .game-core-panel {
   width: 100%;
 }
 
-.jaycee-profile-page.is-profile-view .jaycee-profile-core {
+.game-ui-page.is-profile-view .game-core-panel {
   min-height: calc(100svh - var(--banner-space) - var(--footer-space) - 48px);
 }
 
-.jaycee-profile-page.is-profile-view .jaycee-profile-canvas {
+.game-ui-page.is-profile-view .game-core-canvas {
   width: 100%;
 }
 
-.jaycee-profile-canvas {
+.game-core-canvas {
   position: relative;
   z-index: 1;
   width: 100%;
@@ -704,75 +774,6 @@
   outline: none;
 }
 
-.profile-theme-controls {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  display: grid;
-  grid-template-columns: minmax(120px, 1fr) repeat(2, minmax(74px, 0.55fr));
-  gap: 10px;
-}
-
-.profile-theme-controls label {
-  min-width: 0;
-  display: grid;
-  gap: 5px;
-}
-
-.profile-theme-controls span {
-  color: var(--muted);
-  font-family: "Share Tech Mono", monospace;
-  font-size: 0.68rem;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.profile-theme-controls select,
-.profile-theme-controls input {
-  min-width: 0;
-  min-height: 36px;
-  border: 1px solid var(--field-border-soft);
-  border-radius: 6px;
-  background: var(--surface);
-  color: var(--text);
-  font: inherit;
-  outline: none;
-}
-
-.profile-theme-controls select {
-  padding: 7px 9px;
-}
-
-.profile-theme-controls input[type="color"] {
-  width: 100%;
-  padding: 4px;
-  cursor: pointer;
-}
-
-.profile-theme-controls select:focus,
-.profile-theme-controls input:focus {
-  border-color: var(--neon-border-strong);
-  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
-}
-
-.profile-theme-controls p {
-  grid-column: 1 / -1;
-  min-height: 1.1em;
-  margin: 0;
-  color: var(--accent-soft);
-  font-family: "Share Tech Mono", monospace;
-  font-size: 0.72rem;
-  line-height: 1.2;
-}
-
-.profile-theme-controls p[data-state="error"] {
-  color: #ff8d8d;
-}
-
-.profile-theme-controls p:empty {
-  display: none;
-}
-
 .profile-details-controls {
   position: relative;
   z-index: 1;
@@ -790,16 +791,12 @@
 
 .profile-details-controls h2,
 .profile-details-controls label,
-.profile-gender-field,
-.profile-location-field,
 .profile-settings-actions {
   min-width: 0;
 }
 
 .profile-details-controls h2,
 .profile-field-wide,
-.profile-gender-field,
-.profile-location-field,
 .profile-manna-fields,
 .profile-settings-actions {
   grid-column: 1 / -1;
@@ -968,9 +965,7 @@
 }
 
 .jaycee-account-section.is-character,
-.jaycee-account-section.is-items,
-.jaycee-account-section.is-maps,
-.jaycee-account-section.is-skills {
+.jaycee-account-section.is-maps {
   grid-column: 1 / -1;
 }
 
@@ -979,7 +974,6 @@
   gap: 12px;
 }
 
-.jaycee-account-theme,
 .jaycee-account-form {
   width: 100%;
 }
@@ -994,33 +988,74 @@
   background: transparent;
 }
 
-.jaycee-item-elements-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+.account-avatar-field {
+  grid-column: 1 / -1;
 }
 
-.jaycee-account-skill-list {
-  display: grid;
-  gap: 10px;
-}
-
-.jaycee-account-skill-row {
-  align-items: center;
-}
-
-.jaycee-account-skill-row label {
+.account-avatar-control {
   min-width: 0;
-  display: grid;
-  gap: 5px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.jaycee-account-skill-row span:not(.profile-skill-badge) {
-  color: var(--muted);
-  font-size: 0.68rem;
+.account-avatar-preview {
+  width: 58px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  flex: 0 0 auto;
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.24);
+  color: var(--accent-soft);
+  font-family: "Rajdhani", sans-serif;
+  font-size: 1.25rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.account-avatar-preview img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.account-avatar-button {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  border: 1px solid rgba(var(--accent-rgb), 0.34);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--accent);
+  cursor: pointer;
+  font-family: "Rajdhani", sans-serif;
+  font-size: 0.9rem;
   font-weight: 800;
   line-height: 1;
   text-transform: uppercase;
+}
+
+.account-avatar-field input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.account-avatar-field:focus-within .account-avatar-button,
+.account-avatar-field:hover .account-avatar-button {
+  border-color: var(--neon-border-strong);
+  color: var(--accent-soft);
 }
 
 .profile-details-controls h2 {
@@ -1037,78 +1072,12 @@
   gap: 5px;
 }
 
-.profile-details-controls span,
-.profile-gender-field legend {
+.profile-details-controls span {
   color: var(--muted);
   font-family: "Share Tech Mono", monospace;
   font-size: 0.68rem;
   line-height: 1;
   text-transform: uppercase;
-}
-
-.profile-gender-field {
-  margin: 0;
-  border: 0;
-  padding: 0;
-}
-
-.profile-gender-options {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 8px;
-  padding: 4px;
-  border: 1px solid var(--field-border);
-  border-radius: 8px;
-  background: rgba(var(--accent-rgb), 0.035);
-}
-
-.profile-gender-option {
-  position: relative;
-  min-height: 46px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--field-border-soft);
-  border-radius: 6px;
-  color: var(--muted);
-  background: var(--surface);
-  cursor: pointer;
-  transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
-}
-
-.profile-gender-option input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.profile-gender-option span {
-  color: inherit;
-  font-weight: 750;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.profile-gender-option:has(input:checked) {
-  border-color: var(--neon-border-strong);
-  background:
-    var(--active-button-bg),
-    var(--accent);
-  color: var(--accent-ink);
-  box-shadow: 0 8px 18px rgba(var(--accent-rgb), 0.14);
-}
-
-.profile-gender-option:has(input:focus-visible) {
-  outline: 2px solid var(--accent-soft);
-  outline-offset: 3px;
-}
-
-.profile-gender-option:hover {
-  border-color: var(--neon-border);
-  color: var(--accent-soft);
-  transform: translateY(-1px);
 }
 
 .profile-details-controls input,
@@ -1139,98 +1108,6 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-}
-
-.profile-location-field {
-  position: relative;
-}
-
-.location-results {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  right: 0;
-  z-index: 5;
-  max-height: 210px;
-  margin: 0;
-  border: 1px solid var(--field-border);
-  border-radius: 6px;
-  padding: 6px;
-  background: var(--card-strong);
-  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.42);
-  list-style: none;
-  overflow-y: auto;
-}
-
-.location-results li {
-  margin: 0;
-}
-
-.location-option {
-  width: 100%;
-  min-height: auto;
-  border: 1px solid transparent;
-  border-radius: 5px;
-  padding: 10px;
-  color: var(--text);
-  background: transparent;
-  cursor: pointer;
-  font: inherit;
-  text-align: left;
-}
-
-.location-option:hover,
-.location-option:focus-visible,
-.location-option:active,
-.location-option.is-pressed {
-  color: #001505;
-  background: var(--accent);
-  outline: none;
-}
-
-.profile-derived-birth-data {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  padding: 4px;
-  border: 1px solid var(--field-border);
-  border-radius: 8px;
-  background: rgba(var(--accent-rgb), 0.035);
-}
-
-.profile-derived-birth-data div {
-  min-width: 0;
-  display: grid;
-  gap: 6px;
-  padding: 10px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.025);
-}
-
-.profile-derived-birth-data span {
-  color: var(--muted);
-  font-family: "Share Tech Mono", monospace;
-  font-size: 0.68rem;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.profile-derived-birth-data strong {
-  min-height: 1.1em;
-  color: var(--accent-soft);
-  font-family: "Share Tech Mono", monospace;
-  font-size: 0.82rem;
-  font-weight: 600;
-  line-height: 1.2;
-  overflow-wrap: anywhere;
-}
-
-.profile-derived-birth-data strong.is-empty {
-  color: var(--muted);
-  font-weight: 500;
-  font-style: italic;
 }
 
 .profile-settings-actions {
@@ -1320,15 +1197,6 @@
 .profile-fractal-select select:focus {
   border-color: var(--neon-border-strong);
   box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
-}
-
-.jaycee-profile-resonances {
-  height: calc(100svh - var(--banner-space) - var(--footer-space) - 48px);
-  min-height: 460px;
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
-  gap: 16px;
-  padding: clamp(18px, 3vw, 28px);
 }
 
 .profile-resonance-header,
@@ -1433,179 +1301,6 @@
   gap: 10px;
 }
 
-.profile-primary-fractal-content,
-.profile-skills-content {
-  display: grid;
-  gap: 10px;
-  padding: 12px 13px;
-  border: 1px solid rgba(var(--accent-rgb), 0.3);
-  border-radius: 7px;
-  background:
-    linear-gradient(90deg, rgba(var(--accent-rgb), 0.16), transparent 72%),
-    rgba(0, 0, 0, 0.14);
-}
-
-.profile-primary-fractal-select,
-.profile-primary-fractal-field select,
-.profile-primary-fractal-field input {
-  width: 100%;
-  min-width: 0;
-  min-height: 38px;
-  padding: 8px 10px;
-  border: 1px solid var(--field-border-soft);
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.16);
-  color: var(--text);
-  font: inherit;
-  outline: none;
-}
-
-.profile-primary-fractal-select:focus,
-.profile-primary-fractal-field select:focus,
-.profile-primary-fractal-field input:focus {
-  border-color: rgba(var(--accent-rgb), 0.58);
-}
-
-.profile-primary-fractal-field {
-  display: grid;
-  gap: 5px;
-}
-
-.profile-primary-fractal-fields {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.profile-primary-fractal-field span {
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 700;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.profile-primary-fractal-field input:disabled {
-  color: var(--muted);
-  opacity: 0.72;
-}
-
-.profile-primary-fractal-field select:disabled {
-  color: var(--muted);
-  opacity: 0.72;
-}
-
-.profile-skill-row {
-  min-width: 0;
-  padding: 10px;
-  border: 1px solid rgba(var(--accent-rgb), 0.18);
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.1);
-}
-
-.profile-skill-badge {
-  width: 26px;
-  height: 26px;
-  display: grid;
-  place-items: center;
-  border: 1px solid rgba(var(--accent-rgb), 0.28);
-  border-radius: 999px;
-  background: rgba(var(--accent-rgb), 0.1);
-  color: var(--text);
-  font-family: "Share Tech Mono", monospace;
-  font-size: 0.78rem;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.profile-skill-row {
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  align-items: stretch;
-  gap: 10px;
-  border-color: rgba(var(--accent-rgb), 0.24);
-  background:
-    linear-gradient(90deg, rgba(var(--accent-rgb), 0.13), transparent 58%),
-    rgba(0, 0, 0, 0.12);
-}
-
-.profile-skill-card-body {
-  display: grid;
-  gap: 0;
-  border: 1px solid rgba(var(--accent-rgb), 0.14);
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-}
-
-.profile-skill-card-line {
-  display: grid;
-  grid-template-columns: 82px repeat(2, minmax(0, 1fr));
-  align-items: stretch;
-  gap: 8px;
-  padding: 9px;
-}
-
-.profile-skill-card-line + .profile-skill-card-line {
-  border-top: 1px solid rgba(var(--accent-rgb), 0.16);
-}
-
-.profile-skill-card-line-title {
-  min-height: 100%;
-  display: flex;
-  align-items: center;
-  padding: 0 10px;
-  border-right: 1px solid rgba(var(--accent-rgb), 0.16);
-  color: var(--accent-soft);
-  font-family: "Share Tech Mono", monospace;
-  font-size: 0.7rem;
-  font-weight: 800;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.profile-skill-card-field {
-  min-width: 0;
-  display: grid;
-  gap: 4px;
-}
-
-.profile-skill-card-field span {
-  color: var(--muted);
-  font-size: 0.66rem;
-  font-weight: 800;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.profile-skill-row input,
-.profile-skill-row select,
-.profile-skill-card-line input {
-  width: 100%;
-  min-width: 0;
-  min-height: 34px;
-  padding: 7px 8px;
-  border: 1px solid var(--field-border-soft);
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.16);
-  color: var(--text);
-  font: inherit;
-  outline: none;
-}
-
-.profile-skill-row input:focus,
-.profile-skill-row select:focus,
-.profile-skill-card-line input:focus {
-  border-color: rgba(var(--accent-rgb), 0.58);
-}
-
-.profile-skill-row input:disabled,
-.profile-skill-row select:disabled,
-.profile-skill-card-line input:disabled {
-  color: var(--muted);
-  opacity: 0.72;
-}
-
 @media (max-width: 720px) {
   .profile-ability-bar {
     gap: 6px;
@@ -1614,12 +1309,6 @@
   .profile-ability-button {
     min-height: 50px;
     padding-inline: 4px;
-  }
-
-  .profile-primary-fractal-fields,
-  .profile-skill-row,
-  .profile-skill-card-line {
-    grid-template-columns: 1fr;
   }
 
 }
@@ -1659,30 +1348,23 @@
 }
 
 @media (max-width: 820px) {
-  .jaycee-profile-page {
+  .game-ui-page {
     grid-template-columns: 1fr;
   }
 
-  .jaycee-profile-core,
-  .jaycee-profile-resonances {
+  .game-core-panel {
     height: auto;
     min-height: auto;
   }
 
-  .jaycee-profile-core {
+  .game-core-panel {
     padding: 14px;
-  }
-
-  .profile-theme-controls {
-    grid-template-columns: 1fr;
   }
 
   .profile-details-controls {
     grid-template-columns: 1fr;
   }
 
-  .profile-gender-options,
-  .profile-derived-birth-data,
   .profile-manna-fields {
     grid-template-columns: 1fr;
   }
@@ -1699,7 +1381,7 @@
     width: 48px;
   }
 
-  .jaycee-profile-canvas {
+  .game-core-canvas {
     width: 100%;
   }
 
@@ -1708,3 +1390,5 @@
     overflow: auto;
   }
 }
+
+

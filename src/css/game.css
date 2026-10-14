@@ -35,7 +35,7 @@ body {
   display: none;
 }
 
-.game-shell.jaycee-profile-page.is-profile-view {
+.game-shell.game-ui-page.is-profile-view {
   width: min(100% - 32px, 720px);
   min-height: 100svh;
   align-content: center;
@@ -58,7 +58,7 @@ body {
     0 10px 34px rgba(0, 0, 0, 0.36);
 }
 
-.game-page .jaycee-profile-core {
+.game-page .game-core-panel {
   height: auto;
   min-height: 0;
   padding: 0;
@@ -68,7 +68,7 @@ body {
   overflow: visible;
 }
 
-.game-page .jaycee-profile-canvas {
+.game-page .game-core-canvas {
   display: none;
   max-width: 560px;
   justify-self: center;
@@ -360,12 +360,12 @@ body {
 }
 
 @media (max-width: 620px) {
-  .game-shell.jaycee-profile-page.is-profile-view {
+  .game-shell.game-ui-page.is-profile-view {
     width: min(100% - 20px, 460px);
     padding: 10px 0;
   }
 
-  .game-page .jaycee-profile-core {
+  .game-page .game-core-panel {
     height: auto;
   }
 }
@@ -375,3 +375,4 @@ body {
     animation-duration: 1ms;
   }
 }
+

@@ -10,7 +10,7 @@
 
     document.body.classList.toggle("is-embedded", isEmbedded);
     if (prayerUsername) {
-        prayerUsername.textContent = window.localStorage.getItem("jaycee_username") || "Player";
+        prayerUsername.textContent = window.localStorage.getItem("player_full_name") || "Player";
     }
 
     function notifyHeight() {
@@ -28,12 +28,12 @@
 
     function getPrayerPayload() {
         const formData = new FormData(prayerForm);
-        const storedUsername = window.localStorage.getItem("jaycee_username");
+        const storedFullName = window.localStorage.getItem("player_full_name");
 
         return {
             problem: String(formData.get("problem") || "").trim(),
             prayer: String(formData.get("prayer") || "").trim(),
-            username: String(storedUsername || "Unknown user").trim(),
+            username: String(storedFullName || "Unknown user").trim(),
         };
     }
 
@@ -127,7 +127,7 @@
 
         try {
             await submitPrayerToDatabase(payload);
-            window.localStorage.setItem("jaycee_pending_prayer", JSON.stringify({
+            window.localStorage.setItem("pending_prayer", JSON.stringify({
                 ...payload,
                 active_typing_ms: Math.round(activeTypingMs),
                 created_at: new Date().toISOString(),

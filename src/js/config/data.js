@@ -10,15 +10,9 @@ const PROFILE_SELECT_COLUMNS = [
   "id",
   "username",
   "avatar_path",
-  "theme",
-  "primary_color",
-  "secondary_color",
   "full_name",
   "birth_date",
   "birth_time",
-  "birth_place",
-  "birth_place_position",
-  "birth_timezone",
   "manna_target",
   "manna_unit",
   "manna_cycle",
@@ -30,22 +24,6 @@ const SIGNED_IMAGE_URL_DURATION_SECONDS = 60 * 60;
 export const getDisplayValue = (value) => (
   value === null || value === undefined ? "" : String(value).trim()
 );
-
-export const isHexColor = (value) => /^#[0-9a-f]{6}$/i.test(getDisplayValue(value));
-
-export const getProfileThemeValue = (profile) => (
-  window.JayceeThemes?.normalizeTheme?.(getDisplayValue(profile?.theme)) || "aurora"
-);
-
-export const getProfileColorValue = (value) => (
-  isHexColor(value) ? getDisplayValue(value) : ""
-);
-
-export const getThemeSettingsFromProfile = (profile) => ({
-  primary_color: getProfileColorValue(profile?.primary_color),
-  secondary_color: getProfileColorValue(profile?.secondary_color),
-  theme: getProfileThemeValue(profile)
-});
 
 export const fetchProfileByUserId = async (client, userId) => {
   const { data, error } = await client
@@ -74,7 +52,7 @@ export const fetchProfileByUsername = async (client, username) => {
 export const fetchPublicProfiles = async (client, limit = 100) => {
   const { data, error } = await client
     .from(PROFILE_TABLE)
-    .select("id, username, full_name, avatar_path, theme, primary_color, secondary_color, role")
+    .select("id, username, full_name, avatar_path, role")
     .not("username", "is", null)
     .eq("visibility", true)
     .order("username", { ascending: true })
@@ -88,7 +66,7 @@ export const fetchPublicProfiles = async (client, limit = 100) => {
 export const fetchAdminProfile = async (client) => {
   const { data, error } = await client
     .from(PROFILE_TABLE)
-    .select("id, username, full_name, avatar_path, theme, primary_color, secondary_color, role")
+    .select("id, username, full_name, avatar_path, role")
     .eq("role", "admin")
     .not("username", "is", null)
     .limit(1);

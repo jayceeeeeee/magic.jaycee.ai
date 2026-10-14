@@ -3,11 +3,8 @@
     const supabasePublishableKey = "sb_publishable_lMEHC2xjlGGmTnkI5G-okg_0AVRhiDd";
     const defaultLoginPath = "/login.html";
     const defaultSignupPath = "/signup.html";
-    const defaultAccountPath = "/account.html";
-    const defaultAfterSignInPath = "/account.html";
-    const themeConfig = window.JayceeThemes || {
-        normalizeTheme: () => "aurora",
-    };
+    const defaultAccountPath = "/game.html";
+    const defaultAfterSignInPath = "/game.html";
     let supabaseClientPromise = null;
 
     function loadScript(src) {
@@ -66,7 +63,7 @@
     }
 
     function getDisplayName(user) {
-        return user?.user_metadata?.name || user?.email || "Account";
+        return user?.user_metadata?.full_name || user?.email || "Account";
     }
 
     function getPublicProfileUrl(username) {
@@ -79,16 +76,6 @@
         return value === null || value === undefined ? "" : String(value).trim();
     }
 
-    function getProfileThemeValue(profile) {
-        return themeConfig.normalizeTheme(getDisplayValue(profile?.theme));
-    }
-
-    function applyTheme(profile) {
-        const theme = getProfileThemeValue(profile);
-
-        document.body.dataset.theme = theme;
-    }
-
     async function getProfileSettings(user) {
         if (!user?.id) {
             return null;
@@ -98,7 +85,7 @@
             const client = await getSupabaseClient();
             const { data, error } = await client
                 .from("profiles")
-                .select("username, theme")
+                .select("username")
                 .eq("id", user.id)
                 .maybeSingle();
 
@@ -141,14 +128,12 @@
         if (data.session?.user) {
             const profile = await getProfileSettings(data.session.user);
 
-            applyTheme(profile);
             setBannerSignedIn(
                 data.session.user,
                 profile?.username || getDisplayName(data.session.user),
                 getPublicProfileUrl(profile?.username)
             );
         } else {
-            applyTheme(null);
             setBannerSignedOut();
         }
     }
@@ -190,7 +175,6 @@
             if (session?.user) {
                 getProfileSettings(session.user)
                     .then((profile) => {
-                        applyTheme(profile);
                         setBannerSignedIn(
                             session.user,
                             profile?.username || getDisplayName(session.user),
@@ -198,14 +182,12 @@
                         );
                     });
             } else {
-                applyTheme(null);
                 setBannerSignedOut();
             }
         });
     }
 
     window.JayceeAuth = {
-        applyTheme,
         getSupabaseClient,
         getAfterSignInUrl,
         getAccountUrl,
