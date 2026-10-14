@@ -13,6 +13,7 @@ const PROFILE_SELECT_COLUMNS = [
   "full_name",
   "birth_date",
   "birth_time",
+  "active_game",
   "manna_target",
   "manna_unit",
   "manna_cycle",
@@ -20,6 +21,7 @@ const PROFILE_SELECT_COLUMNS = [
   "sex"
 ].join(", ");
 const SIGNED_IMAGE_URL_DURATION_SECONDS = 60 * 60;
+const PLAYER_SELECT_COLUMNS = "id, user_id, game_id, level, skill_1_practice, skill_2_practice, skill_3_practice";
 
 export const getDisplayValue = (value) => (
   value === null || value === undefined ? "" : String(value).trim()
@@ -118,9 +120,8 @@ export const fetchUserDynamicFractals = async (client, profile) => {
 
   const { data, error } = await client
     .from(JAYCEE_FRACTALS_TABLE)
-    .select("id, label, user_id, created_at, skill")
-    .eq("user_id", profile.id)
-    .order("created_at", { ascending: true });
+    .select("id, label, user_id, skill")
+    .eq("user_id", profile.id);
 
   if (error) throw error;
 
@@ -148,7 +149,7 @@ export const fetchUserGameSettings = async (client, profile) => {
 
   const { data, error } = await client
     .from(JAYCEE_GAME_TABLE)
-    .select("id, user_id, primary_fractal, ultimate_fractal, ultimate_link, created_at")
+    .select("id, user_id, primary_fractal, ultimate_fractal, ultimate_link")
     .eq("user_id", profile.id)
     .maybeSingle();
 
@@ -164,7 +165,7 @@ export const updateUserGameSettings = async (client, profile, values) => {
     .from(JAYCEE_GAME_TABLE)
     .update(values)
     .eq("user_id", profile.id)
-    .select("id, user_id, primary_fractal, ultimate_fractal, ultimate_link, created_at")
+    .select("id, user_id, primary_fractal, ultimate_fractal, ultimate_link")
     .maybeSingle();
 
   if (error) throw error;
@@ -172,14 +173,41 @@ export const updateUserGameSettings = async (client, profile, values) => {
   return data || null;
 };
 
-export const fetchPlayerForGame = async (client, userProfile, gameProfile) => {
-  if (!userProfile?.id || !gameProfile?.id) return null;
+export const fetchPlayersForUser = async (client, userProfile) => {
+  if (!userProfile?.id) return [];
 
   const { data, error } = await client
     .from(JAYCEE_PLAYER_TABLE)
-    .select("id, user_id, game_id, level, life_bar, skill_1_practice, skill_2_practice, skill_3_practice")
+    .select(PLAYER_SELECT_COLUMNS)
+    .eq("user_id", userProfile.id);
+
+  if (error) throw error;
+
+  return data || [];
+};
+
+export const fetchPlayerById = async (client, playerId) => {
+  if (!playerId) return null;
+
+  const { data, error } = await client
+    .from(JAYCEE_PLAYER_TABLE)
+    .select(PLAYER_SELECT_COLUMNS)
+    .eq("id", playerId)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  return data || null;
+};
+
+export const fetchPlayerForGame = async (client, userProfile, masterProfile) => {
+  if (!userProfile?.id || !masterProfile?.id) return null;
+
+  const { data, error } = await client
+    .from(JAYCEE_PLAYER_TABLE)
+    .select(PLAYER_SELECT_COLUMNS)
     .eq("user_id", userProfile.id)
-    .eq("game_id", gameProfile.id)
+    .eq("game_id", masterProfile.id)
     .limit(1);
 
   if (error) throw error;
@@ -187,22 +215,36 @@ export const fetchPlayerForGame = async (client, userProfile, gameProfile) => {
   return data?.[0] || null;
 };
 
-export const createPlayerForGame = async (client, userProfile, gameProfile, values = {}) => {
-  if (!userProfile?.id || !gameProfile?.id) return null;
+export const createPlayerForGame = async (client, userProfile, masterProfile, values = {}) => {
+  if (!userProfile?.id || !masterProfile?.id) return null;
 
   const { data, error } = await client
     .from(JAYCEE_PLAYER_TABLE)
     .insert({
-      game_id: gameProfile.id,
+      game_id: masterProfile.id,
       level: 1,
-      life_bar: 0,
       skill_1_practice: 0,
       skill_2_practice: 0,
       skill_3_practice: 0,
       ...values,
       user_id: userProfile.id
     })
-    .select("id, user_id, game_id, level, life_bar, skill_1_practice, skill_2_practice, skill_3_practice")
+    .select(PLAYER_SELECT_COLUMNS)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  return data || null;
+};
+
+export const updateProfileActiveGame = async (client, profile, playerId) => {
+  if (!profile?.id) return null;
+
+  const { data, error } = await client
+    .from(PROFILE_TABLE)
+    .update({ active_game: playerId || null })
+    .eq("id", profile.id)
+    .select(PROFILE_SELECT_COLUMNS)
     .maybeSingle();
 
   if (error) throw error;
@@ -217,7 +259,7 @@ export const fetchSkillsByIds = async (client, skillIds) => {
 
   const { data, error } = await client
     .from(JAYCEE_SKILLS_TABLE)
-    .select("id, label, created_at")
+    .select("id, label")
     .in("id", ids)
     .order("label", { ascending: true });
 
@@ -236,7 +278,7 @@ export const updateSkills = async (client, skillUpdates) => {
       .from(JAYCEE_SKILLS_TABLE)
       .update(values)
       .eq("id", id)
-      .select("id, label, created_at")
+      .select("id, label")
       .maybeSingle();
 
     if (error) throw error;

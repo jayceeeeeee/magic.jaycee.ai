@@ -4,13 +4,14 @@ import {
   drawJaycee
 } from "./profile-core.js";
 import {
-  JAYCEE_GAME_CYCLE_LABELS,
   JAYCEE_GAME_CONFIG
 } from "../config/game-config.js";
 import {
   createPlayerForGame,
   fetchAdminProfile,
+  fetchPlayerById,
   fetchPlayerForGame,
+  fetchPlayersForUser,
   fetchProfileByUserId,
   fetchProfileByUsername,
   fetchPublicProfiles,
@@ -19,7 +20,8 @@ import {
   fetchUserGameSettings,
   getAvatarImageUrl,
   getDisplayValue,
-  loadOptionalImage
+  loadOptionalImage,
+  updateProfileActiveGame
 } from "../config/data.js";
 
 const PROFILE_CORE_METRICS = {
@@ -197,6 +199,16 @@ const formatMannaValue = (value, unit) => {
 const getProfileInitial = (profile) => (
   (getDisplayValue(profile?.username) || getDisplayValue(profile?.full_name) || "?").slice(0, 1).toUpperCase()
 );
+
+const getPlayerLevelTotal = (players = []) => {
+  const total = (players || []).reduce((sum, player) => {
+    const level = Number(player?.level);
+
+    return sum + (Number.isFinite(level) && level > 0 ? level : 0);
+  }, 0);
+
+  return Math.max(1, total);
+};
 
 const getCurrentPeriodBounds = (level, now = new Date()) => {
   if (level === 1) {
@@ -387,39 +399,6 @@ const getSkillById = (skillForms, skillId) => (
   (skillForms || []).find((skill) => getDisplayValue(skill.id) === getDisplayValue(skillId)) || null
 );
 
-const getCurrentQuestModel = ({
-  dynamicFractals = [],
-  gameForm = {},
-  player,
-  selectedAbilityIndex = 0,
-  skillForms = []
-}) => {
-  if (!player) return null;
-
-  const level = getSelectedActiveLevel(player, selectedAbilityIndex);
-  const activeModels = getActiveFractalModels({
-    dynamicFractals,
-    gameForm,
-    skillForms
-  });
-  const questActiveIndex = Math.min(level, activeModels.length) - 1;
-  const activeModel = activeModels[questActiveIndex] || null;
-
-  if (!activeModel) return null;
-
-  const skillName = getDisplayValue(activeModel?.skillLabel)
-    || getDisplayValue(activeModel?.skill?.label)
-    || getDisplayValue(activeModel?.label)
-    || "your skill";
-  const duration = formatDuration(activeModel?.questSeconds, { compact: false }) || "0s";
-
-  return {
-    cycleLabel: JAYCEE_GAME_CYCLE_LABELS.activeAbilities[level - 1] || "Cycle",
-    duration,
-    skillName
-  };
-};
-
 const getUltimateModel = ({ dynamicFractals, gameForm, publicProfiles, ultimateTeammateSkillLabel }) => {
   const fractal = getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.ultimate.fractalLabel)
     || getFractalById(dynamicFractals, gameForm?.ultimate_fractal);
@@ -516,14 +495,14 @@ const createProfileNotice = ({
   action = null,
   content = null,
   closable = false,
-  text,
+  text = "",
   title,
   tone = "notification"
 }) => {
   const panel = document.createElement("article");
   const header = document.createElement("h2");
   const icon = document.createElement("span");
-  const copy = document.createElement("p");
+  const copy = document.createElement("div");
   const dismissPanel = () => {
     panel.classList.add("is-dismissing");
     window.setTimeout(() => panel.remove(), 180);
@@ -535,9 +514,21 @@ const createProfileNotice = ({
   icon.textContent = tone === "unlocked" ? "+" : tone === "quest" ? "!" : "i";
   header.replaceChildren(icon, title);
   copy.className = "profile-notice-copy";
-  copy.textContent = text;
+  if (Array.isArray(text)) {
+    text.forEach((line) => {
+      const paragraph = document.createElement("p");
+
+      paragraph.textContent = line;
+      copy.append(paragraph);
+    });
+  } else if (getDisplayValue(text)) {
+    const paragraph = document.createElement("p");
+
+    paragraph.textContent = text;
+    copy.append(paragraph);
+  }
   if (content) {
-    copy.append(document.createElement("br"), content);
+    copy.append(content);
   }
   panel.append(header, copy);
 
@@ -590,6 +581,41 @@ const createNoticeMasterBadge = (profile, fallbackUsername = "Cedricjbt") => {
   return badge;
 };
 
+const getActiveQuestInfo = ({ activeModels = [], player = null, selectedAbilityIndex = 0 }) => {
+  const level = getSelectedActiveLevel(player, selectedAbilityIndex);
+  const activeModel = activeModels[Math.max(0, Math.min(level, activeModels.length) - 1)] || activeModels[0] || null;
+
+  if (!activeModel) {
+    return {
+      activeTime: "0s",
+      passiveTime: "0s",
+      skillName: "your skill"
+    };
+  }
+
+  return {
+    activeTime: formatDuration(activeModel.questSeconds, { compact: false }) || "0s",
+    passiveTime: formatDuration(activeModel.passiveSeconds, { compact: false }) || "0s",
+    skillName: getDisplayValue(activeModel.skillLabel) || getDisplayValue(activeModel.label) || "your skill"
+  };
+};
+
+const createLinkedMasterNoticeContent = ({ masterProfile, questInfo }) => {
+  const fragment = document.createDocumentFragment();
+  const firstLine = document.createElement("p");
+  const secondLine = document.createElement("p");
+
+  firstLine.append(
+    document.createTextNode("Your energy has been linked to "),
+    createNoticeMasterBadge(masterProfile, "a Master"),
+    document.createTextNode(".")
+  );
+  secondLine.textContent = `You have ${questInfo.passiveTime} to do ${questInfo.activeTime} of ${questInfo.skillName}. If you fail your account will be deleted automatically.`;
+  fragment.append(firstLine, secondLine);
+
+  return fragment;
+};
+
 const getPendingPrayerActiveMs = () => {
   try {
     const pendingPrayer = JSON.parse(window.localStorage.getItem("pending_prayer") || "{}");
@@ -623,9 +649,11 @@ const formatKarmaYears = (yearsValue) => {
 };
 
 const createVitalsPanel = ({
-  dynamicFractals,
-  gameForm,
+  activeMasterProfile = null,
+  activeModels = [],
+  isMasterSaving = false,
   onPlay,
+  onAcceptMaster,
   player,
   playerAvatarUrl = "",
   playerProfile,
@@ -633,7 +661,8 @@ const createVitalsPanel = ({
   adminProfile = null,
   publicProfiles = [],
   selectedAbilityIndex,
-  skillForms
+  selectedMasterProfile = null,
+  totalLevel = 1
 }) => {
   const panel = document.createElement("section");
   const hud = document.createElement("div");
@@ -645,12 +674,28 @@ const createVitalsPanel = ({
   const playButton = document.createElement("button");
   const lifeMaxSeconds = JAYCEE_GAME_CONFIG.lifeMaxYears * YEAR_SECONDS;
   const lifeMaxYears = JAYCEE_GAME_CONFIG.lifeMaxYears;
-  const isGuestPlayer = !player;
-  const hasPlayer = Boolean(player) || isGuestPlayer;
   const hasPlayerProfile = Boolean(playerProfile);
+  const displayLevel = Math.max(1, Number(totalLevel) || 1);
+  const effectivePlayer = player
+    ? {
+      ...player,
+      level: displayLevel
+    }
+    : hasPlayerProfile
+      ? {
+        level: displayLevel,
+        skill_1_practice: 0,
+        skill_2_practice: 0,
+        skill_3_practice: 0
+      }
+      : null;
   const guestLevelYears = 1;
-  const level = Number(player?.level) || 1;
+  const level = hasPlayerProfile ? displayLevel : 1;
   const storedUsername = getDisplayValue(window.localStorage.getItem("player_full_name"));
+  const profileName = getDisplayValue(playerProfile?.username)
+    || getDisplayValue(playerProfile?.full_name)
+    || storedUsername
+    || "Player";
   const channelUsername = getDisplayValue(profile?.username)
     || getDisplayValue(window.localStorage.getItem("pending_prayer_target_username"))
     || "";
@@ -660,22 +705,23 @@ const createVitalsPanel = ({
   const noticeMasterUsername = getDisplayValue(noticeMasterProfile?.username) || "Cedricjbt";
   const noticeMasterUsernameElement = document.createElement("i");
   const noticeMasterContent = document.createDocumentFragment();
-  const mannaModel = player ? getMannaModel({ player, playerProfile, selectedAbilityIndex }) : null;
+  const mannaModel = effectivePlayer && playerProfile
+    ? getMannaModel({ player: effectivePlayer, playerProfile, selectedAbilityIndex })
+    : null;
   const prayerActiveMs = getPendingPrayerActiveMs();
   const firstActiveSkillMs = getFirstActiveSkillMs();
   const prayerKarmaYears = firstActiveSkillMs > 0 ? prayerActiveMs / firstActiveSkillMs : 0;
   const guestLifeSeconds = prayerKarmaYears * YEAR_SECONDS;
-  const lifeSeconds = player ? Number(player.life_bar) || 0 : guestLifeSeconds;
-  const lifeValueText = player ? formatYearsFromSeconds(lifeSeconds) : `${formatKarmaYears(prayerKarmaYears)}y`;
+  const profileHealthSeconds = getAgeInSeconds(playerProfile?.birth_date) || 0;
+  const lifeSeconds = hasPlayerProfile ? profileHealthSeconds : guestLifeSeconds;
+  const lifeValueText = effectivePlayer ? formatYearsFromSeconds(lifeSeconds) : `${formatKarmaYears(prayerKarmaYears)}y`;
   const remainingKarmaYears = Math.max(0, lifeMaxYears - guestLevelYears - prayerKarmaYears);
-  const questModel = getCurrentQuestModel({
-    dynamicFractals,
-    gameForm,
-    player,
-    selectedAbilityIndex,
-    skillForms
+  const linkedQuestInfo = getActiveQuestInfo({
+    activeModels,
+    player: effectivePlayer,
+    selectedAbilityIndex
   });
-
+  const firstActivePassiveTime = formatDuration(activeModels[0]?.passiveSeconds, { compact: false }) || "0s";
   panel.className = "profile-vitals-panel";
   panel.dataset.profileVitals = "";
   noticeMasterUsernameElement.textContent = noticeMasterUsername;
@@ -707,20 +753,48 @@ const createVitalsPanel = ({
       label: "Manna",
       max: mannaModel?.maxAbs || 1,
       tone: "manna",
-      valueText: player && mannaModel
+      valueText: effectivePlayer && mannaModel
         ? `${formatMannaValue(mannaModel.value, mannaModel.unit)} / ${formatMannaValue(mannaModel.target, mannaModel.unit)}`
         : "0 € / 0 €"
     })
   );
   panel.replaceChildren();
 
-  if (player && questModel) {
+  if (hasPlayerProfile) {
     panel.append(createProfileNotice({
-      text: `You have 1 ${questModel.cycleLabel} to do ${questModel.duration} of ${questModel.skillName}.`,
-      title: "Quest",
-      tone: "quest"
+      closable: true,
+      text: "Congratulations! You have learned to pray! You can now save your progress and connect with a Master to continue to play.",
+      title: "Unlocked",
+      tone: "unlocked"
     }));
-  } else if (!player) {
+    if (activeMasterProfile) {
+      panel.append(createProfileNotice({
+        content: createLinkedMasterNoticeContent({
+          masterProfile: activeMasterProfile,
+          questInfo: linkedQuestInfo
+        }),
+        title: "Notification",
+        tone: "notification"
+      }));
+    } else {
+      const acceptButton = document.createElement("button");
+
+      acceptButton.className = "profile-play-button";
+      acceptButton.type = "button";
+      acceptButton.textContent = isMasterSaving ? "Linking..." : "Accept";
+      acceptButton.disabled = !selectedMasterProfile || isMasterSaving;
+      acceptButton.addEventListener("click", () => {
+        if (!selectedMasterProfile || isMasterSaving) return;
+        onAcceptMaster?.();
+      });
+      panel.append(createProfileNotice({
+        action: acceptButton,
+        text: `Reach level 2: You can now choose the help of a Master. Each one has different a different path and will give you different quests and therefore different benefits. You have ${firstActivePassiveTime} to choose a Master below and get a first quest, after that your account will be deleted automatically. Click on accept once you're done.`,
+        title: "Quest",
+        tone: "quest"
+      }));
+    }
+  } else {
     panel.append(
       createProfileNotice({
         closable: true,
@@ -738,10 +812,10 @@ const createVitalsPanel = ({
     );
   }
 
-  if (!player) {
+  if (!hasPlayerProfile) {
     playButton.className = "profile-play-button";
     playButton.type = "button";
-    playButton.textContent = hasPlayerProfile ? "Play" : "Accept";
+    playButton.textContent = "Accept";
     playButton.addEventListener("click", onPlay);
     panel.append(createProfileNotice({
       action: playButton,
@@ -753,25 +827,25 @@ const createVitalsPanel = ({
 
   panel.append(profileLabel);
 
-  if (hasPlayer || !hasPlayerProfile) {
-    hud.className = "profile-player-hud";
-    identity.className = "profile-player-identity";
-    avatar.className = "profile-player-avatar";
-    if (player && playerAvatarUrl) {
-      const image = document.createElement("img");
+  hud.className = "profile-player-hud";
+  identity.className = "profile-player-identity";
+  avatar.className = "profile-player-avatar";
+  if (hasPlayerProfile && playerAvatarUrl) {
+    const image = document.createElement("img");
 
-      image.alt = "";
-      image.src = playerAvatarUrl;
-      avatar.append(image);
-    } else {
-      avatar.textContent = player ? getProfileInitial(playerProfile) : (storedUsername || "?").slice(0, 1).toUpperCase();
-    }
-    levelBadge.className = "profile-player-level";
-    levelBadge.textContent = `${storedUsername || getDisplayValue(playerProfile?.username) || "Player"} - Level ${level}`;
-    identity.append(avatar, levelBadge);
-    hud.append(identity, bars);
-    panel.append(hud);
+    image.alt = "";
+    image.src = playerAvatarUrl;
+    avatar.append(image);
+  } else {
+    avatar.textContent = hasPlayerProfile
+      ? getProfileInitial(playerProfile)
+      : (storedUsername || "?").slice(0, 1).toUpperCase();
   }
+  levelBadge.className = "profile-player-level";
+  levelBadge.textContent = `${profileName} - Level ${level}`;
+  identity.append(avatar, levelBadge);
+  hud.append(identity, bars);
+  panel.append(hud);
 
   return panel;
 };
@@ -971,7 +1045,13 @@ const createFractalParameterPanel = ({
   return section;
 };
 
-const createMasterPanel = (profiles = []) => {
+const createMasterPanel = ({
+  activeMasterProfile = null,
+  canSelect = false,
+  onSelect,
+  profiles = [],
+  selectedMasterProfile = null
+} = {}) => {
   if (!profiles.length) return null;
 
   const section = document.createElement("section");
@@ -990,10 +1070,17 @@ const createMasterPanel = (profiles = []) => {
     const lockStatus = document.createElement("span");
     const lockText = document.createElement("span");
     const username = getDisplayValue(profile.username);
+    const isSelected = getDisplayValue(selectedMasterProfile?.id) === getDisplayValue(profile.id);
+    const isActive = getDisplayValue(activeMasterProfile?.id) === getDisplayValue(profile.id);
+    const isLocked = !canSelect && !isActive;
 
-    button.className = "profile-ability-button profile-master-button is-locked";
+    button.className = "profile-ability-button profile-master-button";
+    button.classList.toggle("is-locked", isLocked);
+    button.classList.toggle("is-selected", isSelected);
+    button.classList.toggle("is-active", isActive);
     button.type = "button";
-    button.disabled = true;
+    button.disabled = isLocked;
+    button.dataset.state = isActive ? "Linked" : isSelected ? "Selected" : isLocked ? "" : "Choose";
     avatar.className = "profile-master-avatar";
     name.className = "profile-master-name";
     name.textContent = username;
@@ -1006,10 +1093,17 @@ const createMasterPanel = (profiles = []) => {
     } else {
       avatar.textContent = username.slice(0, 1).toUpperCase();
     }
-    lockStatus.className = "profile-ability-lock-status";
-    lockText.textContent = "Locked";
-    lockStatus.append(createLockedIcon(), lockText);
-    button.append(avatar, name, lockStatus);
+    if (isLocked) {
+      lockStatus.className = "profile-ability-lock-status";
+      lockText.textContent = "Locked";
+      lockStatus.append(createLockedIcon(), lockText);
+      button.append(avatar, name, lockStatus);
+    } else {
+      button.append(avatar, name);
+      if (canSelect) {
+        button.addEventListener("click", () => onSelect?.(profile));
+      }
+    }
     masters.append(button);
   });
 
@@ -1073,6 +1167,8 @@ export const initJayceePage = async () => {
   let publicProfiles = [];
   let avatarImage = null;
   let adminProfile = null;
+  let activeMasterProfile = null;
+  let activeMasterGame = null;
   let currentProfile = null;
   let currentPlayer = null;
   let gameForm = createEmptyGameSettings();
@@ -1080,9 +1176,12 @@ export const initJayceePage = async () => {
   let isPlayerSaving = false;
   let playerAvatarUrl = "";
   let playerProfile = null;
+  let playerRows = [];
   let closingAbilityIndex = null;
   let descriptionCloseTimer = 0;
   let selectedAbilityIndex = null;
+  let selectedMasterProfile = null;
+  let isMasterSaving = false;
   let supabaseClient = null;
   let skillForms = [];
   let skills = [];
@@ -1118,6 +1217,20 @@ export const initJayceePage = async () => {
     ultimateTeammateSkillLabel = getDisplayValue(linkedSkill?.label);
   };
 
+  const loadMasterGame = async (masterProfile, masterGame = null) => {
+    if (!supabaseClient || !masterProfile) return;
+
+    activeMasterProfile = masterProfile;
+    currentProfile = masterProfile;
+    activeMasterGame = masterGame || await fetchUserGameSettings(supabaseClient, masterProfile);
+    dynamicFractals = await fetchUserDynamicFractals(supabaseClient, masterProfile);
+    skills = await fetchSkillsByIds(supabaseClient, dynamicFractals.map((fractal) => fractal.skill));
+    skillForms = createSkillForms(skills);
+    gameSettings = activeMasterGame;
+    gameForm = createGameForm(gameSettings);
+    await loadUltimateTeammateSkillLabel();
+  };
+
   const handlePlayClick = async () => {
     if (isPlayerSaving) return;
 
@@ -1126,15 +1239,14 @@ export const initJayceePage = async () => {
       return;
     }
 
-    if (!supabaseClient || !currentProfile) return;
+    if (!supabaseClient || !gameSettings) return;
 
     isPlayerSaving = true;
     renderVitalsPanel();
 
     try {
-      currentPlayer = await createPlayerForGame(supabaseClient, playerProfile, currentProfile, {
-        life_bar: getAgeInSeconds(playerProfile.birth_date) || 0
-      });
+      currentPlayer = await createPlayerForGame(supabaseClient, playerProfile, currentProfile);
+      playerRows = await fetchPlayersForUser(supabaseClient, playerProfile);
     } catch (error) {
       console.error("Jaycee player could not be created", error);
     } finally {
@@ -1179,10 +1291,17 @@ export const initJayceePage = async () => {
       return;
     }
 
-    const panel = createVitalsPanel({
+    const activeModels = getActiveFractalModels({
       dynamicFractals,
       gameForm,
+      skillForms
+    });
+    const panel = createVitalsPanel({
+      activeMasterProfile,
+      activeModels,
+      isMasterSaving,
       onPlay: handlePlayClick,
+      onAcceptMaster: handleAcceptMasterClick,
       player: currentPlayer,
       adminProfile,
       playerAvatarUrl,
@@ -1190,7 +1309,8 @@ export const initJayceePage = async () => {
       profile: currentProfile,
       publicProfiles,
       selectedAbilityIndex,
-      skillForms
+      selectedMasterProfile,
+      totalLevel: getPlayerLevelTotal(playerRows)
     });
 
     if (existingPanel) {
@@ -1224,7 +1344,9 @@ export const initJayceePage = async () => {
     });
     const panel = createFractalParameterPanel({
       activeModels,
-      currentLevel: Number(currentPlayer?.level) || (document.body.classList.contains("game-page") ? 1 : 0),
+      currentLevel: playerProfile
+        ? getPlayerLevelTotal(playerRows)
+        : (document.body.classList.contains("game-page") ? 1 : 0),
       onSelect: (index) => {
         if (descriptionCloseTimer) {
           window.clearTimeout(descriptionCloseTimer);
@@ -1254,7 +1376,17 @@ export const initJayceePage = async () => {
       selectedIndex: closingAbilityIndex ?? selectedAbilityIndex,
       ultimateModel
     });
-    const masterPanel = createMasterPanel(publicProfiles);
+    const masterPanel = createMasterPanel({
+      activeMasterProfile,
+      canSelect: Boolean(playerProfile && !activeMasterProfile),
+      onSelect: (profile) => {
+        selectedMasterProfile = profile;
+        renderCoreParameters();
+        renderVitalsPanel();
+      },
+      profiles: publicProfiles,
+      selectedMasterProfile
+    });
 
     if (!corePanel || !panel) {
       existingPanel?.remove();
@@ -1299,12 +1431,100 @@ export const initJayceePage = async () => {
     window.requestAnimationFrame(renderCore);
   };
 
-  if (isGamePage && !hasUserProfile) {
-    shell.hidden = false;
+  const handleAcceptMasterClick = async () => {
+    if (isMasterSaving || !selectedMasterProfile || !playerProfile || !supabaseClient) return;
+
+    isMasterSaving = true;
+    renderVitalsPanel();
+
+    try {
+      const masterProfile = selectedMasterProfile;
+      const masterGame = await fetchUserGameSettings(supabaseClient, masterProfile);
+
+      if (!masterGame?.id) {
+        throw new Error("This Master has no game available yet.");
+      }
+
+      let player = await fetchPlayerForGame(supabaseClient, playerProfile, masterProfile);
+
+      if (!player) {
+        player = await createPlayerForGame(supabaseClient, playerProfile, masterProfile);
+      }
+      if (!player?.id) {
+        throw new Error("The Master link could not be created.");
+      }
+
+      const updatedProfile = await updateProfileActiveGame(supabaseClient, playerProfile, player.id);
+
+      playerProfile = updatedProfile || {
+        ...playerProfile,
+        active_game: player.id
+      };
+      currentPlayer = player;
+      selectedMasterProfile = null;
+      playerRows = await fetchPlayersForUser(supabaseClient, playerProfile);
+      await loadMasterGame(masterProfile, masterGame);
+    } catch (error) {
+      console.error("Jaycee Master could not be linked", error);
+    } finally {
+      isMasterSaving = false;
+      renderVitalsPanel();
+      renderCoreParameters();
+    }
+  };
+
+  const refreshPlayerProfile = async () => {
+    if (!supabaseClient) return;
+
+    const sessionResult = await window.JayceeAuth?.getSession?.();
+    const user = sessionResult?.data?.session?.user;
+
+    if (!user) return;
+
+    const refreshedProfile = await fetchProfileByUserId(supabaseClient, user.id);
+
+    if (!refreshedProfile) return;
+
+    playerProfile = refreshedProfile;
+    if (getDisplayValue(currentProfile?.id) === getDisplayValue(refreshedProfile.id)) {
+      currentProfile = refreshedProfile;
+    }
+    playerRows = await fetchPlayersForUser(supabaseClient, refreshedProfile);
+    if (refreshedProfile.active_game) {
+      currentPlayer = await fetchPlayerById(supabaseClient, refreshedProfile.active_game);
+      activeMasterProfile = currentPlayer?.game_id
+        ? await fetchProfileByUserId(supabaseClient, currentPlayer.game_id)
+        : activeMasterProfile;
+      if (activeMasterProfile) {
+        await loadMasterGame(activeMasterProfile);
+      }
+    }
+
+    try {
+      playerAvatarUrl = await getAvatarImageUrl(supabaseClient, refreshedProfile);
+    } catch (error) {
+      console.warn("Jaycee player avatar could not be refreshed", error);
+      playerAvatarUrl = "";
+    }
+
+    try {
+      publicProfiles = await attachProfileAvatarUrls(supabaseClient, await fetchPublicProfiles(supabaseClient));
+      if (activeMasterProfile) {
+        activeMasterProfile = publicProfiles.find((publicProfile) => (
+          getDisplayValue(publicProfile.id) === getDisplayValue(activeMasterProfile.id)
+        )) || activeMasterProfile;
+      }
+    } catch (error) {
+      console.warn("Jaycee public profiles could not be refreshed", error);
+    }
+
     renderVitalsPanel();
     renderPresentControls();
     renderCoreParameters();
-  }
+    scheduleRenderCore();
+  };
+
+  window.addEventListener("jaycee:account-updated", refreshPlayerProfile);
 
   try {
     const client = await window.JayceeAuth.getSupabaseClient();
@@ -1335,18 +1555,27 @@ export const initJayceePage = async () => {
       return;
     }
 
-    shell.hidden = false;
-
-    dynamicFractals = hasUserProfile ? await fetchUserDynamicFractals(client, profile) : [];
-    skills = hasUserProfile
-      ? await fetchSkillsByIds(client, dynamicFractals.map((fractal) => fractal.skill))
-      : [];
-    skillForms = createSkillForms(skills);
-    gameSettings = hasUserProfile ? await fetchUserGameSettings(client, profile) : null;
-    gameForm = createGameForm(gameSettings);
-    currentPlayer = hasUserProfile && playerProfile
-      ? await fetchPlayerForGame(client, playerProfile, profile)
-      : null;
+    playerRows = playerProfile ? await fetchPlayersForUser(client, playerProfile) : [];
+    if (playerProfile?.active_game) {
+      currentPlayer = await fetchPlayerById(client, playerProfile.active_game);
+      activeMasterProfile = currentPlayer?.game_id
+        ? await fetchProfileByUserId(client, currentPlayer.game_id)
+        : null;
+    }
+    if (activeMasterProfile) {
+      await loadMasterGame(activeMasterProfile);
+    } else {
+      dynamicFractals = hasUserProfile ? await fetchUserDynamicFractals(client, profile) : [];
+      skills = hasUserProfile
+        ? await fetchSkillsByIds(client, dynamicFractals.map((fractal) => fractal.skill))
+        : [];
+      skillForms = createSkillForms(skills);
+      gameSettings = hasUserProfile ? await fetchUserGameSettings(client, profile) : null;
+      gameForm = createGameForm(gameSettings);
+      currentPlayer = profile && playerProfile
+        ? await fetchPlayerForGame(client, playerProfile, profile)
+        : currentPlayer;
+    }
     if (playerProfile) {
       try {
         playerAvatarUrl = await getAvatarImageUrl(client, playerProfile);
@@ -1359,6 +1588,11 @@ export const initJayceePage = async () => {
     if (isPresentPage || hasUserProfile || isGamePage) {
       try {
         publicProfiles = await attachProfileAvatarUrls(client, await fetchPublicProfiles(client));
+        if (activeMasterProfile) {
+          activeMasterProfile = publicProfiles.find((publicProfile) => (
+            getDisplayValue(publicProfile.id) === getDisplayValue(activeMasterProfile.id)
+          )) || activeMasterProfile;
+        }
       } catch (error) {
         console.warn("Jaycee public profiles could not be loaded", error);
         publicProfiles = [];
@@ -1381,6 +1615,7 @@ export const initJayceePage = async () => {
     avatarImage = hasUserProfile
       ? await loadOptionalImage(await getAvatarImageUrl(client, profile))
       : null;
+    shell.hidden = false;
     renderCore();
     if (canvas) {
       const resizeObserver = new ResizeObserver(scheduleRenderCore);

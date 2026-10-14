@@ -389,6 +389,11 @@ export const initJayceeAccountPage = async () => {
         Object.assign(profile, profileUpdates);
         setStatus(saveStatus, "Saved.");
         window.JayceeAuth?.refreshHeader?.();
+        window.dispatchEvent(new CustomEvent("jaycee:account-updated", {
+          detail: {
+            profile: { ...profile }
+          }
+        }));
       } catch (error) {
         console.error("Jaycee account save failed", error);
         setStatus(saveStatus, error?.message || "Account could not be saved.", true);

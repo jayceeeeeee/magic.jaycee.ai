@@ -152,6 +152,14 @@ body {
   text-align: center;
 }
 
+.game-page .profile-notice-copy p {
+  margin: 0;
+}
+
+.game-page .profile-notice-copy p + p {
+  margin-top: 7px;
+}
+
 .game-page .profile-notice-master-card {
   display: inline-flex;
   align-items: center;

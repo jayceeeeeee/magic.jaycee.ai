@@ -152,13 +152,11 @@ body {
 }
 
 .lore-login-note {
-    position: fixed;
-    right: 24px;
-    bottom: 20px;
-    margin: 0;
+    margin: -12px 0 0;
     color: rgba(242, 255, 251, 0.58);
     font-size: 0.92rem;
     font-weight: 600;
+    text-align: center;
 }
 
 .lore-login-note a {
@@ -206,8 +204,6 @@ body {
     }
 
     .lore-login-note {
-        position: static;
-        padding-top: 2px;
-        text-align: center;
+        margin-top: -10px;
     }
 }
