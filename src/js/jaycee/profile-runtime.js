@@ -64,11 +64,12 @@ const redirectToLogin = () => {
 
 const redirectToSignup = () => {
   const signupUrl = getSignupUrl();
-  const storedUsername = getDisplayValue(window.localStorage.getItem("jaycee_username"));
+  const storedFullName = getDisplayValue(window.localStorage.getItem("jaycee_full_name"))
+    || getDisplayValue(window.localStorage.getItem("jaycee_username"));
 
   signupUrl.searchParams.set("redirect", `${window.location.pathname}${window.location.search}`);
-  if (storedUsername) {
-    signupUrl.searchParams.set("username", storedUsername);
+  if (storedFullName) {
+    signupUrl.searchParams.set("full_name", storedFullName);
   }
   window.location.href = signupUrl.href;
 };
@@ -683,7 +684,7 @@ const createVitalsPanel = ({
   noticeMasterContent.append(
     document.createTextNode("You have crossed path with "),
     createNoticeMasterBadge(noticeMasterProfile),
-    document.createTextNode(","),
+    document.createTextNode(" in the game room,"),
     document.createElement("br"),
     document.createTextNode("and he has decided to take charge of your karma!"),
     document.createElement("br"),
@@ -726,7 +727,7 @@ const createVitalsPanel = ({
       createProfileNotice({
         closable: true,
         content: noticeMasterContent,
-        text: "Oh! It looks like you're not alone in the game room already!",
+        text: "Oh! You're in luck!",
         title: "Notification",
         tone: "notification"
       }),

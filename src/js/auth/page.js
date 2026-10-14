@@ -22,8 +22,8 @@
         return /already|registered|exists/i.test(error?.message || "");
     }
 
-    async function saveSignupProfile(userId, username) {
-        if (!userId || !username) {
+    async function saveSignupProfile(userId, fullName) {
+        if (!userId || !fullName) {
             return;
         }
 
@@ -32,7 +32,7 @@
             .from("profiles")
             .upsert({
                 id: userId,
-                username,
+                full_name: fullName,
             }, {
                 onConflict: "id",
             });
@@ -153,17 +153,17 @@
         const status = document.querySelector("[data-auth-status]");
         const switcher = document.querySelector("[data-auth-switch]");
         const password = form?.elements.password;
-        const username = form?.elements.username;
+        const fullName = form?.elements.full_name;
         const signupFields = [...document.querySelectorAll("[data-auth-signup-field]")];
         const redirectPath = params.get("redirect");
-        const usernameParam = String(params.get("username") || "").trim();
+        const fullNameParam = String(params.get("full_name") || params.get("username") || "").trim();
 
-        if (!form || !title || !submit || !status || !switcher || !password || !username || !window.JayceeAuth) {
+        if (!form || !title || !submit || !status || !switcher || !password || !fullName || !window.JayceeAuth) {
             return;
         }
 
-        if (usernameParam) {
-            username.value = usernameParam;
+        if (fullNameParam) {
+            fullName.value = fullNameParam;
         }
 
         function createAuthHref(path, nextMode) {
@@ -172,8 +172,8 @@
             if (redirectPath?.startsWith("/") && !redirectPath.startsWith("//")) {
                 nextParams.set("redirect", redirectPath);
             }
-            if (nextMode === "signup" && username.value.trim()) {
-                nextParams.set("username", username.value.trim());
+            if (nextMode === "signup" && fullName.value.trim()) {
+                nextParams.set("full_name", fullName.value.trim());
             }
 
             const query = nextParams.toString();
@@ -191,7 +191,7 @@
 
             submit.textContent = isSignup ? "Sign up" : "Log in";
             password.autocomplete = isSignup ? "new-password" : "current-password";
-            username.required = isSignup;
+            fullName.required = isSignup;
             signupFields.forEach((field) => {
                 field.hidden = !isSignup;
             });
@@ -235,7 +235,7 @@
             submit.disabled = true;
 
             const formData = new FormData(form);
-            const usernameValue = String(formData.get("username") || "").trim();
+            const fullNameValue = String(formData.get("full_name") || "").trim();
             const email = String(formData.get("email")).trim();
             const passwordValue = String(formData.get("password"));
             const birthProfile = loadBirthProfile();
@@ -243,8 +243,7 @@
             const result = mode === "signup"
                 ? await window.JayceeAuth.signUp(email, passwordValue, {
                     data: {
-                        full_name: birthProfile?.fullName || "",
-                        username: usernameValue,
+                        full_name: fullNameValue || birthProfile?.fullName || "",
                         birth_profile: birthProfile,
                     },
                 })
@@ -274,9 +273,9 @@
 
             if (mode === "signup") {
                 try {
-                    await saveSignupProfile(result.data.user?.id, usernameValue);
+                    await saveSignupProfile(result.data.user?.id, fullNameValue);
                 } catch (error) {
-                    status.textContent = error?.message || "Your account was created, but the username could not be saved.";
+                    status.textContent = error?.message || "Your account was created, but the full name could not be saved.";
                     return;
                 }
             }

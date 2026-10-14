@@ -1,14 +1,15 @@
 (function () {
     const form = document.querySelector("[data-lore-access]");
-    const usernameInput = form?.elements?.username;
+    const fullNameInput = form?.elements?.full_name;
 
-    function continueToPrayer(username) {
-        const name = String(username || "").trim();
+    function continueToPrayer(fullName) {
+        const name = String(fullName || "").trim();
 
         if (!name) {
             return;
         }
 
+        window.localStorage.setItem("jaycee_full_name", name);
         window.localStorage.setItem("jaycee_username", name);
         document.body.classList.add("is-lore-launching");
         window.setTimeout(() => {
@@ -23,7 +24,7 @@
             return;
         }
 
-        continueToPrayer(usernameInput?.value);
+        continueToPrayer(fullNameInput?.value);
     });
 
     window.addEventListener("pageshow", () => {
