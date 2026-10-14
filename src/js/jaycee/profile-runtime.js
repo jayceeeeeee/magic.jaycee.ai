@@ -1,28 +1,28 @@
+import { renderSkillMarkdown } from "./markdown.js";
 import {
   JAYCEE_ORDER,
   createJayceeState,
   drawJaycee
 } from "./profile-core.js";
 import {
-  JAYCEE_GAME_CONFIG
+  JAYCEE_GAME_CONFIG,
+  JAYCEE_GAME_SKILL_COLUMNS
 } from "../config/game-config.js";
 import {
   createPlayerForGame,
   fetchAdminProfile,
-  fetchPlayerById,
   fetchPlayerForGame,
   fetchPlayersForUser,
   fetchProfileByUserId,
   fetchProfileByUsername,
   fetchPublicProfiles,
   fetchSkillsByIds,
-  fetchUserDynamicFractals,
   fetchUserGameSettings,
   getAvatarImageUrl,
   getDisplayValue,
   loadOptionalImage,
   startPlayerFirstQuest,
-  updateProfileActiveGame
+  updateProfileMaster
 } from "../config/data.js";
 
 const PROFILE_CORE_METRICS = {
@@ -252,150 +252,49 @@ const getMannaModel = ({ activeModels = [], player, playerProfile, selectedAbili
   };
 };
 
-const getFractalById = (dynamicFractals, fractalId) => (
-  dynamicFractals.find((fractal) => getDisplayValue(fractal.id) === getDisplayValue(fractalId)) || null
+const getSkillById = (skills, skillId) => (
+  (skills || []).find((skill) => getDisplayValue(skill.id) === getDisplayValue(skillId)) || null
 );
 
-const getFractalByLabel = (dynamicFractals, label) => (
-  dynamicFractals.find((fractal) => (
-    getDisplayValue(fractal.label).toLowerCase() === getDisplayValue(label).toLowerCase()
-  )) || null
-);
+const getPassiveSkillModel = ({ gameForm, skillForms, hasLinkedMaster = false }) => ({
+  cycleSeconds: JAYCEE_GAME_CONFIG.passive.cycleSeconds,
+  distanceMeters: JAYCEE_GAME_CONFIG.passive.zoneMeters,
+  label: JAYCEE_GAME_CONFIG.passive.fractalLabel,
+  skill: hasLinkedMaster ? getSkillById(skillForms, gameForm?.[JAYCEE_GAME_CONFIG.passive.skillColumn]) : null
+});
 
-const createFractalMeasureModel = ({
-  cycleSeconds,
-  distanceMeters,
-  fractal,
-  passiveSeconds = null,
-  skill = null,
-  skillLabel = ""
-}) => {
-  if (!fractal) return null;
+const getActiveSkillModels = ({ gameForm, skillForms }) => {
+  let previousQuestSeconds = Number(JAYCEE_GAME_CONFIG.passive.cycleSeconds);
+  let previousDistanceMeters = Number(JAYCEE_GAME_CONFIG.passive.zoneMeters);
 
-  return {
-    cycleSeconds,
-    distanceMeters,
-    fractal,
-    label: getDisplayValue(fractal.label) || "Fractal",
-    passiveSeconds,
-    skill,
-    skillLabel,
-    questSeconds: cycleSeconds
-  };
-};
+  return JAYCEE_GAME_CONFIG.activeAbilities.map((abilityConfig) => {
+    const skill = getSkillById(skillForms, gameForm?.[abilityConfig.skillColumn]);
+    const ratio = Number(abilityConfig.ratio);
+    const questSeconds = previousQuestSeconds / ratio;
+    const distanceMeters = previousDistanceMeters / ratio;
 
-const getPassiveFractalModel = ({
-  dynamicFractals,
-  gameForm,
-  skillForms = [],
-  hasLinkedMaster = false
-}) => {
-  const fractal = getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.passive.fractalLabel)
-    || getFractalById(dynamicFractals, gameForm?.primary_fractal);
+    previousQuestSeconds = questSeconds;
+    previousDistanceMeters = distanceMeters;
 
-  return createFractalMeasureModel({
-    cycleSeconds: JAYCEE_GAME_CONFIG.passive.cycleSeconds,
-    distanceMeters: JAYCEE_GAME_CONFIG.passive.zoneMeters,
-    fractal,
-    skill: hasLinkedMaster ? getSkillById(skillForms, fractal?.skill) : null
+    return {
+      cycleSeconds: questSeconds,
+      distanceMeters,
+      label: abilityConfig.fractalLabel,
+      passiveSeconds: abilityConfig.cycleSeconds,
+      questSeconds,
+      skill,
+      skillLabel: getDisplayValue(skill?.label) || "No skill"
+    };
   });
 };
 
-const getActiveFractals = (dynamicFractals, gameForm) => {
-  const excludedIds = new Set([
-    getDisplayValue(gameForm?.primary_fractal),
-    getDisplayValue(gameForm?.ultimate_fractal)
-  ].filter(Boolean));
-
-  return JAYCEE_GAME_CONFIG.activeAbilities
-    .map((ability) => getFractalByLabel(dynamicFractals, ability.fractalLabel))
-    .filter((fractal) => (
-      fractal
-      && getDisplayValue(fractal.id)
-      && getDisplayValue(fractal.skill)
-      && !excludedIds.has(getDisplayValue(fractal.id))
-    ));
-};
-
-const getActiveFractalModels = ({
-  dynamicFractals,
-  gameForm,
-  skillForms
-}) => {
-  let previousQuestSeconds = Number(JAYCEE_GAME_CONFIG.passive.cycleSeconds);
-  let previousDistanceMeters = Number(JAYCEE_GAME_CONFIG.passive.zoneMeters);
-  const activeFractals = getActiveFractals(dynamicFractals, gameForm);
-  const models = activeFractals.length
-    ? activeFractals
-    : JAYCEE_GAME_CONFIG.activeAbilities.map((ability, index) => ({
-      id: `default-active-${index + 1}`,
-      label: ability.fractalLabel,
-      skill: ""
-    }));
-
-  return models
-    .slice(0, ACTIVE_RING_LIMIT)
-    .map((fractal, index) => {
-      const abilityConfig = JAYCEE_GAME_CONFIG.activeAbilities[index] || {};
-      const skill = getSkillById(skillForms, fractal.skill);
-      const skillRatio = Number(abilityConfig.ratio);
-      const questSeconds = Number.isFinite(previousQuestSeconds) && Number.isFinite(skillRatio) && skillRatio > 0
-        ? previousQuestSeconds / skillRatio
-        : null;
-      const distanceMeters = Number.isFinite(previousDistanceMeters) && Number.isFinite(skillRatio) && skillRatio > 0
-        ? previousDistanceMeters / skillRatio
-        : null;
-
-      if (!fractal) return null;
-
-      previousQuestSeconds = questSeconds;
-      previousDistanceMeters = distanceMeters;
-
-      return createFractalMeasureModel({
-        cycleSeconds: questSeconds,
-        distanceMeters,
-        fractal: {
-          ...fractal,
-          label: abilityConfig.fractalLabel || fractal.label
-        },
-        passiveSeconds: abilityConfig.cycleSeconds,
-        skill,
-        skillLabel: getDisplayValue(skill?.label) || getDisplayValue(abilityConfig.skillLabel) || "Active"
-      });
-    })
-    .filter(Boolean);
-};
-
-const getPassiveModel = ({ dynamicFractals, gameForm }) => {
-  const fractal = getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.passive.fractalLabel)
-    || getFractalById(dynamicFractals, gameForm?.primary_fractal);
-  const label = getDisplayValue(JAYCEE_GAME_CONFIG.passive.fractalLabel || fractal?.label);
-
-  if (!label && !getDisplayValue(JAYCEE_GAME_CONFIG.passive.cycleSeconds) && !getDisplayValue(JAYCEE_GAME_CONFIG.passive.zoneMeters)) return null;
+const getUltimateModel = ({ gameForm, skillForms }) => {
+  const skill = getSkillById(skillForms, gameForm?.[JAYCEE_GAME_CONFIG.ultimate.skillColumn]);
 
   return {
-    distanceMeters: Number(JAYCEE_GAME_CONFIG.passive.zoneMeters),
-    label: label || "Passive",
-    cycleSeconds: Number(JAYCEE_GAME_CONFIG.passive.cycleSeconds)
-  };
-};
-
-const getSkillById = (skillForms, skillId) => (
-  (skillForms || []).find((skill) => getDisplayValue(skill.id) === getDisplayValue(skillId)) || null
-);
-
-const getUltimateModel = ({ dynamicFractals, gameForm, skillForms }) => {
-  const fractal = getFractalByLabel(dynamicFractals, JAYCEE_GAME_CONFIG.ultimate.fractalLabel)
-    || getFractalById(dynamicFractals, gameForm?.ultimate_fractal);
-  const label = getDisplayValue(fractal?.label) || getDisplayValue(JAYCEE_GAME_CONFIG.ultimate.fractalLabel);
-  const skill = getSkillById(skillForms, fractal?.skill);
-
-  if (!label && !skill) return null;
-
-  return {
-    label: label || "Ultimate",
+    label: JAYCEE_GAME_CONFIG.ultimate.fractalLabel,
     skillLabel: getDisplayValue(skill?.label),
-    skillDescription: getDisplayValue(skill?.description)
+    skillDescription: typeof skill?.description === "string" ? skill.description : ""
   };
 };
 
@@ -943,23 +842,17 @@ const getPublicProfileUsernameFromUrl = () => {
   return match && match[1] !== "profile" ? decodeURIComponent(match[1]) : "";
 };
 
-const createEmptyGameSettings = () => ({
-  primary_fractal: "",
-  ultimate_fractal: "",
-  ultimate_link: ""
-});
+const createGameForm = (settings) => Object.fromEntries(
+  JAYCEE_GAME_SKILL_COLUMNS.map((column) => [column, getDisplayValue(settings?.[column])])
+);
 
-const createGameForm = (settings) => ({
-  primary_fractal: getDisplayValue(settings?.primary_fractal),
-  ultimate_fractal: getDisplayValue(settings?.ultimate_fractal),
-  ultimate_link: getDisplayValue(settings?.ultimate_link)
-});
+const createEmptyGameSettings = () => createGameForm(null);
 
 const createSkillForms = (skills) => (
   (skills || []).map((skill) => ({
     id: skill.id,
     label: getDisplayValue(skill.label),
-    description: getDisplayValue(skill.description)
+    description: typeof skill.description === "string" ? skill.description : ""
   }))
 );
 
@@ -982,7 +875,7 @@ const createLockedIcon = (className = "profile-ability-lock-icon") => {
   return icon;
 };
 
-const createFractalParameterPanel = ({
+const createSkillPanel = ({
   activeModels,
   currentLevel = 0,
   isDescriptionClosing = false,
@@ -1008,15 +901,15 @@ const createFractalParameterPanel = ({
   if (passiveModel) {
     abilities.push({
       label: getDisplayValue(passiveModel.skill?.label) || "No skill",
-      description: getDisplayValue(passiveModel.skill?.description),
+      description: passiveModel.skill?.description || "",
       type: "passive",
       unlockLevel: 0
     });
   }
-  activeModels.forEach((fractalModel, index) => {
+  activeModels.forEach((skillModel, index) => {
     abilities.push({
-      label: getDisplayValue(fractalModel.skillLabel) || "No skill",
-      description: getDisplayValue(fractalModel.skill?.description),
+      label: getDisplayValue(skillModel.skillLabel) || "No skill",
+      description: skillModel.skill?.description || "",
       type: "active",
       unlockLevel: index + 1
     });
@@ -1025,7 +918,7 @@ const createFractalParameterPanel = ({
   if (ultimateModel) {
     abilities.push({
       label: getDisplayValue(ultimateModel.skillLabel) || "No skill",
-      description: getDisplayValue(ultimateModel.skillDescription),
+      description: ultimateModel.skillDescription || "",
       type: "ultimate",
       unlockLevel: 4
     });
@@ -1064,11 +957,11 @@ const createFractalParameterPanel = ({
     buttons.append(button);
   });
 
-  if (activeAbility?.description && currentLevel >= activeAbility.unlockLevel) {
-    const text = document.createElement("p");
+  if (activeAbility?.description.trim() && currentLevel >= activeAbility.unlockLevel) {
+    const text = document.createElement("div");
 
     text.className = "profile-skill-description";
-    text.textContent = activeAbility.description;
+    renderSkillMarkdown(text, activeAbility.description);
     description.classList.toggle("is-closing", isDescriptionClosing);
     description.append(text);
   }
@@ -1133,7 +1026,6 @@ export const initJayceePage = async () => {
 
   if (!shell || !canvas) return;
 
-  let dynamicFractals = [];
   let publicProfiles = [];
   let avatarImage = null;
   let adminProfile = null;
@@ -1162,8 +1054,8 @@ export const initJayceePage = async () => {
     activeMasterProfile = masterProfile;
     currentProfile = masterProfile;
     activeMasterGame = masterGame || await fetchUserGameSettings(supabaseClient, masterProfile);
-    dynamicFractals = await fetchUserDynamicFractals(supabaseClient, masterProfile);
-    skills = await fetchSkillsByIds(supabaseClient, dynamicFractals.map((fractal) => fractal.skill));
+
+    skills = await fetchSkillsByIds(supabaseClient, JAYCEE_GAME_SKILL_COLUMNS.map((column) => activeMasterGame?.[column]));
     skillForms = createSkillForms(skills);
     gameSettings = activeMasterGame;
     gameForm = createGameForm(gameSettings);
@@ -1229,8 +1121,7 @@ export const initJayceePage = async () => {
       return;
     }
 
-    const activeModels = getActiveFractalModels({
-      dynamicFractals,
+    const activeModels = getActiveSkillModels({
       gameForm,
       skillForms
     });
@@ -1272,23 +1163,20 @@ export const initJayceePage = async () => {
       return;
     }
 
-    const activeModels = getActiveFractalModels({
-      dynamicFractals,
+    const activeModels = getActiveSkillModels({
       gameForm,
       skillForms
     });
-    const passiveModel = getPassiveFractalModel({
-      dynamicFractals,
+    const passiveModel = getPassiveSkillModel({
       gameForm,
       skillForms,
       hasLinkedMaster: Boolean(activeMasterProfile && currentPlayer)
-    }) || getPassiveModel({ dynamicFractals, gameForm });
+    });
     const ultimateModel = getUltimateModel({
-      dynamicFractals,
       gameForm,
       skillForms
     });
-    const panel = createFractalParameterPanel({
+    const panel = createSkillPanel({
       activeModels,
       currentLevel: playerProfile
         ? Math.max(0, Number(currentPlayer?.level) || 0)
@@ -1380,7 +1268,7 @@ export const initJayceePage = async () => {
 
       player = await startPlayerFirstQuest(supabaseClient, playerProfile, player);
 
-      const updatedProfile = await updateProfileActiveGame(supabaseClient, playerProfile, player.id);
+      const updatedProfile = await updateProfileMaster(supabaseClient, playerProfile, masterProfile.id);
 
       if (!updatedProfile) throw new Error("The Master link could not be saved. Please try again.");
 
@@ -1417,15 +1305,13 @@ export const initJayceePage = async () => {
       currentProfile = refreshedProfile;
     }
     playerRows = await fetchPlayersForUser(supabaseClient, refreshedProfile);
-    if (refreshedProfile.active_game) {
-      currentPlayer = await fetchPlayerById(supabaseClient, refreshedProfile.active_game);
-      activeMasterProfile = currentPlayer?.game_id
-        ? await fetchProfileByUserId(supabaseClient, currentPlayer.game_id)
-        : activeMasterProfile;
-      if (activeMasterProfile) {
-        await loadMasterGame(activeMasterProfile);
-      }
-    }
+    activeMasterProfile = refreshedProfile.master
+      ? await fetchProfileByUserId(supabaseClient, refreshedProfile.master)
+      : null;
+    currentPlayer = activeMasterProfile
+      ? await fetchPlayerForGame(supabaseClient, refreshedProfile, activeMasterProfile)
+      : null;
+    if (activeMasterProfile) await loadMasterGame(activeMasterProfile);
 
     try {
       playerAvatarUrl = await getAvatarImageUrl(supabaseClient, refreshedProfile);
@@ -1485,22 +1371,19 @@ export const initJayceePage = async () => {
     }
 
     playerRows = playerProfile ? await fetchPlayersForUser(client, playerProfile) : [];
-    if (playerProfile?.active_game) {
-      currentPlayer = await fetchPlayerById(client, playerProfile.active_game);
-      activeMasterProfile = currentPlayer?.game_id
-        ? await fetchProfileByUserId(client, currentPlayer.game_id)
+    if (playerProfile?.master) {
+      activeMasterProfile = await fetchProfileByUserId(client, playerProfile.master);
+      currentPlayer = activeMasterProfile
+        ? await fetchPlayerForGame(client, playerProfile, activeMasterProfile)
         : null;
     }
     if (activeMasterProfile) {
       await loadMasterGame(activeMasterProfile);
     } else {
-      dynamicFractals = hasUserProfile ? await fetchUserDynamicFractals(client, profile) : [];
-      skills = hasUserProfile
-        ? await fetchSkillsByIds(client, dynamicFractals.map((fractal) => fractal.skill))
-        : [];
-      skillForms = createSkillForms(skills);
       gameSettings = hasUserProfile ? await fetchUserGameSettings(client, profile) : null;
       gameForm = createGameForm(gameSettings);
+      skills = await fetchSkillsByIds(client, JAYCEE_GAME_SKILL_COLUMNS.map((column) => gameSettings?.[column]));
+      skillForms = createSkillForms(skills);
       currentPlayer = profile && playerProfile
         ? await fetchPlayerForGame(client, playerProfile, profile)
         : currentPlayer;
@@ -1566,7 +1449,7 @@ export const initJayceePage = async () => {
       if (mannaBar) {
         const mannaModel = currentPlayer && playerProfile
           ? getMannaModel({
-            activeModels: getActiveFractalModels({ dynamicFractals, gameForm, skillForms }),
+            activeModels: getActiveSkillModels({ gameForm, skillForms }),
             player: currentPlayer,
             playerProfile,
             selectedAbilityIndex

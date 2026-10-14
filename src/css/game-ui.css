@@ -522,9 +522,33 @@
   font-family: "Share Tech Mono", monospace;
   font-size: 0.72rem;
   line-height: 1.4;
-  white-space: pre-wrap;
+  white-space: normal;
   overflow-wrap: anywhere;
 }
+
+.profile-skill-description > :first-child { margin-top: 0; }
+.profile-skill-description > :last-child { margin-bottom: 0; }
+
+.profile-parameter-section .profile-skill-description :is(h1, h2, h3, h4, h5, h6) {
+  width: auto;
+  margin: 1em 0 0.5em;
+  color: var(--accent-soft);
+  font: inherit;
+  font-size: 1.1em;
+  font-weight: 700;
+  line-height: 1.4;
+  text-transform: none;
+}
+
+.profile-skill-description :is(ul, ol) { padding-left: 1.5em; }
+.profile-skill-description :is(p, ul, ol, pre, blockquote) { margin: 0.7em 0; }
+.profile-skill-description a { color: var(--accent-soft); text-decoration: underline; }
+.profile-skill-description code { font-family: inherit; background: rgba(var(--accent-rgb), 0.08); }
+.profile-skill-description pre { max-width: 100%; overflow-x: auto; padding: 8px; white-space: pre; }
+.profile-skill-description blockquote { padding-left: 10px; border-left: 2px solid var(--accent); }
+.profile-skill-description img { max-width: 100%; height: auto; }
+.profile-skill-description table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
+.profile-skill-description :is(th, td) { padding: 5px 8px; border: 1px solid var(--field-border); }
 
 .profile-parameter-section h3 {
   margin: 0;

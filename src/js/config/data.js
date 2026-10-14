@@ -1,5 +1,5 @@
-export const JAYCEE_FRACTALS_TABLE = "fractals";
-export const JAYCEE_FRACTAL_ELEMENTS_TABLE = "fractal_elements";
+import { JAYCEE_GAME_SKILL_COLUMNS } from "./game-config.js";
+
 export const JAYCEE_GAME_TABLE = "game";
 export const JAYCEE_PLAYER_TABLE = "player";
 export const JAYCEE_SKILLS_TABLE = "skills";
@@ -13,15 +13,16 @@ const PROFILE_SELECT_COLUMNS = [
   "full_name",
   "birth_date",
   "birth_time",
-  "active_game",
+  "master",
   "manna_target",
   "manna_unit",
   "manna_cycle",
   "role",
   "sex"
 ].join(", ");
+const GAME_SELECT_COLUMNS = ["id", "user_id", ...JAYCEE_GAME_SKILL_COLUMNS].join(", ");
 const SIGNED_IMAGE_URL_DURATION_SECONDS = 60 * 60;
-const PLAYER_SELECT_COLUMNS = "id, user_id, game_id, level, skill_1_practice, skill_2_practice, skill_3_practice, skill_1_start, skill_2_start, skill_3_start";
+const PLAYER_SELECT_COLUMNS = "id, user_id, master, level, skill_1_practice, skill_2_practice, skill_3_practice, skill_1_start, skill_2_start, skill_3_start";
 
 export const getDisplayValue = (value) => (
   value === null || value === undefined ? "" : String(value).trim()
@@ -115,41 +116,12 @@ const getUserImageUrl = async (client, profile, path) => {
   return data?.signedUrl || "";
 };
 
-export const fetchUserDynamicFractals = async (client, profile) => {
-  if (!profile?.id) return [];
-
-  const { data, error } = await client
-    .from(JAYCEE_FRACTALS_TABLE)
-    .select("id, label, user_id, skill")
-    .eq("user_id", profile.id);
-
-  if (error) throw error;
-
-  return data || [];
-};
-
-export const fetchDynamicFractalElements = async (client, fractalIds) => {
-  const ids = [...new Set((fractalIds || []).map(getDisplayValue).filter(Boolean))];
-
-  if (!ids.length) return [];
-
-  const { data, error } = await client
-    .from(JAYCEE_FRACTAL_ELEMENTS_TABLE)
-    .select("*")
-    .in("fractal_id", ids)
-    .order("position", { ascending: true });
-
-  if (error) throw error;
-
-  return data || [];
-};
-
 export const fetchUserGameSettings = async (client, profile) => {
   if (!profile?.id) return null;
 
   const { data, error } = await client
     .from(JAYCEE_GAME_TABLE)
-    .select("id, user_id, primary_fractal, ultimate_fractal, ultimate_link")
+    .select(GAME_SELECT_COLUMNS)
     .eq("user_id", profile.id)
     .maybeSingle();
 
@@ -165,7 +137,7 @@ export const updateUserGameSettings = async (client, profile, values) => {
     .from(JAYCEE_GAME_TABLE)
     .update(values)
     .eq("user_id", profile.id)
-    .select("id, user_id, primary_fractal, ultimate_fractal, ultimate_link")
+    .select(GAME_SELECT_COLUMNS)
     .maybeSingle();
 
   if (error) throw error;
@@ -207,7 +179,7 @@ export const fetchPlayerForGame = async (client, userProfile, masterProfile) => 
     .from(JAYCEE_PLAYER_TABLE)
     .select(PLAYER_SELECT_COLUMNS)
     .eq("user_id", userProfile.id)
-    .eq("game_id", masterProfile.id)
+    .eq("master", masterProfile.id)
     .limit(1);
 
   if (error) throw error;
@@ -221,7 +193,7 @@ export const createPlayerForGame = async (client, userProfile, masterProfile, va
   const { data, error } = await client
     .from(JAYCEE_PLAYER_TABLE)
     .insert({
-      game_id: masterProfile.id,
+      master: masterProfile.id,
       level: 1,
       skill_1_practice: 0,
       skill_2_practice: 0,
@@ -238,12 +210,12 @@ export const createPlayerForGame = async (client, userProfile, masterProfile, va
   return data || null;
 };
 
-export const updateProfileActiveGame = async (client, profile, playerId) => {
+export const updateProfileMaster = async (client, profile, masterId) => {
   if (!profile?.id) return null;
 
   const { data, error } = await client
     .from(PROFILE_TABLE)
-    .update({ active_game: playerId || null })
+    .update({ master: masterId || null })
     .eq("id", profile.id)
     .select(PROFILE_SELECT_COLUMNS)
     .maybeSingle();
@@ -299,27 +271,6 @@ export const updateSkills = async (client, skillUpdates) => {
       .update(values)
       .eq("id", id)
       .select("id, label, description")
-      .maybeSingle();
-
-    if (error) throw error;
-
-    return data;
-  }));
-
-  return updatedRows.filter(Boolean);
-};
-
-export const updateFractalElements = async (client, elementUpdates) => {
-  const updates = (elementUpdates || []).filter((element) => element?.id);
-
-  if (!updates.length) return [];
-
-  const updatedRows = await Promise.all(updates.map(async ({ id, ...values }) => {
-    const { data, error } = await client
-      .from(JAYCEE_FRACTAL_ELEMENTS_TABLE)
-      .update(values)
-      .eq("id", id)
-      .select("*")
       .maybeSingle();
 
     if (error) throw error;
