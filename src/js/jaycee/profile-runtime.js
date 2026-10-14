@@ -578,6 +578,74 @@ const createNoticeMasterBadge = (profile, fallbackUsername = "Cedricjbt") => {
   return badge;
 };
 
+const createMastersNoticeContent = (profiles, { showIntro = true, onSelect = null, isSaving = false } = {}) => {
+  const content = document.createDocumentFragment();
+  const message = document.createElement("p");
+
+  message.append(
+    document.createTextNode("Oh! You're in luck!"),
+    document.createElement("br"),
+    document.createTextNode("It looks like you're not alone in the game room. Several Masters have been there before.")
+  );
+  if (showIntro) content.append(message);
+
+  if (profiles.length) {
+    const carousel = document.createElement("div");
+    const track = document.createElement("div");
+
+    carousel.className = "profile-masters-carousel";
+    carousel.tabIndex = 0;
+    carousel.setAttribute("role", "region");
+    carousel.setAttribute("aria-label", "Masters in the game room");
+    track.className = "profile-masters-track";
+
+    for (let copy = 0; copy < 2; copy += 1) {
+      const group = document.createElement("div");
+
+      group.className = "profile-masters-group";
+      if (copy === 0) {
+        group.setAttribute("role", onSelect ? "group" : "list");
+      } else {
+        group.setAttribute("aria-hidden", "true");
+      }
+      const repetitions = Math.ceil(12 / profiles.length);
+
+      for (let repeat = 0; repeat < repetitions; repeat += 1) {
+        profiles.forEach((profile) => {
+          const card = createNoticeMasterBadge(profile);
+
+          if (!onSelect) card.setAttribute("role", "listitem");
+          if (repeat > 0) card.setAttribute("aria-hidden", "true");
+          if (onSelect) {
+            const choice = document.createElement("button");
+
+            choice.className = "profile-master-choice";
+            choice.type = "button";
+            choice.disabled = isSaving;
+            choice.setAttribute("aria-label", `Link to ${getDisplayValue(profile.username)}'s game`);
+            if (copy > 0 || repeat > 0) {
+              choice.tabIndex = -1;
+              choice.setAttribute("aria-hidden", "true");
+            }
+            choice.addEventListener("click", () => {
+              if (!choice.disabled) onSelect(profile);
+            });
+            choice.append(card);
+            group.append(choice);
+          } else {
+            group.append(card);
+          }
+        });
+      }
+      track.append(group);
+    }
+    carousel.append(track);
+    content.append(carousel);
+  }
+
+  return content;
+};
+
 const getActiveQuestInfo = ({ activeModels = [], player = null, selectedAbilityIndex = 0 }) => {
   const level = getSelectedActiveLevel(player, selectedAbilityIndex);
   const activeModel = activeModels[Math.max(0, Math.min(level, activeModels.length) - 1)] || activeModels[0] || null;
@@ -668,6 +736,7 @@ const createVitalsPanel = ({
   activeMasterProfile = null,
   activeModels = [],
   isMasterSaving = false,
+  masterLinkError = "",
   onPlay,
   onAcceptMaster,
   player,
@@ -677,7 +746,6 @@ const createVitalsPanel = ({
   adminProfile = null,
   publicProfiles = [],
   selectedAbilityIndex,
-  selectedMasterProfile = null,
   totalLevel = 1
 }) => {
   const panel = document.createElement("section");
@@ -687,9 +755,8 @@ const createVitalsPanel = ({
   const levelBadge = document.createElement("p");
   const bars = document.createElement("div");
   const profileLabel = document.createElement("h2");
-  const playButton = document.createElement("button");
-  const lifeMaxSeconds = JAYCEE_GAME_CONFIG.lifeMaxYears * YEAR_SECONDS;
   const lifeMaxYears = JAYCEE_GAME_CONFIG.lifeMaxYears;
+  const lifeMaxSeconds = JAYCEE_GAME_CONFIG.lifeMaxYears * YEAR_SECONDS;
   const hasPlayerProfile = Boolean(playerProfile);
   const displayLevel = Math.max(1, Number(totalLevel) || 1);
   const effectivePlayer = player
@@ -702,7 +769,6 @@ const createVitalsPanel = ({
         skill_3_practice: 0
       }
       : null;
-  const guestLevelYears = 1;
   const level = hasPlayerProfile ? displayLevel : 1;
   const storedUsername = getDisplayValue(window.localStorage.getItem("player_full_name"));
   const profileName = getDisplayValue(playerProfile?.username)
@@ -724,11 +790,11 @@ const createVitalsPanel = ({
   const prayerActiveMs = getPendingPrayerActiveMs();
   const firstActiveSkillMs = getFirstActiveSkillMs();
   const prayerKarmaYears = firstActiveSkillMs > 0 ? prayerActiveMs / firstActiveSkillMs : 0;
+  const remainingKarmaYears = Math.max(0, lifeMaxYears - 1 - prayerKarmaYears);
   const guestLifeSeconds = prayerKarmaYears * YEAR_SECONDS;
   const profileHealthSeconds = getAgeInSeconds(playerProfile?.birth_date) || 0;
   const lifeSeconds = hasPlayerProfile ? profileHealthSeconds : guestLifeSeconds;
   const lifeValueText = effectivePlayer ? formatYearsFromSeconds(lifeSeconds) : `${formatKarmaYears(prayerKarmaYears)}y`;
-  const remainingKarmaYears = Math.max(0, lifeMaxYears - guestLevelYears - prayerKarmaYears);
   const linkedQuestInfo = getActiveQuestInfo({
     activeModels,
     player: effectivePlayer,
@@ -739,11 +805,10 @@ const createVitalsPanel = ({
   panel.dataset.profileVitals = "";
   noticeMasterUsernameElement.textContent = noticeMasterUsername;
   noticeMasterContent.append(
-    document.createTextNode("You have crossed path with "),
     createNoticeMasterBadge(noticeMasterProfile),
-    document.createTextNode(" in the game room,"),
+    document.createTextNode(" has crossed path with you"),
     document.createElement("br"),
-    document.createTextNode("and he has decided to take charge of your karma!"),
+    document.createTextNode("and has decided to take charge of your karma!"),
     document.createElement("br"),
     document.createElement("br"),
     noticeMasterUsernameElement,
@@ -751,6 +816,8 @@ const createVitalsPanel = ({
   );
   profileLabel.className = "profile-section-label";
   profileLabel.textContent = "Profile";
+  profileLabel.hidden = true;
+  hud.hidden = true;
   bars.className = "profile-vital-stack";
   bars.replaceChildren(
     createVitalBar({
@@ -781,19 +848,20 @@ const createVitalsPanel = ({
         tone: "notification"
       }));
     } else {
-      const acceptButton = document.createElement("button");
-
-      acceptButton.className = "profile-play-button";
-      acceptButton.type = "button";
-      acceptButton.textContent = isMasterSaving ? "Linking..." : "Accept";
-      acceptButton.disabled = !selectedMasterProfile || isMasterSaving;
-      acceptButton.addEventListener("click", () => {
-        if (!selectedMasterProfile || isMasterSaving) return;
-        onAcceptMaster?.();
+      const masterChoices = createMastersNoticeContent(publicProfiles, {
+        showIntro: false,
+        onSelect: onAcceptMaster,
+        isSaving: isMasterSaving
       });
+      const linkStatus = document.createElement("p");
+
+      linkStatus.className = "profile-master-link-status";
+      linkStatus.setAttribute("role", "status");
+      linkStatus.textContent = masterLinkError || (isMasterSaving ? "Linking..." : publicProfiles.length ? "" : "No Masters available yet.");
+      masterChoices.append(linkStatus);
       panel.append(createProfileNotice({
-        action: acceptButton,
-        text: `Reach level 2: You can now choose the help of a Master. Each one has different a different path and will give you different quests and therefore different benefits. You have ${firstActivePassiveTime} to choose a Master below and get a first quest. Beyond that timing your account will be deleted automatically. Click on accept once you're done.`,
+        content: masterChoices,
+        text: `Unlock level 1 in a Master's game: Each Master offers a different path, with different quests and benefits. You have ${firstActivePassiveTime} to choose a Master and get your first quest. Beyond that timing your account will be deleted automatically. Click on a Master below to link to their game.`,
         title: "Quest",
         tone: "quest"
       }));
@@ -802,8 +870,13 @@ const createVitalsPanel = ({
     panel.append(
       createProfileNotice({
         closable: true,
+        content: createMastersNoticeContent(publicProfiles),
+        title: "Notification",
+        tone: "notification"
+      }),
+      createProfileNotice({
+        closable: true,
         content: noticeMasterContent,
-        text: "Oh! You're in luck!",
         title: "Notification",
         tone: "notification"
       }),
@@ -817,13 +890,15 @@ const createVitalsPanel = ({
   }
 
   if (!hasPlayerProfile) {
+    const playButton = document.createElement("button");
+
     playButton.className = "profile-play-button";
     playButton.type = "button";
     playButton.textContent = "Accept";
     playButton.addEventListener("click", onPlay);
     panel.append(createProfileNotice({
       action: playButton,
-      text: `Unlock Level 2: burn Karma faster and try to get enlightened in this life, save your progress and connect directly with a Master.`,
+      text: "Unlock Level 2: burn Karma faster and try to get enlightened in this life, save your progress and connect directly with a Master.",
       title: "Quest",
       tone: "quest"
     }));
@@ -925,6 +1000,7 @@ const createFractalParameterPanel = ({
   const abilities = [];
 
   section.className = "profile-parameter-panel";
+  section.hidden = true;
   section.dataset.profileParameters = "";
   heading.textContent = "Abilities";
   buttons.className = "profile-ability-bar";
@@ -1062,73 +1138,6 @@ const createFractalParameterPanel = ({
   return section;
 };
 
-const createMasterPanel = ({
-  activeMasterProfile = null,
-  canSelect = false,
-  onSelect,
-  profiles = [],
-  selectedMasterProfile = null
-} = {}) => {
-  if (!profiles.length) return null;
-
-  const section = document.createElement("section");
-  const heading = document.createElement("h2");
-  const masters = document.createElement("div");
-
-  section.className = "profile-master-panel";
-  section.dataset.profileMasters = "";
-  heading.textContent = "Get the help of a Master";
-  masters.className = "profile-master-list";
-
-  profiles.forEach((profile) => {
-    const button = document.createElement("button");
-    const avatar = document.createElement("span");
-    const name = document.createElement("span");
-    const lockStatus = document.createElement("span");
-    const lockText = document.createElement("span");
-    const username = getDisplayValue(profile.username);
-    const isSelected = getDisplayValue(selectedMasterProfile?.id) === getDisplayValue(profile.id);
-    const isActive = getDisplayValue(activeMasterProfile?.id) === getDisplayValue(profile.id);
-    const isLocked = !canSelect && !isActive;
-
-    button.className = "profile-ability-button profile-master-button";
-    button.classList.toggle("is-locked", isLocked);
-    button.classList.toggle("is-selected", isSelected);
-    button.classList.toggle("is-active", isActive);
-    button.type = "button";
-    button.disabled = isLocked;
-    button.dataset.state = isActive ? "Linked" : isSelected ? "Selected" : isLocked ? "" : "Choose";
-    avatar.className = "profile-master-avatar";
-    name.className = "profile-master-name";
-    name.textContent = username;
-    if (profile.avatarUrl) {
-      const image = document.createElement("img");
-
-      image.alt = "";
-      image.src = profile.avatarUrl;
-      avatar.append(image);
-    } else {
-      avatar.textContent = username.slice(0, 1).toUpperCase();
-    }
-    if (isLocked) {
-      lockStatus.className = "profile-ability-lock-status";
-      lockText.textContent = "Locked";
-      lockStatus.append(createLockedIcon(), lockText);
-      button.append(avatar, name, lockStatus);
-    } else {
-      button.append(avatar, name);
-      if (canSelect) {
-        button.addEventListener("click", () => onSelect?.(profile));
-      }
-    }
-    masters.append(button);
-  });
-
-  section.append(heading, masters);
-
-  return section;
-};
-
 const attachProfileAvatarUrls = async (client, profiles) => Promise.all(
   profiles.map(async (profile) => {
     try {
@@ -1197,8 +1206,8 @@ export const initJayceePage = async () => {
   let closingAbilityIndex = null;
   let descriptionCloseTimer = 0;
   let selectedAbilityIndex = null;
-  let selectedMasterProfile = null;
   let isMasterSaving = false;
+  let masterLinkError = "";
   let supabaseClient = null;
   let skillForms = [];
   let skills = [];
@@ -1321,6 +1330,7 @@ export const initJayceePage = async () => {
       activeMasterProfile,
       activeModels,
       isMasterSaving,
+      masterLinkError,
       onPlay: handlePlayClick,
       onAcceptMaster: handleAcceptMasterClick,
       player: currentPlayer,
@@ -1330,7 +1340,6 @@ export const initJayceePage = async () => {
       profile: currentProfile,
       publicProfiles,
       selectedAbilityIndex,
-      selectedMasterProfile,
       totalLevel: getPlayerLevelTotal(playerRows)
     });
 
@@ -1346,7 +1355,6 @@ export const initJayceePage = async () => {
 
     const corePanel = canvas.closest(".game-core-panel");
     const existingPanel = corePanel?.querySelector("[data-profile-parameters]");
-    const existingMasterPanel = corePanel?.querySelector("[data-profile-masters]");
     const existingInventoryTitle = corePanel?.querySelector("[data-profile-inventory-title]");
     const activeModels = getActiveFractalModels({
       dynamicFractals,
@@ -1400,21 +1408,9 @@ export const initJayceePage = async () => {
       selectedIndex: closingAbilityIndex ?? selectedAbilityIndex,
       ultimateModel
     });
-    const masterPanel = createMasterPanel({
-      activeMasterProfile,
-      canSelect: Boolean(playerProfile && !activeMasterProfile),
-      onSelect: (profile) => {
-        selectedMasterProfile = profile;
-        renderCoreParameters();
-        renderVitalsPanel();
-      },
-      profiles: publicProfiles,
-      selectedMasterProfile
-    });
 
     if (!corePanel || !panel) {
       existingPanel?.remove();
-      existingMasterPanel?.remove();
       existingInventoryTitle?.remove();
       return;
     }
@@ -1423,16 +1419,6 @@ export const initJayceePage = async () => {
       existingPanel.replaceWith(panel);
     } else {
       corePanel.insertBefore(panel, canvas);
-    }
-
-    if (masterPanel) {
-      if (existingMasterPanel) {
-        existingMasterPanel.replaceWith(masterPanel);
-      } else {
-        corePanel.insertBefore(masterPanel, canvas);
-      }
-    } else {
-      existingMasterPanel?.remove();
     }
 
     existingInventoryTitle?.remove();
@@ -1455,14 +1441,14 @@ export const initJayceePage = async () => {
     window.requestAnimationFrame(renderCore);
   };
 
-  const handleAcceptMasterClick = async () => {
-    if (isMasterSaving || !selectedMasterProfile || !playerProfile || !supabaseClient) return;
+  const handleAcceptMasterClick = async (masterProfile) => {
+    if (isMasterSaving || activeMasterProfile || !masterProfile?.id || !playerProfile || !supabaseClient) return;
 
     isMasterSaving = true;
+    masterLinkError = "";
     renderVitalsPanel();
 
     try {
-      const masterProfile = selectedMasterProfile;
       const masterGame = await fetchUserGameSettings(supabaseClient, masterProfile);
 
       if (!masterGame?.id) {
@@ -1482,16 +1468,15 @@ export const initJayceePage = async () => {
 
       const updatedProfile = await updateProfileActiveGame(supabaseClient, playerProfile, player.id);
 
-      playerProfile = updatedProfile || {
-        ...playerProfile,
-        active_game: player.id
-      };
+      if (!updatedProfile) throw new Error("The Master link could not be saved. Please try again.");
+
+      playerProfile = updatedProfile;
       currentPlayer = player;
-      selectedMasterProfile = null;
       playerRows = await fetchPlayersForUser(supabaseClient, playerProfile);
       await loadMasterGame(masterProfile, masterGame);
     } catch (error) {
       console.error("Jaycee Master could not be linked", error);
+      masterLinkError = error?.message || "The Master link could not be saved. Please try again.";
     } finally {
       isMasterSaving = false;
       renderVitalsPanel();

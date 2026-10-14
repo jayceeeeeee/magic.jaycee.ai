@@ -299,6 +299,7 @@ export const initJayceeAccountPage = async () => {
   const status = document.querySelector("[data-account-status]");
   const actions = document.querySelector("[data-account-actions]");
   const saveButton = document.querySelector("[data-account-save]");
+  const logoutButton = document.querySelector("[data-account-logout]");
   const saveStatus = document.querySelector("[data-account-save-status]");
   const panel = document.querySelector("[data-account-shell] .jaycee-settings-panel");
   const toggleButton = document.querySelector("[data-account-toggle]");
@@ -311,6 +312,27 @@ export const initJayceeAccountPage = async () => {
     toggleButton.setAttribute("aria-expanded", String(!isCollapsed));
     if (!isCollapsed) {
       panel?.focus?.();
+    }
+  });
+
+  logoutButton?.addEventListener("click", async () => {
+    if (logoutButton.disabled || saveButton.disabled) return;
+
+    logoutButton.disabled = true;
+    saveButton.disabled = true;
+    setStatus(saveStatus, "Logging out...");
+
+    try {
+      const { error } = await window.JayceeAuth.signOut();
+
+      if (error) throw error;
+
+      window.location.replace(getLoginUrl());
+    } catch (error) {
+      console.error("Jaycee logout failed", error);
+      setStatus(saveStatus, error?.message || "Could not log out. Please try again.", true);
+      logoutButton.disabled = false;
+      saveButton.disabled = false;
     }
   });
 
