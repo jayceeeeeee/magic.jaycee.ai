@@ -1,4 +1,5 @@
 import { renderSkillMarkdown } from "./markdown.js";
+import { PracticeTimer } from "./practice-timer.js";
 import {
   JAYCEE_ORDER,
   createJayceeState,
@@ -21,6 +22,7 @@ import {
   getAvatarImageUrl,
   getDisplayValue,
   loadOptionalImage,
+  recordSkillPractice,
   startPlayerFirstQuest,
   updateProfileMaster
 } from "../config/data.js";
@@ -329,13 +331,9 @@ const createGameSelect = (profiles, selectedUsername = "") => {
   return label;
 };
 
-const createVitalBar = ({ centered = false, current, label, max, tone, valueText }) => {
-  const bar = document.createElement("div");
-  const header = document.createElement("div");
-  const name = document.createElement("span");
-  const value = document.createElement("span");
-  const track = document.createElement("div");
-  const fill = document.createElement("span");
+const updateVitalBar = (bar, { centered = false, current, max, valueText }) => {
+  if (!bar) return;
+  const fill = bar.querySelector(".profile-vital-fill");
   const numericCurrent = Number(current);
   const numericMax = Number(max);
   const progress = Number.isFinite(numericCurrent) && Number.isFinite(numericMax) && numericMax > 0
@@ -344,14 +342,8 @@ const createVitalBar = ({ centered = false, current, label, max, tone, valueText
       : Math.min(1, Math.max(0, numericCurrent / numericMax))
     : 0;
 
-  bar.className = `profile-vital-bar is-${tone}`;
-  bar.classList.toggle("is-centered", centered);
   bar.classList.toggle("is-empty", !valueText);
-  header.className = "profile-vital-header";
-  name.textContent = label;
-  value.textContent = valueText;
-  track.className = "profile-vital-track";
-  fill.className = "profile-vital-fill";
+  bar.querySelector(".profile-vital-header span:last-child").textContent = valueText;
   if (centered) {
     const offset = Math.abs(progress - 0.5) * 100;
 
@@ -360,9 +352,26 @@ const createVitalBar = ({ centered = false, current, label, max, tone, valueText
   } else {
     fill.style.width = `${progress * 100}%`;
   }
+};
+
+const createVitalBar = ({ centered = false, current, label, max, tone, valueText }) => {
+  const bar = document.createElement("div");
+  const header = document.createElement("div");
+  const name = document.createElement("span");
+  const value = document.createElement("span");
+  const track = document.createElement("div");
+  const fill = document.createElement("span");
+
+  bar.className = `profile-vital-bar is-${tone}`;
+  bar.classList.toggle("is-centered", centered);
+  header.className = "profile-vital-header";
+  name.textContent = label;
+  track.className = "profile-vital-track";
+  fill.className = "profile-vital-fill";
   header.append(name, value);
   track.append(fill);
   bar.append(header, track);
+  updateVitalBar(bar, { centered, current, max, valueText });
 
   return bar;
 };
@@ -543,15 +552,19 @@ const getActiveQuestInfo = ({ activeModels = [], player = null, selectedAbilityI
   if (!activeModel) {
     return {
       activeTime: "0s",
+      practiceTime: "0s",
       passiveTime: "0s",
       skillName: "your skill"
     };
   }
 
   const startedAt = Date.parse(player?.[`skill_${level}_start`] || "");
+  const practiceSeconds = Math.max(0, Number(player?.[`skill_${level}_practice`]) || 0);
+  const remainingPracticeSeconds = Math.max(0, Number(activeModel.questSeconds) - practiceSeconds);
 
   return {
-    activeTime: formatDuration(activeModel.questSeconds, { compact: false }) || "0s",
+    activeTime: formatDuration(Math.ceil(remainingPracticeSeconds), { compact: false }) || "0s",
+    practiceTime: formatDuration(Math.floor(practiceSeconds), { compact: false }) || "0s",
     deadline: Number.isFinite(startedAt) ? startedAt + activeModel.passiveSeconds * 1000 : null,
     passiveTime: formatDuration(activeModel.passiveSeconds, { compact: false }) || "0s",
     skillName: getDisplayValue(activeModel.skillLabel) || getDisplayValue(activeModel.label) || "your skill"
@@ -576,6 +589,22 @@ const createQuestCountdown = (deadline) => {
   return countdown;
 };
 
+const getLinkedQuestText = (questInfo) => (
+  `You have ${questInfo.passiveTime} to do ${questInfo.activeTime} of ${questInfo.skillName}. During this time you cannot link yourself to another Master. If you fail, your account will be deleted automatically.`
+);
+
+const updatePracticeDetails = (element, questInfo) => {
+  const countdown = element.querySelector("[data-practice-deadline]");
+  if (Number.isFinite(questInfo.deadline)) {
+    countdown.dataset.questDeadline = String(questInfo.deadline);
+    updateQuestCountdown(countdown);
+  } else {
+    delete countdown.dataset.questDeadline;
+    countdown.textContent = "Time remaining: —";
+  }
+  element.querySelector("[data-practice-progress]").textContent = `Practice: ${questInfo.practiceTime} / ${questInfo.activeTime}`;
+};
+
 const createLinkedMasterNoticeContent = ({ masterProfile, questInfo }) => {
   const fragment = document.createDocumentFragment();
   const firstLine = document.createElement("p");
@@ -586,12 +615,16 @@ const createLinkedMasterNoticeContent = ({ masterProfile, questInfo }) => {
     createNoticeMasterBadge(masterProfile, "a Master"),
     document.createTextNode(".")
   );
-  secondLine.textContent = `You have ${questInfo.passiveTime} to do ${questInfo.activeTime} of ${questInfo.skillName}. During this time you cannot link yourself to another Master.If you fail, your account will be deleted automatically.`;
+  secondLine.dataset.linkedQuestText = "";
+  secondLine.textContent = getLinkedQuestText(questInfo);
   fragment.append(firstLine, secondLine);
 
   const countdown = createQuestCountdown(questInfo.deadline);
 
-  if (countdown) fragment.append(countdown);
+  if (countdown) {
+    countdown.dataset.linkedQuestCountdown = "";
+    fragment.append(countdown);
+  }
 
   return fragment;
 };
@@ -881,6 +914,8 @@ const createSkillPanel = ({
   isDescriptionClosing = false,
   onSelect,
   passiveModel,
+  player = null,
+  practicingSkillIndex = null,
   selectedIndex = null,
   ultimateModel
 }) => {
@@ -937,8 +972,11 @@ const createSkillPanel = ({
     button.className = "profile-ability-button";
     button.classList.toggle("is-active", isActive);
     button.classList.toggle("is-locked", isLocked);
+    button.classList.toggle("is-practicing", index === practicingSkillIndex);
     button.classList.add(ability.type === "active" ? "is-active-skill" : `is-${ability.type}`);
     button.type = "button";
+    button.dataset.skillIndex = String(index);
+    button.dataset.skillLabel = ability.label;
     button.dataset.state = ability.type === "passive" ? "Passive" : isLocked ? "" : ability.type === "ultimate" ? "Ultimate" : "Ready";
     button.disabled = isLocked;
     button.textContent = ability.label;
@@ -957,16 +995,36 @@ const createSkillPanel = ({
     buttons.append(button);
   });
 
-  if (activeAbility?.description.trim() && currentLevel >= activeAbility.unlockLevel) {
-    const text = document.createElement("div");
-
-    text.className = "profile-skill-description";
-    renderSkillMarkdown(text, activeAbility.description);
+  if (activeAbility && currentLevel >= activeAbility.unlockLevel) {
     description.classList.toggle("is-closing", isDescriptionClosing);
-    description.append(text);
+    if (activeAbility.type === "active") {
+      const details = document.createElement("div");
+      const countdown = document.createElement("p");
+      const progress = document.createElement("p");
+
+      details.className = "profile-skill-practice-details";
+      details.dataset.skillPracticeDetails = String(activeIndex);
+      countdown.dataset.practiceDeadline = "";
+      progress.dataset.practiceProgress = "";
+      details.append(countdown, progress);
+      updatePracticeDetails(details, getActiveQuestInfo({ activeModels, player, selectedAbilityIndex: activeIndex }));
+      description.append(details);
+      if (activeAbility.description.trim()) description.append(document.createElement("hr"));
+    }
+    if (activeAbility.description.trim()) {
+      const text = document.createElement("div");
+
+      text.className = "profile-skill-description";
+      renderSkillMarkdown(text, activeAbility.description);
+      description.append(text);
+    }
   }
 
   section.append(heading, buttons);
+  const practiceStatus = document.createElement("p");
+  practiceStatus.className = "profile-practice-status";
+  practiceStatus.setAttribute("role", "status");
+  section.append(practiceStatus);
 
   if (description.childElementCount) {
     section.append(description);
@@ -1048,6 +1106,7 @@ export const initJayceePage = async () => {
   let supabaseClient = null;
   let skillForms = [];
   let skills = [];
+  let practice = null;
   const loadMasterGame = async (masterProfile, masterGame = null) => {
     if (!supabaseClient || !masterProfile) return;
 
@@ -1133,7 +1192,7 @@ export const initJayceePage = async () => {
       masterLinkError,
       onPlay: handlePlayClick,
       onAcceptMaster: handleAcceptMasterClick,
-      player: currentPlayer,
+      player: practice?.project(currentPlayer) || currentPlayer,
       adminProfile,
       playerAvatarUrl,
       playerProfile,
@@ -1148,6 +1207,7 @@ export const initJayceePage = async () => {
     } else {
       corePanel.insertBefore(panel, corePanel.firstChild);
     }
+    updateLiveUI();
   };
 
   const renderCoreParameters = () => {
@@ -1182,6 +1242,21 @@ export const initJayceePage = async () => {
         ? Math.max(0, Number(currentPlayer?.level) || 0)
         : (document.body.classList.contains("game-page") ? 1 : 0),
       onSelect: (index) => {
+        const canPractice = index >= 1 && index <= ACTIVE_RING_LIMIT
+          && Number(currentPlayer?.level) >= index && activeModels[index - 1]?.skill;
+        const wasPracticing = practice?.active?.skillNumber === index;
+
+        if (canPractice && !wasPracticing && practice) {
+          if (descriptionCloseTimer) window.clearTimeout(descriptionCloseTimer);
+          descriptionCloseTimer = 0;
+          closingAbilityIndex = null;
+          selectedAbilityIndex = index;
+          practice.start(currentPlayer.id, index);
+          renderCoreParameters();
+          renderVitalsPanel();
+          return;
+        }
+        if (canPractice && wasPracticing) practice.stop();
         if (descriptionCloseTimer) {
           window.clearTimeout(descriptionCloseTimer);
           descriptionCloseTimer = 0;
@@ -1207,6 +1282,8 @@ export const initJayceePage = async () => {
       },
       isDescriptionClosing: closingAbilityIndex !== null,
       passiveModel,
+      player: practice?.project(currentPlayer) || currentPlayer,
+      practicingSkillIndex: practice?.active?.skillNumber ?? null,
       selectedIndex: closingAbilityIndex ?? selectedAbilityIndex,
       ultimateModel
     });
@@ -1224,6 +1301,68 @@ export const initJayceePage = async () => {
     }
 
     existingInventoryTitle?.remove();
+    updateLiveUI();
+  };
+
+  const updateLiveUI = () => {
+    const player = practice?.project(currentPlayer) || currentPlayer;
+    const activeSkill = practice?.active?.skillNumber;
+    const models = getActiveSkillModels({ gameForm, skillForms });
+    const questText = shell.querySelector("[data-linked-quest-text]");
+    if (questText) {
+      const questInfo = getActiveQuestInfo({
+        activeModels: models, player, selectedAbilityIndex: activeSkill ?? selectedAbilityIndex
+      });
+      questText.textContent = getLinkedQuestText(questInfo);
+      const countdown = shell.querySelector("[data-linked-quest-countdown]");
+      if (countdown) {
+        if (Number.isFinite(questInfo.deadline)) {
+          countdown.dataset.questDeadline = String(questInfo.deadline);
+          updateQuestCountdown(countdown);
+        } else {
+          delete countdown.dataset.questDeadline;
+          countdown.textContent = "Time remaining: —";
+        }
+      }
+    }
+    shell.querySelectorAll("[data-skill-practice-details]").forEach((element) => {
+      updatePracticeDetails(element, getActiveQuestInfo({
+        activeModels: models, player, selectedAbilityIndex: Number(element.dataset.skillPracticeDetails)
+      }));
+    });
+    const mannaModel = player && playerProfile ? getMannaModel({
+      activeModels: models, player, playerProfile,
+      selectedAbilityIndex: activeSkill ?? selectedAbilityIndex
+    }) : null;
+
+    updateVitalBar(shell.querySelector("[data-profile-vitals] .is-manna"), {
+      centered: true, current: mannaModel?.value || 0, max: mannaModel?.maxAbs || 1,
+      valueText: mannaModel
+        ? `${formatMannaValue(mannaModel.value, mannaModel.unit)} / ${formatMannaValue(mannaModel.target, mannaModel.unit)}`
+        : "0 € / 0 €"
+    });
+    if (playerProfile) {
+      const health = getAgeInSeconds(playerProfile.birth_date) || 0;
+      updateVitalBar(shell.querySelector("[data-profile-vitals] .is-health"), {
+        current: health, max: JAYCEE_GAME_CONFIG.lifeMaxYears * YEAR_SECONDS,
+        valueText: `${formatYearsFromSeconds(health)} / ${JAYCEE_GAME_CONFIG.lifeMaxYears.toLocaleString()}y`
+      });
+    }
+
+    shell.querySelectorAll("[data-skill-index]").forEach((button) => {
+      const index = Number(button.dataset.skillIndex);
+      const isPracticing = index === activeSkill;
+      button.classList.toggle("is-practicing", isPracticing);
+      button.setAttribute("aria-pressed", String(isPracticing || button.classList.contains("is-active")));
+      button.dataset.state = isPracticing
+        ? `Using · ${formatDuration(Math.floor(practice.elapsed()), { compact: false }) || "0s"}`
+        : index === 0 ? "Passive" : button.disabled ? "" : index === 4 ? "Ultimate" : "Ready";
+      if (index >= 1 && index <= 3) {
+        button.title = isPracticing ? "Click to stop practicing" : "Click to start practicing";
+      }
+    });
+    const status = shell.querySelector(".profile-practice-status");
+    if (status) status.textContent = practice?.error || "";
   };
 
   const renderCore = () => {
@@ -1293,6 +1432,7 @@ export const initJayceePage = async () => {
     const user = sessionResult?.data?.session?.user;
 
     if (!user) return;
+    if (practice) await practice.flush();
 
     accountCreatedAt = getDisplayValue(user.created_at);
 
@@ -1311,6 +1451,7 @@ export const initJayceePage = async () => {
     currentPlayer = activeMasterProfile
       ? await fetchPlayerForGame(supabaseClient, refreshedProfile, activeMasterProfile)
       : null;
+    if (practice?.active && practice.active.playerId !== currentPlayer?.id) practice.stop();
     if (activeMasterProfile) await loadMasterGame(activeMasterProfile);
 
     try {
@@ -1426,6 +1567,18 @@ export const initJayceePage = async () => {
     avatarImage = hasUserProfile
       ? await loadOptionalImage(await getAvatarImageUrl(client, profile))
       : null;
+    if (playerProfile) {
+      practice = new PracticeTimer({
+        userId: playerProfile.id,
+        save: (session) => recordSkillPractice(supabaseClient, playerProfile, session),
+        onSaved: (player) => {
+          if (currentPlayer?.id === player.id) currentPlayer = player;
+          playerRows = playerRows.map((row) => row.id === player.id ? player : row);
+        },
+        onChange: updateLiveUI
+      });
+      await practice.flush();
+    }
     shell.hidden = false;
     renderCore();
     if (canvas) {
@@ -1442,25 +1595,27 @@ export const initJayceePage = async () => {
     renderPresentControls();
     renderCoreParameters();
     scheduleRenderCore();
-    const questClock = window.setInterval(() => {
-      shell.querySelectorAll("[data-quest-deadline]").forEach((element) => updateQuestCountdown(element));
-      const mannaBar = shell.querySelector("[data-profile-vitals] .is-manna");
-
-      if (mannaBar) {
-        const mannaModel = currentPlayer && playerProfile
-          ? getMannaModel({
-            activeModels: getActiveSkillModels({ gameForm, skillForms }),
-            player: currentPlayer,
-            playerProfile,
-            selectedAbilityIndex
-          })
-          : null;
-
-        mannaBar.replaceWith(createMannaBar(mannaModel));
-      }
-    }, 1000);
-
-    window.addEventListener("pagehide", () => window.clearInterval(questClock), { once: true });
+    let uiClock = 0;
+    let questClock = 0;
+    const startClocks = () => {
+      if (uiClock) return;
+      uiClock = window.setInterval(() => {
+        updateLiveUI();
+      }, 100);
+      questClock = window.setInterval(() => {
+        shell.querySelectorAll("[data-quest-deadline]").forEach((element) => updateQuestCountdown(element));
+      }, 1000);
+    };
+    startClocks();
+    window.addEventListener("online", () => { void practice?.flush(); });
+    window.addEventListener("pagehide", () => {
+      window.clearInterval(uiClock);
+      window.clearInterval(questClock);
+      uiClock = 0;
+    });
+    window.addEventListener("pageshow", (event) => {
+      if (event.persisted) { startClocks(); void practice?.flush(); }
+    });
   } catch (error) {
     console.error("Jaycee profile load failed", error);
     shell.hidden = false;

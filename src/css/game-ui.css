@@ -526,6 +526,21 @@
   overflow-wrap: anywhere;
 }
 
+.profile-skill-practice-details {
+  color: var(--accent-soft);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.profile-skill-practice-details p { margin: 0; }
+.profile-parameter-section > hr {
+  width: 100%;
+  margin: 5px 0;
+  border: 0;
+  border-top: 1px solid var(--field-border);
+}
+
 .profile-skill-description > :first-child { margin-top: 0; }
 .profile-skill-description > :last-child { margin-bottom: 0; }
 
@@ -606,6 +621,48 @@
     linear-gradient(180deg, rgba(124, 255, 120, 0.2), rgba(var(--accent-rgb), 0.06)),
     rgba(0, 0, 0, 0.24);
   color: rgba(124, 255, 120, 0.98);
+}
+
+@property --practice-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.profile-ability-button.is-practicing {
+  border-color: #7cff78;
+  color: #c9ffc7;
+  animation: skill-practice-pulse 2s ease-in-out infinite;
+}
+
+.profile-ability-button.is-practicing::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  padding: 2px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: conic-gradient(from var(--practice-angle), transparent 35%, #7cff78 70%, #eaffdf 78%, transparent 85%);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  animation: skill-practice-orbit 2s linear infinite;
+}
+
+.profile-ability-button.is-practicing::after { color: #b5ffad; }
+.profile-practice-status { margin: 0; color: var(--accent-soft); font-size: 0.75rem; }
+.profile-practice-status:empty { display: none; }
+.profile-vital-fill { transition: width 120ms linear, left 120ms linear; }
+
+@keyframes skill-practice-orbit { to { --practice-angle: 360deg; } }
+@keyframes skill-practice-pulse {
+  0%, 100% { box-shadow: inset 0 0 12px rgba(124, 255, 120, 0.08), 0 0 6px rgba(124, 255, 120, 0.12); }
+  50% { box-shadow: inset 0 0 18px rgba(124, 255, 120, 0.2), 0 0 18px rgba(124, 255, 120, 0.3); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-ability-button.is-practicing,
+  .profile-ability-button.is-practicing::before { animation: none; }
+  .profile-vital-fill { transition: none; }
 }
 
 .profile-ability-button.is-passive {

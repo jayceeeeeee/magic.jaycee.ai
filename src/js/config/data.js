@@ -260,6 +260,30 @@ export const fetchSkillsByIds = async (client, skillIds) => {
   return data || [];
 };
 
+export const recordSkillPractice = async (client, profile, session) => {
+  if (!profile?.id || ![1, 2, 3].includes(session.skillNumber)
+    || !Number.isFinite(session.totalSeconds) || session.totalSeconds <= 0) {
+    throw new Error("Invalid practice duration.");
+  }
+  const column = `skill_${session.skillNumber}_practice`;
+  if (session.practiceValue === undefined) {
+    const player = await fetchPlayerById(client, session.playerId);
+    if (!player || player.user_id !== profile.id) throw new Error("Player not found.");
+    session.practiceValue = (Number(player[column]) || 0) + session.totalSeconds;
+  }
+  const { data, error } = await client
+    .from(JAYCEE_PLAYER_TABLE)
+    .update({ [column]: session.practiceValue })
+    .eq("id", session.playerId)
+    .eq("user_id", profile.id)
+    .select(PLAYER_SELECT_COLUMNS)
+    .single();
+
+  if (error) throw error;
+  if (!data?.id) throw new Error("Practice could not be saved.");
+  return data;
+};
+
 export const updateSkills = async (client, skillUpdates) => {
   const updates = (skillUpdates || []).filter((skill) => skill?.id);
 
