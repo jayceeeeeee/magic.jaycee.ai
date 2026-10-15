@@ -39,6 +39,9 @@ assert(Number(restarted.querySelector('[data-quest-deadline]').dataset.questDead
 const before=runtime.createVitalsPanel(options);
 assert(before.querySelectorAll('[data-notification-key]').length===1,'Quest visible before acceptance');
 assert(before.querySelectorAll('em').length===3,'Skill names are not italic');
+const thirdSkillNotice={id:'third_skill_test',stage:'linked_master',content:{text:['Practice {skillThreeName}.']}};
+const thirdSkillPanel=runtime.createVitalsPanel({...options,notifications:{...options.notifications,definitions:[thirdSkillNotice]}});
+assert(thirdSkillPanel.querySelector('em')?.textContent==='Skill 3'&&!thirdSkillPanel.textContent.includes('{skillThreeName}'),'Third skill name was not interpolated in italics');
 assert(before.textContent.includes('Or you can choose to link yourself to another Master.'),'Missing switch invitation');
 assert(before.querySelectorAll('.profile-master-choice').length>0,'Missing carousel');
 before.querySelector('.profile-master-choice').click();assert(switched==='new','Wrong Master selected');

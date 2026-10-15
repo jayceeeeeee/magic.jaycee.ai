@@ -12,6 +12,7 @@ declare
   result jsonb;
   permanent_time timestamptz;
   reward integer;
+  three_goal double precision:=31556926.08/1826.211/576;
   rejected boolean;
   alternative uuid;
   payload jsonb := '[{"label":"Passive"},{"label":"One"},{"label":"Two"},{"label":"Three"},{"label":"Ultimate","description":"Passive ultimate description"}]';
@@ -30,7 +31,7 @@ begin
   exception when insufficient_privilege then rejected:=true;
   end;
   if not rejected then raise exception 'FAIL: permanent status forged before Level 4'; end if;
-  update public.player set skill_3_practice=1000000 where id=player_id;
+  update public.player set skill_3_practice=three_goal where id=player_id;
   result:=public.sync_skill_progress(player_id);
   if (result->'player'->>'level')::integer<>4 then raise exception 'FAIL: Level 3 did not unlock Level 4'; end if;
   select permanent_account_at,years_burned into permanent_time,reward from public.profiles where id=auth.uid();
@@ -39,13 +40,13 @@ begin
     and split_part(occurrence,':',1)=player_id::text and split_part(occurrence,':',2)='3' and completed_at is not null) then
     raise exception 'FAIL: Level 3 quest was not completed';
   end if;
-  -- Optional practice saves and cycle clocks initialize, without another level/reward.
+  -- Another complete goal burns one year without another level or milestone.
   update public.player set skill_1_start=null,skill_2_start=null,skill_3_start=null where id=player_id;
-  result:=public.sync_skill_progress(player_id,3,1000000,null);
+  result:=public.sync_skill_progress(player_id,3,three_goal,null);
   if (result->'player'->>'level')::integer<>4 or result->'player'->>'skill_3_start' is null then
     raise exception 'FAIL: Level 4 advanced or failed to initialize the skill cycle';
   end if;
-  if (select years_burned from public.profiles where id=auth.uid())<>reward then raise exception 'FAIL: Level 4 granted repeated rewards'; end if;
+  if (select years_burned from public.profiles where id=auth.uid())<>reward+1 then raise exception 'FAIL: Level 4 goal did not burn one year'; end if;
   if (select permanent_account_at from public.profiles where id=auth.uid()) is distinct from permanent_time then
     raise exception 'FAIL: reload changed the permanent milestone';
   end if;
@@ -80,4 +81,4 @@ begin
 end;
 $$;
 rollback;
-select 'PASS: automatic Level 4, permanent milestone/link, no extra quest/rewards, visibility gate and persisted account access' as result;
+select 'PASS: automatic Level 4, permanent milestone/link, practice goal karma, no extra quest, visibility gate and persisted account access' as result;

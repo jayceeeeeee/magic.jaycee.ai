@@ -46,10 +46,13 @@ player row, saves the practice counter directly, checks the current skill's calc
 target, then atomically archives completed goals and resets only the completed
 skill's start and practice counter (retaining any excess practice). Other skills'
 clocks/counters are preserved. Completing the current quest also completes its
-notification, increments the player level and `profiles.years_burned` once.
+notification and increments the player level once. `sql/practice_goal_karma.sql`
+awards one `profiles.years_burned` per completed practice goal, including earlier
+skills and Level 4 practice. Multiple goals in one save award one year each;
+partial practice, clock renewal and retried saves do not award additional years.
 The next quest still waits for Accept, which starts its own clock.
 Earlier skills remain usable and archive their completed goals without advancing
-the current quest or granting another progression reward.
+the current quest.
 Completing the third active skill reaches Level 4, where timed quest progression ends.
 Keep the RPC's target ratios aligned with `src/js/config/game-config.js`.
 The life bar is `(age in years + years_burned) / 1000000`.
@@ -165,8 +168,8 @@ use stable player/level occurrences. The timed linked quest is hidden at Level 4
 
 Ultimate is a description-only ability, like Passive: no countdown, target, Start
 button or practice timer. Earlier active skills retain their descriptions' countdown,
-practice progress and Start/Stop controls at Level 4. They do not grant further
-level/reward advancement or create another quest notification.
+practice progress and Start/Stop controls at Level 4. Completed practice goals
+continue burning one year each, without further levels or quest notifications.
 
 `sql/level_four_repeating_skill_cycles.sql` was applied as
 `level_four_repeating_skill_cycles`. On Level 4+ sync, expired or missing active-skill
@@ -233,7 +236,7 @@ Never store executable HTML, scripts, arbitrary iframe URLs or callbacks in this
 
 Text placeholders: `{lifeMaxYears}`, `{prayerKarmaYears}`, `{remainingKarmaYears}`,
 `{firstActivePassiveTime}`, `{passiveSkillName}`, `{skillOneName}`, `{skillTwoName}`,
-`{masterName}`. Text may be an array
+`{skillThreeName}`, `{masterName}`. Text may be an array
 of paragraphs; values and text render as text nodes. `content.level` restricts a
 notice to that player level, and `content.occurrence = "level"` uses a stable level receipt.
 Avatars, carousels,
@@ -312,7 +315,7 @@ cannot edit that field. The carousel countdown uses the same duration and start.
   and last-selection/Skill 3 fallback at Level 4, plus annual credit continuity
   after archiving and aggregation without double-counting partial practice.
 - `supabase/tests/level_four_permanent_accounts.sql`: automatic Level 4 transition,
-  permanent milestone/link, no further levels/rewards, visibility authorization,
+  permanent milestone/link, practice goal karma without further levels, visibility authorization,
   complete public game discovery and permanent access after participation changes.
   All fixture changes are rolled back.
 - `supabase/tests/level_four_repeating_skill_cycles.sql`: only expired clocks renew,

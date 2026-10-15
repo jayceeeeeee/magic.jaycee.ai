@@ -26,6 +26,7 @@ begin
   update public.player set level=4,skill_1_start=one_start,skill_2_start=two_start,skill_3_start=three_start,
     skill_1_practice=0,skill_2_practice=0,skill_3_practice=0 where id=player_id;
   result:=public.sync_skill_progress(player_id,3,three_goal*0.4,three_start);
+  if (result->>'years_burned')::integer<>burned then raise exception 'FAIL: partial practice burned karma'; end if;
   if (select count(*) from public.practice_completions h join public.player p on p.id=h.player_id where p.user_id=owner_id)<>baseline then raise exception 'FAIL: partial practice archived'; end if;
   if abs((result->'player'->>'skill_3_practice')::double precision-three_goal*0.4)>0.000001 then raise exception 'FAIL: partial practice lost'; end if;
   update public.player set skill_3_start=now()-interval '2 hours' where id=player_id;
@@ -36,6 +37,7 @@ begin
     raise exception 'FAIL: natural expiry archived or reset partial practice';
   end if;
   result:=public.sync_skill_progress(player_id,3,three_goal+2,three_start);
+  if (result->>'years_burned')::integer<>burned+1 then raise exception 'FAIL: complete goal did not burn one year'; end if;
   next_start:=(result->'player'->>'skill_3_start')::timestamptz;
   if next_start=three_start or (result->'player'->>'skill_1_start')::timestamptz is distinct from one_start
     or (result->'player'->>'skill_2_start')::timestamptz is distinct from two_start
@@ -48,17 +50,19 @@ begin
     raise exception 'FAIL: full goal not recorded';
   end if;
   result:=public.sync_skill_progress(player_id,3,three_goal+2,three_start);
+  if (result->>'years_burned')::integer<>burned+1 then raise exception 'FAIL: retry duplicated karma reward'; end if;
   if (select count(*) from public.practice_completions h join public.player p on p.id=h.player_id where p.user_id=owner_id)<>baseline+1 then raise exception 'FAIL: retry duplicated history'; end if;
   result:=public.sync_skill_progress(player_id,3,2*three_goal+2,next_start);
   if (select count(*) from public.practice_completions h join public.player p on p.id=h.player_id where p.user_id=owner_id)<>baseline+3
     or abs(public.get_practice_completion_totals()-baseline_credit-10800)>0.000001 then
     raise exception 'FAIL: accumulated complete goals or credits incorrect';
   end if;
-  if (result->'player'->>'level')::integer<>4 or (result->>'years_burned')::integer<>burned then raise exception 'FAIL: Level 4 completion changed level/reward'; end if;
+  if (result->'player'->>'level')::integer<>4 or (result->>'years_burned')::integer<>burned+3 then raise exception 'FAIL: Level 4 goals changed level or did not each burn a year'; end if;
   -- Current quest completion advances one level but preserves every other start/counter.
   update public.player set level=1,skill_1_start=one_start,skill_1_practice=0,skill_2_practice=4 where id=player_id;
   three_start:=(result->'player'->>'skill_3_start')::timestamptz;
-  result:=public.sync_skill_progress(player_id,1,one_goal,one_start);
+  result:=public.sync_skill_progress(player_id,1,one_goal*2+2,one_start);
+  if (result->>'years_burned')::integer<>burned+5 then raise exception 'FAIL: progression goals did not each burn one year'; end if;
   if (result->'player'->>'level')::integer<>2
     or (result->'player'->>'skill_2_start')::timestamptz is distinct from two_start
     or (result->'player'->>'skill_3_start')::timestamptz is distinct from three_start
@@ -70,7 +74,7 @@ begin
   one_start:=(result->'player'->>'skill_1_start')::timestamptz;
   burned:=(result->>'years_burned')::integer;
   result:=public.sync_skill_progress(player_id,1,one_goal,one_start);
-  if (result->'player'->>'level')::integer<>3 or (result->>'years_burned')::integer<>burned
+  if (result->'player'->>'level')::integer<>3 or (result->>'years_burned')::integer<>burned+1
     or (result->'player'->>'skill_2_start')::timestamptz is distinct from two_start
     or (result->'player'->>'skill_3_start')::timestamptz is distinct from three_start
     or not (result->'completed_skills' @> '[1]'::jsonb) then
@@ -79,11 +83,18 @@ begin
   update public.player set level_3_accepted_at=now() where id=player_id;
   one_start:=(result->'player'->>'skill_1_start')::timestamptz;
   result:=public.sync_skill_progress(player_id,3,three_goal,three_start);
+  if (result->>'years_burned')::integer<>burned+2 then raise exception 'FAIL: Level 3 goal did not burn exactly one year'; end if;
   if (result->'player'->>'level')::integer<>4
     or (result->'player'->>'skill_1_start')::timestamptz is distinct from one_start
     or (result->'player'->>'skill_2_start')::timestamptz is distinct from two_start then
     raise exception 'FAIL: Level 3 completion reset other clocks';
   end if;
+  result:=public.sync_skill_progress(player_id,2,one_goal/24,two_start);
+  if (result->>'years_burned')::integer<>burned+3 or (result->'player'->>'level')::integer<>4 then
+    raise exception 'FAIL: Skill 2 goal did not burn one year at Level 4';
+  end if;
+  result:=public.sync_skill_progress(player_id,2,one_goal/24,two_start);
+  if (result->>'years_burned')::integer<>burned+3 then raise exception 'FAIL: Skill 2 retry duplicated karma'; end if;
   rejected:=false;
   begin insert into public.practice_completions(player_id) values(player_id);
   exception when insufficient_privilege then rejected:=true;
