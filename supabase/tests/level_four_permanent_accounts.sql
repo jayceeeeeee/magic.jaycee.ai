@@ -18,6 +18,8 @@ declare
 begin
   if player_id is null then raise exception 'Test requires a player with the third active skill'; end if;
   update public.player set level=3,level_3_accepted_at=now(),skill_3_start=now(),skill_3_practice=0 where id=player_id;
+  -- Complete the game first so this check isolates the Level 4 visibility gate.
+  perform public.save_own_game(payload);
   rejected:=false;
   begin update public.profiles set visibility=true where id=auth.uid();
   exception when insufficient_privilege then rejected:=true;
@@ -37,11 +39,11 @@ begin
     and split_part(occurrence,':',1)=player_id::text and split_part(occurrence,':',2)='3' and completed_at is not null) then
     raise exception 'FAIL: Level 3 quest was not completed';
   end if;
-  -- Optional practice still saves, but must not grant another level/reward or start a quest clock.
+  -- Optional practice saves and cycle clocks initialize, without another level/reward.
   update public.player set skill_1_start=null,skill_2_start=null,skill_3_start=null where id=player_id;
   result:=public.sync_skill_progress(player_id,3,1000000,null);
-  if (result->'player'->>'level')::integer<>4 or result->'player'->>'skill_3_start' is not null then
-    raise exception 'FAIL: Level 4 advanced or started a timed quest';
+  if (result->'player'->>'level')::integer<>4 or result->'player'->>'skill_3_start' is null then
+    raise exception 'FAIL: Level 4 advanced or failed to initialize the skill cycle';
   end if;
   if (select years_burned from public.profiles where id=auth.uid())<>reward then raise exception 'FAIL: Level 4 granted repeated rewards'; end if;
   if (select permanent_account_at from public.profiles where id=auth.uid()) is distinct from permanent_time then

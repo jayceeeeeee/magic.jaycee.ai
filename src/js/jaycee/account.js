@@ -128,7 +128,8 @@ const normalizeCurrencyValue = (value) => (
 const MANNA_CYCLE_OPTIONS = [
   { label: "Year", value: "year" },
   { label: "Month", value: "month" },
-  { label: "Day", value: "day" }
+  { label: "Day", value: "day" },
+  { label: "Hour", value: "hour" }
 ];
 
 const sanitizeAvatarFileName = (fileName) => {

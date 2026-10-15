@@ -1,5 +1,6 @@
 -- Current schema after skill_progression_v1, simplify_skill_progression_v2,
--- level_two_quest_acceptance, level_three_master_games and level_four_permanent_accounts.
+-- level_two_quest_acceptance, level_three_master_games, level_four_permanent_accounts
+-- and level_four_repeating_skill_cycles.
 -- Keep thresholds aligned with game-config.js.
 alter table public.profiles add column years_burned integer not null default 0
   check (years_burned >= 0);
@@ -83,8 +84,20 @@ begin
       skill_3_start = case when quest = 2 then null else now() end
       where id = participant.id returning * into participant;
   end if;
-  -- Level 4 is permanent and has no further timed quest or acceptance step.
+  -- Level 4 cycles repeat without changing practice, levels or rewards.
   if participant.level >= 4 then
+    update public.player set
+      skill_1_start = case when skill_1_start is null or skill_1_start + interval '2551442.803 seconds' <= now() then now() else skill_1_start end,
+      skill_2_start = case when skill_2_start is null or skill_2_start + interval '86400 seconds' <= now() then now() else skill_2_start end,
+      skill_3_start = case when skill_3_start is null or skill_3_start + interval '3600 seconds' <= now() then now() else skill_3_start end
+      where id = participant.id and (
+        skill_1_start is null or skill_1_start + interval '2551442.803 seconds' <= now()
+        or skill_2_start is null or skill_2_start + interval '86400 seconds' <= now()
+        or skill_3_start is null or skill_3_start + interval '3600 seconds' <= now()
+      ) returning * into participant;
+    if not found then
+      select * into participant from public.player where id = p_player_id and user_id = owner_id;
+    end if;
     update public.profiles set permanent_account_at = coalesce(permanent_account_at, now())
       where id = owner_id and master = participant.master and permanent_account_at is null;
   end if;

@@ -68,7 +68,7 @@ begin
     or result->'player'->>'level_2_accepted_at' is not null then
     raise exception 'FAIL: Level 1 completion did not pause the next quest';
   end if;
-  -- Level 3 waits for acceptance; Level 4 has no timed quest.
+  -- Level 3 waits for acceptance; Level 4 initializes repeatable skill cycles.
   update public.player set level = 3, level_3_accepted_at = null, skill_3_practice = 0, skill_3_start = null where id = player_id;
   result := public.sync_skill_progress(player_id);
   if result->'player'->>'skill_3_start' is not null then
@@ -76,8 +76,8 @@ begin
   end if;
   update public.player set level = 4 where id = player_id;
   result := public.sync_skill_progress(player_id);
-  if (result->'player'->>'level')::integer <> 4 or result->'player'->>'skill_3_start' is not null then
-    raise exception 'FAIL: Level 4 started a timed quest';
+  if (result->'player'->>'level')::integer <> 4 or result->'player'->>'skill_3_start' is null then
+    raise exception 'FAIL: Level 4 skill cycle did not initialize';
   end if;
 end;
 $$;

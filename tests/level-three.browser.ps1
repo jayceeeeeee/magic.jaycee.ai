@@ -6,11 +6,12 @@ function Read-BrowserSource($path) {
   return ((Get-Content -LiteralPath $path -Raw -Encoding UTF8) -replace '(?s)import\s+.*?from\s+["''][^"'']+["''];', '').Replace('export ', '')
 }
 $prelude = (Read-BrowserSource 'src/js/config/game-config.js') + (Read-BrowserSource 'src/js/jaycee/notifications.js')
+$prelude += Read-BrowserSource 'tests/manna.test.mjs'
 $checks = ''
 foreach ($path in @('tests/notifications.test.mjs', 'tests/level-two-quest.test.mjs', 'tests/level-three-quest.test.mjs', 'tests/level-four.test.mjs')) {
   $checks += "`nawait (async()=>{`n" + (Read-BrowserSource $path) + "`n})();`n"
 }
-$runtime = ConvertTo-Json -InputObject ((Read-BrowserSource 'src/js/jaycee/profile-runtime.js') + "`nreturn {createVitalsPanel,createSkillPanel,getActiveQuestInfo};") -Compress
+$runtime = ConvertTo-Json -InputObject ((Read-BrowserSource 'src/js/jaycee/profile-runtime.js') + "`nreturn {createVitalsPanel,createSkillPanel,getActiveQuestInfo,getMannaModel};") -Compress
 $editor = ConvertTo-Json -InputObject ((Read-BrowserSource 'src/js/jaycee/game-editor.js') + "`nreturn createSkillsSection;") -Compress
 $accountSource = Read-BrowserSource 'src/js/jaycee/account.js'
 $accountSource = $accountSource.Substring(0, $accountSource.LastIndexOf('if (document.readyState'))
@@ -19,6 +20,7 @@ $browser = @'
 const assert=(value,message)=>{if(!value)throw new Error(message)};
 const display=value=>String(value??'').trim();
 const runtime=new Function('JAYCEE_GAME_CONFIG','getDisplayValue','isQuestPending','notificationOccurrence','isNotificationVisible','interpolateNotification','renderSkillMarkdown',RUNTIME)(JAYCEE_GAME_CONFIG,display,isQuestPending,notificationOccurrence,isNotificationVisible,interpolateNotification,(element,markdown)=>{element.textContent=markdown});
+runMannaTests(runtime.getMannaModel);
 const models=[1,2,3].map(level=>({skillLabel:`Skill ${level}`,skill:{id:level},passiveSeconds:100,questSeconds:20}));
 const definitions=[{id:'level_three_prepare.v1',stage:'linked_master',title:'Quest',tone:'quest',content:{level:3,occurrence:'level',action:'accept_quest',text:['Review {passiveSkillName} and {skillTwoName}.','In the meantime practice {skillOneName}.']}},{id:'master_linked.v1',stage:'linked_master',title:'Quest',tone:'quest',content:{component:'linked_quest'}}];
 let accepted=0,switched;
@@ -69,7 +71,9 @@ const levelFour={...active,level:4};
 const ultimate=runtime.createSkillPanel({activeModels:models,currentLevel:4,passiveModel:{skill:null},ultimateModel:{skillLabel:'Ultimate',skillDescription:'Permanent ultimate description'},player:levelFour,selectedIndex:4});
 assert(ultimate.textContent.includes('Permanent ultimate description')&&!ultimate.querySelector('[data-practice-toggle]')&&!ultimate.querySelector('[data-quest-deadline]'),'Ultimate is not description-only');
 assert(!ultimate.querySelector('[data-skill-index="4"]').disabled,'Ultimate remains locked at Level 4');
-assert(runtime.getActiveQuestInfo({activeModels:models,player:levelFour}).deadline===null,'Level 4 has a quest timer');
+assert(runtime.getActiveQuestInfo({activeModels:models,player:levelFour}).deadline!==null,'Level 4 active skill timer is missing');
+const levelFourActive=runtime.createSkillPanel({activeModels:models,currentLevel:4,passiveModel:{skill:null},player:levelFour,selectedIndex:3});
+assert(levelFourActive.querySelector('[data-skill-practice-details]')&&levelFourActive.querySelector('[data-quest-deadline]'),'Level 4 active descriptions lost their countdown/practice details');
 assert(!isNotificationVisible(definitions[1],null,{hasAccount:true,hasMaster:true,player:levelFour}),'Timed quest still visible at Level 4');
 let savedProfile;
 const client={from(){return{update(values){savedProfile=values;saveOrder.push('profile');return{eq:async()=>({error:null})}}}}};
@@ -80,11 +84,13 @@ assert(document.querySelector('.is-master').textContent.includes('Linked Master'
 window.dispatchEvent(new CustomEvent('jaycee:player-updated',{detail:{player}}));await new Promise(resolve=>setTimeout(resolve,10));assert(!document.querySelector('.is-skills').hidden,'Account Skills did not unlock at Level 3');
 window.dispatchEvent(new CustomEvent('jaycee:player-updated',{detail:{player:{...player,id:'another-game',level:1}}}));assert(!document.querySelector('.is-skills').hidden,'Another game removed earned account features');
 const accountSkills=document.querySelector('.is-skills');
+const mannaCycle=document.querySelector('[name=manna_cycle]');assert([...mannaCycle.options].some(option=>option.value==='hour'),'Hour cycle missing from account selector');mannaCycle.value='hour';
 accountSkills.querySelector('[name=skill_0_label]').value='Saved via main account button';
 document.querySelector('[data-account-toggle]').click();
 document.querySelector('[data-account-save]').click();await new Promise(resolve=>setTimeout(resolve,20));
 assert(savePayload.skills[0].label==='Saved via main account button','Main account Save did not save skills');
 assert(document.querySelector('[data-account-save-status]').textContent==='Saved.','Account Save did not complete');
+assert(savedProfile.manna_cycle==='hour','Account Save did not persist Hour cycle');
 const visibility=document.querySelector('[name=visibility]');assert(visibility.closest('label').hidden,'Visibility control available below Level 4');
 window.dispatchEvent(new CustomEvent('jaycee:player-updated',{detail:{player:levelFour}}));await new Promise(resolve=>setTimeout(resolve,10));
 assert(!visibility.closest('label').hidden,'Visibility control did not unlock at Level 4');

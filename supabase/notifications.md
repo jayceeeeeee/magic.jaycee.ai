@@ -50,6 +50,32 @@ Completing the third active skill reaches Level 4, where timed quest progression
 Keep the RPC's target ratios aligned with `src/js/config/game-config.js`.
 The life bar is `(age in years + years_burned) / 1000000`.
 
+Manna supports Year, Month, Day and Hour target cycles. `profiles.manna_cycle` is
+already text, so Hour requires no database migration. Each active skill has its own
+Manna calculation from its saved start timestamp and practice counter:
+`target = manna_target * passive_seconds / manna_cycle_seconds`,
+`loss = -target * min(elapsed_seconds, passive_seconds) / passive_seconds`,
+`gain = target * practice_seconds / quest_seconds`.
+Other active skills' practice is not added to that skill's balance. Selection shows
+the selected skill's result directly, without scaling a shared balance to match.
+Targets below one unit retain their correct bar scale. An unaccepted current quest
+is paused; earlier unlocked skills retain their independent calculations.
+
+Selected skill details take priority over an ongoing practice's display. Below
+Level 4, no selection uses the practiced skill, then the current quest's skill.
+At Level 4, closing a description retains the last selected Manna view for the page;
+with no selection history it defaults to the practiced skill or Skill 3. Switching
+Master clears that selection history. Passive and Ultimate retain an annual overview using `permanent_account_at`
+(with saved skill-clock fallbacks) and practice credits from unlocked skills. That
+overview is not projected onto active skills. Calendar-month conversion for an
+active skill uses its own start month. Manna remains derived from existing saved
+clocks/counters; no new database balance column is created.
+
+Because targets are proportional to passive duration, the instantaneous currency
+loss rate simplifies to `manna_target / manna_cycle_seconds` before the period cap
+(for the same target-cycle length). Independent calculations do not force that
+rate to differ; skill clocks, caps, practice durations and gains remain skill-specific.
+
 ## Level 3 and Master games
 
 `sql/level_three_and_master_games.sql` was applied as `level_three_master_games`.
@@ -115,9 +141,20 @@ profile currently linked by `profiles.master`. Both notices are dismissible and
 use stable player/level occurrences. The timed linked quest is hidden at Level 4.
 
 Ultimate is a description-only ability, like Passive: no countdown, target, Start
-button or practice timer. Earlier active skills can still be practiced voluntarily,
-but there are no quest deadlines or further level/reward advancement at Level 4.
-The progression RPC stops advancing at Level 4 and does not initialize new clocks.
+button or practice timer. Earlier active skills retain their descriptions' countdown,
+practice progress and Start/Stop controls at Level 4. They do not grant further
+level/reward advancement or create another quest notification.
+
+`sql/level_four_repeating_skill_cycles.sql` was applied as
+`level_four_repeating_skill_cycles`. On Level 4+ sync, expired or missing active-skill
+start timestamps restart at the current server time. Only the affected clocks
+change: practice counters, level, rewards, accepted state and permanent milestone
+are preserved. Durations match game-config.js (2551442.803, 86400 and 3600 seconds).
+Pre-Level 4 quest clocks keep their existing behavior. The page checks for expired
+cycles each second and syncs only when needed, with one request at a time and a
+retry delay on failure. Load/practice sync handles expiry while the page was closed.
+Queued practice is flushed before a background renewal. Ongoing Level 4 practice
+is retained and uses the new clock for future saves.
 
 `profiles.permanent_account_at` records the milestone automatically when the linked
 participation reaches Level 4. Existing linked Level 4+ profiles are backfilled.
@@ -216,10 +253,17 @@ Historic dismissals before this feature cannot be reconstructed.
   browser visibility changes, legacy publication protection, anonymous discovery,
   missing slots and blank skill names. All test changes are rolled back.
 - `tests/level-four.test.mjs`: unlock receipt scope, dismissal, and absence of a Level 4 quest/Accept.
+- `tests/manna.test.mjs` (run through the browser harness): independent skill clocks,
+  practice isolation and skill-specific gains, Hour and calendar-month conversion,
+  fractional targets, passive loss caps, pending quest pause, annual passive view
+  and last-selection/Skill 3 fallback at Level 4.
 - `supabase/tests/level_four_permanent_accounts.sql`: automatic Level 4 transition,
-  permanent milestone/link, no further levels/rewards/clocks, visibility authorization,
+  permanent milestone/link, no further levels/rewards, visibility authorization,
   complete public game discovery and permanent access after participation changes.
   All fixture changes are rolled back.
+- `supabase/tests/level_four_repeating_skill_cycles.sql`: only expired clocks renew,
+  practice/level/rewards/milestones remain unchanged, practice saves survive renewal,
+  stale cycle saves are ignored and earlier quest clocks do not renew. Rolled back.
 - `tests/notifications.sql`: execute as postgres with two existing auth users. It
   exercises the actual `anon` / `authenticated` roles, idempotency and RLS allow/deny
   paths inside a transaction which is rolled back.

@@ -38,6 +38,7 @@ const ACTIVE_RING_LIMIT = 3;
 const YEAR_SECONDS = JAYCEE_GAME_CONFIG.passive.cycleSeconds;
 const DAY_SECONDS = 24 * 60 * 60;
 const MANNA_CYCLE_SECONDS = {
+  hour: 60 * 60,
   day: DAY_SECONDS,
   month: YEAR_SECONDS / 12,
   year: YEAR_SECONDS
@@ -224,34 +225,47 @@ const getSelectedActiveLevel = (player, selectedAbilityIndex = 0) => {
     : level;
 };
 
-const getMannaModel = ({ activeModels = [], player, playerProfile, selectedAbilityIndex = 0, now = new Date() }) => {
-  const level = getSelectedActiveLevel(player, selectedAbilityIndex);
+const getMannaModel = ({ activeModels = [], player, playerProfile, selectedAbilityIndex = null, lastSelectedAbilityIndex = null, practicingSkillIndex = null, now = new Date() }) => {
+  const level = Math.min(ACTIVE_RING_LIMIT, Math.max(1, Number(player?.level) || 1));
+  const hasQuest = Number(player?.level) < 4;
   const mannaTarget = Number(playerProfile?.manna_target);
   const mannaCycle = normalizeMannaCycle(playerProfile?.manna_cycle);
   const mannaUnit = normalizeMannaUnit(playerProfile?.manna_unit);
-  const activeModel = activeModels[level - 1];
-  const questStart = new Date(player?.[`skill_${level}_start`] || "");
-  const periodSeconds = Number(activeModel?.passiveSeconds);
-  const activeCycleSeconds = Number(activeModel?.questSeconds);
-
-  if ((level === Number(player?.level) && isQuestPending(player))
-    || !Number.isFinite(questStart.getTime()) || !(periodSeconds > 0) || !(activeCycleSeconds > 0)) {
-    return { maxAbs: 1, target: 0, unit: mannaUnit, value: 0 };
+  const viewIndex = selectedAbilityIndex ?? (hasQuest ? practicingSkillIndex : lastSelectedAbilityIndex ?? practicingSkillIndex ?? 3);
+  const skillNumber = viewIndex >= 1 && viewIndex <= level ? viewIndex
+    : viewIndex == null && hasQuest ? level : null;
+  const skillModel = skillNumber === null ? null : activeModels[skillNumber - 1];
+  const periodSeconds = skillModel ? Number(skillModel.passiveSeconds) : YEAR_SECONDS;
+  const startedAt = new Date((skillNumber !== null ? player?.[`skill_${skillNumber}_start`]
+    : playerProfile?.permanent_account_at || player?.skill_3_start || player?.skill_1_start) || "");
+  const cycleSeconds = getMannaCycleSeconds(mannaCycle, Number.isFinite(startedAt.getTime()) ? startedAt : now);
+  const periodTarget = Number.isFinite(mannaTarget) && periodSeconds > 0
+    ? mannaTarget * periodSeconds / cycleSeconds : 0;
+  let value = 0;
+  const paused = isQuestPending(player) && (skillNumber === null || skillNumber === Number(player?.level));
+  if (!paused && Number.isFinite(startedAt.getTime()) && periodSeconds > 0) {
+    const elapsedSeconds = Math.min(periodSeconds, Math.max(0, (now.getTime() - startedAt.getTime()) / 1000));
+    if (skillNumber !== null) {
+      // Each active skill keeps its own clock, practice, gain and loss calculation.
+      const practiceSeconds = Math.max(0, Number(player?.[`skill_${skillNumber}_practice`]) || 0);
+      const questSeconds = Number(skillModel?.questSeconds);
+      value = -periodTarget * elapsedSeconds / periodSeconds
+        + (questSeconds > 0 ? periodTarget * practiceSeconds / questSeconds : 0);
+    } else {
+      // Keep the annual overview, without projecting its balance onto active skills.
+      const earnedSeconds = activeModels.slice(0, level).reduce((sum, model, index) => {
+        const passiveSeconds = Number(model.passiveSeconds);
+        const questSeconds = Number(model.questSeconds);
+        const practiceSeconds = Math.max(0, Number(player?.[`skill_${index + 1}_practice`]) || 0);
+        return passiveSeconds > 0 && questSeconds > 0
+          ? sum + practiceSeconds * passiveSeconds / questSeconds : sum;
+      }, 0);
+      value = periodTarget * (earnedSeconds - elapsedSeconds) / periodSeconds;
+    }
   }
 
-  const elapsedSeconds = Math.min(periodSeconds, Math.max(0, (now.getTime() - questStart.getTime()) / 1000));
-  const periodTarget = Number.isFinite(mannaTarget)
-    ? mannaTarget * (periodSeconds / getMannaCycleSeconds(mannaCycle, questStart))
-    : 0;
-  const practiceSeconds = Number(player?.[`skill_${level}_practice`]) || 0;
-  const negativeManna = -periodTarget * (elapsedSeconds / periodSeconds);
-  const positiveManna = activeCycleSeconds > 0
-    ? periodTarget * (practiceSeconds / activeCycleSeconds)
-    : 0;
-  const value = negativeManna + positiveManna;
-
   return {
-    maxAbs: Math.max(1, Math.abs(periodTarget)),
+    maxAbs: Math.abs(periodTarget) || 1,
     target: periodTarget,
     unit: mannaUnit,
     value
@@ -580,7 +594,7 @@ const getActiveQuestInfo = ({ activeModels = [], player = null, selectedAbilityI
     };
   }
 
-  const startedAt = Number(player?.level) >= 4 || (level === Number(player?.level) && isQuestPending(player))
+  const startedAt = level === Number(player?.level) && isQuestPending(player)
     ? NaN : Date.parse(player?.[`skill_${level}_start`] || "");
   const practiceSeconds = Math.max(0, Number(player?.[`skill_${level}_practice`]) || 0);
   const remainingPracticeSeconds = Math.max(0, Number(activeModel.questSeconds) - practiceSeconds);
@@ -700,6 +714,8 @@ const createVitalsPanel = ({
   adminProfile = null,
   publicProfiles = [],
   selectedAbilityIndex,
+  lastMannaAbilityIndex = null,
+  practicingSkillIndex = null,
   totalLevel = 1
 }) => {
   const panel = document.createElement("section");
@@ -739,7 +755,7 @@ const createVitalsPanel = ({
   const noticeMasterUsernameElement = document.createElement("i");
   const noticeMasterContent = document.createDocumentFragment();
   const mannaModel = effectivePlayer && playerProfile
-    ? getMannaModel({ activeModels, player: effectivePlayer, playerProfile, selectedAbilityIndex })
+    ? getMannaModel({ activeModels, player: effectivePlayer, playerProfile, selectedAbilityIndex, lastSelectedAbilityIndex: lastMannaAbilityIndex, practicingSkillIndex })
     : null;
   const prayerActiveMs = getPendingPrayerActiveMs();
   const firstActiveSkillMs = getFirstActiveSkillMs();
@@ -1048,7 +1064,7 @@ const createSkillPanel = ({
 
   if (activeAbility && currentLevel >= activeAbility.unlockLevel) {
     description.classList.toggle("is-closing", isDescriptionClosing);
-    if (activeAbility.type === "active" && currentLevel < 4) {
+    if (activeAbility.type === "active") {
       const details = document.createElement("div");
       const countdown = document.createElement("p");
       const progress = document.createElement("p");
@@ -1164,6 +1180,9 @@ export const initJayceePage = async () => {
   let closingAbilityIndex = null;
   let descriptionCloseTimer = 0;
   let selectedAbilityIndex = null;
+  let lastMannaAbilityIndex = null;
+  let cycleRefreshInFlight = false;
+  let cycleRefreshRetryAt = 0;
   let isMasterSaving = false;
   let masterLinkError = "";
   let supabaseClient = null;
@@ -1199,7 +1218,11 @@ export const initJayceePage = async () => {
     // A reset in another tab also ends practice against the previous quest clock.
     if (practice?.active?.playerId === player.id
       && practice.active.questStart !== (player[`skill_${practice.active.skillNumber}_start`] || null)) {
-      practice.active = null;
+      if (Number(previous?.level) >= 4 && Number(player.level) >= 4) {
+        practice.active.questStart = player[`skill_${practice.active.skillNumber}_start`] || null;
+      } else {
+        practice.active = null;
+      }
     }
     if (completed_occurrence) notifications?.record('master_linked.v1', 'completed', completed_occurrence);
     if (progressed) {
@@ -1338,6 +1361,8 @@ export const initJayceePage = async () => {
       profile: currentProfile,
       publicProfiles,
       selectedAbilityIndex,
+      lastMannaAbilityIndex,
+      practicingSkillIndex: practice?.active?.skillNumber ?? null,
       totalLevel: getPlayerLevelTotal(playerRows)
     });
 
@@ -1395,6 +1420,7 @@ export const initJayceePage = async () => {
 
         closingAbilityIndex = null;
         selectedAbilityIndex = index;
+        lastMannaAbilityIndex = index;
         sounds.play('skillOpen');
         renderCoreParameters();
         renderVitalsPanel();
@@ -1449,7 +1475,9 @@ export const initJayceePage = async () => {
     });
     const mannaModel = player && playerProfile ? getMannaModel({
       activeModels: models, player, playerProfile,
-      selectedAbilityIndex: activeSkill ?? selectedAbilityIndex
+      selectedAbilityIndex,
+      lastSelectedAbilityIndex: lastMannaAbilityIndex,
+      practicingSkillIndex: activeSkill ?? null
     }) : null;
 
     updateVitalBar(shell.querySelector("[data-profile-vitals] .is-manna"), {
@@ -1487,6 +1515,34 @@ export const initJayceePage = async () => {
     if (Number(currentPlayer?.level) < 4 && activeSkill === quest && models[quest - 1]?.skill
       && Number(player?.[`skill_${quest}_practice`]) >= models[quest - 1].questSeconds) {
       practice.stop();
+    }
+  };
+
+  const refreshExpiredSkillCycles = async () => {
+    if (!supabaseClient || !currentPlayer?.id || Number(currentPlayer.level) < 4 || cycleRefreshInFlight || Date.now() < cycleRefreshRetryAt) return;
+    const models = getActiveSkillModels({ gameForm, skillForms });
+    const expired = models.some((model, index) => {
+      if (!model.skill) return false;
+      const startedAt = Date.parse(currentPlayer?.[`skill_${index + 1}_start`] || "");
+      return !Number.isFinite(startedAt) || Date.now() >= startedAt + model.passiveSeconds * 1000;
+    });
+    if (!expired) return;
+    cycleRefreshInFlight = true;
+    const playerId = currentPlayer.id;
+    try {
+      // Save queued practice against its old clock before renewing any cycle.
+      if (practice) await practice.flush();
+      if (practice?.error) throw new Error(practice.error);
+      const result = await syncSkillProgress(supabaseClient, playerId);
+      if (currentPlayer?.id === playerId) {
+        applySkillProgress(result);
+        updateLiveUI();
+      }
+    } catch (error) {
+      console.warn("Jaycee skill cycles could not be refreshed", error);
+      cycleRefreshRetryAt = Date.now() + 5000;
+    } finally {
+      cycleRefreshInFlight = false;
     }
   };
 
@@ -1530,6 +1586,7 @@ export const initJayceePage = async () => {
       playerProfile = { ...playerProfile, master: masterProfile.id };
       currentPlayer = player;
       selectedAbilityIndex = null;
+      lastMannaAbilityIndex = null;
       closingAbilityIndex = null;
       if (descriptionCloseTimer) window.clearTimeout(descriptionCloseTimer);
       descriptionCloseTimer = 0;
@@ -1758,6 +1815,7 @@ export const initJayceePage = async () => {
       }, 100);
       questClock = window.setInterval(() => {
         shell.querySelectorAll("[data-quest-deadline]").forEach((element) => updateQuestCountdown(element));
+        void refreshExpiredSkillCycles();
       }, 1000);
     };
     startClocks();
