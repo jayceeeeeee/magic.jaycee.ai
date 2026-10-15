@@ -18,7 +18,10 @@ const clientMock = () => {
   api.from = (table) => {
     const query = {
       select() { return query; }, eq() { return query; }, order() { return query; }, range() { return query; },
-      then(resolve, reject) { return Promise.resolve({ data: table === 'notifications' ? api.definitions : api.receipts }).then(resolve, reject); }
+      then(resolve, reject) { return Promise.resolve({
+        data: table === 'notifications' ? api.definitions : api.receipts,
+        error: table === 'user_notifications' && api.failRead ? new Error('offline') : null
+      }).then(resolve, reject); }
     };
     return query;
   };
@@ -69,6 +72,30 @@ assert(!device.receipt('quest.v1').completed_at, 'Recording a click must not com
 device.record('quest.v1', 'completed');
 await device.flush();
 assert(device.receipt('quest.v1').completed_at, 'Game resolution must persist');
+
+// Database resets must also remove the corresponding acknowledged browser history.
+client.receipts = [];
+await device.load();
+assert(!device.receipt('quest.v1') && !device.receipt('notice.v1'), 'Deleted server receipts must clear synced local history');
+const afterReset = new NotificationStore({ client, storage: device.storage, userId: 'alice' });
+assert(!afterReset.receipt('quest.v1'), 'Reset must persist in browser storage after reload');
+client.receipts = [{ notification_id: 'notice.v1', occurrence: 'once', read_at: null, completed_at: null }];
+await device.load();
+assert(!device.receipt('notice.v1')?.read_at, 'Null server timestamps must clear cached acknowledgements');
+
+// A reset must not discard genuine offline actions that have not synced yet.
+client.fail = true;
+device.record('quest.v1', 'clicked');
+await device.flush();
+await device.load();
+assert(device.receipt('quest.v1').clicked_at, 'Pending offline actions must survive receipt reconciliation');
+assert(Object.keys(device.state.pending).length === 1, 'Pending actions must remain queued while offline');
+client.fail = false;
+await device.flush();
+client.failRead = true;
+await device.load();
+assert(device.receipt('quest.v1').clicked_at, 'Failed receipt fetch must keep cached history');
+client.failRead = false;
 
 const brokenStorage = { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } };
 const restricted = new NotificationStore({ client, storage: brokenStorage, userId: 'alice' });

@@ -105,6 +105,7 @@ export class NotificationStore {
         if (this.write(this.storageKey, this.state)) {
           try { this.storage?.removeItem(guestKey); } catch { /* Retry transfer next visit. */ }
         }
+        const remoteReceipts = {};
         for (let offset = 0; ; offset += 1000) {
           const { data: receipts, error: receiptError } = await this.client.from('user_notifications')
             .select('notification_id, occurrence, read_at, dismissed_at, clicked_at, completed_at')
@@ -112,11 +113,23 @@ export class NotificationStore {
           if (receiptError) throw receiptError;
           for (const row of receipts || []) {
             const key = keyFor(row.notification_id, row.occurrence);
-            const local = this.state.receipts[key] ||= {};
-            for (const field of Object.values(fields)) if (row[field]) local[field] = row[field];
+            const receipt = remoteReceipts[key] ||= {};
+            for (const field of Object.values(fields)) if (row[field]) receipt[field] = row[field];
           }
           if ((receipts || []).length < 1000) break;
         }
+        // A successful full fetch is authoritative, including deleted/reset receipts.
+        // Retain only local actions still waiting to be uploaded, not old synced history.
+        this.mergeLocal();
+        for (const event of Object.values(this.state.pending)) {
+          const key = keyFor(event.notification_id, event.occurrence);
+          const field = fields[event.action];
+          if (!field) continue;
+          const receipt = remoteReceipts[key] ||= {};
+          receipt[field] ||= this.state.receipts[key]?.[field] || new Date().toISOString();
+          if (event.action === 'clicked' || event.action === 'dismissed') receipt.read_at ||= receipt[field];
+        }
+        this.state.receipts = remoteReceipts;
         this.write(this.storageKey, this.state);
         await this.flush();
       }

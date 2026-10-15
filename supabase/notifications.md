@@ -87,6 +87,13 @@ page restoration. Successful loads restore receipts from Supabase for other devi
 storage events share local acknowledgements between tabs. Identity changes reload
 the game so stale state cannot be attributed to the next account.
 
+After a successful full receipt fetch, the database replaces acknowledged local
+history, including deleted receipts and timestamps reset to null. Unsynced outbox
+actions are retained and retried. An offline/failed fetch keeps the cached history.
+When manually resetting a quest for testing, reset its player acceptance/clock and
+the corresponding notification receipts, then reload the page. Resetting only the
+player does not clear an already read unlock notification.
+
 If local storage is blocked, the notification store works in memory and authenticated
 RPC writes still work. Guest state and unsent events cannot survive closing the page
 without working browser storage. Clearing browser data also clears guest receipts.
