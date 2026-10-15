@@ -1,25 +1,61 @@
-import { fetchUserGameSettings, fetchSkillsByIds, saveOwnGame } from "../config/data.js";
+﻿import { fetchUserGameSettings, fetchSkillsByIds, saveOwnGame } from "../config/data.js";
 import { JAYCEE_GAME_SKILL_COLUMNS } from "../config/game-config.js";
 
 export const createSkillsSection = ({ client, profile, createSection }) => {
   const { section, content } = createSection("Skills", "is-skills");
-  const form = document.createElement("form");
+  const editor = document.createElement("div");
   const fields = document.createElement("fieldset");
-  const intro = document.createElement("p");
+  const selectorLabel = document.createElement("label");
+  const selectorCaption = document.createElement("span");
+  const selector = document.createElement("select");
   const status = document.createElement("p");
-  const save = document.createElement("button");
   const retry = document.createElement("button");
   const inputs = [];
+  const slots = ["Passive", "Skill 1", "Skill 2", "Skill 3", "Ultimate"];
+  let savedSkills = [];
   let loaded = false;
   let loading = null;
 
   section.hidden = true;
   section.inert = true;
-  form.className = "jaycee-game-editor";
+  editor.className = "jaycee-game-editor";
   fields.className = "profile-game-skill-fields";
   fields.disabled = true;
-  intro.textContent = "Create your own game and share your skills as a Master. Add instructions and resource links in Markdown.";
-  ["Passive", "Skill 1", "Skill 2", "Skill 3", "Ultimate"].forEach((slot, index) => {
+  selector.name = "skill_selector";
+  selectorCaption.textContent = "Skill";
+  slots.forEach((slot, index) => {
+    const option = document.createElement("option");
+    option.value = String(index);
+    option.textContent = index === 4 ? "Ultimate · Locked" : slot;
+    option.disabled = index === 4;
+    selector.append(option);
+  });
+  selectorLabel.append(selectorCaption, selector);
+  fields.append(selectorLabel);
+
+  const resizeDescription = (description) => {
+    if (!description.getClientRects().length) return;
+    if (!description.value) {
+      description.style.height = "36px";
+      return;
+    }
+    description.style.height = "auto";
+    const border = description.offsetHeight - description.clientHeight;
+    description.style.height = `${Math.min(200, Math.max(36, description.scrollHeight + border))}px`;
+  };
+  const resizeSelected = () => {
+    const selected = inputs[Number(selector.value)];
+    if (selected) resizeDescription(selected.description);
+  };
+  const showSelected = () => {
+    if (Number(selector.value) >= 4) selector.value = "0";
+    inputs.forEach(({ group }, index) => { group.hidden = index !== Number(selector.value); });
+    resizeSelected();
+  };
+  selector.addEventListener("change", showSelected);
+
+  // Ultimate is kept in the saved payload, with no editable controls.
+  slots.slice(0, 4).forEach((_slot, index) => {
     const group = document.createElement("div");
     const label = document.createElement("label");
     const caption = document.createElement("span");
@@ -28,78 +64,99 @@ export const createSkillsSection = ({ client, profile, createSection }) => {
     const descriptionCaption = document.createElement("span");
     const description = document.createElement("textarea");
     group.className = "profile-game-skill";
-    caption.textContent = `${slot} name`;
+    group.hidden = index !== 0;
+    caption.textContent = "Name";
     name.name = `skill_${index}_label`;
     name.maxLength = 120;
-    descriptionCaption.textContent = `${slot} description & resources`;
+    descriptionCaption.textContent = "Description";
     description.name = `skill_${index}_description`;
-    description.rows = 4;
+    description.rows = 1;
+    description.placeholder = "Put your skill description in markdown format.";
     description.maxLength = 20000;
+    description.addEventListener("input", () => resizeDescription(description));
     label.append(caption, name);
     descriptionLabel.append(descriptionCaption, description);
     group.append(label, descriptionLabel);
     fields.append(group);
-    inputs.push({ name, description });
+    inputs.push({ name, description, group });
   });
-  save.type = "submit";
-  save.className = "account-button account-button-primary";
-  save.textContent = "Create game";
   retry.type = "button";
   retry.textContent = "Retry";
   retry.hidden = true;
   status.setAttribute("role", "status");
-  fields.append(save);
-  form.append(fields, status, retry);
-  content.append(intro, form);
+  status.hidden = true;
+  editor.append(fields, status, retry);
+  content.append(editor);
+  const setStatus = (message) => {
+    status.textContent = message;
+    status.hidden = !message;
+  };
 
   const load = () => {
     if (loaded || loading) return loading;
-    status.textContent = "Loading your game...";
+    setStatus("Loading your game...");
     retry.hidden = true;
     loading = (async () => {
       const game = await fetchUserGameSettings(client, profile);
       const skills = await fetchSkillsByIds(client, JAYCEE_GAME_SKILL_COLUMNS.map((column) => game?.[column]));
-      inputs.forEach(({ name, description }, index) => {
-        const skill = skills.find((item) => item.id === game?.[JAYCEE_GAME_SKILL_COLUMNS[index]]);
-        name.value = skill?.label || "";
-        description.value = skill?.description || "";
+      savedSkills = JAYCEE_GAME_SKILL_COLUMNS.map((column) => {
+        const skill = skills.find((item) => item.id === game?.[column]);
+        return { label: skill?.label || "", description: skill?.description || "" };
       });
-      save.textContent = game ? "Save game" : "Create game";
+      inputs.forEach(({ name, description }, index) => {
+        name.value = savedSkills[index].label;
+        description.value = savedSkills[index].description;
+      });
       fields.disabled = false;
       loaded = true;
-      status.textContent = "";
+      setStatus("");
+      window.requestAnimationFrame(resizeSelected);
     })().catch((error) => {
-      status.textContent = error?.message || "Your game could not be loaded.";
+      setStatus(error?.message || "Your game could not be loaded.");
       retry.hidden = false;
     }).finally(() => { loading = null; });
     return loading;
   };
   retry.addEventListener("click", load);
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    if (!loaded || fields.disabled || section.hidden) return;
-    const skills = inputs.map(({ name, description }) => ({ label: name.value.trim(), description: description.value.trim() }));
-    if (skills.some((skill) => skill.description && !skill.label)) {
-      status.textContent = "Add a name for each skill that has a description.";
-      return;
-    }
-    fields.disabled = true;
-    status.textContent = "Saving your game...";
-    try {
-      await saveOwnGame(client, skills);
-      save.textContent = "Save game";
-      status.textContent = "Game saved.";
-      window.dispatchEvent(new CustomEvent("jaycee:account-updated", { detail: { profile: { ...profile } } }));
-    } catch (error) {
-      status.textContent = error?.message || "Your game could not be saved. Please try again.";
-    } finally {
-      fields.disabled = false;
-    }
-  });
+  // Resize when the account panel opens or its available width changes.
+  if (window.ResizeObserver) {
+    let previousWidth = 0;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry.contentRect.width !== previousWidth) {
+        previousWidth = entry.contentRect.width;
+        resizeSelected();
+      }
+    });
+    observer.observe(fields);
+  }
 
-  return { section, setUnlocked: (unlocked) => {
-    section.hidden = !unlocked;
-    section.inert = !unlocked;
-    if (unlocked) void load();
-  } };
+  return {
+    section,
+    setUnlocked: (unlocked) => {
+      section.hidden = !unlocked;
+      section.inert = !unlocked;
+      if (unlocked) void load();
+    },
+    getUpdates: () => {
+      if (section.hidden) return { skills: null };
+      if (!loaded) return { error: "Your skills have not loaded yet. Retry before saving." };
+      const skills = inputs.map(({ name, description }) => ({ label: name.value.trim(), description: description.value.trim() }));
+      const invalid = skills.findIndex((skill) => skill.description && !skill.label);
+      if (invalid !== -1) {
+        selector.value = String(invalid);
+        showSelected();
+        inputs[invalid].name.focus();
+        return { error: "Add a name for each skill that has a description." };
+      }
+      const changed = skills.some((skill, index) => skill.label !== savedSkills[index].label.trim()
+        || skill.description !== savedSkills[index].description.trim());
+      return { skills: changed ? [...skills, { ...savedSkills[4] }] : null };
+    },
+    setSaving: (saving) => { fields.disabled = saving || !loaded; },
+    save: async (skills) => {
+      if (!skills) return;
+      await saveOwnGame(client, skills);
+      savedSkills = skills.map((skill) => ({ ...skill }));
+    }
+  };
 };

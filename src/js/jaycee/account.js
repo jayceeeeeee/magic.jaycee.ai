@@ -482,8 +482,14 @@ export const initJayceeAccountPage = async () => {
         setStatus(saveStatus, mapsResult.error, true);
         return;
       }
+      const skillsResult = skills.getUpdates();
+      if (skillsResult.error) {
+        setStatus(saveStatus, skillsResult.error, true);
+        return;
+      }
 
       saveButton.disabled = true;
+      skills.setSaving(true);
       setStatus(saveStatus, "Saving...");
 
       try {
@@ -512,6 +518,7 @@ export const initJayceeAccountPage = async () => {
         if (error) throw error;
 
         Object.assign(profile, profileUpdates);
+        await skills.save(skillsResult.skills);
         setStatus(saveStatus, "Saved.");
         window.JayceeAuth?.refreshHeader?.();
         window.dispatchEvent(new CustomEvent("jaycee:account-updated", {
@@ -524,6 +531,7 @@ export const initJayceeAccountPage = async () => {
         setStatus(saveStatus, error?.message || "Account could not be saved.", true);
       } finally {
         saveButton.disabled = false;
+        skills.setSaving(false);
       }
     });
   } catch (error) {

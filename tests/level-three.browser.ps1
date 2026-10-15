@@ -37,14 +37,28 @@ assert(runtime.getActiveQuestInfo({activeModels:models,player}).deadline===null,
 assert(runtime.getActiveQuestInfo({activeModels:models,player:active}).deadline!==null,'Accepted Level 3 clock missing');
 for(const row of [player,active]){const skills=runtime.createSkillPanel({activeModels:models,currentLevel:3,passiveModel:{skill:null},player:row,selectedIndex:3});assert(skills.querySelector('[data-practice-toggle]').disabled===isQuestPending(row),'Wrong practice availability');}
 let savePayload;
-const createSkillsSection=new Function('fetchUserGameSettings','fetchSkillsByIds','saveOwnGame','JAYCEE_GAME_SKILL_COLUMNS',EDITOR)(async()=>null,async()=>[],async(...args)=>{savePayload={skills:args[1],argumentCount:args.length}},JAYCEE_GAME_SKILL_COLUMNS);
+const createSkillsSection=new Function('fetchUserGameSettings','fetchSkillsByIds','saveOwnGame','JAYCEE_GAME_SKILL_COLUMNS',EDITOR)(async()=>({skill_4:'ultimate'}),async()=>[{id:'ultimate',label:'Existing ultimate',description:'Keep these resources'}],async(...args)=>{savePayload={skills:args[1],argumentCount:args.length}},JAYCEE_GAME_SKILL_COLUMNS);
 const profile={id:'user',master:'old',username:'User'};
 const editor=createSkillsSection({client:{},profile,createSection:()=>{const section=document.createElement('section'),content=document.createElement('div');section.append(content);return{section,content}}});
 assert(editor.section.hidden,'Skills visible before unlock');editor.setUnlocked(true);document.body.append(editor.section);await new Promise(resolve=>setTimeout(resolve,10));
 assert(!editor.section.querySelector('input[type=checkbox]'),'User can change visibility');
-const form=editor.section.querySelector('form');editor.section.querySelector('[name=skill_1_description]').value='Resources without a skill name';form.dispatchEvent(new Event('submit',{cancelable:true}));await Promise.resolve();assert(!savePayload,'Description without a name saved');
+assert(!editor.section.querySelector('button[type=submit]'),'Separate game Save button still present');
+const selector=editor.section.querySelector('select');
+assert(selector.options.length===5&&selector.options[4].disabled&&selector.options[4].textContent.includes('Locked'),'Ultimate is not locked in the selector');
+assert(!editor.section.querySelector('[name=skill_4_label]'),'Ultimate has editable controls');
+assert([...editor.section.querySelectorAll('.profile-game-skill')].filter(group=>!group.hidden).length===1,'More than one skill visible');
+editor.section.querySelector('[name=skill_1_description]').value='Resources without a skill name';assert(editor.getUpdates().error,'Description without a name accepted');
 editor.section.querySelector('[name=skill_0_label]').value='My passive';editor.section.querySelector('[name=skill_1_label]').value='My first skill';editor.section.querySelector('[name=skill_1_description]').value='[Resources](https://example.com)';
-form.dispatchEvent(new Event('submit',{cancelable:true}));await new Promise(resolve=>setTimeout(resolve,10));assert(savePayload?.skills.length===5&&savePayload.argumentCount===2,'Game save must not submit visibility');
+selector.value='0';selector.dispatchEvent(new Event('change'));selector.value='1';selector.dispatchEvent(new Event('change'));
+assert(editor.section.querySelector('[name=skill_1_label]').value==='My first skill','Selection change lost draft edits');
+const description=editor.section.querySelector('[name=skill_1_description]');
+assert(description.rows===1&&description.placeholder==='Put your skill description in markdown format.','Description field is not compact');
+description.value='Long description\n'.repeat(30);description.dispatchEvent(new Event('input'));
+assert(parseFloat(description.style.height)<=200&&parseFloat(description.style.height)>36,'Description did not grow within its cap');
+description.value='[Resources](https://example.com)';description.dispatchEvent(new Event('input'));
+await editor.save(editor.getUpdates().skills);assert(savePayload?.skills.length===5&&savePayload.argumentCount===2,'Game save must not submit visibility');
+assert(savePayload.skills[4].label==='Existing ultimate'&&savePayload.skills[4].description==='Keep these resources','Saving changed the locked Ultimate');
+assert(editor.getUpdates().skills===null,'Unchanged skills would be saved again');
 assert(!Object.hasOwn(profile,'visibility'),'Game save modified profile visibility');
 assert(savePayload.skills[1].description.includes('Resources'),'Resource text lost');
 const client={from(){return{update(){return{eq:async()=>({error:null})}}}}};
@@ -53,6 +67,12 @@ const init=new Function('PROFILE_TABLE','USER_IMAGES_BUCKET','fetchProfileByUser
 await init();assert(document.querySelector('.is-skills').hidden,'Account Skills shown at Level 2');
 window.dispatchEvent(new CustomEvent('jaycee:player-updated',{detail:{player}}));await new Promise(resolve=>setTimeout(resolve,10));assert(!document.querySelector('.is-skills').hidden,'Account Skills did not unlock at Level 3');
 window.dispatchEvent(new CustomEvent('jaycee:player-updated',{detail:{player:{...player,id:'another-game',level:1}}}));assert(!document.querySelector('.is-skills').hidden,'Another game removed earned account features');
+const accountSkills=document.querySelector('.is-skills');
+accountSkills.querySelector('[name=skill_0_label]').value='Saved via main account button';
+document.querySelector('[data-account-toggle]').click();
+document.querySelector('[data-account-save]').click();await new Promise(resolve=>setTimeout(resolve,20));
+assert(savePayload.skills[0].label==='Saved via main account button','Main account Save did not save skills');
+assert(document.querySelector('[data-account-save-status]').textContent==='Saved.','Account Save did not complete');
 '@
 $browser = $browser.Replace('RUNTIME', $runtime).Replace('EDITOR', $editor).Replace('ACCOUNT', $account)
 $html = '<!doctype html><body>RUNNING<script>(async()=>{try{' + $prelude + $checks + $browser + "document.body.textContent='PASS: notifications, Level 2/3 acceptance, clocks, practice gating, italic skill names, Master carousel, game validation/save and live Skills unlock.';}catch(error){document.body.textContent='FAIL: '+error.stack;}})();</script>"

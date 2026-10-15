@@ -445,7 +445,7 @@
 .profile-game-skill-fields,
 .profile-game-skill {
   display: grid;
-  gap: 14px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -455,22 +455,19 @@
   border: 0;
 }
 
-.profile-game-skill {
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.12));
-}
-
-.profile-game-skill label {
+.profile-game-skill label,
+.profile-game-skill-fields > label {
   display: grid;
   gap: 6px;
 }
 
 .profile-game-skill input,
+.profile-game-skill-fields select,
 .profile-game-skill textarea {
   width: 100%;
   box-sizing: border-box;
-  resize: vertical;
-  padding: 10px;
+  min-width: 0;
+  padding: 7px 9px;
   color: var(--text);
   background: rgba(0, 0, 0, 0.25);
   border: 1px solid var(--border, rgba(255, 255, 255, 0.18));
@@ -478,7 +475,36 @@
   font: inherit;
 }
 
-.profile-game-skill label > span {
+.profile-game-skill textarea {
+  height: 36px;
+  min-height: 36px;
+  max-height: 200px;
+  line-height: 20px;
+  overflow-y: auto;
+  resize: none;
+}
+
+.has-account-panel select,
+.profile-fractal-select select {
+  color-scheme: dark;
+  background-color: #10211f;
+  color: #effffb;
+}
+
+.has-account-panel select option,
+.has-account-panel select optgroup,
+.profile-fractal-select select option {
+  background-color: #10211f;
+  color: #effffb;
+}
+
+.has-account-panel select option:disabled,
+.profile-fractal-select select option:disabled {
+  color: #91aaa5;
+}
+
+.profile-game-skill label > span,
+.profile-game-skill-fields > label > span {
   color: var(--muted);
   font-family: "Share Tech Mono", monospace;
   font-size: 0.68rem;
@@ -486,6 +512,7 @@
 }
 
 .profile-game-skill input:focus-visible,
+.profile-game-skill-fields select:focus-visible,
 .profile-game-skill textarea:focus-visible {
   outline: 1px solid var(--accent-soft);
   outline-offset: 2px;

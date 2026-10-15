@@ -75,10 +75,14 @@ Account Map and Skills unlocks use the highest level among the user's saved
 participations, so switching does not remove earned account features.
 
 The Skills section appears at Level 3, before quest acceptance. It edits five game
-slots (passive, three active, ultimate), with a name and Markdown description/resources
-for each. Its own Create/Save game button calls `save_own_game`; game and skill changes
-are transactional. Incomplete drafts remain editable. No special `profiles.role`
-is assigned.
+slots (passive, three active, ultimate). A selector shows one editable skill at a time;
+Ultimate is currently disabled and marked Locked. Its saved name/resources are
+preserved when editing the other four slots. Description textareas start at one line,
+grow with their text, and stop at 200px. Draft edits survive selector changes.
+The account's main Save button saves changed skills through `save_own_game`; the
+game/skills RPC is transactional, while the profile save remains a separate request.
+Unchanged or hidden skill settings are not submitted. Incomplete drafts remain
+editable. No special `profiles.role` is assigned.
 
 `sql/master_eligibility_and_visibility.sql` was subsequently applied as
 `master_eligibility_managed_visibility`. Master discovery and switching now share
