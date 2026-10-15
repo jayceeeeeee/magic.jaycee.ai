@@ -117,12 +117,14 @@
                 const button = event.currentTarget;
 
                 button.disabled = true;
-                await window.JayceeAuth?.signOut?.();
-                if (window.location.pathname === routes.account) {
-                    window.location.href = routes.login;
-                    return;
+                try {
+                    const { error } = await window.JayceeAuth.signOut();
+                    if (error) throw error;
+                    window.location.replace("/");
+                } catch (error) {
+                    console.error("Jaycee logout failed", error);
+                    button.disabled = false;
                 }
-                button.disabled = false;
             });
 
             requestAnimationFrame(updateTempleTextMotion);

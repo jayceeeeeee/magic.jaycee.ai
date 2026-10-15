@@ -9,11 +9,20 @@ export const interpolateNotification = (text, values) => String(text || '').repl
   /\{([a-zA-Z]+)\}/g, (token, key) => Object.hasOwn(values, key) ? String(values[key]) : token
 );
 
-export const notificationOccurrence = (definition, player) => definition.stage === 'linked_master'
-  ? `${player?.id || 'none'}:${Math.max(1, Number(player?.level) || 1)}:${player?.[`skill_${Math.min(3, Math.max(1, Number(player?.level) || 1))}_start`] || 'none'}`
-  : 'once';
+export const isLevelTwoQuestPending = (player) => Number(player?.level) === 2 && !player?.level_2_accepted_at;
 
-export const isNotificationVisible = (definition, receipt, { hasAccount, hasMaster }) => {
+export const notificationOccurrence = (definition, player) => {
+  if (definition.stage !== 'linked_master') return 'once';
+  const level = Math.max(1, Number(player?.level) || 1);
+  const key = `${player?.id || 'none'}:${level}`;
+  return definition.content?.occurrence === 'level' ? key
+    : `${key}:${player?.[`skill_${Math.min(3, level)}_start`] || 'none'}`;
+};
+
+export const isNotificationVisible = (definition, receipt, { hasAccount, hasMaster, player = null }) => {
+  if (definition.content?.level && Number(player?.level) !== definition.content.level) return false;
+  if (definition.content?.component === 'linked_quest' && isLevelTwoQuestPending(player)) return false;
+  if (definition.content?.action === 'accept_level_two' && !isLevelTwoQuestPending(player)) return false;
   const eligible = definition.stage === 'guest' ? !hasAccount
     : definition.stage === 'account' ? hasAccount
       : definition.stage === 'choose_master' ? hasAccount && !hasMaster

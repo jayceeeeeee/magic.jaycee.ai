@@ -1,6 +1,7 @@
 import { renderSkillMarkdown } from "./markdown.js";
 import { PracticeTimer } from "./practice-timer.js";
-import { NotificationStore, interpolateNotification, isNotificationVisible, notificationOccurrence } from "./notifications.js";
+import { SoundEffects } from "./sounds.js";
+import { NotificationStore, interpolateNotification, isNotificationVisible, notificationOccurrence, isLevelTwoQuestPending } from "./notifications.js";
 import {
   JAYCEE_ORDER,
   createJayceeState,
@@ -11,6 +12,7 @@ import {
   JAYCEE_GAME_SKILL_COLUMNS
 } from "../config/game-config.js";
 import {
+  acceptLevelTwoQuest,
   createPlayerForGame,
   fetchAdminProfile,
   fetchPlayerForGame,
@@ -233,7 +235,8 @@ const getMannaModel = ({ activeModels = [], player, playerProfile, selectedAbili
   const periodSeconds = Number(activeModel?.passiveSeconds);
   const activeCycleSeconds = Number(activeModel?.questSeconds);
 
-  if (!Number.isFinite(questStart.getTime()) || !(periodSeconds > 0) || !(activeCycleSeconds > 0)) {
+  if ((level === 2 && isLevelTwoQuestPending(player))
+    || !Number.isFinite(questStart.getTime()) || !(periodSeconds > 0) || !(activeCycleSeconds > 0)) {
     return { maxAbs: 1, target: 0, unit: mannaUnit, value: 0 };
   }
 
@@ -395,6 +398,7 @@ const createProfileNotice = ({
   closable = false,
   onEvent = () => {},
   text = "",
+  textValues = {},
   title,
   tone = "notification"
 }) => {
@@ -403,6 +407,7 @@ const createProfileNotice = ({
   const icon = document.createElement("span");
   const copy = document.createElement("div");
   const dismissPanel = (action) => {
+    if (panel.classList.contains("is-dismissing")) return;
     onEvent(action);
     panel.classList.add("is-dismissing");
     window.setTimeout(() => panel.remove(), 180);
@@ -414,19 +419,23 @@ const createProfileNotice = ({
   icon.textContent = tone === "unlocked" ? "+" : tone === "quest" ? "!" : "i";
   header.replaceChildren(icon, title);
   copy.className = "profile-notice-copy";
-  if (Array.isArray(text)) {
-    text.forEach((line) => {
-      const paragraph = document.createElement("p");
-
-      paragraph.textContent = line;
-      copy.append(paragraph);
-    });
-  } else if (getDisplayValue(text)) {
+  const lines = Array.isArray(text) ? text : getDisplayValue(text) ? [text] : [];
+  lines.forEach((line) => {
     const paragraph = document.createElement("p");
 
-    paragraph.textContent = text;
+    String(line).split(/(\{[a-zA-Z]+\})/g).forEach((part) => {
+      const key = part.slice(1, -1);
+      const value = interpolateNotification(part, textValues);
+      if ((part === '{passiveSkillName}' || part === '{skillOneName}') && Object.hasOwn(textValues, key)) {
+        const emphasis = document.createElement("em");
+        emphasis.textContent = value;
+        paragraph.append(emphasis);
+      } else {
+        paragraph.append(document.createTextNode(value));
+      }
+    });
     copy.append(paragraph);
-  }
+  });
   if (content) {
     copy.append(content);
   }
@@ -563,7 +572,8 @@ const getActiveQuestInfo = ({ activeModels = [], player = null, selectedAbilityI
     };
   }
 
-  const startedAt = Date.parse(player?.[`skill_${level}_start`] || "");
+  const startedAt = level === 2 && isLevelTwoQuestPending(player)
+    ? NaN : Date.parse(player?.[`skill_${level}_start`] || "");
   const practiceSeconds = Math.max(0, Number(player?.[`skill_${level}_practice`]) || 0);
   const remainingPracticeSeconds = Math.max(0, Number(activeModel.questSeconds) - practiceSeconds);
 
@@ -667,6 +677,11 @@ const createVitalsPanel = ({
   isMasterSaving = false,
   masterLinkError = "",
   notifications = null,
+  sounds,
+  passiveSkillName = "your passive skill",
+  onAcceptLevelTwoQuest,
+  isQuestAcceptSaving = false,
+  questAcceptError = "",
   onPlay,
   onAcceptMaster,
   player,
@@ -767,16 +782,21 @@ const createVitalsPanel = ({
     lifeMaxYears: lifeMaxYears.toLocaleString(),
     prayerKarmaYears: formatKarmaYears(prayerKarmaYears),
     remainingKarmaYears: formatKarmaYears(remainingKarmaYears),
-    firstActivePassiveTime
+    firstActivePassiveTime,
+    passiveSkillName,
+    skillOneName: activeModels[0]?.skillLabel || "your first skill"
   };
   // Only named, code-owned components/actions can be selected by catalog JSON.
   // Text always goes through textContent: database content cannot inject HTML.
   for (const definition of notifications?.definitions || []) {
     const occurrence = notificationOccurrence(definition, player);
     if (!isNotificationVisible(definition, notifications.receipt(definition.id, occurrence), {
-      hasAccount: hasPlayerProfile, hasMaster: Boolean(activeMasterProfile)
+      hasAccount: hasPlayerProfile, hasMaster: Boolean(activeMasterProfile), player
     })) continue;
-    const onEvent = (action) => notifications.record(definition.id, action, occurrence);
+    const onEvent = (action) => {
+      sounds.play('notificationConfirm');
+      notifications.record(definition.id, action, occurrence);
+    };
     let content = null;
     let action = null;
     const component = definition.content?.component;
@@ -810,13 +830,30 @@ const createVitalsPanel = ({
       action.textContent = definition.content.actionLabel || 'Accept';
       action.addEventListener('click', () => { onEvent('clicked'); onPlay(); });
     }
-    panel.append(createProfileNotice({
+    if (definition.content?.action === 'accept_level_two') {
+      action = document.createElement('button');
+      action.className = 'profile-play-button';
+      action.type = 'button';
+      action.textContent = isQuestAcceptSaving ? 'Starting...' : 'Accept';
+      action.disabled = isQuestAcceptSaving;
+      action.addEventListener('click', () => { void onAcceptLevelTwoQuest(); });
+      if (questAcceptError) {
+        const status = document.createElement('p');
+        status.setAttribute('role', 'alert');
+        status.textContent = questAcceptError;
+        content = status;
+      }
+    }
+    const notice = createProfileNotice({
       action, content, onEvent,
       closable: definition.dismissible,
-      text: interpolateNotification(definition.content?.text, values),
+      text: definition.content?.text,
+      textValues: values,
       title: definition.title,
       tone: definition.tone
-    }));
+    });
+    notice.dataset.notificationKey = JSON.stringify([definition.id, occurrence]);
+    panel.append(notice);
   }
   const syncStatus = document.createElement('p');
   syncStatus.dataset.notificationStatus = '';
@@ -1013,7 +1050,8 @@ const createSkillPanel = ({
       toggle.type = "button";
       toggle.className = "profile-play-button";
       toggle.dataset.practiceToggle = String(activeIndex);
-      toggle.disabled = isDescriptionClosing || !player?.id || !activeModels[activeIndex - 1]?.skill;
+      toggle.disabled = isDescriptionClosing || !player?.id || !activeModels[activeIndex - 1]?.skill
+        || (activeIndex === 2 && isLevelTwoQuestPending(player));
       toggle.textContent = practicingSkillIndex === activeIndex ? "Stop" : "Start";
       toggle.addEventListener("click", () => onTogglePractice?.(activeIndex));
       description.append(toggle);
@@ -1108,6 +1146,9 @@ export const initJayceePage = async () => {
   let skills = [];
   let practice = null;
   let notifications = null;
+  const sounds = new SoundEffects();
+  let isQuestAcceptSaving = false;
+  let questAcceptError = "";
   const closeSkillDescription = (index) => {
     if (descriptionCloseTimer) window.clearTimeout(descriptionCloseTimer);
     selectedAbilityIndex = null;
@@ -1181,6 +1222,27 @@ export const initJayceePage = async () => {
     }
   };
 
+  const handleAcceptLevelTwoQuest = async () => {
+    if (isQuestAcceptSaving || !supabaseClient || !isLevelTwoQuestPending(currentPlayer)) return;
+    isQuestAcceptSaving = true;
+    questAcceptError = "";
+    renderVitalsPanel();
+    try {
+      if (practice) await practice.flush();
+      const result = await acceptLevelTwoQuest(supabaseClient, currentPlayer.id);
+      applySkillProgress(result);
+      notifications?.record('level_two_prepare.v1', 'completed', `${result.player.id}:2`);
+      sounds.play('notificationConfirm');
+    } catch (error) {
+      console.error("Jaycee Level 2 quest could not be started", error);
+      questAcceptError = error?.message || "The quest could not be started. Please try again.";
+    } finally {
+      isQuestAcceptSaving = false;
+      renderVitalsPanel();
+      renderCoreParameters();
+    }
+  };
+
   const renderPresentControls = () => {
     if (!canvas) return;
 
@@ -1232,6 +1294,11 @@ export const initJayceePage = async () => {
       isMasterSaving,
       masterLinkError,
       notifications,
+      sounds,
+      passiveSkillName: getPassiveSkillModel({ gameForm, skillForms, hasLinkedMaster: true }).skill?.label || "your passive skill",
+      onAcceptLevelTwoQuest: handleAcceptLevelTwoQuest,
+      isQuestAcceptSaving,
+      questAcceptError,
       onPlay: handlePlayClick,
       onAcceptMaster: handleAcceptMasterClick,
       player: practice?.project(currentPlayer) || currentPlayer,
@@ -1249,6 +1316,8 @@ export const initJayceePage = async () => {
     } else {
       corePanel.insertBefore(panel, corePanel.firstChild);
     }
+    sounds.notify(Array.from(panel.querySelectorAll('[data-notification-key]'),
+      (notice) => notice.dataset.notificationKey));
     updateLiveUI();
   };
 
@@ -1296,12 +1365,14 @@ export const initJayceePage = async () => {
 
         closingAbilityIndex = null;
         selectedAbilityIndex = index;
+        sounds.play('skillOpen');
         renderCoreParameters();
         renderVitalsPanel();
       },
       onTogglePractice: (index) => {
         if (!practice || !currentPlayer || closingAbilityIndex !== null
           || index < 1 || index > ACTIVE_RING_LIMIT || Number(currentPlayer.level) < index
+          || (index === 2 && isLevelTwoQuestPending(currentPlayer))
           || !activeModels[index - 1]?.skill) return;
 
         if (practice.active?.skillNumber === index) {
@@ -1310,6 +1381,7 @@ export const initJayceePage = async () => {
           return;
         }
         practice.start(currentPlayer.id, index, currentPlayer[`skill_${index}_start`] || null);
+        sounds.play('skillStart');
         updateLiveUI();
       },
       isDescriptionClosing: closingAbilityIndex !== null,
@@ -1539,7 +1611,10 @@ export const initJayceePage = async () => {
     // Reinitialize all user-owned state when the session identity changes, including in another tab.
     client.auth.onAuthStateChange((_event, session) => {
       if ((session?.user?.id || null) !== (user?.id || null)) {
-        window.setTimeout(() => window.location.reload(), 0);
+        window.setTimeout(() => {
+          if (_event === 'SIGNED_OUT') window.location.replace('/');
+          else window.location.reload();
+        }, 0);
       }
     });
 

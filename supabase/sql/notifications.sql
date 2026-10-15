@@ -88,4 +88,8 @@ insert into public.notifications (id, stage, position, title, tone, dismissible,
 ('choose_master.v1', 'choose_master', 20, 'Quest', 'quest', false,
  '{"text":"Connect with a Master: Each Master offers a different path, with different quests and benefits. You have {firstActivePassiveTime} to choose a Master and get your first quest. Beyond that timing your account will be deleted automatically. Click on a Master below to link to their game.","component":"master_choices"}'),
 ('master_linked.v1', 'linked_master', 20, 'Quest', 'quest', false,
- '{"component":"linked_quest"}');
+ '{"component":"linked_quest"}'),
+('level_two_unlocked.v1', 'linked_master', 10, 'Unlocked', 'unlocked', true,
+ '{"level":2,"occurrence":"level","text":"Congratulations! You have unlocked Level 2!"}'),
+('level_two_prepare.v1', 'linked_master', 15, 'Quest', 'quest', false,
+ '{"level":2,"occurrence":"level","text":["Before beginning this Quest you must have checked the resources of {passiveSkillName} and {skillOneName}. Check their description to access it.","Only after that, click on Accept and the Quest will start."],"action":"accept_level_two","actionLabel":"Accept"}');

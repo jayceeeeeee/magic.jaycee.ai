@@ -22,13 +22,30 @@ changes. Account creation resolves `create_account.v1`; a saved Master link reso
 skill's start date. Later levels omit the initial energy-link introduction.
 Notification receipts never grant game progress.
 
-`sql/skill_progression.sql` reflects `skill_progression_v1` and
-`simplify_skill_progression_v2` (which removed the practice-session table). Its authenticated
+Level 2 first shows `level_two_unlocked.v1` and `level_two_prepare.v1`. The reminder
+names the Master's passive and first active skill and asks the player to review their
+description resources. It has an **Accept** button; opening resources is not tracked
+or enforced. The existing linked quest is hidden until acceptance. The authenticated
+`accept_level_two_quest` RPC locks the owned player, saves `level_2_accepted_at`,
+starts `skill_2_start`, and completes the preparation receipt atomically. Retries keep
+the accepted clock. Level 2 practice and advancement are blocked until acceptance;
+existing practice is preserved. Earlier skills remain available. New Level 2 players
+receive no second quest clock until Accept. Existing Level 2 players also see this
+step; their old clock is replaced when they accept.
+
+`sql/level_two_quest.sql` upgrades an existing installation with this flow and the
+updated progression RPC. The two new notices use a stable `player-id:2` occurrence
+so accepting (and changing the clock) does not replay an acknowledged unlock notice.
+
+`sql/skill_progression.sql` reflects `skill_progression_v1`,
+`simplify_skill_progression_v2` (which removed the practice-session table), and
+`level_two_quest_acceptance`. Its authenticated
 `sync_skill_progress` RPC runs at page load and when practice is saved. It locks the
 player row, saves the practice counter directly, checks the current skill's calculated
 target, then atomically completes the notification, increments the player level and
-`profiles.years_burned`, clears the completed skill's practice and resets all three
-start dates. Earlier skills remain usable but do not advance the current quest.
+`profiles.years_burned`, clears the completed skill's practice and resets the quest
+clocks. The Level 1 to Level 2 transition leaves `skill_2_start` empty until Accept.
+Earlier skills remain usable but do not advance the current quest.
 At levels above 3 the third active skill continues to supply the practice target.
 Keep the RPC's target ratios aligned with `src/js/config/game-config.js`.
 The life bar is `(age in years + years_burned) / 1000000`.
@@ -37,12 +54,15 @@ The life bar is `(age in years + years_burned) / 1000000`.
 
 Catalog JSON contains plain `text`, optional `component`, and optional `action` /
 `actionLabel`. Supported components are `masters`, `karma_master`, `master_choices`,
-and `linked_quest`; the supported action is `signup`. These map to existing DOM
+and `linked_quest`; supported actions are `signup` and `accept_level_two`. These map to existing DOM
 builders in `profile-runtime.js`. Unknown components/actions do not execute code.
 Never store executable HTML, scripts, arbitrary iframe URLs or callbacks in this table.
 
 Text placeholders: `{lifeMaxYears}`, `{prayerKarmaYears}`, `{remainingKarmaYears}`,
-`{firstActivePassiveTime}`. Values and text render as text nodes. Avatars, carousels,
+`{firstActivePassiveTime}`, `{passiveSkillName}`, `{skillOneName}`. Text may be an array
+of paragraphs; values and text render as text nodes. `content.level` restricts a
+notice to that player level, and `content.occurrence = "level"` uses a stable level receipt.
+Avatars, carousels,
 quest countdowns and dynamic Master copy remain code-owned components.
 
 Stages: `guest`, `account`, `choose_master`, `linked_master`. The browser derives
@@ -77,6 +97,11 @@ Historic dismissals before this feature cannot be reconstructed.
 - `tests/notifications.test.mjs`: guest reload, one-time claim, offline outbox/retry,
   deduplication, account isolation, remote restore, quest lifecycle and blocked storage.
   With Node installed: `node --experimental-default-type=module --test tests/notifications.test.mjs`.
+- `tests/level-two-quest.test.mjs`: Level 2 visibility before/after acceptance,
+  stable unlock receipts, quest clock changes, other levels and dynamic skill names.
+- `tests/level_two_quest.sql` (under `supabase/`): authenticated acceptance, paused
+  advancement, retry/reload clock stability, preserved practice, receipt writes,
+  ownership and Level 1/3 behavior, all rolled back. Requires a Level 2 player.
 - `tests/notifications.sql`: execute as postgres with two existing auth users. It
   exercises the actual `anon` / `authenticated` roles, idempotency and RLS allow/deny
   paths inside a transaction which is rolled back.

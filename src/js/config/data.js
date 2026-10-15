@@ -23,7 +23,7 @@ const PROFILE_SELECT_COLUMNS = [
 ].join(", ");
 const GAME_SELECT_COLUMNS = ["id", "user_id", ...JAYCEE_GAME_SKILL_COLUMNS].join(", ");
 const SIGNED_IMAGE_URL_DURATION_SECONDS = 60 * 60;
-const PLAYER_SELECT_COLUMNS = "id, user_id, master, level, skill_1_practice, skill_2_practice, skill_3_practice, skill_1_start, skill_2_start, skill_3_start";
+const PLAYER_SELECT_COLUMNS = "id, user_id, master, level, level_2_accepted_at, skill_1_practice, skill_2_practice, skill_3_practice, skill_1_start, skill_2_start, skill_3_start";
 
 export const getDisplayValue = (value) => (
   value === null || value === undefined ? "" : String(value).trim()
@@ -283,6 +283,13 @@ export const syncSkillProgress = async (client, playerId, session = null) => {
   });
   if (error) throw error;
   if (!data?.player?.id) throw new Error("Practice could not be saved.");
+  return data;
+};
+
+export const acceptLevelTwoQuest = async (client, playerId) => {
+  const { data, error } = await client.rpc("accept_level_two_quest", { p_player_id: playerId });
+  if (error) throw error;
+  if (!data?.player?.id) throw new Error("The quest could not be started. Please try again.");
   return data;
 };
 

@@ -327,8 +327,7 @@ const createGuestLoginSection = () => {
     <label class="profile-field-wide"><span>Email</span><input type="email" name="email" autocomplete="email" required></label>
     <label class="profile-field-wide"><span>Password</span><input type="password" name="password" autocomplete="current-password" required></label>
     <button class="account-button account-button-primary profile-field-wide" type="submit">Log in</button>
-    <p class="profile-field-wide" role="status" data-panel-login-status></p>
-    <p class="profile-field-wide">No account yet? <a href="/">Sign up</a></p>`;
+    <p class="profile-field-wide" role="status" data-panel-login-status></p>`;
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!form.reportValidity()) return;
@@ -402,7 +401,7 @@ export const initJayceeAccountPage = async () => {
 
       if (error) throw error;
 
-      window.location.replace(getLoginUrl());
+      window.location.replace("/");
     } catch (error) {
       console.error("Jaycee logout failed", error);
       setStatus(saveStatus, error?.message || "Could not log out. Please try again.", true);
