@@ -275,6 +275,18 @@ Historic dismissals before this feature cannot be reconstructed.
 
 ## Verification
 
+`sql/first_master_selection_deadline.sql` extends the account lock to first-time
+Master selection: one Skill 1 passive/Moon cycle (2551442.803 seconds) from Auth
+account creation. Only unlinked, nonpublic, nonadmin, nonpermanent profiles with
+no previous participation qualify. The existing minute cron and login access check
+both enforce this deadline, even while the browser is closed. Linking a Master
+replaces it with the usual game deadline. An administrator unlock starts a fresh
+selection cycle via the managed `master_selection_started_at` field; browsers
+cannot edit that field. The carousel countdown uses the same duration and start.
+
+- `supabase/tests/first_master_selection_deadline.sql`: initial deadline,
+  reconnect/offline locking, exemptions, managed clock and admin unlock. Rolled back.
+
 - `tests/notifications.test.mjs`: guest reload, one-time claim, offline outbox/retry,
   deduplication, account isolation, remote restore, quest lifecycle and blocked storage.
   With Node installed: `node --experimental-default-type=module --test tests/notifications.test.mjs`.

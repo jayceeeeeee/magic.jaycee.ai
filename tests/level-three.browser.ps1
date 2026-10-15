@@ -29,6 +29,13 @@ const definitions=[{id:'level_three_prepare.v1',stage:'linked_master',title:'Que
 let accepted=0,switched;
 const player={id:'player',user_id:'user',master:'old',level:3,level_3_accepted_at:null};
 const options={activeModels:models,player,playerProfile:{id:'user',username:'User'},activeMasterProfile:{id:'old'},passiveSkillName:'Passive',notifications:{definitions,receipt(){},record(){}},sounds:{play(){}},publicProfiles:[{id:'user',username:'Self'},{id:'old',username:'Old'},{id:'new',username:'New'}],onAcceptQuest:()=>accepted++,onAcceptMaster:master=>switched=master.id};
+const selectionStart=new Date().toISOString();
+const selectionOptions={...options,player:null,activeMasterProfile:null,accountCreatedAt:selectionStart,notifications:{...options.notifications,definitions:[{id:'choose_master.v1',stage:'choose_master',content:{component:'master_choices'}}]}};
+const selection=runtime.createVitalsPanel(selectionOptions);
+assert(Number(selection.querySelector('[data-quest-deadline]').dataset.questDeadline)===Date.parse(selectionStart)+JAYCEE_GAME_CONFIG.activeAbilities[0].cycleSeconds*1000,'First selection countdown must use the Moon cycle');
+const restartedStart=new Date(Date.parse(selectionStart)+60000).toISOString();
+const restarted=runtime.createVitalsPanel({...selectionOptions,playerProfile:{...options.playerProfile,master_selection_started_at:restartedStart}});
+assert(Number(restarted.querySelector('[data-quest-deadline]').dataset.questDeadline)===Date.parse(restartedStart)+JAYCEE_GAME_CONFIG.activeAbilities[0].cycleSeconds*1000,'Countdown must reflect administrator unlock');
 const before=runtime.createVitalsPanel(options);
 assert(before.querySelectorAll('[data-notification-key]').length===1,'Quest visible before acceptance');
 assert(before.querySelectorAll('em').length===3,'Skill names are not italic');

@@ -22,6 +22,7 @@ const PROFILE_SELECT_COLUMNS = [
   "sex",
   "visibility",
   "permanent_account_at",
+  "master_selection_started_at",
   "locked"
 ].join(", ");
 const GAME_SELECT_COLUMNS = ["id", "user_id", ...JAYCEE_GAME_SKILL_COLUMNS].join(", ");

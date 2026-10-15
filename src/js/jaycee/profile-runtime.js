@@ -857,8 +857,8 @@ const createVitalsPanel = ({
         isSaving: isMasterSaving
       });
       const linkStatus = document.createElement("p");
-      const createdAt = Date.parse(accountCreatedAt);
-      const selectionDurationSeconds = Number(activeModels[0]?.passiveSeconds);
+      const createdAt = Date.parse(playerProfile?.master_selection_started_at || accountCreatedAt);
+      const selectionDurationSeconds = JAYCEE_GAME_CONFIG.activeAbilities[0].cycleSeconds;
       const countdown = createQuestCountdown(createdAt + selectionDurationSeconds * 1000);
 
       if (countdown) masterChoices.prepend(countdown);
