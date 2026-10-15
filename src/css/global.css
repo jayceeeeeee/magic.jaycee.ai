@@ -56,6 +56,16 @@
     view-transition-name: jaycee-title;
 }
 
+.game-brand-title a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.game-brand-title a:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 6px;
+}
+
 [hidden] {
     display: none !important;
 }
