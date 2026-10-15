@@ -1,5 +1,6 @@
 import { renderSkillMarkdown } from "./markdown.js";
 import { PracticeTimer } from "./practice-timer.js";
+import { NotificationStore, interpolateNotification, isNotificationVisible, notificationOccurrence } from "./notifications.js";
 import {
   JAYCEE_ORDER,
   createJayceeState,
@@ -391,6 +392,7 @@ const createProfileNotice = ({
   action = null,
   content = null,
   closable = false,
+  onEvent = () => {},
   text = "",
   title,
   tone = "notification"
@@ -399,7 +401,8 @@ const createProfileNotice = ({
   const header = document.createElement("h2");
   const icon = document.createElement("span");
   const copy = document.createElement("div");
-  const dismissPanel = () => {
+  const dismissPanel = (action) => {
+    onEvent(action);
     panel.classList.add("is-dismissing");
     window.setTimeout(() => panel.remove(), 180);
   };
@@ -440,11 +443,11 @@ const createProfileNotice = ({
     closeButton.type = "button";
     closeButton.textContent = "x";
     closeButton.setAttribute("aria-label", "Dismiss notification");
-    closeButton.addEventListener("click", dismissPanel);
+    closeButton.addEventListener("click", () => dismissPanel("dismissed"));
     okButton.className = "profile-notice-ok";
     okButton.type = "button";
     okButton.textContent = "Ok";
-    okButton.addEventListener("click", dismissPanel);
+    okButton.addEventListener("click", () => dismissPanel("read"));
     panel.append(okButton, closeButton);
   }
 
@@ -661,6 +664,7 @@ const createVitalsPanel = ({
   activeModels = [],
   isMasterSaving = false,
   masterLinkError = "",
+  notifications = null,
   onPlay,
   onAcceptMaster,
   player,
@@ -754,26 +758,32 @@ const createVitalsPanel = ({
   );
   panel.replaceChildren();
 
-  if (hasPlayerProfile) {
-    panel.append(createProfileNotice({
-      closable: true,
-      text: "Congratulations! You have learned to pray! You can now save your progress and connect with a Master to continue to play. Click on the top right icon to add your informations.",
-      title: "Unlocked",
-      tone: "unlocked"
-    }));
-    if (activeMasterProfile) {
-      panel.append(createProfileNotice({
-        content: createLinkedMasterNoticeContent({
-          masterProfile: activeMasterProfile,
-          questInfo: linkedQuestInfo
-        }),
-        title: "Quest",
-        tone: "quest"
-      }));
-    } else {
+  const values = {
+    lifeMaxYears: lifeMaxYears.toLocaleString(),
+    prayerKarmaYears: formatKarmaYears(prayerKarmaYears),
+    remainingKarmaYears: formatKarmaYears(remainingKarmaYears),
+    firstActivePassiveTime
+  };
+  // Only named, code-owned components/actions can be selected by catalog JSON.
+  // Text always goes through textContent: database content cannot inject HTML.
+  for (const definition of notifications?.definitions || []) {
+    const occurrence = notificationOccurrence(definition, player);
+    if (!isNotificationVisible(definition, notifications.receipt(definition.id, occurrence), {
+      hasAccount: hasPlayerProfile, hasMaster: Boolean(activeMasterProfile)
+    })) continue;
+    const onEvent = (action) => notifications.record(definition.id, action, occurrence);
+    let content = null;
+    let action = null;
+    const component = definition.content?.component;
+    if (component === 'masters') content = createMastersNoticeContent(publicProfiles);
+    else if (component === 'karma_master') content = noticeMasterContent;
+    else if (component === 'linked_quest') content = createLinkedMasterNoticeContent({
+      masterProfile: activeMasterProfile, questInfo: linkedQuestInfo
+    });
+    else if (component === 'master_choices') {
       const masterChoices = createMastersNoticeContent(publicProfiles, {
         showIntro: false,
-        onSelect: onAcceptMaster,
+        onSelect: (master) => { onEvent('clicked'); onAcceptMaster(master); },
         isSaving: isMasterSaving
       });
       const linkStatus = document.createElement("p");
@@ -786,50 +796,29 @@ const createVitalsPanel = ({
       linkStatus.setAttribute("role", "status");
       linkStatus.textContent = masterLinkError || (isMasterSaving ? "Linking..." : publicProfiles.length ? "" : "No Masters available yet.");
       masterChoices.append(linkStatus);
-      panel.append(createProfileNotice({
-        content: masterChoices,
-        text: `Connect with a Master: Each Master offers a different path, with different quests and benefits. You have ${firstActivePassiveTime} to choose a Master and get your first quest. Beyond that timing your account will be deleted automatically. Click on a Master below to link to their game.`,
-        title: "Quest",
-        tone: "quest"
-      }));
+      content = masterChoices;
     }
-  } else {
-    panel.append(
-      createProfileNotice({
-        closable: true,
-        content: createMastersNoticeContent(publicProfiles),
-        title: "Notification",
-        tone: "notification"
-      }),
-      createProfileNotice({
-        closable: true,
-        content: noticeMasterContent,
-        title: "Notification",
-        tone: "notification"
-      }),
-      createProfileNotice({
-        closable: true,
-        text: `Congratulations! You have unlocked level 1. It has been calculated by the great Masters of this game that it takes approximately ${lifeMaxYears.toLocaleString()} years for an average Human being to burn all his Karma and leave the Earth. Your prayer has burned ${formatKarmaYears(prayerKarmaYears)} years of Karma. You have more than ${formatKarmaYears(remainingKarmaYears)} years left.`,
-        title: "Unlocked",
-        tone: "unlocked"
-      })
-    );
-  }
-
-  if (!hasPlayerProfile) {
-    const playButton = document.createElement("button");
-
-    playButton.className = "profile-play-button";
-    playButton.type = "button";
-    playButton.textContent = "Accept";
-    playButton.addEventListener("click", onPlay);
+    if (definition.content?.action === 'signup') {
+      action = document.createElement('button');
+      action.className = 'profile-play-button';
+      action.type = 'button';
+      action.textContent = definition.content.actionLabel || 'Accept';
+      action.addEventListener('click', () => { onEvent('clicked'); onPlay(); });
+    }
     panel.append(createProfileNotice({
-      action: playButton,
-      text: "Unlock Level 2: burn Karma faster and try to get enlightened in this life, save your progress and connect directly with a Master.",
-      title: "Quest",
-      tone: "quest"
+      action, content, onEvent,
+      closable: definition.dismissible,
+      text: interpolateNotification(definition.content?.text, values),
+      title: definition.title,
+      tone: definition.tone
     }));
   }
+  const syncStatus = document.createElement('p');
+  syncStatus.dataset.notificationStatus = '';
+  syncStatus.setAttribute('role', 'status');
+  syncStatus.textContent = notifications?.error || '';
+  syncStatus.hidden = !syncStatus.textContent;
+  panel.append(syncStatus);
 
   panel.append(profileLabel);
 
@@ -1113,6 +1102,7 @@ export const initJayceePage = async () => {
   let skillForms = [];
   let skills = [];
   let practice = null;
+  let notifications = null;
   const loadMasterGame = async (masterProfile, masterGame = null) => {
     if (!supabaseClient || !masterProfile) return;
 
@@ -1190,12 +1180,18 @@ export const initJayceePage = async () => {
       gameForm,
       skillForms
     });
+    // Resolution follows saved game state, never merely clicking a quest action.
+    if (playerProfile && notifications) {
+      notifications.record('create_account.v1', 'completed');
+      if (activeMasterProfile) notifications.record('choose_master.v1', 'completed');
+    }
     const panel = createVitalsPanel({
       accountCreatedAt,
       activeMasterProfile,
       activeModels,
       isMasterSaving,
       masterLinkError,
+      notifications,
       onPlay: handlePlayClick,
       onAcceptMaster: handleAcceptMasterClick,
       player: practice?.project(currentPlayer) || currentPlayer,
@@ -1487,6 +1483,37 @@ export const initJayceePage = async () => {
 
     accountCreatedAt = getDisplayValue(user?.created_at);
 
+    notifications = new NotificationStore({
+      client, userId: user?.id,
+      onChange: () => {
+        const status = shell.querySelector('[data-notification-status]');
+        if (status) {
+          status.textContent = notifications.error;
+          status.hidden = !notifications.error;
+        }
+      }
+    });
+    await notifications.load();
+    const syncNotifications = async () => {
+      await notifications.load();
+      renderVitalsPanel();
+    };
+    window.addEventListener('online', syncNotifications);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') void syncNotifications();
+    });
+    window.addEventListener('storage', (event) => {
+      if (event.key !== notifications.storageKey) return;
+      notifications.mergeLocal();
+      renderVitalsPanel();
+    });
+    // Reinitialize all user-owned state when the session identity changes, including in another tab.
+    client.auth.onAuthStateChange((_event, session) => {
+      if ((session?.user?.id || null) !== (user?.id || null)) {
+        window.setTimeout(() => window.location.reload(), 0);
+      }
+    });
+
     if (isEditableProfilePage && !user) {
       redirectToLogin();
       return;
@@ -1613,7 +1640,7 @@ export const initJayceePage = async () => {
       uiClock = 0;
     });
     window.addEventListener("pageshow", (event) => {
-      if (event.persisted) { startClocks(); void practice?.flush(); }
+      if (event.persisted) { startClocks(); void practice?.flush(); void syncNotifications(); }
     });
   } catch (error) {
     console.error("Jaycee profile load failed", error);
