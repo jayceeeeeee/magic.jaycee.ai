@@ -517,9 +517,10 @@ const createNoticeMasterBadge = (profile, fallbackUsername = "Cedricjbt") => {
 
 // Temporary lineup, keyed by stable account UUIDs. Usernames are display-only.
 const FEATURED_MASTERS = new Map([
-  ["d70b5c69-daae-4a77-9955-4385439ae292", { linkLocked: true }], // Cedricjbt
-  ["b7a38b31-100f-4e03-b3e8-9357c635ecf8", { linkLocked: false }], // Yogananda
-  ["7abd58ec-1289-403d-932c-dc2df233d079", { linkLocked: true }] // Jesus
+  //["d70b5c69-daae-4a77-9955-4385439ae292", { linkLocked: true }], // Cedricjbt
+  ["b7a38b31-100f-4e03-b3e8-9357c635ecf8", { linkLocked: true }], // Yogananda
+  ["7abd58ec-1289-403d-932c-dc2df233d079", { linkLocked: true }], // Jesus
+  ["5dd4e584-2f03-4a94-b442-528ca19492e1", { linkLocked: true }] // Buddha
 ]);
 
 const isMasterLinkLocked = (profile) => (
@@ -1028,6 +1029,8 @@ const createSkillPanel = ({
   player = null,
   practicingSkillIndex = null,
   selectedIndex = null,
+  masterLineage = null,
+  hasLineageMaster = false,
   ultimateModel
 }) => {
   if (!passiveModel && !activeModels.length && !ultimateModel) return null;
@@ -1130,6 +1133,31 @@ const createSkillPanel = ({
       renderSkillMarkdown(text, activeAbility.description);
       description.append(text);
     }
+    if (activeAbility.type === "ultimate") {
+      const lineage = document.createElement("div");
+      const label = document.createElement("span");
+      const name = document.createElement("span");
+      lineage.className = "account-master-identity profile-skill-practice-details profile-ultimate-master";
+      label.textContent = "Master:";
+      name.textContent = getDisplayValue(masterLineage?.username)
+        || getDisplayValue(masterLineage?.full_name)
+        || (hasLineageMaster ? "Master unavailable" : "God");
+      lineage.append(label);
+      if (masterLineage) {
+        const avatar = document.createElement("span");
+        avatar.className = "account-master-avatar";
+        avatar.textContent = name.textContent.slice(0, 1).toUpperCase();
+        if (masterLineage.avatarUrl) {
+          const image = document.createElement("img");
+          image.src = masterLineage.avatarUrl;
+          image.alt = "";
+          avatar.replaceChildren(image);
+        }
+        lineage.append(avatar);
+      }
+      lineage.append(name);
+      description.append(lineage);
+    }
     if (activeAbility.type === "active") {
       const toggle = document.createElement("button");
 
@@ -1212,6 +1240,7 @@ export const initJayceePage = async () => {
   let avatarImage = null;
   let adminProfile = null;
   let activeMasterProfile = null;
+  let masterLineage = null;
   let activeMasterGame = null;
   let currentProfile = null;
   let currentPlayer = null;
@@ -1288,6 +1317,16 @@ export const initJayceePage = async () => {
 
     activeMasterProfile = masterProfile;
     currentProfile = masterProfile;
+    // The Ultimate belongs to this Master, so show their own Master here.
+    masterLineage = null;
+    if (masterProfile.master) {
+      try {
+        const profile = await fetchProfileByUserId(supabaseClient, masterProfile.master);
+        if (profile) [masterLineage] = await attachProfileAvatarUrls(supabaseClient, [profile]);
+      } catch (error) {
+        console.warn("Could not load the Master's Master", error);
+      }
+    }
     activeMasterGame = masterGame || await fetchUserGameSettings(supabaseClient, masterProfile);
 
     skills = await fetchSkillsByIds(supabaseClient, JAYCEE_GAME_SKILL_COLUMNS.map((column) => activeMasterGame?.[column]));
@@ -1496,6 +1535,8 @@ export const initJayceePage = async () => {
       player: practice?.project(currentPlayer) || currentPlayer,
       practicingSkillIndex: practice?.active?.skillNumber ?? null,
       selectedIndex: closingAbilityIndex ?? selectedAbilityIndex,
+      masterLineage,
+      hasLineageMaster: Boolean(activeMasterProfile.master),
       ultimateModel
     });
 

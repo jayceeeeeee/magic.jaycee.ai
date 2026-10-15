@@ -502,6 +502,16 @@
   gap: 10px;
 }
 
+.profile-ultimate-master {
+  margin-top: 5px;
+  gap: 6px;
+}
+
+.profile-ultimate-master .account-master-avatar {
+  width: 20px;
+  height: 20px;
+}
+
 .account-master-avatar {
   display: grid;
   place-items: center;
