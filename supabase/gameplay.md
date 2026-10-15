@@ -79,7 +79,9 @@ Master commence au niveau 1 ; revenir vers un ancien reprend sa participation.
 L'interface recharge les skills et actualise les panneaux sur place. Le niveau 4
 rend le lien permanent. Un Master public doit avoir un profil visible et cinq
 skills nommés. Le carrousel est temporairement limité à Cedricjbt, Yogananda et
-Jesus. Les cartes Jesus/Cedricjbt restent désactivées côté UI.
+Jesus. La liste et les locks utilisent leurs UUID dans `FEATURED_MASTERS`
+(`src/js/jaycee/profile-runtime.js`), indépendamment des changements de username.
+Les cartes Jesus/Cedricjbt restent désactivées côté UI.
 
 ## Manna et karma
 

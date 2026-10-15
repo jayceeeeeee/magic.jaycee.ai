@@ -39,8 +39,9 @@ runMannaTests(runtime.getMannaModel);
 const models=[1,2,3].map(level=>({skillLabel:`Skill ${level}`,skill:{id:level},passiveSeconds:100,questSeconds:20}));
 const definitions=[{id:'level_three_prepare.v1',stage:'linked_master',title:'Quest',tone:'quest',content:{level:3,occurrence:'level',action:'accept_quest',text:['Review {passiveSkillName} and {skillTwoName}.','In the meantime practice {skillOneName}.']}},{id:'master_linked.v1',stage:'linked_master',title:'Quest',tone:'quest',content:{component:'linked_quest'}}];
 let accepted=0,switched;
+const masterIds={cedricjbt:'d70b5c69-daae-4a77-9955-4385439ae292',yogananda:'b7a38b31-100f-4e03-b3e8-9357c635ecf8',jesus:'7abd58ec-1289-403d-932c-dc2df233d079'};
 const player={id:'player',user_id:'user',master:'old',level:3,level_3_accepted_at:null};
-const options={activeModels:models,player,playerProfile:{id:'user',username:'User'},activeMasterProfile:{id:'old'},passiveSkillName:'Passive',notifications:{definitions,receipt(){},record(){}},sounds:{play(){}},publicProfiles:[{id:'user',username:'Self'},{id:'old',username:'Old'},{id:'new',username:'Yogananda'}],onAcceptQuest:()=>accepted++,onAcceptMaster:master=>switched=master.id};
+const options={activeModels:models,player,playerProfile:{id:'user',username:'User'},activeMasterProfile:{id:'old'},passiveSkillName:'Passive',notifications:{definitions,receipt(){},record(){}},sounds:{play(){}},publicProfiles:[{id:'user',username:'Self'},{id:'old',username:'Old'},{id:masterIds.yogananda,username:'Yogananda'}],onAcceptQuest:()=>accepted++,onAcceptMaster:master=>switched=master.id};
 const originalUI=window.JayceeUI;
 let finishConfirmation,finishAcceptClick,signupRedirects=0;
 const confirmationDone=new Promise(resolve=>{finishConfirmation=resolve;});
@@ -75,8 +76,8 @@ const unnamedUltimate=runtime.createVitalsPanel({...fourthSkillOptions,ultimateM
 assert(unnamedUltimate.querySelector('em')?.textContent==='your ultimate skill','Missing Ultimate name has no fallback');
 assert(before.textContent.includes('Or you can choose to link yourself to another Master.'),'Missing switch invitation');
 assert(before.querySelectorAll('.profile-master-choice').length>0,'Missing carousel');
-before.querySelector('.profile-master-choice').click();assert(switched==='new','Wrong Master selected');
-const lockedChoices=runtime.createVitalsPanel({...options,publicProfiles:[{id:'jesus',username:'Jesus'},{id:'cedric',username:'Cedricjbt'},{id:'new',username:'Yogananda'},{id:'other',username:'Other Master'}]});
+before.querySelector('.profile-master-choice').click();assert(switched===masterIds.yogananda,'Wrong Master selected');
+const lockedChoices=runtime.createVitalsPanel({...options,publicProfiles:[{id:masterIds.jesus,username:'Jesus'},{id:masterIds.cedricjbt,username:'Cedricjbt'},{id:masterIds.yogananda,username:'Yogananda'},{id:'other',username:'Other Master'}]});
 assert(!lockedChoices.textContent.includes('Other Master'),'Slider exposed a profile outside its temporary lineup');
 for(const name of ['Jesus','Cedricjbt']){
   const choices=[...lockedChoices.querySelectorAll('.profile-master-choice')].filter(choice=>choice.textContent.includes(name));
@@ -86,7 +87,12 @@ for(const name of ['Jesus','Cedricjbt']){
     switched=null;choice.click();assert(switched===null,`${name} can still be linked`);
   }
 }
-lockedChoices.querySelector('.profile-master-choice:not(:disabled)').click();assert(switched==='new','Available Master cannot be linked');
+lockedChoices.querySelector('.profile-master-choice:not(:disabled)').click();assert(switched===masterIds.yogananda,'Available Master cannot be linked');
+const renamed=runtime.createVitalsPanel({...options,publicProfiles:[{id:masterIds.jesus,username:'Renamed Jesus'},{id:masterIds.cedricjbt,username:'Renamed Cedric'},{id:masterIds.yogananda,username:'Renamed Yogananda'},{id:'impostor',username:'Jesus'}]});
+const primaryChoices=[...renamed.querySelectorAll('.profile-master-choice:not([aria-hidden="true"])')];
+assert(primaryChoices.length===3,'UUID lineup changed after a username change or accepted a matching username');
+assert(primaryChoices[0].disabled&&primaryChoices[1].disabled&&!primaryChoices[2].disabled,'UUID locks changed after a username change');
+primaryChoices[2].click();assert(switched===masterIds.yogananda,'Renamed Master cannot be linked by UUID');
 before.querySelector('.profile-play-button').click();assert(accepted===1,'Accept is broken');
 const active={...player,level_3_accepted_at:'2026-10-15T00:00:00Z',skill_3_start:'2026-10-15T00:00:00Z'};
 const after=runtime.createVitalsPanel({...options,player:active});assert(!after.textContent.includes('Or you can choose'),'Switching remains after Accept');
@@ -135,8 +141,10 @@ const client={from(){return{update(values){savedProfile=values;saveOrder.push('p
 window.JayceeAuth={getSupabaseClient:async()=>client,getSession:async()=>({data:{session:{user:{id:'user'}}}})};
 const init=new Function('PROFILE_TABLE','USER_IMAGES_BUCKET','fetchProfileByUserId','fetchPlayersForUser','getAvatarImageUrl','getDisplayValue','createSkillsSection',ACCOUNT)('profiles','users',async(_client,id)=>id==='old'?{id:'old',username:'Linked Master'}:profile,async()=>[{...player,level:2}],async()=>'',display,createSkillsSection);
 await init();assert(document.querySelector('.is-skills').hidden,'Account Skills shown at Level 2');
+assert(document.querySelector('.is-master').hidden,'Account Master section shown at Level 2');
 assert(document.querySelector('.is-master').textContent.includes('Linked Master'),'Linked Master not displayed in its section');
 window.dispatchEvent(new CustomEvent('jaycee:player-updated',{detail:{player}}));await new Promise(resolve=>setTimeout(resolve,10));assert(!document.querySelector('.is-skills').hidden,'Account Skills did not unlock at Level 3');
+assert(document.querySelector('.is-master').hidden,'Account Master section shown at Level 3');
 window.dispatchEvent(new CustomEvent('jaycee:player-updated',{detail:{player:{...player,id:'another-game',level:1}}}));assert(!document.querySelector('.is-skills').hidden,'Another game removed earned account features');
 const accountSkills=document.querySelector('.is-skills');
 const mannaCycle=document.querySelector('[name=manna_cycle]');assert([...mannaCycle.options].some(option=>option.value==='hour'),'Hour cycle missing from account selector');mannaCycle.value='hour';
@@ -148,6 +156,7 @@ assert(document.querySelector('[data-account-save-status]').textContent==='Saved
 assert(savedProfile.manna_cycle==='hour','Account Save did not persist Hour cycle');
 const visibility=document.querySelector('[name=visibility]');assert(visibility.closest('label').hidden,'Visibility control available below Level 4');
 window.dispatchEvent(new CustomEvent('jaycee:player-updated',{detail:{player:levelFour}}));await new Promise(resolve=>setTimeout(resolve,10));
+assert(!document.querySelector('.is-master').hidden,'Account Master section did not unlock at Level 4');
 assert(!visibility.closest('label').hidden,'Visibility control did not unlock at Level 4');
 assert(visibility.closest('.is-master'),'Visibility control is not in the Master section');
 assert(visibility.disabled&&document.querySelector('#account-visibility-hint').textContent.includes('Skill 1'),'Missing skill names did not disable publication or show a message');

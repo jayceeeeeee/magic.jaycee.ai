@@ -240,6 +240,7 @@ const createMasterSection = ({ client, profile, skills }) => {
 
   const refresh = () => {
     const state = skills.getPublicationState();
+    section.hidden = level < 4 || !masterId;
     visibilityField.hidden = level < 4;
     const message = !state.ready ? "Loading your skills..." : state.missing.length
       ? `Name all five skills before making your account visible. Missing: ${state.missing.join(", ")}.` : "";
@@ -250,7 +251,7 @@ const createMasterSection = ({ client, profile, skills }) => {
   };
   visibilityInput.addEventListener("change", refresh);
   const setMaster = async (id) => {
-    section.hidden = !id;
+    section.hidden = level < 4 || !id;
     if (id === masterId) return;
     masterId = id;
     avatar.replaceChildren();

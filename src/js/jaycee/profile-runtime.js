@@ -515,15 +515,21 @@ const createNoticeMasterBadge = (profile, fallbackUsername = "Cedricjbt") => {
   return badge;
 };
 
-// Temporarily unavailable while these Masters' games are being prepared.
+// Temporary lineup, keyed by stable account UUIDs. Usernames are display-only.
+const FEATURED_MASTERS = new Map([
+  ["d70b5c69-daae-4a77-9955-4385439ae292", { linkLocked: true }], // Cedricjbt
+  ["b7a38b31-100f-4e03-b3e8-9357c635ecf8", { linkLocked: false }], // Yogananda
+  ["7abd58ec-1289-403d-932c-dc2df233d079", { linkLocked: true }] // Jesus
+]);
+
 const isMasterLinkLocked = (profile) => (
-  ["jesus", "cedricjbt"].includes(getDisplayValue(profile?.username).toLowerCase())
+  FEATURED_MASTERS.get(profile?.id)?.linkLocked === true
 );
 
 const createMastersNoticeContent = (profiles, { showIntro = true, onSelect = null, isSaving = false } = {}) => {
   // Temporary slider lineup; keep other public profiles out of these cards.
   const visibleProfiles = profiles.filter((profile) => (
-    ["cedricjbt", "yogananda", "jesus"].includes(getDisplayValue(profile?.username).toLowerCase())
+    FEATURED_MASTERS.has(profile?.id)
   ));
   const content = document.createDocumentFragment();
   const message = document.createElement("p");
