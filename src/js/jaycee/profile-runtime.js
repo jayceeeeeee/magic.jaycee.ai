@@ -515,6 +515,11 @@ const createNoticeMasterBadge = (profile, fallbackUsername = "Cedricjbt") => {
   return badge;
 };
 
+// Temporarily unavailable while these Masters' games are being prepared.
+const isMasterLinkLocked = (profile) => (
+  ["jesus", "cedricjbt"].includes(getDisplayValue(profile?.username).toLowerCase())
+);
+
 const createMastersNoticeContent = (profiles, { showIntro = true, onSelect = null, isSaving = false } = {}) => {
   const content = document.createDocumentFragment();
   const message = document.createElement("p");
@@ -555,11 +560,18 @@ const createMastersNoticeContent = (profiles, { showIntro = true, onSelect = nul
           if (repeat > 0) card.setAttribute("aria-hidden", "true");
           if (onSelect) {
             const choice = document.createElement("button");
+            const isLocked = isMasterLinkLocked(profile);
 
-            choice.className = "profile-master-choice";
+            choice.className = `profile-master-choice${isLocked ? " is-locked" : ""}`;
             choice.type = "button";
-            choice.disabled = isSaving;
-            choice.setAttribute("aria-label", `Link to ${getDisplayValue(profile.username)}'s game`);
+            choice.disabled = isSaving || isLocked;
+            choice.setAttribute("aria-label", isLocked
+              ? `${getDisplayValue(profile.username)}'s game is locked`
+              : `Link to ${getDisplayValue(profile.username)}'s game`);
+            if (isLocked) {
+              choice.title = "This Master's game is temporarily locked.";
+              card.append(createLockedIcon("profile-master-lock-icon"));
+            }
             if (copy > 0 || repeat > 0) {
               choice.tabIndex = -1;
               choice.setAttribute("aria-hidden", "true");
@@ -1593,6 +1605,7 @@ export const initJayceePage = async () => {
 
   const handleAcceptMasterClick = async (masterProfile) => {
     if (isMasterSaving || isQuestAcceptSaving || !masterProfile?.id || !playerProfile || !supabaseClient
+      || isMasterLinkLocked(masterProfile)
       || masterProfile.id === activeMasterProfile?.id || masterProfile.id === playerProfile.id
       || (activeMasterProfile && !isQuestPending(currentPlayer))) return;
 

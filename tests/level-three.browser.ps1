@@ -35,6 +35,16 @@ assert(before.querySelectorAll('em').length===3,'Skill names are not italic');
 assert(before.textContent.includes('Or you can choose to link yourself to another Master.'),'Missing switch invitation');
 assert(before.querySelectorAll('.profile-master-choice').length>0,'Missing carousel');
 before.querySelector('.profile-master-choice').click();assert(switched==='new','Wrong Master selected');
+const lockedChoices=runtime.createVitalsPanel({...options,publicProfiles:[{id:'jesus',username:'Jesus'},{id:'cedric',username:'Cedricjbt'},{id:'new',username:'New'}]});
+for(const name of ['Jesus','Cedricjbt']){
+  const choices=[...lockedChoices.querySelectorAll('.profile-master-choice')].filter(choice=>choice.textContent.includes(name));
+  assert(choices.length>0,`${name} missing from carousel`);
+  for(const choice of choices){
+    assert(choice.disabled&&choice.querySelector('.profile-master-lock-icon'),`${name} missing lock`);
+    switched=null;choice.click();assert(switched===null,`${name} can still be linked`);
+  }
+}
+lockedChoices.querySelector('.profile-master-choice:not(:disabled)').click();assert(switched==='new','Available Master cannot be linked');
 before.querySelector('.profile-play-button').click();assert(accepted===1,'Accept is broken');
 const active={...player,level_3_accepted_at:'2026-10-15T00:00:00Z',skill_3_start:'2026-10-15T00:00:00Z'};
 const after=runtime.createVitalsPanel({...options,player:active});assert(!after.textContent.includes('Or you can choose'),'Switching remains after Accept');
