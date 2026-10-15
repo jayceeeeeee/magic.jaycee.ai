@@ -1,10 +1,14 @@
-# Run from the repository root with Chrome installed. Uses mocks; writes only to TEMP.
+# Browser regression suite. Run from the repository root with Chrome installed.
+# Uses mocks; writes only to TEMP and never connects to Supabase.
 $ErrorActionPreference = 'Stop'
-$checkDir = Join-Path $env:TEMP ('jaycee-level-three-' + [guid]::NewGuid().ToString('N'))
+$checkDir = Join-Path $env:TEMP ('jaycee-browser-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $checkDir | Out-Null
 function Read-BrowserSource($path) {
   return ((Get-Content -LiteralPath $path -Raw -Encoding UTF8) -replace '(?s)import\s+.*?from\s+["''][^"'']+["''];', '').Replace('export ', '')
 }
+$syntaxSources = ConvertTo-Json -InputObject @(Get-ChildItem -LiteralPath 'src/js' -Recurse -Filter '*.js' | Where-Object { $_.FullName -notmatch '[\\/]vendor[\\/]' } | ForEach-Object {
+  @{ name = $_.Name; source = Read-BrowserSource $_.FullName }
+}) -Depth 3 -Compress
 $prelude = (Read-BrowserSource 'src/js/config/game-config.js') + (Read-BrowserSource 'src/js/jaycee/notifications.js')
 $prelude += Read-BrowserSource 'tests/manna.test.mjs'
 $prelude += Read-BrowserSource 'tests/quest-lock-auth.test.mjs'
@@ -20,6 +24,12 @@ $accountSource = $accountSource.Substring(0, $accountSource.LastIndexOf('if (doc
 $account = ConvertTo-Json -InputObject ($accountSource + "`nreturn initJayceeAccountPage;") -Compress
 $browser = @'
 const assert=(value,message)=>{if(!value)throw new Error(message)};
+const syntaxSources=SYNTAX_SOURCES;
+for(const file of syntaxSources){try{new Function(file.source.replace(/\bimport\.meta\b/g,'({url:"file:///syntax-check.js"})'));}catch(error){throw new Error(`${file.name}: ${error.message}`);}}
+const coreSource=syntaxSources.find(file=>file.name==='profile-core.js').source;
+const core=new Function(coreSource+'\nreturn {createJayceeState,drawJaycee};')();
+const coreCanvas=document.createElement('canvas');coreCanvas.style.width='200px';coreCanvas.style.height='200px';document.body.append(coreCanvas);
+core.drawJaycee(coreCanvas,core.createJayceeState());assert(coreCanvas.width>0,'Core canvas did not render');coreCanvas.remove();
 await runQuestLockAuthTests(AUTH_SOURCE);
 const display=value=>String(value??'').trim();
 const runtime=new Function('JAYCEE_GAME_CONFIG','getDisplayValue','isQuestPending','notificationOccurrence','isNotificationVisible','interpolateNotification','renderSkillMarkdown',RUNTIME)(JAYCEE_GAME_CONFIG,display,isQuestPending,notificationOccurrence,isNotificationVisible,interpolateNotification,(element,markdown)=>{element.textContent=markdown});
@@ -132,11 +142,22 @@ assert(!visibility.disabled&&document.querySelector('#account-visibility-hint').
 saveOrder=[];visibility.checked=true;document.querySelector('[data-account-save]').click();await new Promise(resolve=>setTimeout(resolve,20));assert(savedProfile.visibility===true,'Main Save did not persist account visibility');
 assert(saveOrder.join(',')==='skills,profile','Account made public before skill names were saved');
 '@
-$browser = $browser.Replace('AUTH_SOURCE', $authSource).Replace('RUNTIME', $runtime).Replace('EDITOR', $editor).Replace('ACCOUNT', $account)
-$html = '<!doctype html><body>RUNNING<script>(async()=>{try{' + $prelude + $checks + $browser + "document.body.textContent='PASS: notifications, Level 2/3 acceptance, clocks, practice gating, italic skill names, Master carousel, game validation/save and live Skills unlock.';}catch(error){document.body.textContent='FAIL: '+error.stack;}})();</script>"
+$browser = $browser.Replace('AUTH_SOURCE', $authSource).Replace('RUNTIME', $runtime).Replace('EDITOR', $editor).Replace('ACCOUNT', $account).Replace('SYNTAX_SOURCES', $syntaxSources)
+$html = '<!doctype html><body>RUNNING<script>(async()=>{try{' + $prelude + $checks + $browser + "document.body.textContent='PASS: JavaScript syntax, canvas, notifications, Level 2/3 acceptance, clocks, practice gating, skill names, Master carousel, game validation/save and live Skills unlock.';}catch(error){document.body.textContent='FAIL: '+error.stack;}})();</script>"
 Set-Content -LiteralPath (Join-Path $checkDir 'check.html') -Value $html -Encoding UTF8
 $process = Start-Process 'C:/Program Files/Google/Chrome/Application/chrome.exe' -ArgumentList @('--headless','--disable-gpu','--disable-software-rasterizer','--in-process-gpu','--no-sandbox','--no-first-run','--virtual-time-budget=5000','--dump-dom',('--user-data-dir='+(Join-Path $checkDir 'profile')),('file:///'+(Join-Path $checkDir 'check.html').Replace('\','/'))) -RedirectStandardOutput (Join-Path $checkDir 'stdout.txt') -RedirectStandardError (Join-Path $checkDir 'stderr.txt') -WindowStyle Hidden -PassThru
-$process.WaitForExit(20000) | Out-Null
+if (-not $process.WaitForExit(20000)) {
+  Stop-Process -Id $process.Id -ErrorAction SilentlyContinue
+  throw "Browser check timed out. Diagnostics: $checkDir"
+}
 $output = Get-Content -LiteralPath (Join-Path $checkDir 'stdout.txt') -Raw
 if ($output -notmatch '<body[^>]*>PASS:') { throw $output }
 Write-Output ($output -replace '<[^>]+>', '').Trim()
+# Delete only this run's generated profile/harness, after verifying its location.
+$resolvedCheckDir = [System.IO.Path]::GetFullPath($checkDir)
+$resolvedTempDir = [System.IO.Path]::GetFullPath($env:TEMP).TrimEnd('\') + '\'
+if (-not $resolvedCheckDir.StartsWith($resolvedTempDir, [System.StringComparison]::OrdinalIgnoreCase) -or
+    [System.IO.Path]::GetFileName($resolvedCheckDir) -notlike 'jaycee-browser-*') {
+  throw "Unexpected test artifact directory: $resolvedCheckDir"
+}
+Remove-Item -LiteralPath $resolvedCheckDir -Recurse -Force

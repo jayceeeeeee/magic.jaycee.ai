@@ -1886,8 +1886,3 @@ export const startJayceePage = () => {
     initJayceePage();
   }
 };
-
-export const startJayceeProfilePage = () => {
-  startJayceePage();
-};
-

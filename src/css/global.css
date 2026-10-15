@@ -288,17 +288,6 @@ body::after {
     transform: translateY(-1px);
 }
 
-.temple-header-note img {
-    flex: 0 0 auto;
-    width: 34px;
-    height: 34px;
-    border: 1px solid rgba(var(--accent-rgb), 0.36);
-    border-radius: 4px;
-    object-fit: cover;
-    object-position: center top;
-    filter: var(--image-filter);
-}
-
 .site-header .account-menu-button {
     justify-self: end;
     display: none;
@@ -941,11 +930,6 @@ body::after {
 
     .temple-header-note p.is-overflowing .temple-header-track {
         animation-duration: 7s;
-    }
-
-    .temple-header-note img {
-        width: 32px;
-        height: 32px;
     }
 
     .site-header .account-menu-button {

@@ -3,8 +3,6 @@ const SQUARE_GRID_SIZE = 3;
 export const JAYCEE_ORDER = [1, 2, 4, 3, 5, 7, 6, 8, 9];
 const ACTIVE_CORE_SEGMENT_INDEX = JAYCEE_ORDER.indexOf(9);
 const ACTIVE_FILL_ALPHA = 0.255;
-const CONSOLE_TYPING_SPEED = 18;
-const CONSOLE_LINE_PAUSE = 90;
 const SURFACE_FILL_ALPHA = 0.86;
 const STYLED_RING_INDEX = 0;
 const CORE_RING_MAX_RADIAL_SHARE = 0.46;
@@ -128,27 +126,6 @@ const getSquareCellPaletteColors = (index, palette) => {
     end: getSquarePaletteColor(column + 1, row + 1, palette),
     start: getSquarePaletteColor(column, row, palette)
   };
-};
-
-const wait = (duration) => new Promise((resolve) => window.setTimeout(resolve, duration));
-
-const typeJayceeConsoleLine = async (line) => {
-  if (!line) return;
-
-  const message = line.dataset.jayceeConsoleLine || "";
-  const prompt = line.querySelector("span[aria-hidden='true']") || document.createElement("span");
-  const text = document.createElement("span");
-
-  prompt.setAttribute("aria-hidden", "true");
-  prompt.textContent = ">";
-  line.replaceChildren(prompt, text);
-
-  await wait(CONSOLE_LINE_PAUSE);
-
-  for (const character of message) {
-    text.textContent += character;
-    await wait(CONSOLE_TYPING_SPEED);
-  }
 };
 
 const getCanvasMetrics = (canvas, ringCount, options = {}) => {
@@ -1455,47 +1432,3 @@ export const drawJaycee = (canvas, state = DEFAULT_JAYCEE_STATE) => {
   }, state.coreSquareLabels);
 
 };
-
-const initJaycee = () => {
-  typeJayceeConsoleLine(document.querySelector("[data-jaycee-console-line]"));
-
-  const canvas = document.querySelector("[data-jaycee-canvas]");
-  if (!canvas) return;
-
-  let jayceeState = DEFAULT_JAYCEE_STATE;
-  const render = () => {
-    try {
-      drawJaycee(canvas, jayceeState);
-    } catch (error) {
-      console.error("Jaycee render failed", error);
-    }
-  };
-  const scheduleRender = () => {
-    window.requestAnimationFrame(() => {
-      render();
-      window.requestAnimationFrame(render);
-    });
-  };
-  const resizeObserver = new ResizeObserver(scheduleRender);
-  const clock = window.setInterval(render, 1000);
-
-  resizeObserver.observe(canvas);
-  if (canvas.parentElement) {
-    resizeObserver.observe(canvas.parentElement);
-  }
-  window.addEventListener("resize", scheduleRender);
-  window.addEventListener("load", scheduleRender);
-  if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(scheduleRender);
-  }
-  render();
-  scheduleRender();
-
-  window.addEventListener("pagehide", () => {
-    window.clearInterval(clock);
-  }, { once: true });
-};
-
-if (document.querySelector("[data-jaycee-canvas]")) {
-  initJaycee();
-}

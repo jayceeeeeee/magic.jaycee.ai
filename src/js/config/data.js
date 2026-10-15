@@ -207,40 +207,6 @@ export const createPlayerForGame = async (client, userProfile, masterProfile, va
   return data || null;
 };
 
-export const updateProfileMaster = async (client, profile, masterId) => {
-  if (!profile?.id) return null;
-
-  const { data, error } = await client
-    .from(PROFILE_TABLE)
-    .update({ master: masterId || null })
-    .eq("id", profile.id)
-    .select(PROFILE_SELECT_COLUMNS)
-    .maybeSingle();
-
-  if (error) throw error;
-
-  return data || null;
-};
-
-export const startPlayerFirstQuest = async (client, userProfile, player) => {
-  if (!userProfile?.id || !player?.id || player.skill_1_start || Number(player.level) !== 1) return player;
-
-  const { data, error } = await client
-    .from(JAYCEE_PLAYER_TABLE)
-    .update({ skill_1_start: new Date().toISOString() })
-    .eq("id", player.id)
-    .eq("user_id", userProfile.id)
-    .eq("level", 1)
-    .is("skill_1_start", null)
-    .select(PLAYER_SELECT_COLUMNS)
-    .maybeSingle();
-
-  if (error) throw error;
-
-  // Another request may already have started this quest.
-  return data || await fetchPlayerById(client, player.id);
-};
-
 export const fetchSkillsByIds = async (client, skillIds) => {
   const ids = [...new Set((skillIds || []).map(getDisplayValue).filter(Boolean))];
 
@@ -286,13 +252,6 @@ export const syncSkillProgress = async (client, playerId, session = null) => {
   return data;
 };
 
-export const acceptLevelTwoQuest = async (client, playerId) => {
-  const { data, error } = await client.rpc("accept_level_two_quest", { p_player_id: playerId });
-  if (error) throw error;
-  if (!data?.player?.id) throw new Error("The quest could not be started. Please try again.");
-  return data;
-};
-
 export const acceptQuest = async (client, playerId, level) => {
   const { data, error } = await client.rpc("accept_player_quest", { p_player_id: playerId, p_level: level });
   if (error) throw error;
@@ -311,27 +270,6 @@ export const saveOwnGame = async (client, skills) => {
   const { data, error } = await client.rpc("save_own_game", { p_skills: skills });
   if (error) throw error;
   return data;
-};
-
-export const updateSkills = async (client, skillUpdates) => {
-  const updates = (skillUpdates || []).filter((skill) => skill?.id);
-
-  if (!updates.length) return [];
-
-  const updatedRows = await Promise.all(updates.map(async ({ id, ...values }) => {
-    const { data, error } = await client
-      .from(JAYCEE_SKILLS_TABLE)
-      .update(values)
-      .eq("id", id)
-      .select("id, label, description")
-      .maybeSingle();
-
-    if (error) throw error;
-
-    return data;
-  }));
-
-  return updatedRows.filter(Boolean);
 };
 
 export const getAvatarImageUrl = async (client, profile) => (

@@ -15,7 +15,6 @@
     };
     const lightLogoSrc = new URL("assets/brand/logo_trans_black.png", assetBase).href;
     const darkLogoSrc = new URL("assets/brand/logo_trans_white.png", assetBase).href;
-    const yoganandaImageSrc = new URL("assets/images/paramahansa-yogananda-yogoda-satsanga-society-of-india-front.jpg", assetBase).href;
 
     document.documentElement.style.setProperty("--jaycee-logo-light", `url("${lightLogoSrc}")`);
     document.documentElement.style.setProperty("--jaycee-logo-dark", `url("${darkLogoSrc}")`);
@@ -56,7 +55,6 @@
                                     <span>This website is a <a href="${routes.services}" data-section-link="services">Techno-temple</a> directly connected to <a href="${routes.about}" data-section-link="about">Yogananda</a>.</span>
                                 </span>
                             </p>
-                            <img src="${yoganandaImageSrc}" alt="Paramahansa Yogananda">
                         </div>
                         <button class="account-menu-button" type="button" aria-label="Open account menu" aria-expanded="false">
                             <span class="account-menu-icon" aria-hidden="true">
