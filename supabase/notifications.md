@@ -170,7 +170,7 @@ level/reward advancement or create another quest notification.
 start timestamps restart at the current server time. Only the affected clocks
 change: practice counters, level, rewards, accepted state and permanent milestone
 are preserved. Durations match game-config.js (2551442.803, 86400 and 3600 seconds).
-Pre-Level 4 quest clocks keep their existing behavior. The page checks for expired
+Pre-Level 4 expired quests lock the account as described below. The page checks for expired
 cycles each second and syncs only when needed, with one request at a time and a
 retry delay on failure. Load/practice sync handles expiry while the page was closed.
 Queued practice is flushed before a background renewal. Ongoing Level 4 practice
@@ -180,8 +180,26 @@ is retained and uses the new clock for future saves.
 participation reaches Level 4. Existing linked Level 4+ profiles are backfilled.
 The browser cannot forge this status below Level 4, clear it, change its timestamp,
 or change the Master link after it is granted. The status survives participation
-row changes and retains account authoring access. There is currently no database
-account-expiry job; any future expiry mechanism must exclude permanent accounts.
+row changes and retains account authoring access. Permanent accounts are excluded
+from quest-expiry locking.
+
+`sql/quest_account_lock.sql` adds managed `profiles.locked` (default false).
+The currently linked game determines the account deadline: Level 1 uses Skill 1;
+an accepted Level 2/3 uses its own skill, while a pending Level 2 uses Skill 1
+and a pending Level 3 uses Skill 2. Level 4/permanent accounts are exempt.
+`sql/pending_quest_account_deadline.sql` upgrades the initial lock behavior.
+Expiry preserves clocks/practice and rejects late practice
+before progression. The lock commits as a normal RPC response, then the page
+clears the session and redirects to `/`. Auth also checks on session load/login,
+at the deadline and periodically while open. A server cron checks once per minute
+even with the site closed. A lock bans Auth login/refresh, revokes all sessions,
+and restrictive RLS denies authenticated writes/private reads with stale tokens.
+Browser users cannot change the lock flag. To restore an account, set
+`profiles.locked=false` as an administrator. The trigger removes the Auth ban and
+restarts only the enforced skill's clock (the previous skill while awaiting Accept),
+preserving all practice.
+This upgrade follows the completed-practice-history upgrades; do not rerun older
+progression replacements afterward.
 
 At Level 4 the Master section reveals **Make my account visible**, saved using
 the main account Save button. The profile trigger enforces the Level 4/permanent
@@ -292,3 +310,8 @@ Historic dismissals before this feature cannot be reconstructed.
   complete-only history, isolated skill resets, retained excess, retry deduplication,
   multiple goals, level progression, owner-only reads and forbidden browser inserts.
   All fixture/history/reward changes are rolled back.
+- `supabase/tests/quest_account_lock.sql`: current versus pending/permanent quests,
+  expiry before late saves, managed lock protection, Auth ban/session revocation,
+  stale-token denial, administrator unlock and background enforcement. Rolled back.
+- `tests/quest-lock-auth.test.mjs` (through the browser harness): automatic logout,
+  expired/banned login rejection, restored login and deadline scheduling with mocks.

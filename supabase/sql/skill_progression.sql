@@ -2,6 +2,7 @@
 -- level_two_quest_acceptance, level_three_master_games, level_four_permanent_accounts
 -- level_four_repeating_skill_cycles and simplified practice history.
 -- Keep thresholds aligned with game-config.js.
+-- Apply quest_account_lock.sql afterwards for deadline enforcement and its RPC wrapper.
 alter table public.profiles add column years_burned integer not null default 0
   check (years_burned >= 0);
 alter table public.player add column level_2_accepted_at timestamptz;

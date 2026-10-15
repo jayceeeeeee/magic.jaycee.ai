@@ -1530,8 +1530,25 @@ export const initJayceePage = async () => {
   };
 
   const refreshExpiredSkillCycles = async () => {
-    if (!supabaseClient || !currentPlayer?.id || Number(currentPlayer.level) < 4 || cycleRefreshInFlight || Date.now() < cycleRefreshRetryAt) return;
+    if (!supabaseClient || !currentPlayer?.id || cycleRefreshInFlight || Date.now() < cycleRefreshRetryAt) return;
     const models = getActiveSkillModels({ gameForm, skillForms });
+    if (Number(currentPlayer.level) < 4) {
+      const quest = getActiveQuestInfo({
+        activeModels: models, player: currentPlayer,
+        selectedAbilityIndex: isQuestPending(currentPlayer) ? Number(currentPlayer.level) - 1 : 0
+      });
+      if (Number.isFinite(quest.deadline) && Date.now() >= quest.deadline) {
+        cycleRefreshInFlight = true;
+        try {
+          await window.JayceeAuth?.checkAccountAccess();
+        } catch {
+          cycleRefreshRetryAt = Date.now() + 5000;
+        } finally {
+          cycleRefreshInFlight = false;
+        }
+      }
+      return;
+    }
     const expired = models.some((model, index) => {
       if (!model.skill) return false;
       const startedAt = Date.parse(currentPlayer?.[`skill_${index + 1}_start`] || "");

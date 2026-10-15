@@ -7,6 +7,8 @@ function Read-BrowserSource($path) {
 }
 $prelude = (Read-BrowserSource 'src/js/config/game-config.js') + (Read-BrowserSource 'src/js/jaycee/notifications.js')
 $prelude += Read-BrowserSource 'tests/manna.test.mjs'
+$prelude += Read-BrowserSource 'tests/quest-lock-auth.test.mjs'
+$authSource = ConvertTo-Json -InputObject ([string](Get-Content 'src/js/auth/auth.js' -Raw -Encoding UTF8)) -Compress
 $checks = ''
 foreach ($path in @('tests/notifications.test.mjs', 'tests/level-two-quest.test.mjs', 'tests/level-three-quest.test.mjs', 'tests/level-four.test.mjs')) {
   $checks += "`nawait (async()=>{`n" + (Read-BrowserSource $path) + "`n})();`n"
@@ -18,6 +20,7 @@ $accountSource = $accountSource.Substring(0, $accountSource.LastIndexOf('if (doc
 $account = ConvertTo-Json -InputObject ($accountSource + "`nreturn initJayceeAccountPage;") -Compress
 $browser = @'
 const assert=(value,message)=>{if(!value)throw new Error(message)};
+await runQuestLockAuthTests(AUTH_SOURCE);
 const display=value=>String(value??'').trim();
 const runtime=new Function('JAYCEE_GAME_CONFIG','getDisplayValue','isQuestPending','notificationOccurrence','isNotificationVisible','interpolateNotification','renderSkillMarkdown',RUNTIME)(JAYCEE_GAME_CONFIG,display,isQuestPending,notificationOccurrence,isNotificationVisible,interpolateNotification,(element,markdown)=>{element.textContent=markdown});
 runMannaTests(runtime.getMannaModel);
@@ -103,7 +106,7 @@ assert(!visibility.disabled&&document.querySelector('#account-visibility-hint').
 saveOrder=[];visibility.checked=true;document.querySelector('[data-account-save]').click();await new Promise(resolve=>setTimeout(resolve,20));assert(savedProfile.visibility===true,'Main Save did not persist account visibility');
 assert(saveOrder.join(',')==='skills,profile','Account made public before skill names were saved');
 '@
-$browser = $browser.Replace('RUNTIME', $runtime).Replace('EDITOR', $editor).Replace('ACCOUNT', $account)
+$browser = $browser.Replace('AUTH_SOURCE', $authSource).Replace('RUNTIME', $runtime).Replace('EDITOR', $editor).Replace('ACCOUNT', $account)
 $html = '<!doctype html><body>RUNNING<script>(async()=>{try{' + $prelude + $checks + $browser + "document.body.textContent='PASS: notifications, Level 2/3 acceptance, clocks, practice gating, italic skill names, Master carousel, game validation/save and live Skills unlock.';}catch(error){document.body.textContent='FAIL: '+error.stack;}})();</script>"
 Set-Content -LiteralPath (Join-Path $checkDir 'check.html') -Value $html -Encoding UTF8
 $process = Start-Process 'C:/Program Files/Google/Chrome/Application/chrome.exe' -ArgumentList @('--headless','--disable-gpu','--disable-software-rasterizer','--in-process-gpu','--no-sandbox','--no-first-run','--virtual-time-budget=5000','--dump-dom',('--user-data-dir='+(Join-Path $checkDir 'profile')),('file:///'+(Join-Path $checkDir 'check.html').Replace('\','/'))) -RedirectStandardOutput (Join-Path $checkDir 'stdout.txt') -RedirectStandardError (Join-Path $checkDir 'stderr.txt') -WindowStyle Hidden -PassThru

@@ -21,7 +21,8 @@ const PROFILE_SELECT_COLUMNS = [
   "role",
   "sex",
   "visibility",
-  "permanent_account_at"
+  "permanent_account_at",
+  "locked"
 ].join(", ");
 const GAME_SELECT_COLUMNS = ["id", "user_id", ...JAYCEE_GAME_SKILL_COLUMNS].join(", ");
 const SIGNED_IMAGE_URL_DURATION_SECONDS = 60 * 60;
@@ -276,6 +277,10 @@ export const syncSkillProgress = async (client, playerId, session = null) => {
     p_started_at: session?.questStart || null
   });
   if (error) throw error;
+  if (data?.account_locked) {
+    await window.JayceeAuth?.signOutLockedAccount();
+    throw new Error("This account is locked because its quest expired.");
+  }
   if (!data?.player?.id) throw new Error("Practice could not be saved.");
   return data;
 };
