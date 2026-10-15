@@ -1,8 +1,10 @@
--- Current schema after skill_progression_v1, simplify_skill_progression_v2 and level_two_quest_acceptance.
+-- Current schema after skill_progression_v1, simplify_skill_progression_v2,
+-- level_two_quest_acceptance and level_three_master_games.
 -- Keep thresholds aligned with game-config.js.
 alter table public.profiles add column years_burned integer not null default 0
   check (years_burned >= 0);
 alter table public.player add column level_2_accepted_at timestamptz;
+alter table public.player add column level_3_accepted_at timestamptz;
 
 create function public.sync_skill_progress(
   p_player_id uuid, p_skill_number integer default null,
@@ -17,6 +19,7 @@ declare
   burned integer;
   occurrence text;
   completed text := null;
+  pending boolean;
 begin
   if owner_id is null then raise exception 'Authentication required' using errcode = '42501'; end if;
   select * into participant from public.player
@@ -24,9 +27,11 @@ begin
   if not found then raise exception 'Player not found' using errcode = '42501'; end if;
   snapshot := to_jsonb(participant);
   quest := least(3, greatest(1, participant.level));
-  -- Level 2 waits for explicit acceptance; loading the page must not start it.
+  pending := participant.level in (2, 3)
+    and snapshot->>('level_' || participant.level || '_accepted_at') is null;
+  -- Levels 2 and 3 wait for explicit acceptance.
   if snapshot->>('skill_' || quest || '_start') is null
-    and not (participant.level = 2 and participant.level_2_accepted_at is null) then
+    and not pending then
     update public.player set skill_1_start = now(), skill_2_start = now(), skill_3_start = now()
       where id = participant.id returning * into participant;
     snapshot := to_jsonb(participant);
@@ -39,8 +44,8 @@ begin
       or not (p_practice_seconds >= 0 and p_practice_seconds < 'Infinity'::double precision) then
       raise exception 'Invalid practice time';
     end if;
-    if p_skill_number = 2 and participant.level = 2 and participant.level_2_accepted_at is null then
-      raise exception 'Accept the Level 2 quest before starting practice';
+    if p_skill_number = quest and pending then
+      raise exception 'Accept the Level % quest before starting practice', participant.level;
     end if;
     -- A late save must not restore practice after an objective has reset it.
     if p_started_at is not distinct from
@@ -57,7 +62,7 @@ begin
   occurrence := participant.id::text || ':' || participant.level::text || ':' ||
     coalesce(snapshot->>('skill_' || quest || '_start'), 'none');
   if coalesce((snapshot->>('skill_' || quest || '_practice'))::double precision, 0) >= target
-    and not (participant.level = 2 and participant.level_2_accepted_at is null)
+    and not pending
     and exists (select 1 from public.game where user_id = participant.master
       and to_jsonb(game)->>('skill_' || quest) is not null) then
     -- Progress, reward, reset and notification completion commit together.
@@ -73,7 +78,7 @@ begin
       skill_3_practice = case when quest = 3 then 0 else skill_3_practice end,
       skill_1_start = now(),
       skill_2_start = case when quest = 1 then null else now() end,
-      skill_3_start = now()
+      skill_3_start = case when quest = 2 then null else now() end
       where id = participant.id returning * into participant;
   end if;
   -- Also close historic guidance when loading an already advanced player.

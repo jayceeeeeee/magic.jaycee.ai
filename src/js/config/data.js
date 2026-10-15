@@ -19,11 +19,12 @@ const PROFILE_SELECT_COLUMNS = [
   "manna_unit",
   "manna_cycle",
   "role",
-  "sex"
+  "sex",
+  "visibility"
 ].join(", ");
 const GAME_SELECT_COLUMNS = ["id", "user_id", ...JAYCEE_GAME_SKILL_COLUMNS].join(", ");
 const SIGNED_IMAGE_URL_DURATION_SECONDS = 60 * 60;
-const PLAYER_SELECT_COLUMNS = "id, user_id, master, level, level_2_accepted_at, skill_1_practice, skill_2_practice, skill_3_practice, skill_1_start, skill_2_start, skill_3_start";
+const PLAYER_SELECT_COLUMNS = "id, user_id, master, level, level_2_accepted_at, level_3_accepted_at, skill_1_practice, skill_2_practice, skill_3_practice, skill_1_start, skill_2_start, skill_3_start";
 
 export const getDisplayValue = (value) => (
   value === null || value === undefined ? "" : String(value).trim()
@@ -54,17 +55,9 @@ export const fetchProfileByUsername = async (client, username) => {
 };
 
 export const fetchPublicProfiles = async (client, limit = 100) => {
-  const { data, error } = await client
-    .from(PROFILE_TABLE)
-    .select("id, username, full_name, avatar_path, role")
-    .not("username", "is", null)
-    .eq("visibility", true)
-    .order("username", { ascending: true })
-    .limit(limit);
-
+  const { data, error } = await client.rpc("list_public_masters", { p_limit: limit });
   if (error) throw error;
-
-  return (data || []).filter((profile) => getDisplayValue(profile.username));
+  return data || [];
 };
 
 export const fetchAdminProfile = async (client) => {
@@ -290,6 +283,26 @@ export const acceptLevelTwoQuest = async (client, playerId) => {
   const { data, error } = await client.rpc("accept_level_two_quest", { p_player_id: playerId });
   if (error) throw error;
   if (!data?.player?.id) throw new Error("The quest could not be started. Please try again.");
+  return data;
+};
+
+export const acceptQuest = async (client, playerId, level) => {
+  const { data, error } = await client.rpc("accept_player_quest", { p_player_id: playerId, p_level: level });
+  if (error) throw error;
+  if (!data?.player?.id) throw new Error("The quest could not be started. Please try again.");
+  return data;
+};
+
+export const switchMaster = async (client, masterId) => {
+  const { data, error } = await client.rpc("switch_player_master", { p_master_id: masterId });
+  if (error) throw error;
+  if (!data?.id) throw new Error("The Master link could not be saved.");
+  return data;
+};
+
+export const saveOwnGame = async (client, skills) => {
+  const { data, error } = await client.rpc("save_own_game", { p_skills: skills });
+  if (error) throw error;
   return data;
 };
 

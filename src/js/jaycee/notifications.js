@@ -10,6 +10,8 @@ export const interpolateNotification = (text, values) => String(text || '').repl
 );
 
 export const isLevelTwoQuestPending = (player) => Number(player?.level) === 2 && !player?.level_2_accepted_at;
+export const isQuestPending = (player) => [2, 3].includes(Number(player?.level))
+  && !player?.[`level_${Number(player.level)}_accepted_at`];
 
 export const notificationOccurrence = (definition, player) => {
   if (definition.stage !== 'linked_master') return 'once';
@@ -21,8 +23,9 @@ export const notificationOccurrence = (definition, player) => {
 
 export const isNotificationVisible = (definition, receipt, { hasAccount, hasMaster, player = null }) => {
   if (definition.content?.level && Number(player?.level) !== definition.content.level) return false;
-  if (definition.content?.component === 'linked_quest' && isLevelTwoQuestPending(player)) return false;
+  if (definition.content?.component === 'linked_quest' && isQuestPending(player)) return false;
   if (definition.content?.action === 'accept_level_two' && !isLevelTwoQuestPending(player)) return false;
+  if (definition.content?.action === 'accept_quest' && !isQuestPending(player)) return false;
   const eligible = definition.stage === 'guest' ? !hasAccount
     : definition.stage === 'account' ? hasAccount
       : definition.stage === 'choose_master' ? hasAccount && !hasMaster

@@ -6,6 +6,7 @@ import {
   getAvatarImageUrl,
   getDisplayValue,
 } from "../config/data.js";
+import { createSkillsSection } from "./game-editor.js";
 
 const getLoginUrl = () => (
   new URL(
@@ -442,28 +443,34 @@ export const initJayceeAccountPage = async () => {
 
     const character = createCharacterSection({ avatarUrl, profile });
     const maps = createMapsSection({ profile });
-    let mapAccessUpdated = false;
+    const skills = createSkillsSection({ client, profile, createSection });
+    const playerLevels = new Map();
     const updateMapAccess = (player) => {
-      const unlocked = Number(player?.level) >= 2;
+      if (player?.id) playerLevels.set(player.id, Number(player.level) || 0);
+      const highestLevel = Math.max(0, ...playerLevels.values());
+      const unlocked = highestLevel >= 2;
       maps.section.hidden = !unlocked;
       maps.section.inert = !unlocked;
+      skills.setUnlocked(highestLevel >= 3);
     };
     updateMapAccess(null);
     window.addEventListener("jaycee:player-updated", (event) => {
       const player = event.detail?.player;
       if (player?.user_id === profile.id) {
-        mapAccessUpdated = true;
         updateMapAccess(player);
       }
     });
     try {
       const players = await fetchPlayersForUser(client, profile);
-      if (!mapAccessUpdated) updateMapAccess(players.find((player) => player.master === profile.master));
+      players.forEach((player) => {
+        if (!playerLevels.has(player.id)) playerLevels.set(player.id, Number(player.level) || 0);
+      });
+      updateMapAccess(null);
     } catch (error) {
       console.warn("Account Map access could not be loaded", error);
     }
 
-    sections.replaceChildren(character.section, maps.section);
+    sections.replaceChildren(character.section, maps.section, skills.section);
     shell.hidden = false;
     actions.hidden = false;
     setStatus(status, "");

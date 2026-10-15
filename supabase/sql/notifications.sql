@@ -92,4 +92,12 @@ insert into public.notifications (id, stage, position, title, tone, dismissible,
 ('level_two_unlocked.v1', 'linked_master', 10, 'Unlocked', 'unlocked', true,
  '{"level":2,"occurrence":"level","text":"Congratulations! You have unlocked Level 2!"}'),
 ('level_two_prepare.v1', 'linked_master', 15, 'Quest', 'quest', false,
- '{"level":2,"occurrence":"level","text":["Before beginning this Quest you must have checked the resources of {passiveSkillName} and {skillOneName}. Check their description to access it.","Only after that, click on Accept and the Quest will start."],"action":"accept_level_two","actionLabel":"Accept"}');
+ '{"level":2,"occurrence":"level","text":["Before beginning this Quest you must have checked the resources of {passiveSkillName} and {skillOneName} skills. Check their description below to access it.","Only after that, click on Accept and the Quest will begin.","In the meantime practice {skillOneName} if you don\u0027t want to lose your account."],"action":"accept_quest","actionLabel":"Accept"}'),
+('level_two_map.v1','linked_master',12,'Unlocked','unlocked',true,
+ '{"level":2,"occurrence":"level","text":"You can now modify your Health and Manna bars in the Map section of your account panel."}'),
+('level_three_unlocked.v1','linked_master',10,'Unlocked','unlocked',true,
+ '{"level":3,"occurrence":"level","text":"Congratulations! You have unlocked Level 3! You have access to a new skill."}'),
+('level_three_game.v1','linked_master',12,'Unlocked','unlocked',true,
+ '{"level":3,"occurrence":"level","text":"You can now create your own game and skills in the Skills section of your account panel, and become a Master in your turn."}'),
+('level_three_prepare.v1','linked_master',15,'Quest','quest',false,
+ '{"level":3,"occurrence":"level","action":"accept_quest","actionLabel":"Accept","text":["Before beginning this Quest you must have checked the resources of {passiveSkillName}, {skillOneName} and {skillTwoName} skills. Check their description below to access it.","Only after that, click on Accept and the Quest will begin.","In the meantime practice {skillOneName} if you don\u0027t want to lose your account."]}');

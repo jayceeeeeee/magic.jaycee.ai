@@ -1,7 +1,7 @@
 import { renderSkillMarkdown } from "./markdown.js";
 import { PracticeTimer } from "./practice-timer.js";
 import { SoundEffects } from "./sounds.js";
-import { NotificationStore, interpolateNotification, isNotificationVisible, notificationOccurrence, isLevelTwoQuestPending } from "./notifications.js";
+import { NotificationStore, interpolateNotification, isNotificationVisible, notificationOccurrence, isQuestPending } from "./notifications.js";
 import {
   JAYCEE_ORDER,
   createJayceeState,
@@ -12,7 +12,8 @@ import {
   JAYCEE_GAME_SKILL_COLUMNS
 } from "../config/game-config.js";
 import {
-  acceptLevelTwoQuest,
+  acceptQuest,
+  switchMaster,
   createPlayerForGame,
   fetchAdminProfile,
   fetchPlayerForGame,
@@ -26,9 +27,7 @@ import {
   getDisplayValue,
   loadOptionalImage,
   recordSkillPractice,
-  startPlayerFirstQuest,
   syncSkillProgress,
-  updateProfileMaster
 } from "../config/data.js";
 
 const PROFILE_CORE_METRICS = {
@@ -235,7 +234,7 @@ const getMannaModel = ({ activeModels = [], player, playerProfile, selectedAbili
   const periodSeconds = Number(activeModel?.passiveSeconds);
   const activeCycleSeconds = Number(activeModel?.questSeconds);
 
-  if ((level === 2 && isLevelTwoQuestPending(player))
+  if ((level === Number(player?.level) && isQuestPending(player))
     || !Number.isFinite(questStart.getTime()) || !(periodSeconds > 0) || !(activeCycleSeconds > 0)) {
     return { maxAbs: 1, target: 0, unit: mannaUnit, value: 0 };
   }
@@ -435,7 +434,7 @@ const createProfileNotice = ({
     String(line).split(/(\{[a-zA-Z]+\})/g).forEach((part) => {
       const key = part.slice(1, -1);
       const value = interpolateNotification(part, textValues);
-      if ((part === '{passiveSkillName}' || part === '{skillOneName}') && Object.hasOwn(textValues, key)) {
+      if (['{passiveSkillName}', '{skillOneName}', '{skillTwoName}'].includes(part) && Object.hasOwn(textValues, key)) {
         const emphasis = document.createElement("em");
         emphasis.textContent = value;
         paragraph.append(emphasis);
@@ -581,7 +580,7 @@ const getActiveQuestInfo = ({ activeModels = [], player = null, selectedAbilityI
     };
   }
 
-  const startedAt = level === 2 && isLevelTwoQuestPending(player)
+  const startedAt = level === Number(player?.level) && isQuestPending(player)
     ? NaN : Date.parse(player?.[`skill_${level}_start`] || "");
   const practiceSeconds = Math.max(0, Number(player?.[`skill_${level}_practice`]) || 0);
   const remainingPracticeSeconds = Math.max(0, Number(activeModel.questSeconds) - practiceSeconds);
@@ -688,7 +687,8 @@ const createVitalsPanel = ({
   notifications = null,
   sounds,
   passiveSkillName = "your passive skill",
-  onAcceptLevelTwoQuest,
+  onAcceptQuest,
+  capabilityLevel = null,
   isQuestAcceptSaving = false,
   questAcceptError = "",
   onPlay,
@@ -779,12 +779,12 @@ const createVitalsPanel = ({
     createVitalBar({
       current: lifeSeconds,
       label: "Health",
-      locked: !(Number(player?.level) >= 2),
+      locked: !(Number(capabilityLevel ?? player?.level) >= 2),
       max: lifeMaxSeconds,
       tone: "health",
       valueText: `${lifeValueText} / ${JAYCEE_GAME_CONFIG.lifeMaxYears.toLocaleString()}y`
     }),
-    createMannaBar(mannaModel, !(Number(player?.level) >= 2))
+    createMannaBar(mannaModel, !(Number(capabilityLevel ?? player?.level) >= 2))
   );
   panel.replaceChildren();
 
@@ -794,7 +794,8 @@ const createVitalsPanel = ({
     remainingKarmaYears: formatKarmaYears(remainingKarmaYears),
     firstActivePassiveTime,
     passiveSkillName,
-    skillOneName: activeModels[0]?.skillLabel || "your first skill"
+    skillOneName: activeModels[0]?.skillLabel || "your first skill",
+    skillTwoName: activeModels[1]?.skillLabel || "your second skill"
   };
   // Only named, code-owned components/actions can be selected by catalog JSON.
   // Text always goes through textContent: database content cannot inject HTML.
@@ -816,7 +817,7 @@ const createVitalsPanel = ({
       masterProfile: activeMasterProfile, questInfo: linkedQuestInfo, level: Number(player?.level) || 1
     });
     else if (component === 'master_choices') {
-      const masterChoices = createMastersNoticeContent(publicProfiles, {
+      const masterChoices = createMastersNoticeContent(publicProfiles.filter((master) => master.id !== playerProfile?.id), {
         showIntro: false,
         onSelect: (master) => { onEvent('clicked'); onAcceptMaster(master); },
         isSaving: isMasterSaving
@@ -840,18 +841,31 @@ const createVitalsPanel = ({
       action.textContent = definition.content.actionLabel || 'Accept';
       action.addEventListener('click', () => { onEvent('clicked'); onPlay(); });
     }
-    if (definition.content?.action === 'accept_level_two') {
+    if (['accept_level_two', 'accept_quest'].includes(definition.content?.action)) {
+      const choices = document.createDocumentFragment();
+      const invitation = document.createElement('p');
+      invitation.textContent = "Or you can choose to link yourself to another Master.";
+      choices.append(invitation, createMastersNoticeContent(publicProfiles.filter((master) => (
+        master.id !== activeMasterProfile?.id && master.id !== playerProfile?.id
+      )), { showIntro: false, onSelect: onAcceptMaster, isSaving: isMasterSaving || isQuestAcceptSaving }));
+      if (masterLinkError || isMasterSaving) {
+        const status = document.createElement('p');
+        status.setAttribute('role', 'status');
+        status.textContent = masterLinkError || 'Linking...';
+        choices.append(status);
+      }
+      content = choices;
       action = document.createElement('button');
       action.className = 'profile-play-button';
       action.type = 'button';
       action.textContent = isQuestAcceptSaving ? 'Starting...' : 'Accept';
-      action.disabled = isQuestAcceptSaving;
-      action.addEventListener('click', () => { void onAcceptLevelTwoQuest(); });
+      action.disabled = isQuestAcceptSaving || isMasterSaving;
+      action.addEventListener('click', () => { void onAcceptQuest(); });
       if (questAcceptError) {
         const status = document.createElement('p');
         status.setAttribute('role', 'alert');
         status.textContent = questAcceptError;
-        content = status;
+        choices.append(status);
       }
     }
     const notice = createProfileNotice({
@@ -1061,7 +1075,7 @@ const createSkillPanel = ({
       toggle.className = "profile-play-button";
       toggle.dataset.practiceToggle = String(activeIndex);
       toggle.disabled = isDescriptionClosing || !player?.id || !activeModels[activeIndex - 1]?.skill
-        || (activeIndex === 2 && isLevelTwoQuestPending(player));
+        || (activeIndex === Number(player?.level) && isQuestPending(player));
       toggle.textContent = practicingSkillIndex === activeIndex ? "Stop" : "Start";
       toggle.addEventListener("click", () => onTogglePractice?.(activeIndex));
       description.append(toggle);
@@ -1235,19 +1249,20 @@ export const initJayceePage = async () => {
     }
   };
 
-  const handleAcceptLevelTwoQuest = async () => {
-    if (isQuestAcceptSaving || !supabaseClient || !isLevelTwoQuestPending(currentPlayer)) return;
+  const handleAcceptQuest = async () => {
+    if (isQuestAcceptSaving || isMasterSaving || !supabaseClient || !isQuestPending(currentPlayer)) return;
     isQuestAcceptSaving = true;
     questAcceptError = "";
     renderVitalsPanel();
     try {
       if (practice) await practice.flush();
-      const result = await acceptLevelTwoQuest(supabaseClient, currentPlayer.id);
+      const level = Number(currentPlayer.level);
+      const result = await acceptQuest(supabaseClient, currentPlayer.id, level);
       applySkillProgress(result);
-      notifications?.record('level_two_prepare.v1', 'completed', `${result.player.id}:2`);
+      notifications?.record(level === 2 ? 'level_two_prepare.v1' : 'level_three_prepare.v1', 'completed', `${result.player.id}:${level}`);
       sounds.play('notificationConfirm');
     } catch (error) {
-      console.error("Jaycee Level 2 quest could not be started", error);
+      console.error("Jaycee quest could not be started", error);
       questAcceptError = error?.message || "The quest could not be started. Please try again.";
     } finally {
       isQuestAcceptSaving = false;
@@ -1309,7 +1324,8 @@ export const initJayceePage = async () => {
       notifications,
       sounds,
       passiveSkillName: getPassiveSkillModel({ gameForm, skillForms, hasLinkedMaster: true }).skill?.label || "your passive skill",
-      onAcceptLevelTwoQuest: handleAcceptLevelTwoQuest,
+      onAcceptQuest: handleAcceptQuest,
+      capabilityLevel: Math.max(0, ...playerRows.map((row) => Number(row.level) || 0)),
       isQuestAcceptSaving,
       questAcceptError,
       onPlay: handlePlayClick,
@@ -1385,7 +1401,7 @@ export const initJayceePage = async () => {
       onTogglePractice: (index) => {
         if (!practice || !currentPlayer || closingAbilityIndex !== null
           || index < 1 || index > ACTIVE_RING_LIMIT || Number(currentPlayer.level) < index
-          || (index === 2 && isLevelTwoQuestPending(currentPlayer))
+          || (index === Number(currentPlayer.level) && isQuestPending(currentPlayer))
           || !activeModels[index - 1]?.skill) return;
 
         if (practice.active?.skillNumber === index) {
@@ -1491,38 +1507,34 @@ export const initJayceePage = async () => {
   };
 
   const handleAcceptMasterClick = async (masterProfile) => {
-    if (isMasterSaving || activeMasterProfile || !masterProfile?.id || !playerProfile || !supabaseClient) return;
+    if (isMasterSaving || isQuestAcceptSaving || !masterProfile?.id || !playerProfile || !supabaseClient
+      || masterProfile.id === activeMasterProfile?.id || masterProfile.id === playerProfile.id
+      || (activeMasterProfile && !isQuestPending(currentPlayer))) return;
 
     isMasterSaving = true;
     masterLinkError = "";
+    questAcceptError = "";
     renderVitalsPanel();
 
     try {
       const masterGame = await fetchUserGameSettings(supabaseClient, masterProfile);
 
-      if (!masterGame?.id) {
+      if (!masterGame?.id || !masterGame.skill_1) {
         throw new Error("This Master has no game available yet.");
       }
 
-      let player = await fetchPlayerForGame(supabaseClient, playerProfile, masterProfile);
-
-      if (!player) {
-        player = await createPlayerForGame(supabaseClient, playerProfile, masterProfile);
-      }
-      if (!player?.id) {
-        throw new Error("The Master link could not be created.");
-      }
-
-      player = await startPlayerFirstQuest(supabaseClient, playerProfile, player);
-
-      const updatedProfile = await updateProfileMaster(supabaseClient, playerProfile, masterProfile.id);
-
-      if (!updatedProfile) throw new Error("The Master link could not be saved. Please try again.");
-
-      playerProfile = updatedProfile;
+      practice?.stop();
+      if (practice) await practice.flush();
+      const player = await switchMaster(supabaseClient, masterProfile.id);
+      playerProfile = { ...playerProfile, master: masterProfile.id };
       currentPlayer = player;
+      selectedAbilityIndex = null;
+      closingAbilityIndex = null;
+      if (descriptionCloseTimer) window.clearTimeout(descriptionCloseTimer);
+      descriptionCloseTimer = 0;
       playerRows = await fetchPlayersForUser(supabaseClient, playerProfile);
       await loadMasterGame(masterProfile, masterGame);
+      window.dispatchEvent(new CustomEvent("jaycee:player-updated", { detail: { player } }));
     } catch (error) {
       console.error("Jaycee Master could not be linked", error);
       masterLinkError = error?.message || "The Master link could not be saved. Please try again.";

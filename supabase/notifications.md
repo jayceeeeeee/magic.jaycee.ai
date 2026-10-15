@@ -50,16 +50,68 @@ At levels above 3 the third active skill continues to supply the practice target
 Keep the RPC's target ratios aligned with `src/js/config/game-config.js`.
 The life bar is `(age in years + years_burned) / 1000000`.
 
+## Level 3 and Master games
+
+`sql/level_three_and_master_games.sql` was applied as `level_three_master_games`.
+It adds `player.level_3_accepted_at` and extends acceptance to Levels 2 and 3 with
+`accept_player_quest(player_id, level)`. The Level 2 RPC remains a compatibility
+wrapper. Level 2 completion leaves `skill_3_start` empty; Level 3 cannot start or
+advance before Accept. Existing Level 3 players also need to accept; their saved
+practice is retained. Later levels keep their existing progression behavior.
+
+Each level first displays an unlock notice, an account-feature unlock notice, and
+a preparation quest. `level_two_map.v1` announces Map/Health/Manna editing;
+`level_three_game.v1` announces the Skills editor. Notices use stable player/level
+occurrences. Level 3 preparation names the passive, first and second active skills.
+Preparation at either level includes the prior-skill practice reminder followed by
+an invitation and carousel to choose another Master. The Level 2 text edited in the
+database is preserved by the upgrade; only its action changes to `accept_quest`.
+
+`switch_player_master` locks and checks the active participation and saves the new
+profile link atomically. Switching is allowed before accepting a Level 2 or 3 quest,
+or when first choosing a Master. It is blocked during accepted quests. Each Master's
+game retains its own participation and progress; a new game starts at Level 1.
+Account Map and Skills unlocks use the highest level among the user's saved
+participations, so switching does not remove earned account features.
+
+The Skills section appears at Level 3, before quest acceptance. It edits five game
+slots (passive, three active, ultimate), with a name and Markdown description/resources
+for each. Its own Create/Save game button calls `save_own_game`; game and skill changes
+are transactional. Incomplete drafts remain editable. No special `profiles.role`
+is assigned.
+
+`sql/master_eligibility_and_visibility.sql` was subsequently applied as
+`master_eligibility_managed_visibility`. Master discovery and switching now share
+`is_public_master`: the profile must be visible, have a username and game, and all
+five skill slots must reference existing skills with nonblank names. The browser
+loads this list through the invoker `list_public_masters` RPC, available to guests
+and accounts.
+
+Visibility defaults to `false` and is managed only through trusted database/backend
+access. The editor has no visibility control and saving never changes this flag.
+A profile trigger rejects visibility changes and public profile inserts by browser
+roles, including direct API requests. Existing visible profiles remain unchanged.
+The legacy `save_own_game` publication argument is retained for compatibility;
+`true` is rejected and false/omitted leaves visibility untouched. Apply upgrades
+in order; rerunning the older Level 3 upgrade would restore obsolete function bodies.
+
+The upgrade also adds indexed `skills.user_id`, attributes existing skills to their
+sole game owner, and replaces unrestricted skill writes with owner-only policies.
+Shared/unowned legacy slots are cloned on save. Game/skill authoring requires an
+owned participation at Level 3 or higher through the invoker `can_author_game` helper.
+No other player's skills can be edited through the editor or direct table updates.
+
 ## Content and new notifications
 
 Catalog JSON contains plain `text`, optional `component`, and optional `action` /
 `actionLabel`. Supported components are `masters`, `karma_master`, `master_choices`,
-and `linked_quest`; supported actions are `signup` and `accept_level_two`. These map to existing DOM
+and `linked_quest`; supported actions are `signup`, `accept_quest`, and legacy
+`accept_level_two`. These map to existing DOM
 builders in `profile-runtime.js`. Unknown components/actions do not execute code.
 Never store executable HTML, scripts, arbitrary iframe URLs or callbacks in this table.
 
 Text placeholders: `{lifeMaxYears}`, `{prayerKarmaYears}`, `{remainingKarmaYears}`,
-`{firstActivePassiveTime}`, `{passiveSkillName}`, `{skillOneName}`. Text may be an array
+`{firstActivePassiveTime}`, `{passiveSkillName}`, `{skillOneName}`, `{skillTwoName}`. Text may be an array
 of paragraphs; values and text render as text nodes. `content.level` restricts a
 notice to that player level, and `content.occurrence = "level"` uses a stable level receipt.
 Avatars, carousels,
@@ -109,6 +161,16 @@ Historic dismissals before this feature cannot be reconstructed.
 - `tests/level_two_quest.sql` (under `supabase/`): authenticated acceptance, paused
   advancement, retry/reload clock stability, preserved practice, receipt writes,
   ownership and Level 1/3 behavior, all rolled back. Requires a Level 2 player.
+- `tests/level-three-quest.test.mjs`: Level 3 preparation/acceptance and receipt scope.
+- `tests/level-three.browser.ps1`: headless Chrome checks for rendering, italic skill
+  names, carousel selection, practice/countdown gating, editor validation/save and
+  live Skills unlocking. Uses mocks and writes its harness only to TEMP.
+- `supabase/tests/level_three_master_games.sql`: real-role Level 3 progression,
+  acceptance, authoring/managed visibility, owner-only skill edits, level gating and
+  switching. All game/player/profile/receipt test changes are rolled back.
+- `supabase/tests/master_eligibility_and_visibility.sql`: private saves, forbidden
+  browser visibility changes, legacy publication protection, anonymous discovery,
+  missing slots and blank skill names. All test changes are rolled back.
 - `tests/notifications.sql`: execute as postgres with two existing auth users. It
   exercises the actual `anon` / `authenticated` roles, idempotency and RLS allow/deny
   paths inside a transaction which is rolled back.

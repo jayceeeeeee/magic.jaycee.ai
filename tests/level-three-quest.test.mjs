@@ -1,0 +1,22 @@
+import { isQuestPending, isNotificationVisible, notificationOccurrence } from '../src/js/jaycee/notifications.js';
+
+const assert = (condition, message) => { if (!condition) throw new Error(message); };
+const player = { id: 'game-a', level: 3, level_3_accepted_at: null, skill_3_start: null };
+const active = { ...player, level_3_accepted_at: 'accepted', skill_3_start: 'accepted' };
+const prepare = { stage: 'linked_master', content: { level: 3, occurrence: 'level', action: 'accept_quest' } };
+const unlock = { stage: 'linked_master', dismissible: true, content: { level: 3, occurrence: 'level' } };
+const quest = { stage: 'linked_master', content: { component: 'linked_quest' } };
+const visible = (definition, row, receipt = null) => isNotificationVisible(definition, receipt, { hasAccount: true, hasMaster: true, player: row });
+assert(isQuestPending(player) && !isQuestPending(active), 'Level 3 acceptance must be persisted in player state');
+assert(visible(prepare, player) && !visible(quest, player), 'Preparation must precede the quest');
+assert(!visible(prepare, active) && visible(quest, active), 'Accept must replace preparation with the quest');
+assert(visible(unlock, active) && !visible(unlock, active, { read_at: 'read' }), 'Unlock acknowledgement must be independent of acceptance');
+assert(notificationOccurrence(unlock, player) === notificationOccurrence(unlock, active), 'Accept must not replay an acknowledged unlock');
+assert(notificationOccurrence(quest, player) !== notificationOccurrence(quest, active), 'Quest scope must use its accepted clock');
+assert(notificationOccurrence(prepare, player) !== notificationOccurrence(prepare, { ...player, id: 'game-b' }), 'Master games must have separate receipts');
+for (const level of [1, 2, 4]) assert(!visible(prepare, { ...player, level }), 'Level 3 preparation leaked to another level');
+assert(!isQuestPending({ level: 4 }), 'Later levels must keep their existing flow');
+assert(isQuestPending({ level: 2 }), 'Level 2 still needs acceptance');
+assert(!isQuestPending({ level: 2, level_2_accepted_at: 'accepted' }), 'Level 2 acceptance regressed');
+export const result = 'Level 3 quest state tests passed.';
+console.log(result);

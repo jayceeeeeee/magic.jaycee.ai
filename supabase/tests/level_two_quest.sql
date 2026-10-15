@@ -68,11 +68,16 @@ begin
     or result->'player'->>'level_2_accepted_at' is not null then
     raise exception 'FAIL: Level 1 completion did not pause the next quest';
   end if;
-  -- Other levels keep their automatic quest clock behavior.
-  update public.player set level = 3, skill_3_practice = 0, skill_3_start = null where id = player_id;
+  -- Level 3 also waits for acceptance; Level 4 keeps automatic timing.
+  update public.player set level = 3, level_3_accepted_at = null, skill_3_practice = 0, skill_3_start = null where id = player_id;
   result := public.sync_skill_progress(player_id);
-  if (result->'player'->>'level')::integer <> 3 or result->'player'->>'skill_3_start' is null then
-    raise exception 'FAIL: other level timing changed';
+  if result->'player'->>'skill_3_start' is not null then
+    raise exception 'FAIL: Level 3 started before acceptance';
+  end if;
+  update public.player set level = 4 where id = player_id;
+  result := public.sync_skill_progress(player_id);
+  if (result->'player'->>'level')::integer <> 4 or result->'player'->>'skill_3_start' is null then
+    raise exception 'FAIL: later level timing changed';
   end if;
 end;
 $$;

@@ -21,7 +21,7 @@ assert(notificationOccurrence(unlock, pending) === notificationOccurrence(unlock
 assert(notificationOccurrence(prepare, active) === 'player-a:2', 'Preparation is scoped per player and level');
 assert(notificationOccurrence(quest, active) !== notificationOccurrence(quest, pending), 'Quest occurrence uses accepted clock');
 assert(notificationOccurrence(unlock, { ...active, id: 'player-b' }) !== notificationOccurrence(unlock, active), 'Games must have separate unlock receipts');
-for (const level of [1, 3, 4]) {
+for (const level of [1, 4]) {
   const player = { ...pending, level };
   assert(!visible(unlock, player) && !visible(prepare, player), 'Level 2 notices must not appear at other levels');
   assert(visible(quest, player), 'Other quests remain visible without Level 2 acceptance');
