@@ -552,6 +552,7 @@ const getActiveQuestInfo = ({ activeModels = [], player = null, selectedAbilityI
   if (!activeModel) {
     return {
       activeTime: "0s",
+      requiredTime: "0s",
       practiceTime: "0s",
       passiveTime: "0s",
       skillName: "your skill"
@@ -564,6 +565,7 @@ const getActiveQuestInfo = ({ activeModels = [], player = null, selectedAbilityI
 
   return {
     activeTime: formatDuration(Math.ceil(remainingPracticeSeconds), { compact: false }) || "0s",
+    requiredTime: formatDuration(activeModel.questSeconds, { compact: false }) || "0s",
     practiceTime: formatDuration(Math.floor(practiceSeconds), { compact: false }) || "0s",
     deadline: Number.isFinite(startedAt) ? startedAt + activeModel.passiveSeconds * 1000 : null,
     passiveTime: formatDuration(activeModel.passiveSeconds, { compact: false }) || "0s",
@@ -590,7 +592,7 @@ const createQuestCountdown = (deadline) => {
 };
 
 const getLinkedQuestText = (questInfo) => (
-  `You have ${questInfo.passiveTime} to do ${questInfo.activeTime} of ${questInfo.skillName}. During this time you cannot link yourself to another Master. If you fail, your account will be deleted automatically.`
+  `You have ${questInfo.passiveTime} to do ${questInfo.requiredTime} of ${questInfo.skillName}. During this time you cannot link yourself to another Master. If you fail, your account will be deleted automatically. Click on the new unlocked skill below to start.`
 );
 
 const updatePracticeDetails = (element, questInfo) => {
@@ -615,16 +617,8 @@ const createLinkedMasterNoticeContent = ({ masterProfile, questInfo }) => {
     createNoticeMasterBadge(masterProfile, "a Master"),
     document.createTextNode(".")
   );
-  secondLine.dataset.linkedQuestText = "";
   secondLine.textContent = getLinkedQuestText(questInfo);
   fragment.append(firstLine, secondLine);
-
-  const countdown = createQuestCountdown(questInfo.deadline);
-
-  if (countdown) {
-    countdown.dataset.linkedQuestCountdown = "";
-    fragment.append(countdown);
-  }
 
   return fragment;
 };
@@ -727,8 +721,7 @@ const createVitalsPanel = ({
   const lifeValueText = effectivePlayer ? formatYearsFromSeconds(lifeSeconds) : `${formatKarmaYears(prayerKarmaYears)}y`;
   const linkedQuestInfo = getActiveQuestInfo({
     activeModels,
-    player: effectivePlayer,
-    selectedAbilityIndex
+    player: effectivePlayer
   });
   const firstActivePassiveTime = formatDuration(activeModels[0]?.passiveSeconds, { compact: false }) || "0s";
   panel.className = "profile-vitals-panel";
@@ -774,8 +767,8 @@ const createVitalsPanel = ({
           masterProfile: activeMasterProfile,
           questInfo: linkedQuestInfo
         }),
-        title: "Notification",
-        tone: "notification"
+        title: "Quest",
+        tone: "quest"
       }));
     } else {
       const masterChoices = createMastersNoticeContent(publicProfiles, {
@@ -913,6 +906,7 @@ const createSkillPanel = ({
   currentLevel = 0,
   isDescriptionClosing = false,
   onSelect,
+  onTogglePractice,
   passiveModel,
   player = null,
   practicingSkillIndex = null,
@@ -980,6 +974,7 @@ const createSkillPanel = ({
     button.dataset.state = ability.type === "passive" ? "Passive" : isLocked ? "" : ability.type === "ultimate" ? "Ultimate" : "Ready";
     button.disabled = isLocked;
     button.textContent = ability.label;
+    button.title = "View skill details";
     button.setAttribute("aria-pressed", String(isActive));
     if (isLocked) {
       const lockStatus = document.createElement("span");
@@ -1017,6 +1012,17 @@ const createSkillPanel = ({
       text.className = "profile-skill-description";
       renderSkillMarkdown(text, activeAbility.description);
       description.append(text);
+    }
+    if (activeAbility.type === "active") {
+      const toggle = document.createElement("button");
+
+      toggle.type = "button";
+      toggle.className = "profile-play-button";
+      toggle.dataset.practiceToggle = String(activeIndex);
+      toggle.disabled = isDescriptionClosing || !player?.id || !activeModels[activeIndex - 1]?.skill;
+      toggle.textContent = practicingSkillIndex === activeIndex ? "Stop" : "Start";
+      toggle.addEventListener("click", () => onTogglePractice?.(activeIndex));
+      description.append(toggle);
     }
   }
 
@@ -1242,21 +1248,6 @@ export const initJayceePage = async () => {
         ? Math.max(0, Number(currentPlayer?.level) || 0)
         : (document.body.classList.contains("game-page") ? 1 : 0),
       onSelect: (index) => {
-        const canPractice = index >= 1 && index <= ACTIVE_RING_LIMIT
-          && Number(currentPlayer?.level) >= index && activeModels[index - 1]?.skill;
-        const wasPracticing = practice?.active?.skillNumber === index;
-
-        if (canPractice && !wasPracticing && practice) {
-          if (descriptionCloseTimer) window.clearTimeout(descriptionCloseTimer);
-          descriptionCloseTimer = 0;
-          closingAbilityIndex = null;
-          selectedAbilityIndex = index;
-          practice.start(currentPlayer.id, index);
-          renderCoreParameters();
-          renderVitalsPanel();
-          return;
-        }
-        if (canPractice && wasPracticing) practice.stop();
         if (descriptionCloseTimer) {
           window.clearTimeout(descriptionCloseTimer);
           descriptionCloseTimer = 0;
@@ -1279,6 +1270,29 @@ export const initJayceePage = async () => {
         selectedAbilityIndex = index;
         renderCoreParameters();
         renderVitalsPanel();
+      },
+      onTogglePractice: (index) => {
+        if (!practice || !currentPlayer || closingAbilityIndex !== null
+          || index < 1 || index > ACTIVE_RING_LIMIT || Number(currentPlayer.level) < index
+          || !activeModels[index - 1]?.skill) return;
+
+        if (practice.active?.skillNumber === index) {
+          practice.stop();
+          if (descriptionCloseTimer) window.clearTimeout(descriptionCloseTimer);
+          selectedAbilityIndex = null;
+          closingAbilityIndex = index;
+          renderCoreParameters();
+          renderVitalsPanel();
+          shell.querySelector(`[data-skill-index="${index}"]`)?.focus();
+          descriptionCloseTimer = window.setTimeout(() => {
+            closingAbilityIndex = null;
+            descriptionCloseTimer = 0;
+            renderCoreParameters();
+          }, 180);
+          return;
+        }
+        practice.start(currentPlayer.id, index);
+        updateLiveUI();
       },
       isDescriptionClosing: closingAbilityIndex !== null,
       passiveModel,
@@ -1308,23 +1322,6 @@ export const initJayceePage = async () => {
     const player = practice?.project(currentPlayer) || currentPlayer;
     const activeSkill = practice?.active?.skillNumber;
     const models = getActiveSkillModels({ gameForm, skillForms });
-    const questText = shell.querySelector("[data-linked-quest-text]");
-    if (questText) {
-      const questInfo = getActiveQuestInfo({
-        activeModels: models, player, selectedAbilityIndex: activeSkill ?? selectedAbilityIndex
-      });
-      questText.textContent = getLinkedQuestText(questInfo);
-      const countdown = shell.querySelector("[data-linked-quest-countdown]");
-      if (countdown) {
-        if (Number.isFinite(questInfo.deadline)) {
-          countdown.dataset.questDeadline = String(questInfo.deadline);
-          updateQuestCountdown(countdown);
-        } else {
-          delete countdown.dataset.questDeadline;
-          countdown.textContent = "Time remaining: —";
-        }
-      }
-    }
     shell.querySelectorAll("[data-skill-practice-details]").forEach((element) => {
       updatePracticeDetails(element, getActiveQuestInfo({
         activeModels: models, player, selectedAbilityIndex: Number(element.dataset.skillPracticeDetails)
@@ -1353,13 +1350,15 @@ export const initJayceePage = async () => {
       const index = Number(button.dataset.skillIndex);
       const isPracticing = index === activeSkill;
       button.classList.toggle("is-practicing", isPracticing);
-      button.setAttribute("aria-pressed", String(isPracticing || button.classList.contains("is-active")));
+      button.setAttribute("aria-pressed", String(button.classList.contains("is-active")));
       button.dataset.state = isPracticing
         ? `Using · ${formatDuration(Math.floor(practice.elapsed()), { compact: false }) || "0s"}`
         : index === 0 ? "Passive" : button.disabled ? "" : index === 4 ? "Ultimate" : "Ready";
-      if (index >= 1 && index <= 3) {
-        button.title = isPracticing ? "Click to stop practicing" : "Click to start practicing";
-      }
+    });
+    shell.querySelectorAll("[data-practice-toggle]").forEach((button) => {
+      const isPracticing = Number(button.dataset.practiceToggle) === activeSkill;
+      button.textContent = isPracticing ? "Stop" : "Start";
+      button.setAttribute("aria-pressed", String(isPracticing));
     });
     const status = shell.querySelector(".profile-practice-status");
     if (status) status.textContent = practice?.error || "";
