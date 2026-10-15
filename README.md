@@ -16,6 +16,7 @@ Servir la racine du dépôt en HTTP pour ouvrir les pages et leurs modules.
 | `src/js/jaycee/profile-core.js` | Dessin du canvas, sans démarrage automatique |
 | `src/js/jaycee/account.js`, `game-editor.js` | Panneau du compte et édition des skills |
 | `src/js/shell/`, `src/css/`, `src/assets/` | Habillage partagé, styles et ressources |
+| `src/js/ui-sounds.js`, `src/js/jaycee/sounds.js` | Sons partagés des boutons/liens et effets du jeu |
 | [supabase/](supabase/README.md) | Code backend SQL, catalogue des notifications et tests DB |
 | [tests/](tests/README.md) | Tests du navigateur avec données simulées |
 

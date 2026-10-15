@@ -132,6 +132,7 @@
                 active_typing_ms: Math.round(activeTypingMs),
                 created_at: new Date().toISOString(),
             }));
+            await window.JayceeUI?.waitForSound();
             (isEmbedded ? window.top : window).location.href = "/game.html";
         } catch (error) {
             console.error("Jaycee prayer could not be saved", error);

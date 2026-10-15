@@ -12,6 +12,7 @@ $syntaxSources = ConvertTo-Json -InputObject @(Get-ChildItem -LiteralPath 'src/j
 $prelude = (Read-BrowserSource 'src/js/config/game-config.js') + (Read-BrowserSource 'src/js/jaycee/notifications.js')
 $prelude += Read-BrowserSource 'tests/manna.test.mjs'
 $prelude += Read-BrowserSource 'tests/quest-lock-auth.test.mjs'
+$prelude += Read-BrowserSource 'tests/menu-sounds.test.mjs'
 $authSource = ConvertTo-Json -InputObject ([string](Get-Content 'src/js/auth/auth.js' -Raw -Encoding UTF8)) -Compress
 $checks = ''
 foreach ($path in @('tests/notifications.test.mjs', 'tests/level-two-quest.test.mjs', 'tests/level-three-quest.test.mjs', 'tests/level-four.test.mjs')) {
@@ -31,6 +32,7 @@ const core=new Function(coreSource+'\nreturn {createJayceeState,drawJaycee};')()
 const coreCanvas=document.createElement('canvas');coreCanvas.style.width='200px';coreCanvas.style.height='200px';document.body.append(coreCanvas);
 core.drawJaycee(coreCanvas,core.createJayceeState());assert(coreCanvas.width>0,'Core canvas did not render');coreCanvas.remove();
 await runQuestLockAuthTests(AUTH_SOURCE);
+await runMenuSoundTests({indexSource:syntaxSources.find(file=>file.name==='index.js').source,loreSource:syntaxSources.find(file=>file.name==='lore.js').source,uiSource:syntaxSources.find(file=>file.name==='ui-sounds.js').source,audioSource:syntaxSources.find(file=>file.name==='sounds.js').source});
 const display=value=>String(value??'').trim();
 const runtime=new Function('JAYCEE_GAME_CONFIG','getDisplayValue','isQuestPending','notificationOccurrence','isNotificationVisible','interpolateNotification','renderSkillMarkdown',RUNTIME)(JAYCEE_GAME_CONFIG,display,isQuestPending,notificationOccurrence,isNotificationVisible,interpolateNotification,(element,markdown)=>{element.textContent=markdown});
 runMannaTests(runtime.getMannaModel);
@@ -39,6 +41,19 @@ const definitions=[{id:'level_three_prepare.v1',stage:'linked_master',title:'Que
 let accepted=0,switched;
 const player={id:'player',user_id:'user',master:'old',level:3,level_3_accepted_at:null};
 const options={activeModels:models,player,playerProfile:{id:'user',username:'User'},activeMasterProfile:{id:'old'},passiveSkillName:'Passive',notifications:{definitions,receipt(){},record(){}},sounds:{play(){}},publicProfiles:[{id:'user',username:'Self'},{id:'old',username:'Old'},{id:'new',username:'New'}],onAcceptQuest:()=>accepted++,onAcceptMaster:master=>switched=master.id};
+const originalUI=window.JayceeUI;
+let finishConfirmation,finishAcceptClick,signupRedirects=0;
+const confirmationDone=new Promise(resolve=>{finishConfirmation=resolve;});
+const acceptClickDone=new Promise(resolve=>{finishAcceptClick=resolve;});
+window.JayceeUI={waitForSound:()=>acceptClickDone};
+const signupPanel=runtime.createVitalsPanel({...options,player:null,playerProfile:null,activeMasterProfile:null,
+  notifications:{...options.notifications,definitions:[{id:'create_account.v1',stage:'guest',content:{action:'signup'}}]},
+  sounds:{play(name,{waitForEnd}){assert(name==='notificationConfirm'&&waitForEnd,'Accept did not wait for its confirmation sound');return confirmationDone;}},onPlay:()=>signupRedirects++});
+const firstAccept=signupPanel.querySelector('.profile-play-button');firstAccept.click();firstAccept.click();
+await new Promise(resolve=>setTimeout(resolve,0));assert(signupRedirects===0&&firstAccept.disabled,'First Accept redirected before its sounds finished');
+finishConfirmation();await new Promise(resolve=>setTimeout(resolve,0));assert(signupRedirects===0,'First Accept cut off the shared click sound');
+finishAcceptClick();await new Promise(resolve=>setTimeout(resolve,0));assert(signupRedirects===1,'First Accept did not continue once after both sounds finished');
+window.JayceeUI=originalUI;
 const selectionStart=new Date().toISOString();
 const selectionOptions={...options,player:null,activeMasterProfile:null,accountCreatedAt:selectionStart,notifications:{...options.notifications,definitions:[{id:'choose_master.v1',stage:'choose_master',content:{component:'master_choices'}}]}};
 const selection=runtime.createVitalsPanel(selectionOptions);

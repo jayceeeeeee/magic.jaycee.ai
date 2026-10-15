@@ -841,9 +841,10 @@ const createVitalsPanel = ({
     if (!isNotificationVisible(definition, notifications.receipt(definition.id, occurrence), {
       hasAccount: hasPlayerProfile, hasMaster: Boolean(activeMasterProfile), player
     })) continue;
-    const onEvent = (action) => {
-      sounds.play('notificationConfirm');
+    const onEvent = (action, { waitForEnd = false } = {}) => {
+      const playback = sounds.play('notificationConfirm', { waitForEnd });
       notifications.record(definition.id, action, occurrence);
+      return playback;
     };
     let content = null;
     let action = null;
@@ -876,7 +877,14 @@ const createVitalsPanel = ({
       action.className = 'profile-play-button';
       action.type = 'button';
       action.textContent = definition.content.actionLabel || 'Accept';
-      action.addEventListener('click', () => { onEvent('clicked'); onPlay(); });
+      action.addEventListener('click', async () => {
+        action.disabled = true;
+        await Promise.all([
+          onEvent('clicked', { waitForEnd: true }),
+          window.JayceeUI?.waitForSound()
+        ]);
+        onPlay();
+      });
     }
     if (['accept_level_two', 'accept_quest'].includes(definition.content?.action)) {
       const choices = document.createDocumentFragment();

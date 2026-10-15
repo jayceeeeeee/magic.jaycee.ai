@@ -2,7 +2,7 @@
     const form = document.querySelector("[data-lore-access]");
     const fullNameInput = form?.elements?.full_name;
 
-    function continueToPrayer(fullName) {
+    async function continueToPrayer(fullName) {
         const name = String(fullName || "").trim();
 
         if (!name) {
@@ -12,9 +12,11 @@
         window.localStorage.setItem("player_full_name", name);
         window.localStorage.removeItem("pending_prayer");
         document.body.classList.add("is-lore-launching");
-        window.setTimeout(() => {
-            window.location.href = "/prayer.html";
-        }, 220);
+        await Promise.all([
+            new Promise((resolve) => window.setTimeout(resolve, 220)),
+            window.JayceeUI?.waitForSound()
+        ]);
+        window.location.href = "/prayer.html";
     }
 
     form?.addEventListener("submit", (event) => {

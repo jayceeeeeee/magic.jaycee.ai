@@ -203,12 +203,12 @@
                 return;
             }
 
-            event.preventDefault();
-            mode = link.dataset.authMode === "signup" ? "signup" : "login";
+            // Cross-page links use normal navigation and the shared click sound.
             if (link.pathname !== window.location.pathname) {
-                window.location.href = link.href;
                 return;
             }
+            event.preventDefault();
+            mode = link.dataset.authMode === "signup" ? "signup" : "login";
             const nextParams = new URLSearchParams(window.location.search);
 
             if (mode === "signup") {
@@ -278,6 +278,7 @@
 
             status.textContent = "You are logged in.";
             window.JayceeAuth.refreshHeader();
+            await window.JayceeUI?.waitForSound();
             window.location.href = redirectPath?.startsWith("/") && !redirectPath.startsWith("//")
                 ? window.JayceeAuth.getAfterSignInUrl(redirectPath)
                 : window.JayceeAuth.getAfterSignInUrl();
