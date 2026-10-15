@@ -411,6 +411,40 @@
   text-transform: none;
 }
 
+.profile-vital-name {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 7px;
+}
+
+.profile-vital-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 5px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.58rem;
+  white-space: nowrap;
+}
+
+.profile-vital-lock-icon {
+  width: 11px;
+  height: 11px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.profile-vital-bar.is-locked .profile-vital-track {
+  filter: grayscale(1);
+}
+
 .profile-vital-track {
   position: relative;
   height: 12px;

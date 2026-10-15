@@ -2,6 +2,7 @@ import {
   PROFILE_TABLE,
   USER_IMAGES_BUCKET,
   fetchProfileByUserId,
+  fetchPlayersForUser,
   getAvatarImageUrl,
   getDisplayValue,
 } from "../config/data.js";
@@ -441,6 +442,26 @@ export const initJayceeAccountPage = async () => {
 
     const character = createCharacterSection({ avatarUrl, profile });
     const maps = createMapsSection({ profile });
+    let mapAccessUpdated = false;
+    const updateMapAccess = (player) => {
+      const unlocked = Number(player?.level) >= 2;
+      maps.section.hidden = !unlocked;
+      maps.section.inert = !unlocked;
+    };
+    updateMapAccess(null);
+    window.addEventListener("jaycee:player-updated", (event) => {
+      const player = event.detail?.player;
+      if (player?.user_id === profile.id) {
+        mapAccessUpdated = true;
+        updateMapAccess(player);
+      }
+    });
+    try {
+      const players = await fetchPlayersForUser(client, profile);
+      if (!mapAccessUpdated) updateMapAccess(players.find((player) => player.master === profile.master));
+    } catch (error) {
+      console.warn("Account Map access could not be loaded", error);
+    }
 
     sections.replaceChildren(character.section, maps.section);
     shell.hidden = false;
@@ -448,7 +469,7 @@ export const initJayceeAccountPage = async () => {
     setStatus(status, "");
 
     saveButton.addEventListener("click", async () => {
-      const mapsResult = maps.getUpdates();
+      const mapsResult = maps.section.hidden ? { updates: {} } : maps.getUpdates();
 
       if (mapsResult.error) {
         setStatus(saveStatus, mapsResult.error, true);

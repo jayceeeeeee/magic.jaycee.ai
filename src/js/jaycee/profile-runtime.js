@@ -359,7 +359,7 @@ const updateVitalBar = (bar, { centered = false, current, max, valueText }) => {
   }
 };
 
-const createVitalBar = ({ centered = false, current, label, max, tone, valueText }) => {
+const createVitalBar = ({ centered = false, current, label, locked = false, max, tone, valueText }) => {
   const bar = document.createElement("div");
   const header = document.createElement("div");
   const name = document.createElement("span");
@@ -369,8 +369,16 @@ const createVitalBar = ({ centered = false, current, label, max, tone, valueText
 
   bar.className = `profile-vital-bar is-${tone}`;
   bar.classList.toggle("is-centered", centered);
+  bar.classList.toggle("is-locked", locked);
   header.className = "profile-vital-header";
+  name.className = "profile-vital-name";
   name.textContent = label;
+  if (locked) {
+    const badge = document.createElement("small");
+    badge.className = "profile-vital-lock";
+    badge.append(createLockedIcon("profile-vital-lock-icon"), document.createTextNode("Locked"));
+    name.append(badge);
+  }
   track.className = "profile-vital-track";
   fill.className = "profile-vital-fill";
   header.append(name, value);
@@ -381,10 +389,11 @@ const createVitalBar = ({ centered = false, current, label, max, tone, valueText
   return bar;
 };
 
-const createMannaBar = (mannaModel) => createVitalBar({
+const createMannaBar = (mannaModel, locked = false) => createVitalBar({
   centered: true,
   current: mannaModel?.value || 0,
   label: "Manna",
+  locked,
   max: mannaModel?.maxAbs || 1,
   tone: "manna",
   valueText: mannaModel
@@ -770,11 +779,12 @@ const createVitalsPanel = ({
     createVitalBar({
       current: lifeSeconds,
       label: "Health",
+      locked: !(Number(player?.level) >= 2),
       max: lifeMaxSeconds,
       tone: "health",
       valueText: `${lifeValueText} / ${JAYCEE_GAME_CONFIG.lifeMaxYears.toLocaleString()}y`
     }),
-    createMannaBar(mannaModel)
+    createMannaBar(mannaModel, !(Number(player?.level) >= 2))
   );
   panel.replaceChildren();
 
@@ -1168,6 +1178,9 @@ export const initJayceePage = async () => {
     if (previous?.id === player.id) currentPlayer = player;
     playerRows = playerRows.map((row) => row.id === player.id ? player : row);
     if (playerProfile) playerProfile.years_burned = years_burned;
+    if (previous?.id === player.id) {
+      window.dispatchEvent(new CustomEvent("jaycee:player-updated", { detail: { player } }));
+    }
     // A reset in another tab also ends practice against the previous quest clock.
     if (practice?.active?.playerId === player.id
       && practice.active.questStart !== (player[`skill_${practice.active.skillNumber}_start`] || null)) {
