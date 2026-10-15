@@ -521,6 +521,10 @@ const isMasterLinkLocked = (profile) => (
 );
 
 const createMastersNoticeContent = (profiles, { showIntro = true, onSelect = null, isSaving = false } = {}) => {
+  // Temporary slider lineup; keep other public profiles out of these cards.
+  const visibleProfiles = profiles.filter((profile) => (
+    ["cedricjbt", "yogananda", "jesus"].includes(getDisplayValue(profile?.username).toLowerCase())
+  ));
   const content = document.createDocumentFragment();
   const message = document.createElement("p");
 
@@ -531,7 +535,7 @@ const createMastersNoticeContent = (profiles, { showIntro = true, onSelect = nul
   );
   if (showIntro) content.append(message);
 
-  if (profiles.length) {
+  if (visibleProfiles.length) {
     const carousel = document.createElement("div");
     const track = document.createElement("div");
 
@@ -550,10 +554,10 @@ const createMastersNoticeContent = (profiles, { showIntro = true, onSelect = nul
       } else {
         group.setAttribute("aria-hidden", "true");
       }
-      const repetitions = Math.ceil(12 / profiles.length);
+      const repetitions = Math.ceil(12 / visibleProfiles.length);
 
       for (let repeat = 0; repeat < repetitions; repeat += 1) {
-        profiles.forEach((profile) => {
+        visibleProfiles.forEach((profile) => {
           const card = createNoticeMasterBadge(profile);
 
           if (!onSelect) card.setAttribute("role", "listitem");

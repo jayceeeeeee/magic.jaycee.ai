@@ -40,7 +40,7 @@ const models=[1,2,3].map(level=>({skillLabel:`Skill ${level}`,skill:{id:level},p
 const definitions=[{id:'level_three_prepare.v1',stage:'linked_master',title:'Quest',tone:'quest',content:{level:3,occurrence:'level',action:'accept_quest',text:['Review {passiveSkillName} and {skillTwoName}.','In the meantime practice {skillOneName}.']}},{id:'master_linked.v1',stage:'linked_master',title:'Quest',tone:'quest',content:{component:'linked_quest'}}];
 let accepted=0,switched;
 const player={id:'player',user_id:'user',master:'old',level:3,level_3_accepted_at:null};
-const options={activeModels:models,player,playerProfile:{id:'user',username:'User'},activeMasterProfile:{id:'old'},passiveSkillName:'Passive',notifications:{definitions,receipt(){},record(){}},sounds:{play(){}},publicProfiles:[{id:'user',username:'Self'},{id:'old',username:'Old'},{id:'new',username:'New'}],onAcceptQuest:()=>accepted++,onAcceptMaster:master=>switched=master.id};
+const options={activeModels:models,player,playerProfile:{id:'user',username:'User'},activeMasterProfile:{id:'old'},passiveSkillName:'Passive',notifications:{definitions,receipt(){},record(){}},sounds:{play(){}},publicProfiles:[{id:'user',username:'Self'},{id:'old',username:'Old'},{id:'new',username:'Yogananda'}],onAcceptQuest:()=>accepted++,onAcceptMaster:master=>switched=master.id};
 const originalUI=window.JayceeUI;
 let finishConfirmation,finishAcceptClick,signupRedirects=0;
 const confirmationDone=new Promise(resolve=>{finishConfirmation=resolve;});
@@ -76,7 +76,8 @@ assert(unnamedUltimate.querySelector('em')?.textContent==='your ultimate skill',
 assert(before.textContent.includes('Or you can choose to link yourself to another Master.'),'Missing switch invitation');
 assert(before.querySelectorAll('.profile-master-choice').length>0,'Missing carousel');
 before.querySelector('.profile-master-choice').click();assert(switched==='new','Wrong Master selected');
-const lockedChoices=runtime.createVitalsPanel({...options,publicProfiles:[{id:'jesus',username:'Jesus'},{id:'cedric',username:'Cedricjbt'},{id:'new',username:'New'}]});
+const lockedChoices=runtime.createVitalsPanel({...options,publicProfiles:[{id:'jesus',username:'Jesus'},{id:'cedric',username:'Cedricjbt'},{id:'new',username:'Yogananda'},{id:'other',username:'Other Master'}]});
+assert(!lockedChoices.textContent.includes('Other Master'),'Slider exposed a profile outside its temporary lineup');
 for(const name of ['Jesus','Cedricjbt']){
   const choices=[...lockedChoices.querySelectorAll('.profile-master-choice')].filter(choice=>choice.textContent.includes(name));
   assert(choices.length>0,`${name} missing from carousel`);

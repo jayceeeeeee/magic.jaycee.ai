@@ -78,7 +78,8 @@ niveaux 2/3. Il conserve la progression de chaque participation. Un nouveau
 Master commence au niveau 1 ; revenir vers un ancien reprend sa participation.
 L'interface recharge les skills et actualise les panneaux sur place. Le niveau 4
 rend le lien permanent. Un Master public doit avoir un profil visible et cinq
-skills nommés. Les cartes Jesus/Cedricjbt sont temporairement désactivées côté UI.
+skills nommés. Le carrousel est temporairement limité à Cedricjbt, Yogananda et
+Jesus. Les cartes Jesus/Cedricjbt restent désactivées côté UI.
 
 ## Manna et karma
 
