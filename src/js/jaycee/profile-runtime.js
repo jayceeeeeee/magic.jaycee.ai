@@ -451,7 +451,7 @@ const createProfileNotice = ({
     String(line).split(/(\{[a-zA-Z]+\})/g).forEach((part) => {
       const key = part.slice(1, -1);
       const value = interpolateNotification(part, textValues);
-      if (['{passiveSkillName}', '{skillOneName}', '{skillTwoName}', '{skillThreeName}', '{masterName}'].includes(part) && Object.hasOwn(textValues, key)) {
+      if (['{passiveSkillName}', '{skillOneName}', '{skillTwoName}', '{skillThreeName}', '{skillFourName}', '{masterName}'].includes(part) && Object.hasOwn(textValues, key)) {
         const emphasis = document.createElement("em");
         emphasis.textContent = value;
         paragraph.append(emphasis);
@@ -716,6 +716,7 @@ const createVitalsPanel = ({
   notifications = null,
   sounds,
   passiveSkillName = "your passive skill",
+  ultimateModel = null,
   onAcceptQuest,
   capabilityLevel = null,
   isQuestAcceptSaving = false,
@@ -830,6 +831,7 @@ const createVitalsPanel = ({
     skillOneName: activeModels[0]?.skillLabel || "your first skill",
     skillTwoName: activeModels[1]?.skillLabel || "your second skill",
     skillThreeName: activeModels[2]?.skillLabel || "your third skill",
+    skillFourName: ultimateModel?.skillLabel || "your ultimate skill",
     masterName: getDisplayValue(activeMasterProfile?.username) || "your Master"
   };
   // Only named, code-owned components/actions can be selected by catalog JSON.
@@ -1369,6 +1371,7 @@ export const initJayceePage = async () => {
       notifications,
       sounds,
       passiveSkillName: getPassiveSkillModel({ gameForm, skillForms, hasLinkedMaster: true }).skill?.label || "your passive skill",
+      ultimateModel: getUltimateModel({ gameForm, skillForms }),
       onAcceptQuest: handleAcceptQuest,
       capabilityLevel: Math.max(playerProfile?.permanent_account_at ? 4 : 0, ...playerRows.map((row) => Number(row.level) || 0)),
       isQuestAcceptSaving,

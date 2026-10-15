@@ -236,7 +236,7 @@ Never store executable HTML, scripts, arbitrary iframe URLs or callbacks in this
 
 Text placeholders: `{lifeMaxYears}`, `{prayerKarmaYears}`, `{remainingKarmaYears}`,
 `{firstActivePassiveTime}`, `{passiveSkillName}`, `{skillOneName}`, `{skillTwoName}`,
-`{skillThreeName}`, `{masterName}`. Text may be an array
+`{skillThreeName}`, `{skillFourName}` (Ultimate), `{masterName}`. Text may be an array
 of paragraphs; values and text render as text nodes. `content.level` restricts a
 notice to that player level, and `content.occurrence = "level"` uses a stable level receipt.
 Avatars, carousels,
