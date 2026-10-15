@@ -225,7 +225,7 @@ const getSelectedActiveLevel = (player, selectedAbilityIndex = 0) => {
     : level;
 };
 
-const getMannaModel = ({ activeModels = [], player, playerProfile, practicePlayers = [], completedPassiveSeconds = 0, selectedAbilityIndex = null, lastSelectedAbilityIndex = null, practicingSkillIndex = null, now = new Date() }) => {
+const getMannaModel = ({ activeModels = [], player, playerProfile, accountCreatedAt = "", practicePlayers = [], completedPassiveSeconds = 0, selectedAbilityIndex = null, lastSelectedAbilityIndex = null, practicingSkillIndex = null, now = new Date() }) => {
   const level = Math.min(ACTIVE_RING_LIMIT, Math.max(1, Number(player?.level) || 1));
   const hasQuest = Number(player?.level) < 4;
   const mannaTarget = Number(playerProfile?.manna_target);
@@ -237,12 +237,12 @@ const getMannaModel = ({ activeModels = [], player, playerProfile, practicePlaye
   const skillModel = skillNumber === null ? null : activeModels[skillNumber - 1];
   const periodSeconds = skillModel ? Number(skillModel.passiveSeconds) : YEAR_SECONDS;
   const startedAt = new Date((skillNumber !== null ? player?.[`skill_${skillNumber}_start`]
-    : playerProfile?.permanent_account_at || player?.skill_3_start || player?.skill_1_start) || "");
+    : accountCreatedAt) || "");
   const cycleSeconds = getMannaCycleSeconds(mannaCycle, Number.isFinite(startedAt.getTime()) ? startedAt : now);
   const periodTarget = Number.isFinite(mannaTarget) && periodSeconds > 0
     ? mannaTarget * periodSeconds / cycleSeconds : 0;
   let value = 0;
-  const paused = isQuestPending(player) && (skillNumber === null || skillNumber === Number(player?.level));
+  const paused = skillNumber !== null && isQuestPending(player) && skillNumber === Number(player?.level);
   if (!paused && Number.isFinite(startedAt.getTime()) && periodSeconds > 0) {
     const elapsedSeconds = Math.min(periodSeconds, Math.max(0, (now.getTime() - startedAt.getTime()) / 1000));
     if (skillNumber !== null) {
@@ -760,7 +760,7 @@ const createVitalsPanel = ({
   const noticeMasterUsernameElement = document.createElement("i");
   const noticeMasterContent = document.createDocumentFragment();
   const mannaModel = effectivePlayer && playerProfile
-    ? getMannaModel({ activeModels, player: effectivePlayer, playerProfile, practicePlayers, completedPassiveSeconds, selectedAbilityIndex, lastSelectedAbilityIndex: lastMannaAbilityIndex, practicingSkillIndex })
+    ? getMannaModel({ activeModels, player: effectivePlayer, playerProfile, accountCreatedAt, practicePlayers, completedPassiveSeconds, selectedAbilityIndex, lastSelectedAbilityIndex: lastMannaAbilityIndex, practicingSkillIndex })
     : null;
   const prayerActiveMs = getPendingPrayerActiveMs();
   const firstActiveSkillMs = getFirstActiveSkillMs();
@@ -1484,7 +1484,7 @@ export const initJayceePage = async () => {
       }));
     });
     const mannaModel = player && playerProfile ? getMannaModel({
-      activeModels: models, player, playerProfile,
+      activeModels: models, player, playerProfile, accountCreatedAt,
       practicePlayers: playerRows,
       completedPassiveSeconds,
       selectedAbilityIndex,

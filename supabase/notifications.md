@@ -69,10 +69,13 @@ Selected skill details take priority over an ongoing practice's display. Below
 Level 4, no selection uses the practiced skill, then the current quest's skill.
 At Level 4, closing a description retains the last selected Manna view for the page;
 with no selection history it defaults to the practiced skill or Skill 3. Switching
-Master clears that selection history. Passive and Ultimate retain an annual overview using `permanent_account_at`
-(with saved skill-clock fallbacks), completed practice history and partial practice
+Master clears that selection history. Passive and Ultimate retain an annual overview using
+the authenticated user's account creation date (`auth.users.created_at` from the session),
+completed practice history and partial practice
 from unlocked skills across the user's saved games. That
-overview is not projected onto active skills. Calendar-month conversion for an
+overview runs at every level, including while waiting to accept a quest. Its loss
+clock never resets on skill completion, a Master switch or reaching Level 4;
+elapsed loss remains capped at one year. The overview is not projected onto active skills. Calendar-month conversion for an
 active skill uses its own start month. Manna remains derived from existing saved
 clocks/counters; no new database balance column is created.
 

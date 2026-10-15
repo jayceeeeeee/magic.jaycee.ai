@@ -15,7 +15,7 @@
     skill_1_practice: 0, skill_2_practice: 0, skill_3_practice: 0
   };
   const playerProfile = { manna_target: 10, manna_cycle: 'hour', manna_unit: 'EUR' };
-  const model = (options = {}) => getMannaModel({ activeModels, player, playerProfile, now, ...options });
+  const model = (options = {}) => getMannaModel({ activeModels, player, playerProfile, accountCreatedAt: start(year / 4), now, ...options });
   const targets = [7200, 240, 10];
   const losses = [-20, -5, -2.5];
   for (const selectedAbilityIndex of [1, 2, 3]) {
@@ -40,13 +40,21 @@
   const pending = { ...player, level_3_accepted_at: null };
   near(model({ player: pending }).value, 0, 'Unaccepted current quest must remain paused');
   near(model({ player: pending, selectedAbilityIndex: 1 }).value, losses[0], 'Earlier skill incorrectly paused with the new quest');
-  const permanent = { ...playerProfile, permanent_account_at: start(year / 4) };
+  const permanent = { ...playerProfile, permanent_account_at: start(120) };
   const idle = model({ player: { ...player, level: 4 }, playerProfile: permanent });
   near(idle.target, 10, 'Idle Level 4 must default to Skill 3');
   near(idle.value, losses[2], 'Idle Level 4 must retain Skill 3 balance');
   const annual = model({ player: { ...player, level: 4 }, playerProfile: permanent, selectedAbilityIndex: 0 });
   near(annual.target, 10 * year / 3600, 'Passive must retain its annual calculation');
   near(annual.value / annual.maxAbs, -0.25, 'Annual passive calculation uses the wrong clock');
+  for (const level of [1, 2, 3, 4]) {
+    const annualAtLevel = model({ selectedAbilityIndex: 0, playerProfile: permanent,
+      player: { ...player, level, level_2_accepted_at: null, level_3_accepted_at: null,
+        skill_1_start: start(10), skill_3_start: start(5) } });
+    near(annualAtLevel.value, annual.value, 'Annual loss must use account creation at every level, including pending quests');
+  }
+  near(model({ selectedAbilityIndex: 0, player: pending, completedPassiveSeconds: 3600 }).value,
+    annual.value + 10, 'Waiting for Accept must not pause archived annual gains');
   const historyOptions = { playerProfile: permanent, selectedAbilityIndex: 0 };
   const full = { ...player, id: 'current', level: 4, skill_3_practice: 60 };
   const beforeArchive = model({ ...historyOptions, player: full });
