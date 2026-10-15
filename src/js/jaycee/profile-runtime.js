@@ -742,7 +742,9 @@ const createVitalsPanel = ({
     document.createElement("br"),
     document.createElement("br"),
     noticeMasterUsernameElement,
-    document.createTextNode(" has the special ability to connect his energy to technology. If your prayer has been done faithfully he will be able to take your karma and help you from the spirit world. Your data will be deleted right after.")
+    document.createTextNode(" has the special ability "),
+    Object.assign(document.createElement("i"), { textContent: "Technomancy" }),
+    document.createTextNode(" that allows him to connect his energy to technology. If your prayer has been done faithfully he will be able to take your karma and help you from the spirit world. Your data will be deleted right after.")
   );
   profileLabel.className = "profile-section-label";
   profileLabel.textContent = "Profile";
