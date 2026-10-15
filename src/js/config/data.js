@@ -23,6 +23,7 @@ const PROFILE_SELECT_COLUMNS = [
   "visibility",
   "permanent_account_at",
   "master_selection_started_at",
+  "referrer_id",
   "locked"
 ].join(", ");
 const GAME_SELECT_COLUMNS = ["id", "user_id", ...JAYCEE_GAME_SKILL_COLUMNS].join(", ");
@@ -33,34 +34,38 @@ export const getDisplayValue = (value) => (
   value === null || value === undefined ? "" : String(value).trim()
 );
 
-export const fetchProfileByUserId = async (client, userId) => {
-  const { data, error } = await client
+const fetchProfile = async (client, column, value) => {
+  const query = (columns) => client
     .from(PROFILE_TABLE)
-    .select(PROFILE_SELECT_COLUMNS)
-    .eq("id", userId)
+    .select(columns)
+    .eq(column, value)
     .maybeSingle();
-
+  let { data, error } = await query(PROFILE_SELECT_COLUMNS);
+  // Keep the current site working until the prepared referral migration is deployed.
+  if (error && ["42703", "PGRST204"].includes(error.code) && /referrer_id/.test(error.message || "")) {
+    ({ data, error } = await query(PROFILE_SELECT_COLUMNS.split(", ").filter((name) => name !== "referrer_id").join(", ")));
+  }
   if (error) throw error;
-
   return data || null;
 };
 
-export const fetchProfileByUsername = async (client, username) => {
-  const { data, error } = await client
-    .from(PROFILE_TABLE)
-    .select(PROFILE_SELECT_COLUMNS)
-    .eq("username", username)
-    .maybeSingle();
+export const fetchProfileByUserId = (client, userId) => fetchProfile(client, "id", userId);
+export const fetchProfileByUsername = (client, username) => fetchProfile(client, "username", username);
 
-  if (error) throw error;
-
-  return data || null;
-};
-
-export const fetchPublicProfiles = async (client, limit = 100) => {
+export const fetchPublicProfiles = async (client, limit = 100, { referrerId = null, referralUsername = "" } = {}) => {
   const { data, error } = await client.rpc("list_public_masters", { p_limit: limit });
   if (error) throw error;
-  return data || [];
+  const profiles = data || [];
+  if (!referrerId && !referralUsername) return profiles;
+  const { data: referrers, error: referralError } = await client.rpc("get_public_referrer", {
+    p_referrer_id: referrerId, p_username: referralUsername || null
+  });
+  if (referralError) {
+    if (!["PGRST202", "42883"].includes(referralError.code)) console.warn("Public referrer could not be loaded", referralError);
+    return profiles;
+  }
+  const referrer = referrers?.[0];
+  return referrer && !profiles.some((profile) => profile.id === referrer.id) ? [...profiles, referrer] : profiles;
 };
 
 export const fetchAdminProfile = async (client) => {

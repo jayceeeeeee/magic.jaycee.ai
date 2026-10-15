@@ -17,7 +17,7 @@
             console.warn("Main menu session could not be checked", error);
         }
         await Promise.all([launchTransition, window.JayceeUI?.waitForSound()]);
-        window.location.href = destination;
+        window.location.href = window.JayceeReferral?.withReferral(destination) || destination;
     });
 
     window.addEventListener("pageshow", () => {

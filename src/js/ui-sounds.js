@@ -34,6 +34,6 @@ document.addEventListener("click", (event) => {
   event.preventDefault();
   const sequence = ++navigationSequence;
   void pendingSound.then(() => {
-    if (sequence === navigationSequence) window.location.assign(destination.href);
+    if (sequence === navigationSequence) window.location.assign(window.JayceeReferral?.withReferral(destination.href) || destination.href);
   });
 });

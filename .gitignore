@@ -1,0 +1,2 @@
+# Local Supabase CLI cache, not application source.
+supabase/.temp/

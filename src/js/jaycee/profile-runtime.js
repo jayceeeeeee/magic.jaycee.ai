@@ -72,7 +72,7 @@ const redirectToSignup = () => {
   if (storedFullName) {
     signupUrl.searchParams.set("full_name", storedFullName);
   }
-  window.location.href = signupUrl.href;
+  window.location.href = window.JayceeReferral?.withReferral(signupUrl.href) || signupUrl.href;
 };
 
 const getEmptyLabels = (count) => Array.from({ length: count }, () => "");
@@ -526,10 +526,10 @@ const isMasterLinkLocked = (profile) => (
   FEATURED_MASTERS.get(profile?.id)?.linkLocked === true
 );
 
-const createMastersNoticeContent = (profiles, { showIntro = true, onSelect = null, isSaving = false } = {}) => {
+const createMastersNoticeContent = (profiles, { showIntro = true, onSelect = null, isSaving = false, referrerId = null } = {}) => {
   // Temporary slider lineup; keep other public profiles out of these cards.
   const visibleProfiles = profiles.filter((profile) => (
-    FEATURED_MASTERS.has(profile?.id)
+    FEATURED_MASTERS.has(profile?.id) || profile?.id === referrerId
   ));
   const content = document.createDocumentFragment();
   const message = document.createElement("p");
@@ -844,6 +844,12 @@ const createVitalsPanel = ({
     skillFourName: ultimateModel?.skillLabel || "your ultimate skill",
     masterName: getDisplayValue(activeMasterProfile?.username) || "your Master"
   };
+  // Public profiles already pass the server's visibility/playability filter.
+  // Guests use the invite username; confirmed accounts use the saved UUID only.
+  const pendingReferrer = getDisplayValue(window.JayceeReferral?.getUsername()).toLowerCase();
+  const referrerId = playerProfile ? playerProfile.referrer_id : publicProfiles.find((candidate) => (
+    pendingReferrer && getDisplayValue(candidate.username).toLowerCase() === pendingReferrer
+  ))?.id;
   // Only named, code-owned components/actions can be selected by catalog JSON.
   // Text always goes through textContent: database content cannot inject HTML.
   for (const definition of notifications?.definitions || []) {
@@ -859,7 +865,7 @@ const createVitalsPanel = ({
     let content = null;
     let action = null;
     const component = definition.content?.component;
-    if (component === 'masters') content = createMastersNoticeContent(publicProfiles);
+    if (component === 'masters') content = createMastersNoticeContent(publicProfiles, { referrerId });
     else if (component === 'karma_master') content = noticeMasterContent;
     else if (component === 'linked_quest') content = createLinkedMasterNoticeContent({
       masterProfile: activeMasterProfile, questInfo: linkedQuestInfo, level: Number(player?.level) || 1
@@ -867,6 +873,7 @@ const createVitalsPanel = ({
     else if (component === 'master_choices') {
       const masterChoices = createMastersNoticeContent(publicProfiles.filter((master) => master.id !== playerProfile?.id), {
         showIntro: false,
+        referrerId,
         onSelect: (master) => { onEvent('clicked'); onAcceptMaster(master); },
         isSaving: isMasterSaving
       });
@@ -902,7 +909,7 @@ const createVitalsPanel = ({
       invitation.textContent = "Or you can choose to link yourself to another Master.";
       choices.append(invitation, createMastersNoticeContent(publicProfiles.filter((master) => (
         master.id !== activeMasterProfile?.id && master.id !== playerProfile?.id
-      )), { showIntro: false, onSelect: onAcceptMaster, isSaving: isMasterSaving || isQuestAcceptSaving }));
+      )), { showIntro: false, referrerId, onSelect: onAcceptMaster, isSaving: isMasterSaving || isQuestAcceptSaving }));
       if (masterLinkError || isMasterSaving) {
         const status = document.createElement('p');
         status.setAttribute('role', 'status');
@@ -1704,7 +1711,10 @@ export const initJayceePage = async () => {
     }
 
     try {
-      publicProfiles = await attachProfileAvatarUrls(supabaseClient, await fetchPublicProfiles(supabaseClient));
+      publicProfiles = await attachProfileAvatarUrls(supabaseClient, await fetchPublicProfiles(supabaseClient, 100, {
+        referrerId: playerProfile?.referrer_id || null,
+        referralUsername: playerProfile ? "" : window.JayceeReferral?.getUsername() || ""
+      }));
       if (activeMasterProfile) {
         activeMasterProfile = publicProfiles.find((publicProfile) => (
           getDisplayValue(publicProfile.id) === getDisplayValue(activeMasterProfile.id)
@@ -1816,7 +1826,10 @@ export const initJayceePage = async () => {
 
     if (isPresentPage || hasUserProfile || isGamePage) {
       try {
-        publicProfiles = await attachProfileAvatarUrls(client, await fetchPublicProfiles(client));
+        publicProfiles = await attachProfileAvatarUrls(client, await fetchPublicProfiles(client, 100, {
+          referrerId: playerProfile?.referrer_id || null,
+          referralUsername: playerProfile ? "" : window.JayceeReferral?.getUsername() || ""
+        }));
         if (activeMasterProfile) {
           activeMasterProfile = publicProfiles.find((publicProfile) => (
             getDisplayValue(publicProfile.id) === getDisplayValue(activeMasterProfile.id)

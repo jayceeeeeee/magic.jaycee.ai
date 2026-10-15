@@ -171,7 +171,8 @@
 
             const query = nextParams.toString();
 
-            return query ? `${path}?${query}` : path;
+            const href = query ? `${path}?${query}` : path;
+            return window.JayceeReferral?.withReferral(href) || href;
         }
 
         function showExistingAccountMessage() {

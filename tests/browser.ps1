@@ -13,6 +13,7 @@ $prelude = (Read-BrowserSource 'src/js/config/game-config.js') + (Read-BrowserSo
 $prelude += Read-BrowserSource 'tests/manna.test.mjs'
 $prelude += Read-BrowserSource 'tests/quest-lock-auth.test.mjs'
 $prelude += Read-BrowserSource 'tests/menu-sounds.test.mjs'
+$prelude += Read-BrowserSource 'tests/referrals.test.mjs'
 $authSource = ConvertTo-Json -InputObject ([string](Get-Content 'src/js/auth/auth.js' -Raw -Encoding UTF8)) -Compress
 $checks = ''
 foreach ($path in @('tests/notifications.test.mjs', 'tests/level-two-quest.test.mjs', 'tests/level-three-quest.test.mjs', 'tests/level-four.test.mjs')) {
@@ -32,6 +33,7 @@ const core=new Function(coreSource+'\nreturn {createJayceeState,drawJaycee};')()
 const coreCanvas=document.createElement('canvas');coreCanvas.style.width='200px';coreCanvas.style.height='200px';document.body.append(coreCanvas);
 core.drawJaycee(coreCanvas,core.createJayceeState());assert(coreCanvas.width>0,'Core canvas did not render');coreCanvas.remove();
 await runQuestLockAuthTests(AUTH_SOURCE);
+await runReferralTests({referralSource:syntaxSources.find(file=>file.name==='referral.js').source,authSource:AUTH_SOURCE,dataSource:syntaxSources.find(file=>file.name==='data.js').source});
 await runMenuSoundTests({indexSource:syntaxSources.find(file=>file.name==='index.js').source,loreSource:syntaxSources.find(file=>file.name==='lore.js').source,uiSource:syntaxSources.find(file=>file.name==='ui-sounds.js').source,audioSource:syntaxSources.find(file=>file.name==='sounds.js').source});
 const display=value=>String(value??'').trim();
 const runtime=new Function('JAYCEE_GAME_CONFIG','getDisplayValue','isQuestPending','notificationOccurrence','isNotificationVisible','interpolateNotification','renderSkillMarkdown',RUNTIME)(JAYCEE_GAME_CONFIG,display,isQuestPending,notificationOccurrence,isNotificationVisible,interpolateNotification,(element,markdown)=>{element.textContent=markdown});
@@ -93,6 +95,11 @@ const primaryChoices=[...renamed.querySelectorAll('.profile-master-choice:not([a
 assert(primaryChoices.length===3,'UUID lineup changed after a username change or accepted a matching username');
 assert(primaryChoices[0].disabled&&primaryChoices[1].disabled&&!primaryChoices[2].disabled,'UUID locks changed after a username change');
 primaryChoices[2].click();assert(switched===masterIds.yogananda,'Renamed Master cannot be linked by UUID');
+const withReferral={...options,playerProfile:{...options.playerProfile,referrer_id:'inviter'},publicProfiles:[...options.publicProfiles,{id:'inviter',username:'Inviting Master',visibility:true},{id:'stranger',username:'Stranger',visibility:true}]};
+const referredPanel=runtime.createVitalsPanel(withReferral);
+assert(referredPanel.textContent.includes('Inviting Master')&&!referredPanel.textContent.includes('Stranger'),'Referral slider did not add only the saved public referrer');
+const hiddenReferrer=runtime.createVitalsPanel({...withReferral,publicProfiles:options.publicProfiles});
+assert(!hiddenReferrer.textContent.includes('Inviting Master'),'Slider exposed a referrer excluded by public discovery');
 before.querySelector('.profile-play-button').click();assert(accepted===1,'Accept is broken');
 const active={...player,level_3_accepted_at:'2026-10-15T00:00:00Z',skill_3_start:'2026-10-15T00:00:00Z'};
 const after=runtime.createVitalsPanel({...options,player:active});assert(!after.textContent.includes('Or you can choose'),'Switching remains after Accept');
@@ -103,6 +110,7 @@ let savePayload;
 let saveOrder=[];
 const createSkillsSection=new Function('fetchUserGameSettings','fetchSkillsByIds','saveOwnGame','JAYCEE_GAME_SKILL_COLUMNS',EDITOR)(async()=>({skill_4:'ultimate'}),async()=>[{id:'ultimate',label:'Existing ultimate',description:'Keep these resources'}],async(...args)=>{savePayload={skills:args[1],argumentCount:args.length};saveOrder.push('skills')},JAYCEE_GAME_SKILL_COLUMNS);
 const profile={id:'user',master:'old',username:'User'};
+window.JayceeReferral={createLink:username=>username?`https://example.test/?ref=${encodeURIComponent(username)}`:'',getUsername:()=>''};
 const editor=createSkillsSection({client:{},profile,createSection:()=>{const section=document.createElement('section'),content=document.createElement('div');section.append(content);return{section,content}}});
 assert(editor.section.hidden,'Skills visible before unlock');editor.setUnlocked(true);document.body.append(editor.section);await new Promise(resolve=>setTimeout(resolve,10));
 assert(!editor.section.querySelector('input[type=checkbox]'),'User can change visibility');
@@ -137,10 +145,13 @@ const levelFourActive=runtime.createSkillPanel({activeModels:models,currentLevel
 assert(levelFourActive.querySelector('[data-skill-practice-details]')&&levelFourActive.querySelector('[data-quest-deadline]'),'Level 4 active descriptions lost their countdown/practice details');
 assert(!isNotificationVisible(definitions[1],null,{hasAccount:true,hasMaster:true,player:levelFour}),'Timed quest still visible at Level 4');
 let savedProfile;
+let copiedReferral,sharedReferral;
+const referralNavigator={language:'en',clipboard:{writeText:async(value)=>{copiedReferral=value;}},share:async(value)=>{sharedReferral=value.url;}};
 const client={from(){return{update(values){savedProfile=values;saveOrder.push('profile');return{eq:async()=>({error:null})}}}}};
 window.JayceeAuth={getSupabaseClient:async()=>client,getSession:async()=>({data:{session:{user:{id:'user'}}}})};
-const init=new Function('PROFILE_TABLE','USER_IMAGES_BUCKET','fetchProfileByUserId','fetchPlayersForUser','getAvatarImageUrl','getDisplayValue','createSkillsSection',ACCOUNT)('profiles','users',async(_client,id)=>id==='old'?{id:'old',username:'Linked Master'}:profile,async()=>[{...player,level:2}],async()=>'',display,createSkillsSection);
+const init=new Function('PROFILE_TABLE','USER_IMAGES_BUCKET','fetchProfileByUserId','fetchPlayersForUser','getAvatarImageUrl','getDisplayValue','createSkillsSection','navigator',ACCOUNT)('profiles','users',async(_client,id)=>id==='old'?{id:'old',username:'Linked Master'}:profile,async()=>[{...player,level:2}],async()=>'',display,createSkillsSection,referralNavigator);
 await init();assert(document.querySelector('.is-skills').hidden,'Account Skills shown at Level 2');
+assert(document.querySelector('.is-master [data-referral-link]').value==='https://example.test/?ref=User','Master referral link was not rendered from the saved username');
 assert(document.querySelector('.is-master').hidden,'Account Master section shown at Level 2');
 assert(document.querySelector('.is-master').textContent.includes('Linked Master'),'Linked Master not displayed in its section');
 window.dispatchEvent(new CustomEvent('jaycee:player-updated',{detail:{player}}));await new Promise(resolve=>setTimeout(resolve,10));assert(!document.querySelector('.is-skills').hidden,'Account Skills did not unlock at Level 3');
@@ -157,8 +168,11 @@ assert(savedProfile.manna_cycle==='hour','Account Save did not persist Hour cycl
 const visibility=document.querySelector('[name=visibility]');assert(visibility.closest('label').hidden,'Visibility control available below Level 4');
 window.dispatchEvent(new CustomEvent('jaycee:player-updated',{detail:{player:levelFour}}));await new Promise(resolve=>setTimeout(resolve,10));
 assert(!document.querySelector('.is-master').hidden,'Account Master section did not unlock at Level 4');
+const referralButtons=document.querySelectorAll('.profile-referral-actions button');
+referralButtons[0].click();await new Promise(resolve=>setTimeout(resolve,0));assert(copiedReferral==='https://example.test/?ref=User','Copy link did not copy the saved referral URL');
+referralButtons[1].click();await new Promise(resolve=>setTimeout(resolve,0));assert(sharedReferral===copiedReferral,'Share did not send the referral URL');
 assert(!visibility.closest('label').hidden,'Visibility control did not unlock at Level 4');
-assert(visibility.closest('.is-master'),'Visibility control is not in the Master section');
+assert(visibility.closest('.is-master'),'Visibility control is not in the Master section above the referral link');
 assert(visibility.disabled&&document.querySelector('#account-visibility-hint').textContent.includes('Skill 1'),'Missing skill names did not disable publication or show a message');
 visibility.checked=true;document.querySelector('[data-account-save]').click();await new Promise(resolve=>setTimeout(resolve,20));assert(savedProfile.visibility!==true,'Main Save published incomplete skills');
 visibility.checked=false;
@@ -166,6 +180,9 @@ for(const index of [1,2,3]){const input=accountSkills.querySelector(`[name=skill
 assert(!visibility.disabled&&document.querySelector('#account-visibility-hint').hidden,'Naming all skills did not enable publication');
 saveOrder=[];visibility.checked=true;document.querySelector('[data-account-save]').click();await new Promise(resolve=>setTimeout(resolve,20));assert(savedProfile.visibility===true,'Main Save did not persist account visibility');
 assert(saveOrder.join(',')==='skills,profile','Account made public before skill names were saved');
+document.querySelector('.is-character [name=username]').value='Renamed User';
+document.querySelector('[data-account-save]').click();await new Promise(resolve=>setTimeout(resolve,20));
+assert(new URL(document.querySelector('[data-referral-link]').value).searchParams.get('ref')==='Renamed User','Referral link did not refresh after saving a new username');
 '@
 $browser = $browser.Replace('AUTH_SOURCE', $authSource).Replace('RUNTIME', $runtime).Replace('EDITOR', $editor).Replace('ACCOUNT', $account).Replace('SYNTAX_SOURCES', $syntaxSources)
 $html = '<!doctype html><body>RUNNING<script>(async()=>{try{' + $prelude + $checks + $browser + "document.body.textContent='PASS: JavaScript syntax, canvas, notifications, Level 2/3 acceptance, clocks, practice gating, skill names, Master carousel, game validation/save and live Skills unlock.';}catch(error){document.body.textContent='FAIL: '+error.stack;}})();</script>"

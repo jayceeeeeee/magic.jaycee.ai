@@ -17,6 +17,7 @@ connecte pas à Supabase et n'a pas besoin de Node ni d'un serveur HTTP.
 | `level-two-quest.test.mjs`, `level-three-quest.test.mjs`, `level-four.test.mjs` | Éligibilité des notifications aux différents niveaux |
 | `manna.test.mjs` | Calculs par skill et cumul annuel |
 | `quest-lock-auth.test.mjs` | Connexion, déconnexion et échéances d'accès |
+| `referrals.test.mjs` | Capture et transport d'invitation, métadonnées signup, stockage bloqué, recherche publique et compatibilité avant migration |
 | `menu-sounds.test.mjs` | Destination de Play selon la session, attente de fin du son pour Play/Continue/liens, audio refusé ou bloqué et contrôles désactivés |
 
 Les fichiers `.mjs` sont chargés par la suite navigateur. Les tests backend sont

@@ -133,7 +133,7 @@
                 created_at: new Date().toISOString(),
             }));
             await window.JayceeUI?.waitForSound();
-            (isEmbedded ? window.top : window).location.href = "/game.html";
+            (isEmbedded ? window.top : window).location.href = window.JayceeReferral?.withReferral("/game.html") || "/game.html";
         } catch (error) {
             console.error("Jaycee prayer could not be saved", error);
             setStatus(error?.message || "Prayer could not be sent.", "error");

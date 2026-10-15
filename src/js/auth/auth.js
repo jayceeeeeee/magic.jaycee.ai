@@ -201,6 +201,7 @@
         const { data } = await client.auth.getSession();
 
         if (data.session?.user) {
+            window.JayceeReferral?.clear();
             const profile = await getProfileSettings(data.session.user);
 
             setBannerSignedIn(
@@ -223,12 +224,13 @@
             password,
             options: {
                 emailRedirectTo: options.emailRedirectTo || getCurrentUrl(defaultLoginPath),
-                data: options.data || {},
+                data: { ...options.data, referral_username: window.JayceeReferral?.getUsername() || null },
             },
         });
 
         if (!result.error && result.data?.user && result.data.user.identities?.length !== 0) {
             consumeSignupEligibility();
+            window.JayceeReferral?.clear();
         }
 
         return result;
@@ -242,7 +244,10 @@
         }
         if (!result.error && result.data?.session) {
             try {
-                if (await checkAccountAccess({ redirect: false })) return result;
+                if (await checkAccountAccess({ redirect: false })) {
+                    window.JayceeReferral?.clear();
+                    return result;
+                }
             } catch (error) {
                 await signOutLockedAccount(false);
                 return { data: { user: null, session: null }, error };

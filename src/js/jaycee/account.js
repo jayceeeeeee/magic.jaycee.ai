@@ -145,6 +145,64 @@ const sanitizeAvatarFileName = (fileName) => {
   return cleanedName || `avatar-${Date.now()}`;
 };
 
+const createReferralControls = (profile) => {
+  const section = document.createElement("div");
+  const label = document.createElement("label");
+  const input = document.createElement("input");
+  const actions = document.createElement("div");
+  const copy = document.createElement("button");
+  const share = document.createElement("button");
+  const status = document.createElement("p");
+  section.className = "profile-referral";
+  label.textContent = "Invite a friend";
+  input.type = "text";
+  input.readOnly = true;
+  input.setAttribute("aria-label", "Your referral link");
+  input.dataset.referralLink = "";
+  label.append(input);
+  actions.className = "profile-referral-actions";
+  copy.type = share.type = "button";
+  copy.className = share.className = "account-button account-button-ghost";
+  copy.textContent = "Copy link";
+  share.textContent = "Share";
+  share.hidden = typeof navigator.share !== "function";
+  status.setAttribute("role", "status");
+  actions.append(copy, share);
+  section.append(label, actions, status);
+
+  const refresh = () => {
+    input.value = window.JayceeReferral?.createLink(profile.username) || "";
+    copy.disabled = share.disabled = !input.value;
+    status.textContent = input.value ? "" : "Save a username to get your invite link.";
+  };
+  const copyLink = async () => {
+    refresh();
+    if (!input.value) return;
+    try {
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(input.value);
+      else {
+        input.focus();
+        input.select();
+        if (!document.execCommand("copy")) throw new Error("Clipboard unavailable");
+      }
+      status.textContent = "Link copied.";
+    } catch {
+      input.focus();
+      input.select();
+      status.textContent = "Select and copy the link above.";
+    }
+  };
+  copy.addEventListener("click", () => { void copyLink(); });
+  share.addEventListener("click", async () => {
+    refresh();
+    if (!input.value) return;
+    try { await navigator.share({ title: "Join me on Jaycee.ai", url: input.value }); }
+    catch (error) { if (error.name !== "AbortError") await copyLink(); }
+  });
+  refresh();
+  return { section, refresh };
+};
+
 const createCharacterSection = ({ avatarUrl = "", profile }) => {
   const { content, section } = createSection("Character", "is-character");
   const detailsForm = document.createElement("form");
@@ -155,6 +213,7 @@ const createCharacterSection = ({ avatarUrl = "", profile }) => {
   const avatarInput = document.createElement("input");
   const avatarButton = document.createElement("span");
   const usernameField = createTextField({ label: "Username", name: "username", value: profile.username });
+  usernameField.input.maxLength = 100;
   const nameField = createTextField({ label: "Full name", name: "full_name", value: profile.full_name });
   let avatarPreviewUrl = "";
 
@@ -220,6 +279,7 @@ const createMasterSection = ({ client, profile, skills }) => {
   const visibilityField = document.createElement("label");
   const visibilityInput = document.createElement("input");
   const hint = document.createElement("p");
+  const publicationControls = document.createElement("div");
   let masterId;
   let level = 0;
   identity.className = "account-master-identity";
@@ -236,10 +296,13 @@ const createMasterSection = ({ client, profile, skills }) => {
   hint.className = "account-visibility-hint";
   hint.setAttribute("role", "status");
   hint.hidden = true;
-  content.append(identity, visibilityField, hint);
+  publicationControls.className = "profile-publication-controls";
+  publicationControls.append(visibilityField, hint);
+  content.append(identity);
 
   const refresh = () => {
     const state = skills.getPublicationState();
+    publicationControls.hidden = level < 4;
     section.hidden = level < 4 || !masterId;
     visibilityField.hidden = level < 4;
     const message = !state.ready ? "Loading your skills..." : state.missing.length
@@ -275,7 +338,7 @@ const createMasterSection = ({ client, profile, skills }) => {
   };
   void setMaster(profile.master);
   return {
-    section, refresh, setMaster,
+    section, content, refresh, setMaster, publicationControls,
     setAccessLevel: (value) => { level = value; refresh(); },
     getUpdates: () => {
       refresh();
@@ -522,6 +585,8 @@ export const initJayceeAccountPage = async () => {
     let master;
     const skills = createSkillsSection({ client, profile, createSection, onChange: () => master?.refresh() });
     master = createMasterSection({ client, profile, skills });
+    const referral = createReferralControls(profile);
+    master.content.append(master.publicationControls, referral.section);
     const playerLevels = new Map();
     const updateMapAccess = (player) => {
       if (player?.id) playerLevels.set(player.id, Number(player.level) || 0);
@@ -606,6 +671,7 @@ export const initJayceeAccountPage = async () => {
         if (error) throw error;
 
         Object.assign(profile, profileUpdates);
+        referral.refresh();
         if (profileUpdates.visibility !== true) await skills.save(skillsResult.skills);
         setStatus(saveStatus, "Saved.");
         window.JayceeAuth?.refreshHeader?.();
@@ -616,7 +682,10 @@ export const initJayceeAccountPage = async () => {
         }));
       } catch (error) {
         console.error("Jaycee account save failed", error);
-        setStatus(saveStatus, error?.message || "Account could not be saved.", true);
+        const message = error?.code === "23505" && /profiles_username_ci_unique/.test(error.message || "")
+          ? "That username is already in use."
+          : error?.message || "Account could not be saved.";
+        setStatus(saveStatus, message, true);
       } finally {
         saveButton.disabled = false;
         skills.setSaving(false);

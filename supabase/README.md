@@ -14,7 +14,9 @@ site ne les applique pas à Supabase.
 | [migrations/](migrations/README.md) | Prochaines modifications datées de la base |
 | [tests/](tests/) | Tests SQL réutilisables, avec annulation des changements |
 
-`schema.sql` et `seed.sql` ont été capturés en lecture seule le **15 octobre 2026**.
+La référence initiale `schema.sql` et `seed.sql` a été capturée en lecture seule
+le **15 octobre 2026**. `schema.sql` suit ensuite les changements préparés dans le
+dépôt ; il peut donc inclure une migration pas encore déployée.
 Les anciens scripts de mises à jour ont été consolidés puis supprimés : plusieurs
 redéfinissaient les mêmes fonctions avec des versions différentes. Leur historique
 reste dans Git. Le dossier `sql/` et le document historique `notifications.md`
@@ -35,6 +37,8 @@ Les fonctions sont regroupées et nommées dans `schema.sql` ; rechercher leur n
 | `public.check_account_access`, `private.quest_deadline` | Délai initial, échéances des quêtes et verrouillage |
 | `private.lock_expired_quest_accounts` | Vérification automatique chaque minute, même page fermée |
 | `public.record_notification_events` | Accusés de lecture/acceptation des notifications |
+| `public.create_confirmed_profile`, `private.guard_profile_referrer` | Création du profil et attribution de l'invitation |
+| `public.get_public_referrer` | Carte publique de l'invitant, avec les mêmes règles que les Masters |
 | `public.is_public_master`, `public.list_public_masters` | Éligibilité et découverte des Masters |
 
 Certaines opérations simples utilisent directement les tables depuis
@@ -57,6 +61,24 @@ déployée. Ils ne se synchronisent pas automatiquement. Lire un fichier SQL ne
 donne aucun droit d'administration sur la base.
 
 ## Modifier une règle
+
+La migration [account_referrals](migrations/20261015230039_account_referrals.sql)
+est **déployée depuis le 16 octobre 2026**. Elle ajoute `profiles.referrer_id`, l'unicité des
+usernames sans distinction de casse, le traitement des métadonnées à la confirmation
+et la recherche publique de l'invitant. Pour une autre base, résoudre d'éventuels
+usernames non vides en double ; l'index unique refusera de les rendre ambigus :
+
+```sql
+select lower(btrim(username)) as username, count(*)
+from public.profiles
+where nullif(btrim(username),'') is not null
+group by lower(btrim(username)) having count(*) > 1;
+```
+
+Conserver ce fichier comme historique ; ne pas le supprimer ni le réexécuter sur cette base.
+Le frontend tolère une base sans cette migration, mais celle-ci reste nécessaire
+pour enregistrer l'invitant dans les profils. Le test SQL correspondant est
+`tests/account_referrals.sql`, à exécuter dans une base de test migrée.
 
 1. Créer une migration avec la procédure de [migrations/README.md](migrations/README.md).
 2. Mettre à jour la référence `schema.sql` et le test concerné, sans réécrire les migrations déjà appliquées.

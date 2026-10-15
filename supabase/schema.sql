@@ -1,5 +1,6 @@
 -- Current application schema, captured read-only from Supabase on 2026-10-15.
 -- Source reference / bootstrap for a NEW Supabase project, not an upgrade script.
+-- Includes account_referrals, deployed on 2026-10-16; this file is not auto-deployed.
 -- Managed Auth/Storage schemas and roles must already exist. See README.md.
 -- No user accounts, profiles, practice history or private data are included.
 begin;
@@ -90,7 +91,8 @@ create table public."profiles" (
   "years_burned" integer default 0 not null,
   "permanent_account_at" timestamp with time zone,
   "locked" boolean default false not null,
-  "master_selection_started_at" timestamp with time zone
+  "master_selection_started_at" timestamp with time zone,
+  "referrer_id" uuid
 );
 
 create table public."skills" (
@@ -149,6 +151,10 @@ alter table public."user_notifications" add constraint "user_notifications_notif
 alter table public."user_notifications" add constraint "user_notifications_user_id_fkey" FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 -- Additional indexes.
+CREATE UNIQUE INDEX profiles_username_ci_unique ON public.profiles (lower(btrim(username))) WHERE username IS NOT NULL AND btrim(username) <> '';
+CREATE INDEX profiles_referrer_idx ON public.profiles (referrer_id) WHERE referrer_id IS NOT NULL;
+alter table public.profiles add constraint profiles_referrer_id_fkey foreign key (referrer_id) references public.profiles(id) on delete set null;
+alter table public.profiles add constraint profiles_referrer_not_self check (referrer_id is distinct from id);
 CREATE INDEX practice_completions_player_idx ON public.practice_completions USING btree (player_id);
 CREATE INDEX skills_user_id_idx ON public.skills USING btree (user_id);
 CREATE INDEX user_notifications_notification_id_idx ON public.user_notifications USING btree (notification_id);
@@ -304,6 +310,22 @@ begin
       or new.master_selection_started_at is distinct from old.master_selection_started_at))
   ) then
     raise exception 'Only an administrator can change account locking' using errcode='42501';
+  end if;
+  return new;
+end;
+$function$;
+
+-- Referral attribution is set by Auth profile creation, not by browser updates.
+-- private.guard_profile_referrer
+CREATE OR REPLACE FUNCTION private.guard_profile_referrer()
+ RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path TO ''
+AS $function$
+begin
+  if current_user in ('anon','authenticated') and (
+    (tg_op='INSERT' and new.referrer_id is not null) or
+    (tg_op='UPDATE' and new.referrer_id is distinct from old.referrer_id)
+  ) then
+    raise exception 'Referral attribution is managed at account creation' using errcode='42501';
   end if;
   return new;
 end;
@@ -530,16 +552,37 @@ CREATE OR REPLACE FUNCTION public.create_confirmed_profile()
  SECURITY DEFINER
  SET search_path TO ''
 AS $function$
+DECLARE
+  inviter_id uuid;
+  referral_username text := nullif(btrim(NEW.raw_user_meta_data ->> 'referral_username'), '');
 BEGIN
-  INSERT INTO public.profiles (id, full_name)
+  if referral_username is not null and length(referral_username) <= 100 then
+    select p.id into inviter_id from public.profiles p
+      where lower(btrim(p.username))=lower(referral_username) and p.id<>NEW.id;
+  end if;
+  INSERT INTO public.profiles (id, full_name, referrer_id)
   VALUES (
     NEW.id,
-    NEW.raw_user_meta_data ->> 'full_name'
+    NEW.raw_user_meta_data ->> 'full_name',
+    inviter_id
   )
   ON CONFLICT (id) DO NOTHING;
 
   RETURN NEW;
 END;
+$function$;
+
+-- Public invite-card lookup, with the same visibility/playability gate as Masters.
+-- public.get_public_referrer
+CREATE OR REPLACE FUNCTION public.get_public_referrer(p_referrer_id uuid DEFAULT NULL,p_username text DEFAULT NULL)
+ RETURNS TABLE(id uuid,username text,full_name text,avatar_path text,role text)
+ LANGUAGE sql STABLE SECURITY INVOKER SET search_path TO ''
+AS $function$
+  select p.id,p.username,p.full_name,p.avatar_path,p.role from public.profiles p
+    where public.is_public_master(p.id) and (
+      (p_referrer_id is not null and p.id=p_referrer_id) or
+      (p_referrer_id is null and lower(btrim(p.username))=lower(btrim(p_username)))
+    );
 $function$;
 
 -- public.get_practice_completion_totals
@@ -802,6 +845,9 @@ end;
 $function$;
 
 -- Explicit function permissions (including trigger-only/private functions).
+revoke all on function private.guard_profile_referrer() from public, anon, authenticated;
+revoke all on function public.get_public_referrer(uuid,text) from public, anon, authenticated;
+grant execute on function public.get_public_referrer(uuid,text) to anon, authenticated, service_role;
 revoke all on function "private"."account_has_access"() from public, anon, authenticated, service_role;
 grant execute on function "private"."account_has_access"() to "authenticated";
 revoke all on function "private"."apply_account_lock"() from public, anon, authenticated, service_role;
@@ -869,6 +915,7 @@ grant execute on function "public"."sync_skill_progress"(p_player_id uuid, p_ski
 grant execute on function "public"."sync_skill_progress"(p_player_id uuid, p_skill_number integer, p_practice_seconds double precision, p_started_at timestamp with time zone) to "service_role";
 
 -- Auth/profile triggers.
+CREATE TRIGGER guard_profile_referrer BEFORE INSERT OR UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION private.guard_profile_referrer();
 CREATE TRIGGER on_email_confirmed_create_profile AFTER UPDATE OF email_confirmed_at ON auth.users FOR EACH ROW WHEN (old.email_confirmed_at IS NULL AND new.email_confirmed_at IS NOT NULL) EXECUTE FUNCTION create_confirmed_profile();
 CREATE TRIGGER apply_account_lock AFTER UPDATE OF locked ON profiles FOR EACH ROW EXECUTE FUNCTION private.apply_account_lock();
 CREATE TRIGGER guard_account_lock BEFORE INSERT OR UPDATE ON profiles FOR EACH ROW EXECUTE FUNCTION private.guard_account_lock();

@@ -83,6 +83,36 @@ Jesus. La liste et les locks utilisent leurs UUID dans `FEATURED_MASTERS`
 (`src/js/jaycee/profile-runtime.js`), indépendamment des changements de username.
 Les cartes Jesus/Cedricjbt restent désactivées côté UI.
 
+## Invitations
+
+Dans la section Master (débloquée au niveau 4), sous la visibilité, le compte
+dispose de **Copy link** et, si le navigateur le permet, **Share**. Le lien est
+`/?ref=Username`, basé sur le username enregistré, pas sur une modification non
+sauvegardée du champ. Il est actualisé après sauvegarde du compte.
+
+`src/js/referral.js` conserve le dernier lien d'invitation valide dans le navigateur
+et transporte aussi `ref` dans les URL du workflow. Le passage par Lore, Prayer,
+Game et Signup ne perd pas ce paramètre, même si le stockage local est bloqué.
+La création du compte envoie `referral_username` dans les métadonnées Auth en plus
+du nom complet. Un échec d'inscription garde l'invitation ; une création réussie
+ou une session déjà connectée efface la référence en attente.
+
+À la confirmation, `create_confirmed_profile()` résout le username sans distinction
+de casse et écrit le UUID dans `profiles.referrer_id`. Un username inconnu n'empêche
+pas l'inscription. L'association ne peut pas être modifiée par le navigateur,
+survit au renommage de l'invitant et devient null si son profil est supprimé.
+Les anciennes URL basées sur son ancien username cessent cependant de le désigner
+après un renommage : partager le lien actualisé. Les usernames non vides sont uniques.
+
+Le carrousel conserve les trois Masters configurés par UUID et ajoute l'invitant
+si son profil est un Master public éligible. Un invité est reconnu par le paramètre
+d'invitation ; après création du profil, c'est le UUID enregistré qui fait foi.
+Un invitant privé/non éligible reste absent, et une carte déjà présente n'est pas
+dupliquée. Il n'y a pas de récompense ni de changement automatique de Master.
+
+Le backend de la migration `20261015230039_account_referrals.sql` a été déployé
+le 16 octobre 2026. Le fichier reste conservé comme historique. Voir [README.md](README.md).
+
 ## Manna et karma
 
 `years_burned` alimente la barre de vie avec l'âge :
