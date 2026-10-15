@@ -23,7 +23,8 @@ export const notificationOccurrence = (definition, player) => {
 
 export const isNotificationVisible = (definition, receipt, { hasAccount, hasMaster, player = null }) => {
   if (definition.content?.level && Number(player?.level) !== definition.content.level) return false;
-  if (definition.content?.component === 'linked_quest' && isQuestPending(player)) return false;
+  if (definition.content?.component === 'linked_quest'
+    && (isQuestPending(player) || Number(player?.level) >= 4)) return false;
   if (definition.content?.action === 'accept_level_two' && !isLevelTwoQuestPending(player)) return false;
   if (definition.content?.action === 'accept_quest' && !isQuestPending(player)) return false;
   const eligible = definition.stage === 'guest' ? !hasAccount

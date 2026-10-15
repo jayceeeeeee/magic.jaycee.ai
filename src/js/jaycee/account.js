@@ -211,6 +211,80 @@ const createCharacterSection = ({ avatarUrl = "", profile }) => {
   };
 };
 
+const createMasterSection = ({ client, profile, skills }) => {
+  const { section, content } = createSection("Master", "is-master");
+  const identity = document.createElement("div");
+  const avatar = document.createElement("span");
+  const name = document.createElement("span");
+  const visibilityField = document.createElement("label");
+  const visibilityInput = document.createElement("input");
+  const hint = document.createElement("p");
+  let masterId;
+  let level = 0;
+  identity.className = "account-master-identity";
+  avatar.className = "account-master-avatar";
+  identity.append(avatar, name);
+  visibilityField.className = "profile-visibility-field";
+  visibilityField.hidden = true;
+  visibilityInput.type = "checkbox";
+  visibilityInput.name = "visibility";
+  visibilityInput.checked = Boolean(profile.visibility);
+  visibilityInput.setAttribute("aria-describedby", "account-visibility-hint");
+  visibilityField.append(visibilityInput, document.createTextNode("Make my account visible"));
+  hint.id = "account-visibility-hint";
+  hint.className = "account-visibility-hint";
+  hint.setAttribute("role", "status");
+  hint.hidden = true;
+  content.append(identity, visibilityField, hint);
+
+  const refresh = () => {
+    const state = skills.getPublicationState();
+    visibilityField.hidden = level < 4;
+    const message = !state.ready ? "Loading your skills..." : state.missing.length
+      ? `Name all five skills before making your account visible. Missing: ${state.missing.join(", ")}.` : "";
+    hint.textContent = message;
+    hint.hidden = level < 4 || !message;
+    // A visible account can always be made private, even if skills are incomplete.
+    visibilityInput.disabled = !visibilityInput.checked && (!state.ready || state.missing.length > 0);
+  };
+  visibilityInput.addEventListener("change", refresh);
+  const setMaster = async (id) => {
+    section.hidden = !id;
+    if (id === masterId) return;
+    masterId = id;
+    avatar.replaceChildren();
+    name.textContent = id ? "Loading Master..." : "";
+    if (!id) return;
+    try {
+      const master = await fetchProfileByUserId(client, id);
+      if (masterId !== id) return;
+      const username = getDisplayValue(master?.username) || getDisplayValue(master?.full_name) || "Master";
+      name.textContent = username;
+      avatar.textContent = username.slice(0, 1).toUpperCase();
+      const avatarUrl = await getAvatarImageUrl(client, master).catch(() => "");
+      if (masterId !== id || !avatarUrl) return;
+      const image = document.createElement("img");
+      image.src = avatarUrl;
+      image.alt = "";
+      avatar.replaceChildren(image);
+    } catch {
+      if (masterId === id) name.textContent = "Master unavailable";
+    }
+  };
+  void setMaster(profile.master);
+  return {
+    section, refresh, setMaster,
+    setAccessLevel: (value) => { level = value; refresh(); },
+    getUpdates: () => {
+      refresh();
+      if (level < 4) return {};
+      const state = skills.getPublicationState();
+      if (visibilityInput.checked && (!state.ready || state.missing.length)) return { error: hint.textContent };
+      return { visibility: visibilityInput.checked };
+    }
+  };
+};
+
 const createMapsSection = ({ profile }) => {
   const { content, section } = createSection("Map", "is-maps");
   const form = document.createElement("form");
@@ -443,21 +517,25 @@ export const initJayceeAccountPage = async () => {
 
     const character = createCharacterSection({ avatarUrl, profile });
     const maps = createMapsSection({ profile });
-    const skills = createSkillsSection({ client, profile, createSection });
+    let master;
+    const skills = createSkillsSection({ client, profile, createSection, onChange: () => master?.refresh() });
+    master = createMasterSection({ client, profile, skills });
     const playerLevels = new Map();
     const updateMapAccess = (player) => {
       if (player?.id) playerLevels.set(player.id, Number(player.level) || 0);
-      const highestLevel = Math.max(0, ...playerLevels.values());
+      const highestLevel = Math.max(profile.permanent_account_at ? 4 : 0, ...playerLevels.values());
       const unlocked = highestLevel >= 2;
       maps.section.hidden = !unlocked;
       maps.section.inert = !unlocked;
-      skills.setUnlocked(highestLevel >= 3);
+      skills.setUnlocked(highestLevel >= 3, highestLevel);
+      master.setAccessLevel(highestLevel);
     };
     updateMapAccess(null);
     window.addEventListener("jaycee:player-updated", (event) => {
       const player = event.detail?.player;
       if (player?.user_id === profile.id) {
         updateMapAccess(player);
+        void master.setMaster(player.master);
       }
     });
     try {
@@ -470,7 +548,7 @@ export const initJayceeAccountPage = async () => {
       console.warn("Account Map access could not be loaded", error);
     }
 
-    sections.replaceChildren(character.section, maps.section, skills.section);
+    sections.replaceChildren(character.section, maps.section, skills.section, master.section);
     shell.hidden = false;
     actions.hidden = false;
     setStatus(status, "");
@@ -480,6 +558,11 @@ export const initJayceeAccountPage = async () => {
 
       if (mapsResult.error) {
         setStatus(saveStatus, mapsResult.error, true);
+        return;
+      }
+      const masterResult = master.getUpdates();
+      if (masterResult.error) {
+        setStatus(saveStatus, masterResult.error, true);
         return;
       }
       const skillsResult = skills.getUpdates();
@@ -497,6 +580,7 @@ export const initJayceeAccountPage = async () => {
         const profileUpdates = {
           full_name: characterUpdates.full_name,
           username: characterUpdates.username,
+          ...(masterResult.visibility === undefined ? {} : { visibility: masterResult.visibility }),
           ...mapsResult.updates
         };
 
@@ -510,6 +594,8 @@ export const initJayceeAccountPage = async () => {
           setStatus(saveStatus, "Saving...");
         }
 
+        // Persist newly named skills before the server validates publication.
+        if (profileUpdates.visibility === true) await skills.save(skillsResult.skills);
         const { error } = await client
           .from(PROFILE_TABLE)
           .update(profileUpdates)
@@ -518,7 +604,7 @@ export const initJayceeAccountPage = async () => {
         if (error) throw error;
 
         Object.assign(profile, profileUpdates);
-        await skills.save(skillsResult.skills);
+        if (profileUpdates.visibility !== true) await skills.save(skillsResult.skills);
         setStatus(saveStatus, "Saved.");
         window.JayceeAuth?.refreshHeader?.();
         window.dispatchEvent(new CustomEvent("jaycee:account-updated", {

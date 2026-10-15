@@ -1,7 +1,7 @@
 -- Run as postgres against an installation with an existing Level 2 player.
 -- All game state and receipt changes are rolled back.
 begin;
-select set_config('test.level_two_player', (select id::text from public.player where level = 2 limit 1), true);
+select set_config('test.level_two_player', (select id::text from public.player order by (level=2) desc, id limit 1), true);
 select set_config('request.jwt.claim.sub', (select user_id::text from public.player
   where id = current_setting('test.level_two_player')::uuid), true);
 set local role authenticated;
@@ -14,7 +14,7 @@ declare
   rejected boolean := false;
 begin
   if player_id is null then raise exception 'Test requires a Level 2 player'; end if;
-  update public.player set level_2_accepted_at = null, skill_2_start = null,
+  update public.player set level=2, level_2_accepted_at = null, skill_2_start = null,
     skill_2_practice = 1000000 where id = player_id;
   result := public.sync_skill_progress(player_id);
   if (result->'player'->>'level')::integer <> 2
@@ -68,7 +68,7 @@ begin
     or result->'player'->>'level_2_accepted_at' is not null then
     raise exception 'FAIL: Level 1 completion did not pause the next quest';
   end if;
-  -- Level 3 also waits for acceptance; Level 4 keeps automatic timing.
+  -- Level 3 waits for acceptance; Level 4 has no timed quest.
   update public.player set level = 3, level_3_accepted_at = null, skill_3_practice = 0, skill_3_start = null where id = player_id;
   result := public.sync_skill_progress(player_id);
   if result->'player'->>'skill_3_start' is not null then
@@ -76,8 +76,8 @@ begin
   end if;
   update public.player set level = 4 where id = player_id;
   result := public.sync_skill_progress(player_id);
-  if (result->'player'->>'level')::integer <> 4 or result->'player'->>'skill_3_start' is null then
-    raise exception 'FAIL: later level timing changed';
+  if (result->'player'->>'level')::integer <> 4 or result->'player'->>'skill_3_start' is not null then
+    raise exception 'FAIL: Level 4 started a timed quest';
   end if;
 end;
 $$;

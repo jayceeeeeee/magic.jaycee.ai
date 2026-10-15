@@ -46,7 +46,7 @@ target, then atomically completes the notification, increments the player level 
 `profiles.years_burned`, clears the completed skill's practice and resets the quest
 clocks. The Level 1 to Level 2 transition leaves `skill_2_start` empty until Accept.
 Earlier skills remain usable but do not advance the current quest.
-At levels above 3 the third active skill continues to supply the practice target.
+Completing the third active skill reaches Level 4, where timed quest progression ends.
 Keep the RPC's target ratios aligned with `src/js/config/game-config.js`.
 The life bar is `(age in years + years_burned) / 1000000`.
 
@@ -57,7 +57,7 @@ It adds `player.level_3_accepted_at` and extends acceptance to Levels 2 and 3 wi
 `accept_player_quest(player_id, level)`. The Level 2 RPC remains a compatibility
 wrapper. Level 2 completion leaves `skill_3_start` empty; Level 3 cannot start or
 advance before Accept. Existing Level 3 players also need to accept; their saved
-practice is retained. Later levels keep their existing progression behavior.
+practice is retained. Level 4 behavior is defined by the subsequent upgrade below.
 
 Each level first displays an unlock notice, an account-feature unlock notice, and
 a preparation quest. `level_two_map.v1` announces Map/Health/Manna editing;
@@ -76,8 +76,8 @@ participations, so switching does not remove earned account features.
 
 The Skills section appears at Level 3, before quest acceptance. It edits five game
 slots (passive, three active, ultimate). A selector shows one editable skill at a time;
-Ultimate is currently disabled and marked Locked. Its saved name/resources are
-preserved when editing the other four slots. Description textareas start at one line,
+Ultimate is disabled and marked Locked below Level 4, and becomes editable at Level 4.
+Its saved name/resources are preserved when editing the other four slots. Description textareas start at one line,
 grow with their text, and stop at 200px. Draft edits survive selector changes.
 The account's main Save button saves changed skills through `save_own_game`; the
 game/skills RPC is transactional, while the profile save remains a separate request.
@@ -91,10 +91,10 @@ five skill slots must reference existing skills with nonblank names. The browser
 loads this list through the invoker `list_public_masters` RPC, available to guests
 and accounts.
 
-Visibility defaults to `false` and is managed only through trusted database/backend
-access. The editor has no visibility control and saving never changes this flag.
-A profile trigger rejects visibility changes and public profile inserts by browser
-roles, including direct API requests. Existing visible profiles remain unchanged.
+Visibility defaults to `false`. The initial visibility upgrade restricted changes
+to trusted database/backend access; the Level 4 upgrade below now permits earned
+visibility changes. Game saves never change visibility. Public profile inserts by
+browser roles remain forbidden. Existing visible profiles remain unchanged.
 The legacy `save_own_game` publication argument is retained for compatibility;
 `true` is rejected and false/omitted leaves visibility untouched. Apply upgrades
 in order; rerunning the older Level 3 upgrade would restore obsolete function bodies.
@@ -104,6 +104,45 @@ sole game owner, and replaces unrestricted skill writes with owner-only policies
 Shared/unowned legacy slots are cloned on save. Game/skill authoring requires an
 owned participation at Level 3 or higher through the invoker `can_author_game` helper.
 No other player's skills can be edited through the editor or direct table updates.
+
+## Level 4 and permanent accounts
+
+`sql/level_four_permanent_accounts.sql` was applied as `level_four_permanent_accounts`.
+Completing Level 3 automatically reaches Level 4 with no preparation/Accept step.
+`level_four_unlocked.v1` announces the level, and `level_four_permanent.v1` announces
+the permanent link/account and visibility control. `{masterName}` comes from the
+profile currently linked by `profiles.master`. Both notices are dismissible and
+use stable player/level occurrences. The timed linked quest is hidden at Level 4.
+
+Ultimate is a description-only ability, like Passive: no countdown, target, Start
+button or practice timer. Earlier active skills can still be practiced voluntarily,
+but there are no quest deadlines or further level/reward advancement at Level 4.
+The progression RPC stops advancing at Level 4 and does not initialize new clocks.
+
+`profiles.permanent_account_at` records the milestone automatically when the linked
+participation reaches Level 4. Existing linked Level 4+ profiles are backfilled.
+The browser cannot forge this status below Level 4, clear it, change its timestamp,
+or change the Master link after it is granted. The status survives participation
+row changes and retains account authoring access. There is currently no database
+account-expiry job; any future expiry mechanism must exclude permanent accounts.
+
+At Level 4 the Master section reveals **Make my account visible**, saved using
+the main account Save button. The profile trigger enforces the Level 4/permanent
+milestone on direct API updates too. Accounts remain private until visibility is
+explicitly changed; discovery still requires all five skills to be named. Ultimate
+editing also unlocks at Level 4 so a player can finish configuring those five slots.
+
+The account Master section displays the profile linked by `profiles.master`, with
+its avatar/name and no Master editor. Its visibility control remains hidden below
+Level 4. It disables making a private account public until all five names are present
+and lists the missing slots live as skills are edited. Already visible accounts can
+always be made private. The main Save button validates this state and saves changed
+skills before enabling visibility, so newly entered names pass server validation.
+`sql/visibility_requires_named_skills.sql` was applied as
+`visibility_requires_named_skills`: the profile trigger rejects publication with
+any missing/blank skill slot, including direct API requests. It shares the invoker
+`has_named_game_skills` predicate with Master discovery. No new database columns
+are added by this upgrade.
 
 ## Content and new notifications
 
@@ -115,7 +154,8 @@ builders in `profile-runtime.js`. Unknown components/actions do not execute code
 Never store executable HTML, scripts, arbitrary iframe URLs or callbacks in this table.
 
 Text placeholders: `{lifeMaxYears}`, `{prayerKarmaYears}`, `{remainingKarmaYears}`,
-`{firstActivePassiveTime}`, `{passiveSkillName}`, `{skillOneName}`, `{skillTwoName}`. Text may be an array
+`{firstActivePassiveTime}`, `{passiveSkillName}`, `{skillOneName}`, `{skillTwoName}`,
+`{masterName}`. Text may be an array
 of paragraphs; values and text render as text nodes. `content.level` restricts a
 notice to that player level, and `content.occurrence = "level"` uses a stable level receipt.
 Avatars, carousels,
@@ -175,6 +215,11 @@ Historic dismissals before this feature cannot be reconstructed.
 - `supabase/tests/master_eligibility_and_visibility.sql`: private saves, forbidden
   browser visibility changes, legacy publication protection, anonymous discovery,
   missing slots and blank skill names. All test changes are rolled back.
+- `tests/level-four.test.mjs`: unlock receipt scope, dismissal, and absence of a Level 4 quest/Accept.
+- `supabase/tests/level_four_permanent_accounts.sql`: automatic Level 4 transition,
+  permanent milestone/link, no further levels/rewards/clocks, visibility authorization,
+  complete public game discovery and permanent access after participation changes.
+  All fixture changes are rolled back.
 - `tests/notifications.sql`: execute as postgres with two existing auth users. It
   exercises the actual `anon` / `authenticated` roles, idempotency and RLS allow/deny
   paths inside a transaction which is rolled back.

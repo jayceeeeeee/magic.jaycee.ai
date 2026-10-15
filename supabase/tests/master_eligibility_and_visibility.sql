@@ -4,7 +4,7 @@ select set_config('test.master_owner',(select g.user_id::text from public.game g
   where exists(select 1 from public.player p where p.user_id=g.user_id) limit 1),true);
 select set_config('request.jwt.claim.sub',current_setting('test.master_owner'),true);
 update public.player set level=3 where user_id=auth.uid();
-update public.profiles set visibility=false where id=auth.uid();
+update public.profiles set visibility=false,permanent_account_at=null where id=auth.uid();
 set local role authenticated;
 do $$
 declare

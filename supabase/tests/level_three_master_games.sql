@@ -10,6 +10,7 @@ select set_config('test.alternative_master',(select g.user_id::text from public.
   and g.user_id<>(select master from public.player where id=current_setting('test.quest_player')::uuid)
   limit 1),true);
 -- Make the alternative game playable only inside the rollback fixture.
+update public.profiles set permanent_account_at=null where id=auth.uid();
 update public.profiles set visibility=true where id=current_setting('test.alternative_master')::uuid;
 update public.game g set skill_0=t.skill_0,skill_1=t.skill_1,skill_2=t.skill_2,skill_3=t.skill_3,skill_4=t.skill_4
   from public.game t where t.user_id=(select master from public.player where id=current_setting('test.quest_player')::uuid)

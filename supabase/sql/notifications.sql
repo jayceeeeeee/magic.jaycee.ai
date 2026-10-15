@@ -100,4 +100,8 @@ insert into public.notifications (id, stage, position, title, tone, dismissible,
 ('level_three_game.v1','linked_master',12,'Unlocked','unlocked',true,
  '{"level":3,"occurrence":"level","text":"You can now create your own game and skills in the Skills section of your account panel, and become a Master in your turn."}'),
 ('level_three_prepare.v1','linked_master',15,'Quest','quest',false,
- '{"level":3,"occurrence":"level","action":"accept_quest","actionLabel":"Accept","text":["Before beginning this Quest you must have checked the resources of {passiveSkillName}, {skillOneName} and {skillTwoName} skills. Check their description below to access it.","Only after that, click on Accept and the Quest will begin.","In the meantime practice {skillOneName} if you don\u0027t want to lose your account."]}');
+ '{"level":3,"occurrence":"level","action":"accept_quest","actionLabel":"Accept","text":["Before beginning this Quest you must have checked the resources of {passiveSkillName}, {skillOneName} and {skillTwoName} skills. Check their description below to access it.","Only after that, click on Accept and the Quest will begin.","In the meantime practice {skillOneName} if you don\u0027t want to lose your account."]}'),
+('level_four_unlocked.v1','linked_master',10,'Unlocked','unlocked',true,
+ '{"level":4,"occurrence":"level","text":"Congratulations! You have unlocked Level 4!"}'),
+('level_four_permanent.v1','linked_master',12,'Unlocked','unlocked',true,
+ '{"level":4,"occurrence":"level","text":"Congratulations! You have now been linked forever to {masterName}. You have been granted a permanent account on this platform and have the ability to make your account visible to let others play your game! Go to your account to modify that."}');

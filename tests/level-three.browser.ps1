@@ -7,7 +7,7 @@ function Read-BrowserSource($path) {
 }
 $prelude = (Read-BrowserSource 'src/js/config/game-config.js') + (Read-BrowserSource 'src/js/jaycee/notifications.js')
 $checks = ''
-foreach ($path in @('tests/notifications.test.mjs', 'tests/level-two-quest.test.mjs', 'tests/level-three-quest.test.mjs')) {
+foreach ($path in @('tests/notifications.test.mjs', 'tests/level-two-quest.test.mjs', 'tests/level-three-quest.test.mjs', 'tests/level-four.test.mjs')) {
   $checks += "`nawait (async()=>{`n" + (Read-BrowserSource $path) + "`n})();`n"
 }
 $runtime = ConvertTo-Json -InputObject ((Read-BrowserSource 'src/js/jaycee/profile-runtime.js') + "`nreturn {createVitalsPanel,createSkillPanel,getActiveQuestInfo};") -Compress
@@ -18,7 +18,7 @@ $account = ConvertTo-Json -InputObject ($accountSource + "`nreturn initJayceeAcc
 $browser = @'
 const assert=(value,message)=>{if(!value)throw new Error(message)};
 const display=value=>String(value??'').trim();
-const runtime=new Function('JAYCEE_GAME_CONFIG','getDisplayValue','isQuestPending','notificationOccurrence','isNotificationVisible','interpolateNotification',RUNTIME)(JAYCEE_GAME_CONFIG,display,isQuestPending,notificationOccurrence,isNotificationVisible,interpolateNotification);
+const runtime=new Function('JAYCEE_GAME_CONFIG','getDisplayValue','isQuestPending','notificationOccurrence','isNotificationVisible','interpolateNotification','renderSkillMarkdown',RUNTIME)(JAYCEE_GAME_CONFIG,display,isQuestPending,notificationOccurrence,isNotificationVisible,interpolateNotification,(element,markdown)=>{element.textContent=markdown});
 const models=[1,2,3].map(level=>({skillLabel:`Skill ${level}`,skill:{id:level},passiveSeconds:100,questSeconds:20}));
 const definitions=[{id:'level_three_prepare.v1',stage:'linked_master',title:'Quest',tone:'quest',content:{level:3,occurrence:'level',action:'accept_quest',text:['Review {passiveSkillName} and {skillTwoName}.','In the meantime practice {skillOneName}.']}},{id:'master_linked.v1',stage:'linked_master',title:'Quest',tone:'quest',content:{component:'linked_quest'}}];
 let accepted=0,switched;
@@ -37,7 +37,8 @@ assert(runtime.getActiveQuestInfo({activeModels:models,player}).deadline===null,
 assert(runtime.getActiveQuestInfo({activeModels:models,player:active}).deadline!==null,'Accepted Level 3 clock missing');
 for(const row of [player,active]){const skills=runtime.createSkillPanel({activeModels:models,currentLevel:3,passiveModel:{skill:null},player:row,selectedIndex:3});assert(skills.querySelector('[data-practice-toggle]').disabled===isQuestPending(row),'Wrong practice availability');}
 let savePayload;
-const createSkillsSection=new Function('fetchUserGameSettings','fetchSkillsByIds','saveOwnGame','JAYCEE_GAME_SKILL_COLUMNS',EDITOR)(async()=>({skill_4:'ultimate'}),async()=>[{id:'ultimate',label:'Existing ultimate',description:'Keep these resources'}],async(...args)=>{savePayload={skills:args[1],argumentCount:args.length}},JAYCEE_GAME_SKILL_COLUMNS);
+let saveOrder=[];
+const createSkillsSection=new Function('fetchUserGameSettings','fetchSkillsByIds','saveOwnGame','JAYCEE_GAME_SKILL_COLUMNS',EDITOR)(async()=>({skill_4:'ultimate'}),async()=>[{id:'ultimate',label:'Existing ultimate',description:'Keep these resources'}],async(...args)=>{savePayload={skills:args[1],argumentCount:args.length};saveOrder.push('skills')},JAYCEE_GAME_SKILL_COLUMNS);
 const profile={id:'user',master:'old',username:'User'};
 const editor=createSkillsSection({client:{},profile,createSection:()=>{const section=document.createElement('section'),content=document.createElement('div');section.append(content);return{section,content}}});
 assert(editor.section.hidden,'Skills visible before unlock');editor.setUnlocked(true);document.body.append(editor.section);await new Promise(resolve=>setTimeout(resolve,10));
@@ -45,7 +46,7 @@ assert(!editor.section.querySelector('input[type=checkbox]'),'User can change vi
 assert(!editor.section.querySelector('button[type=submit]'),'Separate game Save button still present');
 const selector=editor.section.querySelector('select');
 assert(selector.options.length===5&&selector.options[4].disabled&&selector.options[4].textContent.includes('Locked'),'Ultimate is not locked in the selector');
-assert(!editor.section.querySelector('[name=skill_4_label]'),'Ultimate has editable controls');
+assert(editor.section.querySelector('[name=skill_4_label]').disabled,'Ultimate has editable controls below Level 4');
 assert([...editor.section.querySelectorAll('.profile-game-skill')].filter(group=>!group.hidden).length===1,'More than one skill visible');
 editor.section.querySelector('[name=skill_1_description]').value='Resources without a skill name';assert(editor.getUpdates().error,'Description without a name accepted');
 editor.section.querySelector('[name=skill_0_label]').value='My passive';editor.section.querySelector('[name=skill_1_label]').value='My first skill';editor.section.querySelector('[name=skill_1_description]').value='[Resources](https://example.com)';
@@ -61,10 +62,21 @@ assert(savePayload.skills[4].label==='Existing ultimate'&&savePayload.skills[4].
 assert(editor.getUpdates().skills===null,'Unchanged skills would be saved again');
 assert(!Object.hasOwn(profile,'visibility'),'Game save modified profile visibility');
 assert(savePayload.skills[1].description.includes('Resources'),'Resource text lost');
-const client={from(){return{update(){return{eq:async()=>({error:null})}}}}};
+editor.setUnlocked(true,4);assert(!selector.options[4].disabled,'Ultimate editor did not unlock at Level 4');
+selector.value='4';selector.dispatchEvent(new Event('change'));assert(!editor.section.querySelector('[name=skill_4_label]').disabled,'Ultimate inputs remain disabled at Level 4');
+editor.section.querySelector('[name=skill_4_label]').value='My ultimate';await editor.save(editor.getUpdates().skills);assert(savePayload.skills[4].label==='My ultimate','Ultimate edits not saved');
+const levelFour={...active,level:4};
+const ultimate=runtime.createSkillPanel({activeModels:models,currentLevel:4,passiveModel:{skill:null},ultimateModel:{skillLabel:'Ultimate',skillDescription:'Permanent ultimate description'},player:levelFour,selectedIndex:4});
+assert(ultimate.textContent.includes('Permanent ultimate description')&&!ultimate.querySelector('[data-practice-toggle]')&&!ultimate.querySelector('[data-quest-deadline]'),'Ultimate is not description-only');
+assert(!ultimate.querySelector('[data-skill-index="4"]').disabled,'Ultimate remains locked at Level 4');
+assert(runtime.getActiveQuestInfo({activeModels:models,player:levelFour}).deadline===null,'Level 4 has a quest timer');
+assert(!isNotificationVisible(definitions[1],null,{hasAccount:true,hasMaster:true,player:levelFour}),'Timed quest still visible at Level 4');
+let savedProfile;
+const client={from(){return{update(values){savedProfile=values;saveOrder.push('profile');return{eq:async()=>({error:null})}}}}};
 window.JayceeAuth={getSupabaseClient:async()=>client,getSession:async()=>({data:{session:{user:{id:'user'}}}})};
-const init=new Function('PROFILE_TABLE','USER_IMAGES_BUCKET','fetchProfileByUserId','fetchPlayersForUser','getAvatarImageUrl','getDisplayValue','createSkillsSection',ACCOUNT)('profiles','users',async()=>profile,async()=>[{...player,level:2}],async()=>'',display,createSkillsSection);
+const init=new Function('PROFILE_TABLE','USER_IMAGES_BUCKET','fetchProfileByUserId','fetchPlayersForUser','getAvatarImageUrl','getDisplayValue','createSkillsSection',ACCOUNT)('profiles','users',async(_client,id)=>id==='old'?{id:'old',username:'Linked Master'}:profile,async()=>[{...player,level:2}],async()=>'',display,createSkillsSection);
 await init();assert(document.querySelector('.is-skills').hidden,'Account Skills shown at Level 2');
+assert(document.querySelector('.is-master').textContent.includes('Linked Master'),'Linked Master not displayed in its section');
 window.dispatchEvent(new CustomEvent('jaycee:player-updated',{detail:{player}}));await new Promise(resolve=>setTimeout(resolve,10));assert(!document.querySelector('.is-skills').hidden,'Account Skills did not unlock at Level 3');
 window.dispatchEvent(new CustomEvent('jaycee:player-updated',{detail:{player:{...player,id:'another-game',level:1}}}));assert(!document.querySelector('.is-skills').hidden,'Another game removed earned account features');
 const accountSkills=document.querySelector('.is-skills');
@@ -73,6 +85,17 @@ document.querySelector('[data-account-toggle]').click();
 document.querySelector('[data-account-save]').click();await new Promise(resolve=>setTimeout(resolve,20));
 assert(savePayload.skills[0].label==='Saved via main account button','Main account Save did not save skills');
 assert(document.querySelector('[data-account-save-status]').textContent==='Saved.','Account Save did not complete');
+const visibility=document.querySelector('[name=visibility]');assert(visibility.closest('label').hidden,'Visibility control available below Level 4');
+window.dispatchEvent(new CustomEvent('jaycee:player-updated',{detail:{player:levelFour}}));await new Promise(resolve=>setTimeout(resolve,10));
+assert(!visibility.closest('label').hidden,'Visibility control did not unlock at Level 4');
+assert(visibility.closest('.is-master'),'Visibility control is not in the Master section');
+assert(visibility.disabled&&document.querySelector('#account-visibility-hint').textContent.includes('Skill 1'),'Missing skill names did not disable publication or show a message');
+visibility.checked=true;document.querySelector('[data-account-save]').click();await new Promise(resolve=>setTimeout(resolve,20));assert(savedProfile.visibility!==true,'Main Save published incomplete skills');
+visibility.checked=false;
+for(const index of [1,2,3]){const input=accountSkills.querySelector(`[name=skill_${index}_label]`);input.value=`Named ${index}`;input.dispatchEvent(new Event('input'));}
+assert(!visibility.disabled&&document.querySelector('#account-visibility-hint').hidden,'Naming all skills did not enable publication');
+saveOrder=[];visibility.checked=true;document.querySelector('[data-account-save]').click();await new Promise(resolve=>setTimeout(resolve,20));assert(savedProfile.visibility===true,'Main Save did not persist account visibility');
+assert(saveOrder.join(',')==='skills,profile','Account made public before skill names were saved');
 '@
 $browser = $browser.Replace('RUNTIME', $runtime).Replace('EDITOR', $editor).Replace('ACCOUNT', $account)
 $html = '<!doctype html><body>RUNNING<script>(async()=>{try{' + $prelude + $checks + $browser + "document.body.textContent='PASS: notifications, Level 2/3 acceptance, clocks, practice gating, italic skill names, Master carousel, game validation/save and live Skills unlock.';}catch(error){document.body.textContent='FAIL: '+error.stack;}})();</script>"

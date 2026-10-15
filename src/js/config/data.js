@@ -20,7 +20,8 @@ const PROFILE_SELECT_COLUMNS = [
   "manna_cycle",
   "role",
   "sex",
-  "visibility"
+  "visibility",
+  "permanent_account_at"
 ].join(", ");
 const GAME_SELECT_COLUMNS = ["id", "user_id", ...JAYCEE_GAME_SKILL_COLUMNS].join(", ");
 const SIGNED_IMAGE_URL_DURATION_SECONDS = 60 * 60;

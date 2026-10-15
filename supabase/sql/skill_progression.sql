@@ -1,10 +1,11 @@
 -- Current schema after skill_progression_v1, simplify_skill_progression_v2,
--- level_two_quest_acceptance and level_three_master_games.
+-- level_two_quest_acceptance, level_three_master_games and level_four_permanent_accounts.
 -- Keep thresholds aligned with game-config.js.
 alter table public.profiles add column years_burned integer not null default 0
   check (years_burned >= 0);
 alter table public.player add column level_2_accepted_at timestamptz;
 alter table public.player add column level_3_accepted_at timestamptz;
+alter table public.profiles add column permanent_account_at timestamptz;
 
 create function public.sync_skill_progress(
   p_player_id uuid, p_skill_number integer default null,
@@ -31,7 +32,7 @@ begin
     and snapshot->>('level_' || participant.level || '_accepted_at') is null;
   -- Levels 2 and 3 wait for explicit acceptance.
   if snapshot->>('skill_' || quest || '_start') is null
-    and not pending then
+    and not pending and participant.level < 4 then
     update public.player set skill_1_start = now(), skill_2_start = now(), skill_3_start = now()
       where id = participant.id returning * into participant;
     snapshot := to_jsonb(participant);
@@ -62,6 +63,7 @@ begin
   occurrence := participant.id::text || ':' || participant.level::text || ':' ||
     coalesce(snapshot->>('skill_' || quest || '_start'), 'none');
   if coalesce((snapshot->>('skill_' || quest || '_practice'))::double precision, 0) >= target
+    and participant.level < 4
     and not pending
     and exists (select 1 from public.game where user_id = participant.master
       and to_jsonb(game)->>('skill_' || quest) is not null) then
@@ -80,6 +82,11 @@ begin
       skill_2_start = case when quest = 1 then null else now() end,
       skill_3_start = case when quest = 2 then null else now() end
       where id = participant.id returning * into participant;
+  end if;
+  -- Level 4 is permanent and has no further timed quest or acceptance step.
+  if participant.level >= 4 then
+    update public.profiles set permanent_account_at = coalesce(permanent_account_at, now())
+      where id = owner_id and master = participant.master and permanent_account_at is null;
   end if;
   -- Also close historic guidance when loading an already advanced player.
   update public.user_notifications as receipt set completed_at = now()

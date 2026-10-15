@@ -484,6 +484,49 @@
   resize: none;
 }
 
+.profile-visibility-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-visibility-field input[type="checkbox"] {
+  min-height: 0;
+  width: auto;
+  accent-color: var(--accent-soft);
+}
+
+.account-master-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.account-master-avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid rgba(var(--accent-rgb), 0.25);
+  border-radius: 50%;
+  color: var(--accent-soft);
+}
+
+.account-master-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.account-visibility-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
 .has-account-panel select,
 .profile-fractal-select select {
   color-scheme: dark;
@@ -1152,6 +1195,7 @@
 }
 
 .jaycee-account-section.is-character,
+.jaycee-account-section.is-master,
 .jaycee-account-section.is-maps,
 .jaycee-account-section.is-skills {
   grid-column: 1 / -1;

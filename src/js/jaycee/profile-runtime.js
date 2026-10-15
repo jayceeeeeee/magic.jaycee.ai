@@ -434,7 +434,7 @@ const createProfileNotice = ({
     String(line).split(/(\{[a-zA-Z]+\})/g).forEach((part) => {
       const key = part.slice(1, -1);
       const value = interpolateNotification(part, textValues);
-      if (['{passiveSkillName}', '{skillOneName}', '{skillTwoName}'].includes(part) && Object.hasOwn(textValues, key)) {
+      if (['{passiveSkillName}', '{skillOneName}', '{skillTwoName}', '{masterName}'].includes(part) && Object.hasOwn(textValues, key)) {
         const emphasis = document.createElement("em");
         emphasis.textContent = value;
         paragraph.append(emphasis);
@@ -580,7 +580,7 @@ const getActiveQuestInfo = ({ activeModels = [], player = null, selectedAbilityI
     };
   }
 
-  const startedAt = level === Number(player?.level) && isQuestPending(player)
+  const startedAt = Number(player?.level) >= 4 || (level === Number(player?.level) && isQuestPending(player))
     ? NaN : Date.parse(player?.[`skill_${level}_start`] || "");
   const practiceSeconds = Math.max(0, Number(player?.[`skill_${level}_practice`]) || 0);
   const remainingPracticeSeconds = Math.max(0, Number(activeModel.questSeconds) - practiceSeconds);
@@ -795,7 +795,8 @@ const createVitalsPanel = ({
     firstActivePassiveTime,
     passiveSkillName,
     skillOneName: activeModels[0]?.skillLabel || "your first skill",
-    skillTwoName: activeModels[1]?.skillLabel || "your second skill"
+    skillTwoName: activeModels[1]?.skillLabel || "your second skill",
+    masterName: getDisplayValue(activeMasterProfile?.username) || "your Master"
   };
   // Only named, code-owned components/actions can be selected by catalog JSON.
   // Text always goes through textContent: database content cannot inject HTML.
@@ -1047,7 +1048,7 @@ const createSkillPanel = ({
 
   if (activeAbility && currentLevel >= activeAbility.unlockLevel) {
     description.classList.toggle("is-closing", isDescriptionClosing);
-    if (activeAbility.type === "active") {
+    if (activeAbility.type === "active" && currentLevel < 4) {
       const details = document.createElement("div");
       const countdown = document.createElement("p");
       const progress = document.createElement("p");
@@ -1325,7 +1326,7 @@ export const initJayceePage = async () => {
       sounds,
       passiveSkillName: getPassiveSkillModel({ gameForm, skillForms, hasLinkedMaster: true }).skill?.label || "your passive skill",
       onAcceptQuest: handleAcceptQuest,
-      capabilityLevel: Math.max(0, ...playerRows.map((row) => Number(row.level) || 0)),
+      capabilityLevel: Math.max(playerProfile?.permanent_account_at ? 4 : 0, ...playerRows.map((row) => Number(row.level) || 0)),
       isQuestAcceptSaving,
       questAcceptError,
       onPlay: handlePlayClick,
@@ -1483,7 +1484,7 @@ export const initJayceePage = async () => {
     const status = shell.querySelector(".profile-practice-status");
     if (status) status.textContent = practice?.error || "";
     const quest = Math.min(ACTIVE_RING_LIMIT, Math.max(1, Number(currentPlayer?.level) || 1));
-    if (activeSkill === quest && models[quest - 1]?.skill
+    if (Number(currentPlayer?.level) < 4 && activeSkill === quest && models[quest - 1]?.skill
       && Number(player?.[`skill_${quest}_practice`]) >= models[quest - 1].questSeconds) {
       practice.stop();
     }

@@ -1,7 +1,7 @@
 ﻿import { fetchUserGameSettings, fetchSkillsByIds, saveOwnGame } from "../config/data.js";
 import { JAYCEE_GAME_SKILL_COLUMNS } from "../config/game-config.js";
 
-export const createSkillsSection = ({ client, profile, createSection }) => {
+export const createSkillsSection = ({ client, profile, createSection, onChange = () => {} }) => {
   const { section, content } = createSection("Skills", "is-skills");
   const editor = document.createElement("div");
   const fields = document.createElement("fieldset");
@@ -15,6 +15,7 @@ export const createSkillsSection = ({ client, profile, createSection }) => {
   let savedSkills = [];
   let loaded = false;
   let loading = null;
+  let accessLevel = 0;
 
   section.hidden = true;
   section.inert = true;
@@ -48,14 +49,13 @@ export const createSkillsSection = ({ client, profile, createSection }) => {
     if (selected) resizeDescription(selected.description);
   };
   const showSelected = () => {
-    if (Number(selector.value) >= 4) selector.value = "0";
+    if (Number(selector.value) >= 4 && accessLevel < 4) selector.value = "0";
     inputs.forEach(({ group }, index) => { group.hidden = index !== Number(selector.value); });
     resizeSelected();
   };
   selector.addEventListener("change", showSelected);
 
-  // Ultimate is kept in the saved payload, with no editable controls.
-  slots.slice(0, 4).forEach((_slot, index) => {
+  slots.forEach((_slot, index) => {
     const group = document.createElement("div");
     const label = document.createElement("label");
     const caption = document.createElement("span");
@@ -68,11 +68,14 @@ export const createSkillsSection = ({ client, profile, createSection }) => {
     caption.textContent = "Name";
     name.name = `skill_${index}_label`;
     name.maxLength = 120;
+    name.addEventListener("input", onChange);
+    name.disabled = index === 4;
     descriptionCaption.textContent = "Description";
     description.name = `skill_${index}_description`;
     description.rows = 1;
     description.placeholder = "Put your skill description in markdown format.";
     description.maxLength = 20000;
+    description.disabled = index === 4;
     description.addEventListener("input", () => resizeDescription(description));
     label.append(caption, name);
     descriptionLabel.append(descriptionCaption, description);
@@ -109,6 +112,7 @@ export const createSkillsSection = ({ client, profile, createSection }) => {
       });
       fields.disabled = false;
       loaded = true;
+      onChange();
       setStatus("");
       window.requestAnimationFrame(resizeSelected);
     })().catch((error) => {
@@ -132,7 +136,17 @@ export const createSkillsSection = ({ client, profile, createSection }) => {
 
   return {
     section,
-    setUnlocked: (unlocked) => {
+    getPublicationState: () => ({
+      ready: loaded,
+      missing: inputs.filter(({ name }) => !name.value.trim()).map(({ name }) => slots[Number(name.name.split("_")[1])])
+    }),
+    setUnlocked: (unlocked, highestLevel = 3) => {
+      accessLevel = highestLevel;
+      selector.options[4].disabled = accessLevel < 4;
+      selector.options[4].textContent = accessLevel >= 4 ? "Ultimate" : "Ultimate · Locked";
+      inputs[4].name.disabled = accessLevel < 4;
+      inputs[4].description.disabled = accessLevel < 4;
+      showSelected();
       section.hidden = !unlocked;
       section.inert = !unlocked;
       if (unlocked) void load();
@@ -140,7 +154,8 @@ export const createSkillsSection = ({ client, profile, createSection }) => {
     getUpdates: () => {
       if (section.hidden) return { skills: null };
       if (!loaded) return { error: "Your skills have not loaded yet. Retry before saving." };
-      const skills = inputs.map(({ name, description }) => ({ label: name.value.trim(), description: description.value.trim() }));
+      const editable = accessLevel >= 4 ? inputs : inputs.slice(0, 4);
+      const skills = editable.map(({ name, description }) => ({ label: name.value.trim(), description: description.value.trim() }));
       const invalid = skills.findIndex((skill) => skill.description && !skill.label);
       if (invalid !== -1) {
         selector.value = String(invalid);
@@ -150,7 +165,7 @@ export const createSkillsSection = ({ client, profile, createSection }) => {
       }
       const changed = skills.some((skill, index) => skill.label !== savedSkills[index].label.trim()
         || skill.description !== savedSkills[index].description.trim());
-      return { skills: changed ? [...skills, { ...savedSkills[4] }] : null };
+      return { skills: changed ? (accessLevel >= 4 ? skills : [...skills, { ...savedSkills[4] }]) : null };
     },
     setSaving: (saving) => { fields.disabled = saving || !loaded; },
     save: async (skills) => {
