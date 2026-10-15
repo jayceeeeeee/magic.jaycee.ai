@@ -12,6 +12,7 @@ const PROFILE_SELECT_COLUMNS = [
   "avatar_path",
   "full_name",
   "birth_date",
+  "years_burned",
   "birth_time",
   "master",
   "manna_target",
@@ -265,22 +266,23 @@ export const recordSkillPractice = async (client, profile, session) => {
     || !Number.isFinite(session.totalSeconds) || session.totalSeconds <= 0) {
     throw new Error("Invalid practice duration.");
   }
-  const column = `skill_${session.skillNumber}_practice`;
   if (session.practiceValue === undefined) {
     const player = await fetchPlayerById(client, session.playerId);
     if (!player || player.user_id !== profile.id) throw new Error("Player not found.");
-    session.practiceValue = (Number(player[column]) || 0) + session.totalSeconds;
+    session.practiceValue = (Number(player[`skill_${session.skillNumber}_practice`]) || 0) + session.totalSeconds;
   }
-  const { data, error } = await client
-    .from(JAYCEE_PLAYER_TABLE)
-    .update({ [column]: session.practiceValue })
-    .eq("id", session.playerId)
-    .eq("user_id", profile.id)
-    .select(PLAYER_SELECT_COLUMNS)
-    .single();
+  return syncSkillProgress(client, session.playerId, session);
+};
 
+export const syncSkillProgress = async (client, playerId, session = null) => {
+  const { data, error } = await client.rpc("sync_skill_progress", {
+    p_player_id: playerId,
+    p_skill_number: session?.skillNumber || null,
+    p_practice_seconds: session?.practiceValue ?? null,
+    p_started_at: session?.questStart || null
+  });
   if (error) throw error;
-  if (!data?.id) throw new Error("Practice could not be saved.");
+  if (!data?.player?.id) throw new Error("Practice could not be saved.");
   return data;
 };
 

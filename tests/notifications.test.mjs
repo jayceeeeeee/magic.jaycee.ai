@@ -1,6 +1,11 @@
 import { NotificationStore, isNotificationVisible, interpolateNotification, notificationOccurrence } from '../src/js/jaycee/notifications.js';
 
 const assert = (condition, message) => { if (!condition) throw new Error(message); };
+const linkedDefinition = { stage: 'linked_master' };
+assert(notificationOccurrence(linkedDefinition, { id: 'player', level: 2, skill_2_start: 'second' })
+  === 'player:2:second', 'Level 2 guidance must use the second quest clock');
+assert(notificationOccurrence(linkedDefinition, { id: 'player', level: 3, skill_3_start: 'third' })
+  === 'player:3:third', 'Level 3 guidance must use the third quest clock');
 const storageMock = () => {
   const entries = new Map();
   return { getItem: (key) => entries.get(key) ?? null, setItem: (key, value) => entries.set(key, value), removeItem: (key) => entries.delete(key) };

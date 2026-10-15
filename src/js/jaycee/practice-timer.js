@@ -7,10 +7,10 @@ export class PracticeTimer {
     this.error = "";
   }
 
-  start(playerId, skillNumber) {
+  start(playerId, skillNumber, questStart) {
     if (![1, 2, 3].includes(skillNumber)) return;
     this.stop();
-    this.active = { id: crypto.randomUUID(), playerId, skillNumber, since: performance.now() };
+    this.active = { playerId, skillNumber, questStart, since: performance.now() };
     this.onChange();
   }
 
@@ -46,7 +46,7 @@ export class PracticeTimer {
         const player = await this.save(this.pending[0]);
         this.pending.shift();
         this.error = "";
-        this.onSaved(player);
+        await this.onSaved(player);
         this.onChange();
       }
     })().catch(() => {

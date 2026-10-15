@@ -18,8 +18,20 @@ this initial schema on an existing installation; future changes need a new migra
 Information notices disappear after **Ok** (`read`) or **x** (`dismissed`). Quest
 buttons record `clicked`, but quests remain visible until their saved game condition
 changes. Account creation resolves `create_account.v1`; a saved Master link resolves
-`choose_master.v1`. The linked quest is ongoing game guidance, scoped to the player
-and first quest's start date. Notification receipts never grant game progress.
+`choose_master.v1`. The linked quest is scoped to the player, saved level and current
+skill's start date. Later levels omit the initial energy-link introduction.
+Notification receipts never grant game progress.
+
+`sql/skill_progression.sql` reflects `skill_progression_v1` and
+`simplify_skill_progression_v2` (which removed the practice-session table). Its authenticated
+`sync_skill_progress` RPC runs at page load and when practice is saved. It locks the
+player row, saves the practice counter directly, checks the current skill's calculated
+target, then atomically completes the notification, increments the player level and
+`profiles.years_burned`, clears the completed skill's practice and resets all three
+start dates. Earlier skills remain usable but do not advance the current quest.
+At levels above 3 the third active skill continues to supply the practice target.
+Keep the RPC's target ratios aligned with `src/js/config/game-config.js`.
+The life bar is `(age in years + years_burned) / 1000000`.
 
 ## Content and new notifications
 

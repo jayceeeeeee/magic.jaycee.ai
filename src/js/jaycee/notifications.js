@@ -10,7 +10,7 @@ export const interpolateNotification = (text, values) => String(text || '').repl
 );
 
 export const notificationOccurrence = (definition, player) => definition.stage === 'linked_master'
-  ? `${player?.id || 'none'}:1:${player?.skill_1_start || 'none'}`
+  ? `${player?.id || 'none'}:${Math.max(1, Number(player?.level) || 1)}:${player?.[`skill_${Math.min(3, Math.max(1, Number(player?.level) || 1))}_start`] || 'none'}`
   : 'once';
 
 export const isNotificationVisible = (definition, receipt, { hasAccount, hasMaster }) => {

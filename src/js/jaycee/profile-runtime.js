@@ -25,6 +25,7 @@ import {
   loadOptionalImage,
   recordSkillPractice,
   startPlayerFirstQuest,
+  syncSkillProgress,
   updateProfileMaster
 } from "../config/data.js";
 
@@ -610,7 +611,7 @@ const updatePracticeDetails = (element, questInfo) => {
   element.querySelector("[data-practice-progress]").textContent = `Practice: ${questInfo.practiceTime} / ${questInfo.activeTime}`;
 };
 
-const createLinkedMasterNoticeContent = ({ masterProfile, questInfo }) => {
+const createLinkedMasterNoticeContent = ({ masterProfile, questInfo, level = 1 }) => {
   const fragment = document.createDocumentFragment();
   const firstLine = document.createElement("p");
   const secondLine = document.createElement("p");
@@ -621,7 +622,8 @@ const createLinkedMasterNoticeContent = ({ masterProfile, questInfo }) => {
     document.createTextNode(".")
   );
   secondLine.textContent = getLinkedQuestText(questInfo);
-  fragment.append(firstLine, secondLine);
+  if (level === 1) fragment.append(firstLine);
+  fragment.append(secondLine);
 
   return fragment;
 };
@@ -720,7 +722,8 @@ const createVitalsPanel = ({
   const prayerKarmaYears = firstActiveSkillMs > 0 ? prayerActiveMs / firstActiveSkillMs : 0;
   const remainingKarmaYears = Math.max(0, lifeMaxYears - 1 - prayerKarmaYears);
   const guestLifeSeconds = prayerKarmaYears * YEAR_SECONDS;
-  const profileHealthSeconds = getAgeInSeconds(playerProfile?.birth_date) || 0;
+  const profileHealthSeconds = (getAgeInSeconds(playerProfile?.birth_date) || 0)
+    + (Number(playerProfile?.years_burned) || 0) * YEAR_SECONDS;
   const lifeSeconds = hasPlayerProfile ? profileHealthSeconds : guestLifeSeconds;
   const lifeValueText = effectivePlayer ? formatYearsFromSeconds(lifeSeconds) : `${formatKarmaYears(prayerKarmaYears)}y`;
   const linkedQuestInfo = getActiveQuestInfo({
@@ -778,7 +781,7 @@ const createVitalsPanel = ({
     if (component === 'masters') content = createMastersNoticeContent(publicProfiles);
     else if (component === 'karma_master') content = noticeMasterContent;
     else if (component === 'linked_quest') content = createLinkedMasterNoticeContent({
-      masterProfile: activeMasterProfile, questInfo: linkedQuestInfo
+      masterProfile: activeMasterProfile, questInfo: linkedQuestInfo, level: Number(player?.level) || 1
     });
     else if (component === 'master_choices') {
       const masterChoices = createMastersNoticeContent(publicProfiles, {
@@ -1103,6 +1106,41 @@ export const initJayceePage = async () => {
   let skills = [];
   let practice = null;
   let notifications = null;
+  const closeSkillDescription = (index) => {
+    if (descriptionCloseTimer) window.clearTimeout(descriptionCloseTimer);
+    selectedAbilityIndex = null;
+    closingAbilityIndex = index;
+    renderCoreParameters();
+    renderVitalsPanel();
+    shell.querySelector(`[data-skill-index="${index}"]`)?.focus();
+    descriptionCloseTimer = window.setTimeout(() => {
+      closingAbilityIndex = null;
+      descriptionCloseTimer = 0;
+      renderCoreParameters();
+    }, 180);
+  };
+  const applySkillProgress = ({ player, years_burned, completed_occurrence }) => {
+    const previous = currentPlayer;
+    const progressed = previous?.id === player.id && Number(previous.level) !== Number(player.level);
+    if (previous?.id === player.id) currentPlayer = player;
+    playerRows = playerRows.map((row) => row.id === player.id ? player : row);
+    if (playerProfile) playerProfile.years_burned = years_burned;
+    // A reset in another tab also ends practice against the previous quest clock.
+    if (practice?.active?.playerId === player.id
+      && practice.active.questStart !== (player[`skill_${practice.active.skillNumber}_start`] || null)) {
+      practice.active = null;
+    }
+    if (completed_occurrence) notifications?.record('master_linked.v1', 'completed', completed_occurrence);
+    if (progressed) {
+      if (selectedAbilityIndex !== null) {
+        closeSkillDescription(selectedAbilityIndex);
+      } else {
+        renderVitalsPanel();
+        renderCoreParameters();
+      }
+      scheduleRenderCore();
+    }
+  };
   const loadMasterGame = async (masterProfile, masterGame = null) => {
     if (!supabaseClient || !masterProfile) return;
 
@@ -1250,15 +1288,7 @@ export const initJayceePage = async () => {
         }
 
         if (selectedAbilityIndex === index) {
-          closingAbilityIndex = index;
-          selectedAbilityIndex = null;
-          renderCoreParameters();
-          renderVitalsPanel();
-          descriptionCloseTimer = window.setTimeout(() => {
-            closingAbilityIndex = null;
-            descriptionCloseTimer = 0;
-            renderCoreParameters();
-          }, 180);
+          closeSkillDescription(index);
           return;
         }
 
@@ -1274,20 +1304,10 @@ export const initJayceePage = async () => {
 
         if (practice.active?.skillNumber === index) {
           practice.stop();
-          if (descriptionCloseTimer) window.clearTimeout(descriptionCloseTimer);
-          selectedAbilityIndex = null;
-          closingAbilityIndex = index;
-          renderCoreParameters();
-          renderVitalsPanel();
-          shell.querySelector(`[data-skill-index="${index}"]`)?.focus();
-          descriptionCloseTimer = window.setTimeout(() => {
-            closingAbilityIndex = null;
-            descriptionCloseTimer = 0;
-            renderCoreParameters();
-          }, 180);
+          closeSkillDescription(index);
           return;
         }
-        practice.start(currentPlayer.id, index);
+        practice.start(currentPlayer.id, index, currentPlayer[`skill_${index}_start`] || null);
         updateLiveUI();
       },
       isDescriptionClosing: closingAbilityIndex !== null,
@@ -1335,7 +1355,8 @@ export const initJayceePage = async () => {
         : "0 € / 0 €"
     });
     if (playerProfile) {
-      const health = getAgeInSeconds(playerProfile.birth_date) || 0;
+      const health = (getAgeInSeconds(playerProfile.birth_date) || 0)
+        + (Number(playerProfile.years_burned) || 0) * YEAR_SECONDS;
       updateVitalBar(shell.querySelector("[data-profile-vitals] .is-health"), {
         current: health, max: JAYCEE_GAME_CONFIG.lifeMaxYears * YEAR_SECONDS,
         valueText: `${formatYearsFromSeconds(health)} / ${JAYCEE_GAME_CONFIG.lifeMaxYears.toLocaleString()}y`
@@ -1358,6 +1379,11 @@ export const initJayceePage = async () => {
     });
     const status = shell.querySelector(".profile-practice-status");
     if (status) status.textContent = practice?.error || "";
+    const quest = Math.min(ACTIVE_RING_LIMIT, Math.max(1, Number(currentPlayer?.level) || 1));
+    if (activeSkill === quest && models[quest - 1]?.skill
+      && Number(player?.[`skill_${quest}_practice`]) >= models[quest - 1].questSeconds) {
+      practice.stop();
+    }
   };
 
   const renderCore = () => {
@@ -1446,6 +1472,7 @@ export const initJayceePage = async () => {
     currentPlayer = activeMasterProfile
       ? await fetchPlayerForGame(supabaseClient, refreshedProfile, activeMasterProfile)
       : null;
+    if (currentPlayer) applySkillProgress(await syncSkillProgress(supabaseClient, currentPlayer.id));
     if (practice?.active && practice.active.playerId !== currentPlayer?.id) practice.stop();
     if (activeMasterProfile) await loadMasterGame(activeMasterProfile);
 
@@ -1597,13 +1624,11 @@ export const initJayceePage = async () => {
       practice = new PracticeTimer({
         userId: playerProfile.id,
         save: (session) => recordSkillPractice(supabaseClient, playerProfile, session),
-        onSaved: (player) => {
-          if (currentPlayer?.id === player.id) currentPlayer = player;
-          playerRows = playerRows.map((row) => row.id === player.id ? player : row);
-        },
+        onSaved: applySkillProgress,
         onChange: updateLiveUI
       });
       await practice.flush();
+      if (currentPlayer) applySkillProgress(await syncSkillProgress(client, currentPlayer.id));
     }
     shell.hidden = false;
     renderCore();
