@@ -47,6 +47,18 @@
   const annual = model({ player: { ...player, level: 4 }, playerProfile: permanent, selectedAbilityIndex: 0 });
   near(annual.target, 10 * year / 3600, 'Passive must retain its annual calculation');
   near(annual.value / annual.maxAbs, -0.25, 'Annual passive calculation uses the wrong clock');
+  const historyOptions = { playerProfile: permanent, selectedAbilityIndex: 0 };
+  const full = { ...player, id: 'current', level: 4, skill_3_practice: 60 };
+  const beforeArchive = model({ ...historyOptions, player: full });
+  const afterArchive = model({ ...historyOptions, player: { ...full, skill_3_practice: 0 }, completedPassiveSeconds: 3600 });
+  near(afterArchive.value, beforeArchive.value, 'Archiving a complete goal must preserve annual credit');
+  const remainder = { ...full, skill_3_practice: 7 };
+  const currentAndOther = model({ ...historyOptions, player: remainder, completedPassiveSeconds: 3600,
+    practicePlayers: [full, { ...player, id: 'other', skill_2_practice: 30 }] });
+  const expectedCredits = 3600 + 7 * 3600 / 60 + 30 * 86400 / 600;
+  near(currentAndOther.value, annual.value + expectedCredits * 10 / 3600, 'Annual view must combine history and all partial practice without double-counting the current player');
+  near(model({ player: full, selectedAbilityIndex: 3, completedPassiveSeconds: 99999 }).value,
+    model({ player: full, selectedAbilityIndex: 3 }).value, 'Archived goals must not leak into an active skill balance');
   near(model({ player: { ...player, level: 4 }, lastSelectedAbilityIndex: 2 }).value, losses[1], 'Closing a description must retain its Manna calculation');
   near(model({ player: { ...player, level: 4 }, lastSelectedAbilityIndex: 2, practicingSkillIndex: 1 }).value, losses[1], 'Practice must not override the last selected Manna view');
   near(model({ player: { ...player, level: 4 }, playerProfile: permanent, selectedAbilityIndex: 1 }).value, losses[0], 'Level 4 skill balance was rescaled from the annual overview');

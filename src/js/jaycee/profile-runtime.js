@@ -225,7 +225,7 @@ const getSelectedActiveLevel = (player, selectedAbilityIndex = 0) => {
     : level;
 };
 
-const getMannaModel = ({ activeModels = [], player, playerProfile, selectedAbilityIndex = null, lastSelectedAbilityIndex = null, practicingSkillIndex = null, now = new Date() }) => {
+const getMannaModel = ({ activeModels = [], player, playerProfile, practicePlayers = [], completedPassiveSeconds = 0, selectedAbilityIndex = null, lastSelectedAbilityIndex = null, practicingSkillIndex = null, now = new Date() }) => {
   const level = Math.min(ACTIVE_RING_LIMIT, Math.max(1, Number(player?.level) || 1));
   const hasQuest = Number(player?.level) < 4;
   const mannaTarget = Number(playerProfile?.manna_target);
@@ -253,13 +253,16 @@ const getMannaModel = ({ activeModels = [], player, playerProfile, selectedAbili
         + (questSeconds > 0 ? periodTarget * practiceSeconds / questSeconds : 0);
     } else {
       // Keep the annual overview, without projecting its balance onto active skills.
-      const earnedSeconds = activeModels.slice(0, level).reduce((sum, model, index) => {
-        const passiveSeconds = Number(model.passiveSeconds);
-        const questSeconds = Number(model.questSeconds);
-        const practiceSeconds = Math.max(0, Number(player?.[`skill_${index + 1}_practice`]) || 0);
-        return passiveSeconds > 0 && questSeconds > 0
-          ? sum + practiceSeconds * passiveSeconds / questSeconds : sum;
-      }, 0);
+      const players = new Map(practicePlayers.filter((row) => row?.id).map((row) => [row.id, row]));
+      players.set(player?.id || 'current', player);
+      const earnedSeconds = [...players.values()].reduce((total, row) => total
+        + activeModels.slice(0, Math.min(3, Number(row?.level) || 0)).reduce((sum, model, index) => {
+          const passiveSeconds = Number(model.passiveSeconds);
+          const questSeconds = Number(model.questSeconds);
+          const practiceSeconds = Math.max(0, Number(row?.[`skill_${index + 1}_practice`]) || 0);
+          return passiveSeconds > 0 && questSeconds > 0
+            ? sum + practiceSeconds * passiveSeconds / questSeconds : sum;
+        }, 0), Math.max(0, Number(completedPassiveSeconds) || 0));
       value = periodTarget * (earnedSeconds - elapsedSeconds) / periodSeconds;
     }
   }
@@ -715,6 +718,8 @@ const createVitalsPanel = ({
   publicProfiles = [],
   selectedAbilityIndex,
   lastMannaAbilityIndex = null,
+  practicePlayers = [],
+  completedPassiveSeconds = 0,
   practicingSkillIndex = null,
   totalLevel = 1
 }) => {
@@ -755,7 +760,7 @@ const createVitalsPanel = ({
   const noticeMasterUsernameElement = document.createElement("i");
   const noticeMasterContent = document.createDocumentFragment();
   const mannaModel = effectivePlayer && playerProfile
-    ? getMannaModel({ activeModels, player: effectivePlayer, playerProfile, selectedAbilityIndex, lastSelectedAbilityIndex: lastMannaAbilityIndex, practicingSkillIndex })
+    ? getMannaModel({ activeModels, player: effectivePlayer, playerProfile, practicePlayers, completedPassiveSeconds, selectedAbilityIndex, lastSelectedAbilityIndex: lastMannaAbilityIndex, practicingSkillIndex })
     : null;
   const prayerActiveMs = getPendingPrayerActiveMs();
   const firstActiveSkillMs = getFirstActiveSkillMs();
@@ -1177,6 +1182,7 @@ export const initJayceePage = async () => {
   let playerProfile = null;
   let accountCreatedAt = "";
   let playerRows = [];
+  let completedPassiveSeconds = 0;
   let closingAbilityIndex = null;
   let descriptionCloseTimer = 0;
   let selectedAbilityIndex = null;
@@ -1206,7 +1212,8 @@ export const initJayceePage = async () => {
       renderCoreParameters();
     }, 180);
   };
-  const applySkillProgress = ({ player, years_burned, completed_occurrence }) => {
+  const applySkillProgress = ({ player, years_burned, completed_occurrence, completed_skills = [], completed_passive_seconds }) => {
+    if (Number.isFinite(completed_passive_seconds)) completedPassiveSeconds = completed_passive_seconds;
     const previous = currentPlayer;
     const progressed = previous?.id === player.id && Number(previous.level) !== Number(player.level);
     if (previous?.id === player.id) currentPlayer = player;
@@ -1218,7 +1225,8 @@ export const initJayceePage = async () => {
     // A reset in another tab also ends practice against the previous quest clock.
     if (practice?.active?.playerId === player.id
       && practice.active.questStart !== (player[`skill_${practice.active.skillNumber}_start`] || null)) {
-      if (Number(previous?.level) >= 4 && Number(player.level) >= 4) {
+      if (Number(previous?.level) >= 4 && Number(player.level) >= 4
+        && !completed_skills.includes(practice.active.skillNumber)) {
         practice.active.questStart = player[`skill_${practice.active.skillNumber}_start`] || null;
       } else {
         practice.active = null;
@@ -1362,6 +1370,8 @@ export const initJayceePage = async () => {
       publicProfiles,
       selectedAbilityIndex,
       lastMannaAbilityIndex,
+      practicePlayers: playerRows,
+      completedPassiveSeconds,
       practicingSkillIndex: practice?.active?.skillNumber ?? null,
       totalLevel: getPlayerLevelTotal(playerRows)
     });
@@ -1475,6 +1485,8 @@ export const initJayceePage = async () => {
     });
     const mannaModel = player && playerProfile ? getMannaModel({
       activeModels: models, player, playerProfile,
+      practicePlayers: playerRows,
+      completedPassiveSeconds,
       selectedAbilityIndex,
       lastSelectedAbilityIndex: lastMannaAbilityIndex,
       practicingSkillIndex: activeSkill ?? null
@@ -1511,9 +1523,8 @@ export const initJayceePage = async () => {
     });
     const status = shell.querySelector(".profile-practice-status");
     if (status) status.textContent = practice?.error || "";
-    const quest = Math.min(ACTIVE_RING_LIMIT, Math.max(1, Number(currentPlayer?.level) || 1));
-    if (Number(currentPlayer?.level) < 4 && activeSkill === quest && models[quest - 1]?.skill
-      && Number(player?.[`skill_${quest}_practice`]) >= models[quest - 1].questSeconds) {
+    if (activeSkill && models[activeSkill - 1]?.skill
+      && Number(player?.[`skill_${activeSkill}_practice`]) >= models[activeSkill - 1].questSeconds) {
       practice.stop();
     }
   };

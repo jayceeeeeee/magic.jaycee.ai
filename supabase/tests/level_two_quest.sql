@@ -58,13 +58,13 @@ begin
   end;
   if not rejected then raise exception 'FAIL: cross-account acceptance allowed'; end if;
   perform set_config('request.jwt.claim.sub', original_owner, true);
-  -- Completing Level 1 must unlock Level 2 without starting its quest.
+  -- Completing Level 1 must pause Level 2 and preserve its existing clock.
   update public.player set level = 1, level_2_accepted_at = null,
     skill_1_practice = 1000000, skill_1_start = now(), skill_2_start = now()
     where id = player_id;
   result := public.sync_skill_progress(player_id);
   if (result->'player'->>'level')::integer <> 2
-    or result->'player'->>'skill_2_start' is not null
+    or (result->'player'->>'skill_2_start')::timestamptz is distinct from now()
     or result->'player'->>'level_2_accepted_at' is not null then
     raise exception 'FAIL: Level 1 completion did not pause the next quest';
   end if;

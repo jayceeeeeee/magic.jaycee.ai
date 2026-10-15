@@ -39,13 +39,17 @@ so accepting (and changing the clock) does not replay an acknowledged unlock not
 
 `sql/skill_progression.sql` reflects `skill_progression_v1`,
 `simplify_skill_progression_v2` (which removed the practice-session table), and
-`level_two_quest_acceptance`. Its authenticated
+`level_two_quest_acceptance` and subsequent upgrades, including
+`completed_practice_history`. Its authenticated
 `sync_skill_progress` RPC runs at page load and when practice is saved. It locks the
 player row, saves the practice counter directly, checks the current skill's calculated
-target, then atomically completes the notification, increments the player level and
-`profiles.years_burned`, clears the completed skill's practice and resets the quest
-clocks. The Level 1 to Level 2 transition leaves `skill_2_start` empty until Accept.
-Earlier skills remain usable but do not advance the current quest.
+target, then atomically archives completed goals and resets only the completed
+skill's start and practice counter (retaining any excess practice). Other skills'
+clocks/counters are preserved. Completing the current quest also completes its
+notification, increments the player level and `profiles.years_burned` once.
+The next quest still waits for Accept, which starts its own clock.
+Earlier skills remain usable and archive their completed goals without advancing
+the current quest or granting another progression reward.
 Completing the third active skill reaches Level 4, where timed quest progression ends.
 Keep the RPC's target ratios aligned with `src/js/config/game-config.js`.
 The life bar is `(age in years + years_burned) / 1000000`.
@@ -66,10 +70,26 @@ Level 4, no selection uses the practiced skill, then the current quest's skill.
 At Level 4, closing a description retains the last selected Manna view for the page;
 with no selection history it defaults to the practiced skill or Skill 3. Switching
 Master clears that selection history. Passive and Ultimate retain an annual overview using `permanent_account_at`
-(with saved skill-clock fallbacks) and practice credits from unlocked skills. That
+(with saved skill-clock fallbacks), completed practice history and partial practice
+from unlocked skills across the user's saved games. That
 overview is not projected onto active skills. Calendar-month conversion for an
 active skill uses its own start month. Manna remains derived from existing saved
 clocks/counters; no new database balance column is created.
+
+`sql/completed_practice_history.sql` adds `practice_completions`. Only complete goals
+are recorded with four fields: `id`, `player_id`, `skill_number`, `completed_at`.
+Each row represents one completed goal, including when a save contains several goals.
+Owner and Master come from the linked player; durations come from the skill number
+using the shared progression constants. The leftover time remains on `player`.
+Incomplete practice creates no history row. `sql/simplify_practice_history.sql`
+upgrades the initial wider table. Deleting a player also deletes its goal history.
+At Level 4, natural clock expiry preserves practice and creates no completion row.
+The private ownership-checked helper writes history while browsers have owner-only
+read access. Row locks and the old start timestamp prevent duplicate completions
+on retries. `sync_skill_progress` returns the owner's accumulated passive seconds;
+the annual view adds these to partial practice before converting to the current
+Manna target/cycle, so archiving does not erase earned annual credit. Past goals
+whose counters were already cleared before this upgrade cannot be reconstructed.
 
 Because targets are proportional to passive duration, the instantaneous currency
 loss rate simplifies to `manna_target / manna_cycle_seconds` before the period cap
@@ -81,7 +101,7 @@ rate to differ; skill clocks, caps, practice durations and gains remain skill-sp
 `sql/level_three_and_master_games.sql` was applied as `level_three_master_games`.
 It adds `player.level_3_accepted_at` and extends acceptance to Levels 2 and 3 with
 `accept_player_quest(player_id, level)`. The Level 2 RPC remains a compatibility
-wrapper. Level 2 completion leaves `skill_3_start` empty; Level 3 cannot start or
+wrapper. Level 2 completion preserves `skill_3_start`; Level 3 cannot start or
 advance before Accept. Existing Level 3 players also need to accept; their saved
 practice is retained. Level 4 behavior is defined by the subsequent upgrade below.
 
@@ -256,7 +276,8 @@ Historic dismissals before this feature cannot be reconstructed.
 - `tests/manna.test.mjs` (run through the browser harness): independent skill clocks,
   practice isolation and skill-specific gains, Hour and calendar-month conversion,
   fractional targets, passive loss caps, pending quest pause, annual passive view
-  and last-selection/Skill 3 fallback at Level 4.
+  and last-selection/Skill 3 fallback at Level 4, plus annual credit continuity
+  after archiving and aggregation without double-counting partial practice.
 - `supabase/tests/level_four_permanent_accounts.sql`: automatic Level 4 transition,
   permanent milestone/link, no further levels/rewards, visibility authorization,
   complete public game discovery and permanent access after participation changes.
@@ -267,3 +288,7 @@ Historic dismissals before this feature cannot be reconstructed.
 - `tests/notifications.sql`: execute as postgres with two existing auth users. It
   exercises the actual `anon` / `authenticated` roles, idempotency and RLS allow/deny
   paths inside a transaction which is rolled back.
+- `supabase/tests/completed_practice_history.sql`: partial practice, natural expiry,
+  complete-only history, isolated skill resets, retained excess, retry deduplication,
+  multiple goals, level progression, owner-only reads and forbidden browser inserts.
+  All fixture/history/reward changes are rolled back.

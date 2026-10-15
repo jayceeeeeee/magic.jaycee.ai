@@ -34,7 +34,7 @@ begin
   if player_id is null or alternative is null then raise exception 'Test fixture needs a player and an alternative game'; end if;
   select master into original_master from public.player where id=player_id;
   update public.player set level=2,level_2_accepted_at=now(),skill_2_practice=1000000,
-    skill_2_start=now(),level_3_accepted_at=null where id=player_id;
+    skill_2_start=now(),skill_3_start=null,level_3_accepted_at=null where id=player_id;
   result := public.sync_skill_progress(player_id);
   if (result->'player'->>'level')::integer<>3 or result->'player'->>'skill_3_start' is not null then
     raise exception 'FAIL: Level 2 completion did not pause Level 3';
