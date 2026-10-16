@@ -859,7 +859,8 @@ const createVitalsPanel = ({
       hasAccount: hasPlayerProfile, hasMaster: Boolean(activeMasterProfile), player
     })) continue;
     const onEvent = (action, { waitForEnd = false } = {}) => {
-      const playback = sounds.play('notificationConfirm', { waitForEnd });
+      const playback = window.JayceeUI?.waitForSound?.()
+        ?? sounds.play('notificationConfirm', { waitForEnd });
       notifications.record(definition.id, action, occurrence);
       return playback;
     };
@@ -897,10 +898,7 @@ const createVitalsPanel = ({
       action.textContent = definition.content.actionLabel || 'Accept';
       action.addEventListener('click', async () => {
         action.disabled = true;
-        await Promise.all([
-          onEvent('clicked', { waitForEnd: true }),
-          window.JayceeUI?.waitForSound()
-        ]);
+        await onEvent('clicked', { waitForEnd: true });
         onPlay();
       });
     }
@@ -1164,6 +1162,7 @@ const createSkillPanel = ({
       toggle.type = "button";
       toggle.className = "profile-play-button";
       toggle.dataset.practiceToggle = String(activeIndex);
+      if (practicingSkillIndex !== activeIndex) toggle.dataset.uiSound = "skillStart";
       toggle.disabled = isDescriptionClosing || !player?.id || !activeModels[activeIndex - 1]?.skill
         || (activeIndex === Number(player?.level) && isQuestPending(player));
       toggle.textContent = practicingSkillIndex === activeIndex ? "Stop" : "Start";
@@ -1371,7 +1370,6 @@ export const initJayceePage = async () => {
       const result = await acceptQuest(supabaseClient, currentPlayer.id, level);
       applySkillProgress(result);
       notifications?.record(level === 2 ? 'level_two_prepare.v1' : 'level_three_prepare.v1', 'completed', `${result.player.id}:${level}`);
-      sounds.play('notificationConfirm');
     } catch (error) {
       console.error("Jaycee quest could not be started", error);
       questAcceptError = error?.message || "The quest could not be started. Please try again.";
@@ -1511,7 +1509,6 @@ export const initJayceePage = async () => {
         closingAbilityIndex = null;
         selectedAbilityIndex = index;
         lastMannaAbilityIndex = index;
-        sounds.play('skillOpen');
         renderCoreParameters();
         renderVitalsPanel();
       },
@@ -1527,7 +1524,6 @@ export const initJayceePage = async () => {
           return;
         }
         practice.start(currentPlayer.id, index, currentPlayer[`skill_${index}_start`] || null);
-        sounds.play('skillStart');
         updateLiveUI();
       },
       isDescriptionClosing: closingAbilityIndex !== null,

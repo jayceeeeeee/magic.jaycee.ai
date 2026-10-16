@@ -81,6 +81,14 @@ export const runMenuSoundTests = async ({ indexSource, loreSource, uiSource, aud
   button.click();
   assert(calls.length === callCount, 'ARIA-disabled control played a click');
 
+  const start = doc.createElement('button');
+  start.dataset.uiSound = 'skillStart';
+  start.innerHTML = '<span>Start</span>';
+  doc.body.append(start);
+  const beforeStart = calls.length;
+  start.querySelector('span').click();
+  assert(calls.length === beforeStart + 1 && calls.at(-1) === 'skillStart', 'Practice Start stacked a generic click over its own sound');
+
   const created = [];
   class AudioMock extends EventTarget {
     constructor(src) { super(); this.src = src; created.push(this); }

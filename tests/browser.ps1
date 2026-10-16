@@ -56,17 +56,15 @@ assert(fullNamePlayerPanel.querySelector('.profile-player-level').textContent.st
 if(previousPlayerName===null)window.localStorage.removeItem('player_full_name');else window.localStorage.setItem('player_full_name',previousPlayerName);
 const unnamedMasterPanel=runtime.createVitalsPanel({...options,adminProfile:{id:'admin',username:null,full_name:null},notifications:{...options.notifications,definitions:[{id:'unknown_master.v1',stage:'linked_master',content:{component:'karma_master'}}]}});
 assert(unnamedMasterPanel.querySelector('.profile-notice-master-name')?.textContent==='Unknown','Unnamed Master still displays a hardcoded name');
-let finishConfirmation,finishAcceptClick,signupRedirects=0;
-const confirmationDone=new Promise(resolve=>{finishConfirmation=resolve;});
+let finishAcceptClick,signupRedirects=0;
 const acceptClickDone=new Promise(resolve=>{finishAcceptClick=resolve;});
 window.JayceeUI={waitForSound:()=>acceptClickDone};
 const signupPanel=runtime.createVitalsPanel({...options,player:null,playerProfile:null,activeMasterProfile:null,
   notifications:{...options.notifications,definitions:[{id:'create_account.v1',stage:'guest',content:{action:'signup'}}]},
-  sounds:{play(name,{waitForEnd}){assert(name==='notificationConfirm'&&waitForEnd,'Accept did not wait for its confirmation sound');return confirmationDone;}},onPlay:()=>signupRedirects++});
+  sounds:{play(){throw new Error('Accept played a second sound over the shared click');}},onPlay:()=>signupRedirects++});
 const firstAccept=signupPanel.querySelector('.profile-play-button');firstAccept.click();firstAccept.click();
 await new Promise(resolve=>setTimeout(resolve,0));assert(signupRedirects===0&&firstAccept.disabled,'First Accept redirected before its sounds finished');
-finishConfirmation();await new Promise(resolve=>setTimeout(resolve,0));assert(signupRedirects===0,'First Accept cut off the shared click sound');
-finishAcceptClick();await new Promise(resolve=>setTimeout(resolve,0));assert(signupRedirects===1,'First Accept did not continue once after both sounds finished');
+finishAcceptClick();await new Promise(resolve=>setTimeout(resolve,0));assert(signupRedirects===1,'First Accept did not continue once after its shared sound finished');
 window.JayceeUI=originalUI;
 const selectionStart=new Date().toISOString();
 const selectionOptions={...options,player:null,activeMasterProfile:null,accountCreatedAt:selectionStart,notifications:{...options.notifications,definitions:[{id:'choose_master.v1',stage:'choose_master',content:{component:'master_choices'}}]}};

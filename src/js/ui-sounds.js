@@ -17,7 +17,8 @@ const getControl = (event) => event.target instanceof Element
 document.addEventListener("click", (event) => {
   const control = getControl(event);
   if (!control || control.matches(":disabled") || control.closest('[aria-disabled="true"], [inert]')) return;
-  pendingSound = Promise.resolve(sounds.play(control.matches("[data-start-game]") ? "menuPlay" : "buttonClick", { waitForEnd: true }));
+  const sound = control.matches("[data-start-game]") ? "menuPlay" : (control.dataset.uiSound || "buttonClick");
+  pendingSound = Promise.resolve(sounds.play(sound, { waitForEnd: true }));
 }, true);
 
 // Let the click sound finish before ordinary same-tab navigation unloads it.
