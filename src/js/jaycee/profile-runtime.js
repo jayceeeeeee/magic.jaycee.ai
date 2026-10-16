@@ -518,7 +518,7 @@ const createNoticeMasterBadge = (profile, fallbackUsername = "Unknown") => {
 // Temporary lineup, keyed by stable account UUIDs. Usernames are display-only.
 const FEATURED_MASTERS = new Map([
   ["d70b5c69-daae-4a77-9955-4385439ae292", { linkLocked: false }], // Cedricjbt
-  ["b7a38b31-100f-4e03-b3e8-9357c635ecf8", { linkLocked: true }], // Yogananda
+  ["b7a38b31-100f-4e03-b3e8-9357c635ecf8", { linkLocked: false }], // Yogananda
   ["7abd58ec-1289-403d-932c-dc2df233d079", { linkLocked: true }], // Jesus
   ["5dd4e584-2f03-4a94-b442-528ca19492e1", { linkLocked: true }] // Buddha
 ]);
