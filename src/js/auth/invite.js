@@ -24,7 +24,7 @@
               <button class="account-button account-button-primary auth-submit" type="submit" disabled>Continue</button>
             </form>
             <p class="auth-status" role="status" aria-live="polite">Checking your invitation...</p>
-            <button class="account-button" type="button" data-invite-exit>Log out</button>
+            <button class="account-button" type="button" data-invite-exit hidden>Back to log in</button>
           </section>`;
         document.body.append(dialog);
         dialog.addEventListener("cancel", (event) => event.preventDefault());
@@ -32,6 +32,7 @@
         const form = dialog.querySelector("form");
         const submit = form.querySelector('[type="submit"]');
         const status = dialog.querySelector('[role="status"]');
+        const exit = dialog.querySelector("[data-invite-exit]");
         const password = form.elements.password;
         const confirmation = form.elements.confirmation;
         let client;
@@ -41,8 +42,8 @@
             try { window.sessionStorage.removeItem(key); } catch { /* Optional storage. */ }
         };
 
-        dialog.querySelector("[data-invite-exit]").addEventListener("click", async (event) => {
-            if (saving) return;
+        exit.addEventListener("click", async (event) => {
+            if (saving || exit.hidden) return;
             const button = event.currentTarget;
             button.disabled = true;
             try {
@@ -107,6 +108,7 @@
             password.focus();
         } catch (error) {
             status.textContent = error?.message || "Could not check your invitation. Please reload to try again.";
+            exit.hidden = false;
         }
     }
 

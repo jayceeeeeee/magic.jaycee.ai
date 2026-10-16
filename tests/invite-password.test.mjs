@@ -22,6 +22,7 @@ export const runInvitePasswordTests = async (source) => {
   const start = async () => { new Function('window','document',source)(win,document); await tick(); return document.querySelector('.invite-password-dialog'); };
   let dialog = await start();
   assert(dialog?.open, 'Invitation did not show password setup');
+  assert(dialog.querySelector('[data-invite-exit]').hidden, 'Valid invitation offers logout before password setup');
   dialog.remove();
   win.location.hash = '';
   dialog = await start();
@@ -44,6 +45,7 @@ export const runInvitePasswordTests = async (source) => {
   win.location.hash = '#type=invite'; session = null;
   dialog = await start();
   assert(dialog.querySelector('[type=submit]').disabled && dialog.textContent.includes('expired'), 'Missing session allowed setting a password');
+  assert(!dialog.querySelector('[data-invite-exit]').hidden, 'Expired invitation has no exit');
   dialog.querySelector('[data-invite-exit]').click(); await tick();
   assert(stored.size === 0 && navigations.at(-1) === '/login.html', 'Exit failed to clear unfinished invitation');
   dialog.remove();

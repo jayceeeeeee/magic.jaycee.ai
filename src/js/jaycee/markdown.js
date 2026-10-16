@@ -9,4 +9,8 @@ export const renderSkillMarkdown = (element, markdown) => {
     FORBID_TAGS: ["form", "input", "button", "textarea", "select", "style"],
     FORBID_ATTR: ["style"]
   });
+  element.querySelectorAll("a[href]").forEach((link) => {
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+  });
 };
