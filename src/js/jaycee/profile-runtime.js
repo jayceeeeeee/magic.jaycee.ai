@@ -417,6 +417,20 @@ const createMannaBar = (mannaModel, locked = false) => createVitalBar({
     : "0 € / 0 €"
 });
 
+const appendNotificationText = (element, text, textValues = {}) => {
+  String(text).split(/(\{[a-zA-Z]+\})/g).forEach((part) => {
+    const key = part.slice(1, -1);
+    const value = interpolateNotification(part, textValues);
+    if (['{passiveSkillName}', '{skillOneName}', '{skillTwoName}', '{skillThreeName}', '{skillFourName}', '{skillName}', '{masterName}'].includes(part) && Object.hasOwn(textValues, key)) {
+      const emphasis = document.createElement("em");
+      emphasis.textContent = value;
+      element.append(emphasis);
+    } else {
+      element.append(document.createTextNode(value));
+    }
+  });
+};
+
 const createProfileNotice = ({
   action = null,
   content = null,
@@ -448,17 +462,7 @@ const createProfileNotice = ({
   lines.forEach((line) => {
     const paragraph = document.createElement("p");
 
-    String(line).split(/(\{[a-zA-Z]+\})/g).forEach((part) => {
-      const key = part.slice(1, -1);
-      const value = interpolateNotification(part, textValues);
-      if (['{passiveSkillName}', '{skillOneName}', '{skillTwoName}', '{skillThreeName}', '{skillFourName}', '{masterName}'].includes(part) && Object.hasOwn(textValues, key)) {
-        const emphasis = document.createElement("em");
-        emphasis.textContent = value;
-        paragraph.append(emphasis);
-      } else {
-        paragraph.append(document.createTextNode(value));
-      }
-    });
+    appendNotificationText(paragraph, line, textValues);
     copy.append(paragraph);
   });
   if (content) {
@@ -646,7 +650,7 @@ const createQuestCountdown = (deadline) => {
 };
 
 const getLinkedQuestText = (questInfo) => (
-  `You have ${questInfo.passiveTime} to do ${questInfo.requiredTime} of ${questInfo.skillName}. During this time you cannot link yourself to another Master. If you fail, your account will be deleted automatically. Click on the new unlocked skill below to start.`
+  `You have ${questInfo.passiveTime} to do ${questInfo.requiredTime} of {skillName}. During this time you cannot link yourself to another Master. If you fail, your account will be deleted automatically. Click on the new unlocked skill below to start.`
 );
 
 const updatePracticeDetails = (element, questInfo) => {
@@ -671,7 +675,7 @@ const createLinkedMasterNoticeContent = ({ masterProfile, questInfo, level = 1 }
     createNoticeMasterBadge(masterProfile),
     document.createTextNode(".")
   );
-  secondLine.textContent = getLinkedQuestText(questInfo);
+  appendNotificationText(secondLine, getLinkedQuestText(questInfo), { skillName: questInfo.skillName });
   if (level === 1) fragment.append(firstLine);
   fragment.append(secondLine);
 

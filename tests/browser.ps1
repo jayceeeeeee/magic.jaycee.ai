@@ -117,6 +117,7 @@ assert(!hiddenReferrer.textContent.includes('Inviting Master'),'Slider exposed a
 before.querySelector('.profile-play-button').click();assert(accepted===1,'Accept is broken');
 const active={...player,level_3_accepted_at:'2026-10-15T00:00:00Z',skill_3_start:'2026-10-15T00:00:00Z'};
 const after=runtime.createVitalsPanel({...options,player:active});assert(!after.textContent.includes('Catalog switch explanation.'),'Switching remains after Accept');
+assert([...after.querySelectorAll('.profile-notice-copy em')].some(element=>element.textContent==='Skill 3'),'Active quest skill name is not italicized');
 assert(runtime.getActiveQuestInfo({activeModels:models,player}).deadline===null,'Pending Level 3 clock runs');
 assert(runtime.getActiveQuestInfo({activeModels:models,player:active}).deadline!==null,'Accepted Level 3 clock missing');
 for(const row of [player,active]){const skills=runtime.createSkillPanel({activeModels:models,currentLevel:3,passiveModel:{skill:null},player:row,selectedIndex:3});assert(skills.querySelector('[data-practice-toggle]').disabled===isQuestPending(row),'Wrong practice availability');}
