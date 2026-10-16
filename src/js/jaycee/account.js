@@ -443,6 +443,7 @@ const mountAccountPanel = () => {
   shell.className = "jaycee-settings-page is-account-page is-account-panel-collapsed";
   shell.dataset.accountShell = "";
   shell.innerHTML = `
+    <a class="account-hud-trigger donate-hud-trigger" href="https://buy.stripe.com/14A14o70HbZXdtr73FfQI01" target="_blank" rel="noopener noreferrer">Donate</a>
     <button class="account-hud-trigger" type="button" data-account-toggle aria-controls="account-panel" aria-expanded="false" aria-label="Open account">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"></path><path d="M4.5 20a7.5 7.5 0 0 1 15 0"></path></svg>
     </button>

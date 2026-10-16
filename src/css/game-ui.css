@@ -115,6 +115,16 @@
   stroke-width: 1.8;
 }
 
+.donate-hud-trigger {
+  left: 14px;
+  right: auto;
+  width: auto;
+  padding-inline: 10px;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.72rem;
+  text-decoration: none;
+}
+
 .account-hud-trigger:hover,
 .account-hud-trigger:focus-visible {
   border-color: var(--neon-border-strong);
@@ -209,6 +219,11 @@
   .account-hud-trigger {
     top: 10px;
     right: 10px;
+  }
+
+  .donate-hud-trigger {
+    left: 10px;
+    right: auto;
   }
 
   .has-account-panel .account-side-panel {
