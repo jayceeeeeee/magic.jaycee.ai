@@ -527,20 +527,12 @@ const isMasterLinkLocked = (profile) => (
   FEATURED_MASTERS.get(profile?.id)?.linkLocked === true
 );
 
-const createMastersNoticeContent = (profiles, { showIntro = true, onSelect = null, isSaving = false, referrerId = null } = {}) => {
+const createMastersNoticeContent = (profiles, { onSelect = null, isSaving = false, referrerId = null } = {}) => {
   // Temporary slider lineup; keep other public profiles out of these cards.
   const visibleProfiles = profiles.filter((profile) => (
     FEATURED_MASTERS.has(profile?.id) || profile?.id === referrerId
   ));
   const content = document.createDocumentFragment();
-  const message = document.createElement("p");
-
-  message.append(
-    document.createTextNode("Oh! You're in luck!"),
-    document.createElement("br"),
-    document.createTextNode("It looks like you're not alone in the game room. Several Masters have been there before.")
-  );
-  if (showIntro) content.append(message);
 
   if (visibleProfiles.length) {
     const carousel = document.createElement("div");
@@ -867,24 +859,29 @@ const createVitalsPanel = ({
     let content = null;
     let action = null;
     const component = definition.content?.component;
+    const isQuestAcceptance = ['accept_level_two', 'accept_quest'].includes(definition.content?.action);
     if (component === 'masters') content = createMastersNoticeContent(publicProfiles, { referrerId });
     else if (component === 'karma_master') content = noticeMasterContent;
     else if (component === 'linked_quest') content = createLinkedMasterNoticeContent({
       masterProfile: activeMasterProfile, questInfo: linkedQuestInfo, level: Number(player?.level) || 1
     });
     else if (component === 'master_choices') {
-      const masterChoices = createMastersNoticeContent(publicProfiles.filter((master) => master.id !== playerProfile?.id), {
-        showIntro: false,
+      const masterChoices = createMastersNoticeContent(publicProfiles.filter((master) => (
+        master.id !== playerProfile?.id && (!isQuestAcceptance || master.id !== activeMasterProfile?.id)
+      )), {
         referrerId,
-        onSelect: (master) => { onEvent('clicked'); onAcceptMaster(master); },
-        isSaving: isMasterSaving
+        onSelect: (master) => {
+          if (!isQuestAcceptance) onEvent('clicked');
+          onAcceptMaster(master);
+        },
+        isSaving: isMasterSaving || isQuestAcceptSaving
       });
       const linkStatus = document.createElement("p");
       const createdAt = Date.parse(playerProfile?.master_selection_started_at || accountCreatedAt);
       const selectionDurationSeconds = JAYCEE_GAME_CONFIG.activeAbilities[0].cycleSeconds;
       const countdown = createQuestCountdown(createdAt + selectionDurationSeconds * 1000);
 
-      if (countdown) masterChoices.prepend(countdown);
+      if (countdown && !isQuestAcceptance) masterChoices.prepend(countdown);
       linkStatus.className = "profile-master-link-status";
       linkStatus.setAttribute("role", "status");
       linkStatus.textContent = masterLinkError || (isMasterSaving ? "Linking..." : publicProfiles.length ? "" : "No Masters available yet.");
@@ -902,19 +899,8 @@ const createVitalsPanel = ({
         onPlay();
       });
     }
-    if (['accept_level_two', 'accept_quest'].includes(definition.content?.action)) {
-      const choices = document.createDocumentFragment();
-      const invitation = document.createElement('p');
-      invitation.textContent = "Or you can choose to link yourself to another Master.";
-      choices.append(invitation, createMastersNoticeContent(publicProfiles.filter((master) => (
-        master.id !== activeMasterProfile?.id && master.id !== playerProfile?.id
-      )), { showIntro: false, referrerId, onSelect: onAcceptMaster, isSaving: isMasterSaving || isQuestAcceptSaving }));
-      if (masterLinkError || isMasterSaving) {
-        const status = document.createElement('p');
-        status.setAttribute('role', 'status');
-        status.textContent = masterLinkError || 'Linking...';
-        choices.append(status);
-      }
+    if (isQuestAcceptance) {
+      const choices = content || document.createDocumentFragment();
       content = choices;
       action = document.createElement('button');
       action.className = 'profile-play-button';

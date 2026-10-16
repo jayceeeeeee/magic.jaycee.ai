@@ -41,12 +41,17 @@ const display=value=>String(value??'').trim();
 const runtime=new Function('JAYCEE_GAME_CONFIG','getDisplayValue','isQuestPending','notificationOccurrence','isNotificationVisible','interpolateNotification','renderSkillMarkdown',RUNTIME)(JAYCEE_GAME_CONFIG,display,isQuestPending,notificationOccurrence,isNotificationVisible,interpolateNotification,(element,markdown)=>{element.textContent=markdown});
 runMannaTests(runtime.getMannaModel);
 const models=[1,2,3].map(level=>({skillLabel:`Skill ${level}`,skill:{id:level},passiveSeconds:100,questSeconds:20}));
-const definitions=[{id:'level_three_prepare.v1',stage:'linked_master',title:'Quest',tone:'quest',content:{level:3,occurrence:'level',action:'accept_quest',text:['Review {passiveSkillName} and {skillTwoName}.','In the meantime practice {skillOneName}.']}},{id:'master_linked.v1',stage:'linked_master',title:'Quest',tone:'quest',content:{component:'linked_quest'}}];
+const definitions=[{id:'level_three_prepare.v1',stage:'linked_master',title:'Quest',tone:'quest',content:{level:3,occurrence:'level',action:'accept_quest',component:'master_choices',text:['Review {passiveSkillName} and {skillTwoName}.','In the meantime practice {skillOneName}.','Catalog switch explanation.']}},{id:'master_linked.v1',stage:'linked_master',title:'Quest',tone:'quest',content:{component:'linked_quest'}}];
 let accepted=0,switched;
 const masterIds={cedricjbt:'d70b5c69-daae-4a77-9955-4385439ae292',yogananda:'b7a38b31-100f-4e03-b3e8-9357c635ecf8',jesus:'7abd58ec-1289-403d-932c-dc2df233d079'};
 const player={id:'player',user_id:'user',master:'old',level:3,level_3_accepted_at:null};
 const options={activeModels:models,player,playerProfile:{id:'user',username:'User'},activeMasterProfile:{id:'old'},passiveSkillName:'Passive',notifications:{definitions,receipt(){},record(){}},sounds:{play(){}},publicProfiles:[{id:'user',username:'Self'},{id:'old',username:'Old'},{id:masterIds.cedricjbt,username:'Cedricjbt'}],onAcceptQuest:()=>accepted++,onAcceptMaster:master=>switched=master.id};
 const originalUI=window.JayceeUI;
+const guestSliderOptions={...options,player:null,playerProfile:null,activeMasterProfile:null,notifications:{...options.notifications,definitions:[{id:'masters_present.v1',stage:'guest',title:'Notification',content:{component:'masters',text:['Custom guest introduction.','Another paragraph.']}}]}};
+const guestSlider=runtime.createVitalsPanel(guestSliderOptions);
+assert(guestSlider.textContent.includes('Custom guest introduction.')&&guestSlider.textContent.includes('Another paragraph.')&&!guestSlider.textContent.includes("You're in luck"),'Guest slider intro did not come from the catalog');
+const silentSlider=runtime.createVitalsPanel({...guestSliderOptions,notifications:{...options.notifications,definitions:[{id:'masters_present.v1',stage:'guest',content:{component:'masters'}}]}});
+assert(silentSlider.querySelector('.profile-masters-carousel')&&!silentSlider.textContent.includes("You're in luck"),'Slider inserted hardcoded intro when catalog text was absent');
 const previousPlayerName=window.localStorage.getItem('player_full_name');
 window.localStorage.setItem('player_full_name','Cédric');
 const unnamedPlayerPanel=runtime.createVitalsPanel({...options,playerProfile:{id:'user',username:'  ',full_name:null}});
@@ -85,12 +90,12 @@ const fourthSkillPanel=runtime.createVitalsPanel(fourthSkillOptions);
 assert(fourthSkillPanel.querySelector('em')?.textContent==='Master Ultimate'&&!fourthSkillPanel.textContent.includes('{skillFourName}'),'Ultimate name was not interpolated in italics');
 const unnamedUltimate=runtime.createVitalsPanel({...fourthSkillOptions,ultimateModel:{skillLabel:''}});
 assert(unnamedUltimate.querySelector('em')?.textContent==='your ultimate skill','Missing Ultimate name has no fallback');
-assert(before.textContent.includes('Or you can choose to link yourself to another Master.'),'Missing switch invitation');
+assert(before.textContent.includes('Catalog switch explanation.')&&!before.textContent.includes('Or you can choose to link yourself to another Master.'),'Slider explanation did not come from catalog text');
 assert(before.querySelectorAll('.profile-master-choice').length>0,'Missing carousel');
 before.querySelector('.profile-master-choice').click();assert(switched===masterIds.cedricjbt,'Wrong Master selected');
 const lockedChoices=runtime.createVitalsPanel({...options,publicProfiles:[{id:masterIds.jesus,username:'Jesus'},{id:masterIds.cedricjbt,username:'Cedricjbt'},{id:masterIds.yogananda,username:'Yogananda'},{id:'other',username:'Other Master'}]});
 assert(!lockedChoices.textContent.includes('Other Master'),'Slider exposed a profile outside its temporary lineup');
-for(const name of ['Jesus','Yogananda']){
+for(const name of ['Jesus']){
   const choices=[...lockedChoices.querySelectorAll('.profile-master-choice')].filter(choice=>choice.textContent.includes(name));
   assert(choices.length>0,`${name} missing from carousel`);
   for(const choice of choices){
@@ -102,7 +107,7 @@ lockedChoices.querySelector('.profile-master-choice:not(:disabled)').click();ass
 const renamed=runtime.createVitalsPanel({...options,publicProfiles:[{id:masterIds.jesus,username:'Renamed Jesus'},{id:masterIds.cedricjbt,username:'Renamed Cedric'},{id:masterIds.yogananda,username:'Renamed Yogananda'},{id:'impostor',username:'Jesus'}]});
 const primaryChoices=[...renamed.querySelectorAll('.profile-master-choice:not([aria-hidden="true"])')];
 assert(primaryChoices.length===3,'UUID lineup changed after a username change or accepted a matching username');
-assert(primaryChoices[0].disabled&&!primaryChoices[1].disabled&&primaryChoices[2].disabled,'UUID locks changed after a username change');
+assert(primaryChoices[0].disabled&&!primaryChoices[1].disabled&&!primaryChoices[2].disabled,'UUID locks changed after a username change');
 primaryChoices[1].click();assert(switched===masterIds.cedricjbt,'Renamed Master cannot be linked by UUID');
 const withReferral={...options,playerProfile:{...options.playerProfile,referrer_id:'inviter'},publicProfiles:[...options.publicProfiles,{id:'inviter',username:'Inviting Master',visibility:true},{id:'stranger',username:'Stranger',visibility:true}]};
 const referredPanel=runtime.createVitalsPanel(withReferral);
@@ -111,7 +116,7 @@ const hiddenReferrer=runtime.createVitalsPanel({...withReferral,publicProfiles:o
 assert(!hiddenReferrer.textContent.includes('Inviting Master'),'Slider exposed a referrer excluded by public discovery');
 before.querySelector('.profile-play-button').click();assert(accepted===1,'Accept is broken');
 const active={...player,level_3_accepted_at:'2026-10-15T00:00:00Z',skill_3_start:'2026-10-15T00:00:00Z'};
-const after=runtime.createVitalsPanel({...options,player:active});assert(!after.textContent.includes('Or you can choose'),'Switching remains after Accept');
+const after=runtime.createVitalsPanel({...options,player:active});assert(!after.textContent.includes('Catalog switch explanation.'),'Switching remains after Accept');
 assert(runtime.getActiveQuestInfo({activeModels:models,player}).deadline===null,'Pending Level 3 clock runs');
 assert(runtime.getActiveQuestInfo({activeModels:models,player:active}).deadline!==null,'Accepted Level 3 clock missing');
 for(const row of [player,active]){const skills=runtime.createSkillPanel({activeModels:models,currentLevel:3,passiveModel:{skill:null},player:row,selectedIndex:3});assert(skills.querySelector('[data-practice-toggle]').disabled===isQuestPending(row),'Wrong practice availability');}

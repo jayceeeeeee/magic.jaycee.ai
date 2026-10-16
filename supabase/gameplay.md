@@ -165,6 +165,13 @@ Les noms de skills et du Master sont rendus en italique. Composants disponibles 
 `choose_master`, `linked_master`. `content.level` cible un niveau ;
 `content.occurrence = "level"` crée un reçu stable par participation/niveau.
 
+Les carrousels `masters` (consultation) et `master_choices` (sélection) ne contiennent
+pas de texte d'introduction codé en JS. Modifier `content.text` pour toute explication,
+y compris celle proposant de changer de Master dans les quêtes de niveau 2/3.
+Ces quêtes combinent `component: "master_choices"` et `action: "accept_quest"`.
+`text` accepte une chaîne ou une liste de paragraphes ; supprimer un paragraphe
+ne supprime pas le carrousel, qui est contrôlé par `component`.
+
 Pour modifier du texte sans rejouer une notification, garder son ID. Pour une
 nouvelle annonce, utiliser un nouvel ID versionné. Désactiver une ancienne notice
 avec `enabled=false`, en conservant les reçus. Les textes modifiés dans le dashboard
