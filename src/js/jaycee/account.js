@@ -454,6 +454,7 @@ const mountAccountPanel = () => {
         <button type="button" data-account-save>Save</button>
         <button type="button" data-account-logout>Log out</button>
         <p data-account-save-status aria-live="polite"></p>
+        <p class="account-help">Need help? <a href="mailto:jaubertcedric13@gmail.com">contact me</a>.</p>
       </div>
     </section>`;
   document.body.append(shell);

@@ -1436,6 +1436,10 @@
   display: none;
 }
 
+.profile-settings-actions .account-help {
+  text-align: center;
+}
+
 .profile-fractal-selectors {
   position: relative;
   z-index: 1;
