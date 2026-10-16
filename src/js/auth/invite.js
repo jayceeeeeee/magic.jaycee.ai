@@ -16,8 +16,7 @@
         dialog.innerHTML = `
           <section class="auth-panel">
             <h1 class="game-brand-title" id="invite-password-title">jaycee.ai</h1>
-            <p class="auth-eyebrow">Welcome to Jaycee.ai</p>
-            <p>Choose a password to finish setting up your account.</p>
+            <p class="auth-eyebrow">Jaycee.ai &gt; Welcome! Choose a password to finish setting up your account.</p>
             <form class="auth-form" data-invite-password-form>
               <label><span>Password</span><input type="password" name="password" autocomplete="new-password" minlength="6" required></label>
               <label><span>Confirm password</span><input type="password" name="confirmation" autocomplete="new-password" minlength="6" required></label>

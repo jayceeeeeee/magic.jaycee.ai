@@ -1688,3 +1688,10 @@
 
 .invite-password-dialog .auth-panel { width: 100%; box-sizing: border-box; }
 
+.invite-password-dialog .auth-eyebrow {
+  width: auto;
+  justify-self: stretch;
+  padding-inline: 0;
+  text-align: left;
+}
+
