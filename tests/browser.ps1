@@ -47,6 +47,15 @@ const masterIds={cedricjbt:'d70b5c69-daae-4a77-9955-4385439ae292',yogananda:'b7a
 const player={id:'player',user_id:'user',master:'old',level:3,level_3_accepted_at:null};
 const options={activeModels:models,player,playerProfile:{id:'user',username:'User'},activeMasterProfile:{id:'old'},passiveSkillName:'Passive',notifications:{definitions,receipt(){},record(){}},sounds:{play(){}},publicProfiles:[{id:'user',username:'Self'},{id:'old',username:'Old'},{id:masterIds.cedricjbt,username:'Cedricjbt'}],onAcceptQuest:()=>accepted++,onAcceptMaster:master=>switched=master.id};
 const originalUI=window.JayceeUI;
+const previousPlayerName=window.localStorage.getItem('player_full_name');
+window.localStorage.setItem('player_full_name','Cédric');
+const unnamedPlayerPanel=runtime.createVitalsPanel({...options,playerProfile:{id:'user',username:'  ',full_name:null}});
+assert(unnamedPlayerPanel.querySelector('.profile-player-level').textContent.startsWith('Unknown - Level'),'Unnamed account reused a previous browser name');
+const fullNamePlayerPanel=runtime.createVitalsPanel({...options,playerProfile:{id:'user',username:null,full_name:'Actual Name'}});
+assert(fullNamePlayerPanel.querySelector('.profile-player-level').textContent.startsWith('Actual Name - Level'),'Full name fallback was lost');
+if(previousPlayerName===null)window.localStorage.removeItem('player_full_name');else window.localStorage.setItem('player_full_name',previousPlayerName);
+const unnamedMasterPanel=runtime.createVitalsPanel({...options,adminProfile:{id:'admin',username:null,full_name:null},notifications:{...options.notifications,definitions:[{id:'unknown_master.v1',stage:'linked_master',content:{component:'karma_master'}}]}});
+assert(unnamedMasterPanel.querySelector('.profile-notice-master-name')?.textContent==='Unknown','Unnamed Master still displays a hardcoded name');
 let finishConfirmation,finishAcceptClick,signupRedirects=0;
 const confirmationDone=new Promise(resolve=>{finishConfirmation=resolve;});
 const acceptClickDone=new Promise(resolve=>{finishAcceptClick=resolve;});

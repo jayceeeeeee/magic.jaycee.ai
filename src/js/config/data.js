@@ -73,12 +73,11 @@ export const fetchAdminProfile = async (client) => {
     .from(PROFILE_TABLE)
     .select("id, username, full_name, avatar_path, role")
     .eq("role", "admin")
-    .not("username", "is", null)
     .limit(1);
 
   if (error) throw error;
 
-  return (data || []).find((profile) => getDisplayValue(profile.username)) || null;
+  return (data || [])[0] || null;
 };
 
 const getStoragePathFromImage = (image, bucketName) => {

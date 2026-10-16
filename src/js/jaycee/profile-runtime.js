@@ -489,11 +489,11 @@ const createProfileNotice = ({
   return panel;
 };
 
-const createNoticeMasterBadge = (profile, fallbackUsername = "Cedricjbt") => {
+const createNoticeMasterBadge = (profile, fallbackUsername = "Unknown") => {
   const badge = document.createElement("span");
   const avatar = document.createElement("span");
   const name = document.createElement("span");
-  const username = getDisplayValue(profile?.username) || fallbackUsername;
+  const username = getDisplayValue(profile?.username) || getDisplayValue(profile?.full_name) || fallbackUsername;
 
   badge.className = "profile-notice-master-card";
   avatar.className = "profile-notice-master-avatar";
@@ -676,7 +676,7 @@ const createLinkedMasterNoticeContent = ({ masterProfile, questInfo, level = 1 }
 
   firstLine.append(
     document.createTextNode("Your energy has been linked to "),
-    createNoticeMasterBadge(masterProfile, "a Master"),
+    createNoticeMasterBadge(masterProfile),
     document.createTextNode(".")
   );
   secondLine.textContent = getLinkedQuestText(questInfo);
@@ -772,15 +772,15 @@ const createVitalsPanel = ({
   const storedUsername = getDisplayValue(window.localStorage.getItem("player_full_name"));
   const profileName = getDisplayValue(playerProfile?.username)
     || getDisplayValue(playerProfile?.full_name)
-    || storedUsername
-    || "Player";
+    || (!hasPlayerProfile ? storedUsername : "")
+    || "Unknown";
   const channelUsername = getDisplayValue(profile?.username)
     || getDisplayValue(window.localStorage.getItem("pending_prayer_target_username"))
     || "";
   const noticeMasterProfile = adminProfile || publicProfiles.find((publicProfile) => (
     getDisplayValue(publicProfile.role).toLowerCase() === "admin"
   )) || publicProfiles[0] || null;
-  const noticeMasterUsername = getDisplayValue(noticeMasterProfile?.username) || "Cedricjbt";
+  const noticeMasterUsername = getDisplayValue(noticeMasterProfile?.username) || getDisplayValue(noticeMasterProfile?.full_name) || "Unknown";
   const noticeMasterUsernameElement = document.createElement("i");
   const noticeMasterContent = document.createDocumentFragment();
   const mannaModel = effectivePlayer && playerProfile

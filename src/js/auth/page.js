@@ -66,21 +66,20 @@
     async function fetchAdminProfile(client) {
         const { data, error } = await client
             .from("profiles")
-            .select("id, username, avatar_path, role")
+            .select("id, username, full_name, avatar_path, role")
             .eq("role", "admin")
-            .not("username", "is", null)
             .limit(1);
 
         if (error) throw error;
 
-        return (data || []).find((profile) => getDisplayValue(profile.username)) || null;
+        return (data || [])[0] || null;
     }
 
     function createAdminCard(profile, avatarUrl = "") {
         const card = document.createElement("span");
         const avatar = document.createElement("span");
         const name = document.createElement("span");
-        const username = getDisplayValue(profile?.username) || "Cedricjbt";
+        const username = getDisplayValue(profile?.username) || getDisplayValue(profile?.full_name) || "Unknown";
 
         card.className = "auth-admin-card";
         avatar.className = "auth-admin-card-avatar";
@@ -111,7 +110,7 @@
         try {
             const client = await window.JayceeAuth.getSupabaseClient();
             const profile = await fetchAdminProfile(client);
-            const username = getDisplayValue(profile?.username) || "Cedricjbt";
+            const username = getDisplayValue(profile?.username) || getDisplayValue(profile?.full_name) || "Unknown";
             const avatarUrl = profile ? await getAvatarImageUrl(client, profile) : "";
 
             if (usernameElement) {
