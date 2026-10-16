@@ -11,7 +11,7 @@ Servir la racine du dépôt en HTTP pour ouvrir les pages et leurs modules.
 | `*.html` | Pages publiques ; `account.html` redirige vers le panneau du jeu |
 | `src/js/config/game-config.js` | Durées des cycles et configuration du jeu |
 | `src/js/config/data.js` | Lectures/écritures et appels aux fonctions Supabase |
-| `src/js/auth/` | Connexion, inscription et contrôle d'accès au compte |
+| `src/js/auth/` | Connexion, inscription, définition du mot de passe après invitation Supabase et contrôle d'accès au compte |
 | `src/js/referral.js` | Liens d'invitation et transport du paramètre `ref` jusqu'au signup |
 | `src/js/jaycee/profile-runtime.js` | Interface du jeu, notifications et pratique |
 | `src/js/jaycee/profile-core.js` | Dessin du canvas, sans démarrage automatique |

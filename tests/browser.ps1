@@ -14,6 +14,7 @@ $prelude += Read-BrowserSource 'tests/manna.test.mjs'
 $prelude += Read-BrowserSource 'tests/quest-lock-auth.test.mjs'
 $prelude += Read-BrowserSource 'tests/menu-sounds.test.mjs'
 $prelude += Read-BrowserSource 'tests/referrals.test.mjs'
+$prelude += Read-BrowserSource 'tests/invite-password.test.mjs'
 $authSource = ConvertTo-Json -InputObject ([string](Get-Content 'src/js/auth/auth.js' -Raw -Encoding UTF8)) -Compress
 $checks = ''
 foreach ($path in @('tests/notifications.test.mjs', 'tests/level-two-quest.test.mjs', 'tests/level-three-quest.test.mjs', 'tests/level-four.test.mjs')) {
@@ -33,6 +34,7 @@ const core=new Function(coreSource+'\nreturn {createJayceeState,drawJaycee};')()
 const coreCanvas=document.createElement('canvas');coreCanvas.style.width='200px';coreCanvas.style.height='200px';document.body.append(coreCanvas);
 core.drawJaycee(coreCanvas,core.createJayceeState());assert(coreCanvas.width>0,'Core canvas did not render');coreCanvas.remove();
 await runQuestLockAuthTests(AUTH_SOURCE);
+await runInvitePasswordTests(syntaxSources.find(file=>file.name==='invite.js').source);
 await runReferralTests({referralSource:syntaxSources.find(file=>file.name==='referral.js').source,authSource:AUTH_SOURCE,dataSource:syntaxSources.find(file=>file.name==='data.js').source});
 await runMenuSoundTests({indexSource:syntaxSources.find(file=>file.name==='index.js').source,loreSource:syntaxSources.find(file=>file.name==='lore.js').source,uiSource:syntaxSources.find(file=>file.name==='ui-sounds.js').source,audioSource:syntaxSources.find(file=>file.name==='sounds.js').source});
 const display=value=>String(value??'').trim();
@@ -43,7 +45,7 @@ const definitions=[{id:'level_three_prepare.v1',stage:'linked_master',title:'Que
 let accepted=0,switched;
 const masterIds={cedricjbt:'d70b5c69-daae-4a77-9955-4385439ae292',yogananda:'b7a38b31-100f-4e03-b3e8-9357c635ecf8',jesus:'7abd58ec-1289-403d-932c-dc2df233d079'};
 const player={id:'player',user_id:'user',master:'old',level:3,level_3_accepted_at:null};
-const options={activeModels:models,player,playerProfile:{id:'user',username:'User'},activeMasterProfile:{id:'old'},passiveSkillName:'Passive',notifications:{definitions,receipt(){},record(){}},sounds:{play(){}},publicProfiles:[{id:'user',username:'Self'},{id:'old',username:'Old'},{id:masterIds.yogananda,username:'Yogananda'}],onAcceptQuest:()=>accepted++,onAcceptMaster:master=>switched=master.id};
+const options={activeModels:models,player,playerProfile:{id:'user',username:'User'},activeMasterProfile:{id:'old'},passiveSkillName:'Passive',notifications:{definitions,receipt(){},record(){}},sounds:{play(){}},publicProfiles:[{id:'user',username:'Self'},{id:'old',username:'Old'},{id:masterIds.cedricjbt,username:'Cedricjbt'}],onAcceptQuest:()=>accepted++,onAcceptMaster:master=>switched=master.id};
 const originalUI=window.JayceeUI;
 let finishConfirmation,finishAcceptClick,signupRedirects=0;
 const confirmationDone=new Promise(resolve=>{finishConfirmation=resolve;});
@@ -78,10 +80,10 @@ const unnamedUltimate=runtime.createVitalsPanel({...fourthSkillOptions,ultimateM
 assert(unnamedUltimate.querySelector('em')?.textContent==='your ultimate skill','Missing Ultimate name has no fallback');
 assert(before.textContent.includes('Or you can choose to link yourself to another Master.'),'Missing switch invitation');
 assert(before.querySelectorAll('.profile-master-choice').length>0,'Missing carousel');
-before.querySelector('.profile-master-choice').click();assert(switched===masterIds.yogananda,'Wrong Master selected');
+before.querySelector('.profile-master-choice').click();assert(switched===masterIds.cedricjbt,'Wrong Master selected');
 const lockedChoices=runtime.createVitalsPanel({...options,publicProfiles:[{id:masterIds.jesus,username:'Jesus'},{id:masterIds.cedricjbt,username:'Cedricjbt'},{id:masterIds.yogananda,username:'Yogananda'},{id:'other',username:'Other Master'}]});
 assert(!lockedChoices.textContent.includes('Other Master'),'Slider exposed a profile outside its temporary lineup');
-for(const name of ['Jesus','Cedricjbt']){
+for(const name of ['Jesus','Yogananda']){
   const choices=[...lockedChoices.querySelectorAll('.profile-master-choice')].filter(choice=>choice.textContent.includes(name));
   assert(choices.length>0,`${name} missing from carousel`);
   for(const choice of choices){
@@ -89,12 +91,12 @@ for(const name of ['Jesus','Cedricjbt']){
     switched=null;choice.click();assert(switched===null,`${name} can still be linked`);
   }
 }
-lockedChoices.querySelector('.profile-master-choice:not(:disabled)').click();assert(switched===masterIds.yogananda,'Available Master cannot be linked');
+lockedChoices.querySelector('.profile-master-choice:not(:disabled)').click();assert(switched===masterIds.cedricjbt,'Available Master cannot be linked');
 const renamed=runtime.createVitalsPanel({...options,publicProfiles:[{id:masterIds.jesus,username:'Renamed Jesus'},{id:masterIds.cedricjbt,username:'Renamed Cedric'},{id:masterIds.yogananda,username:'Renamed Yogananda'},{id:'impostor',username:'Jesus'}]});
 const primaryChoices=[...renamed.querySelectorAll('.profile-master-choice:not([aria-hidden="true"])')];
 assert(primaryChoices.length===3,'UUID lineup changed after a username change or accepted a matching username');
-assert(primaryChoices[0].disabled&&primaryChoices[1].disabled&&!primaryChoices[2].disabled,'UUID locks changed after a username change');
-primaryChoices[2].click();assert(switched===masterIds.yogananda,'Renamed Master cannot be linked by UUID');
+assert(primaryChoices[0].disabled&&!primaryChoices[1].disabled&&primaryChoices[2].disabled,'UUID locks changed after a username change');
+primaryChoices[1].click();assert(switched===masterIds.cedricjbt,'Renamed Master cannot be linked by UUID');
 const withReferral={...options,playerProfile:{...options.playerProfile,referrer_id:'inviter'},publicProfiles:[...options.publicProfiles,{id:'inviter',username:'Inviting Master',visibility:true},{id:'stranger',username:'Stranger',visibility:true}]};
 const referredPanel=runtime.createVitalsPanel(withReferral);
 assert(referredPanel.textContent.includes('Inviting Master')&&!referredPanel.textContent.includes('Stranger'),'Referral slider did not add only the saved public referrer');
