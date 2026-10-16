@@ -1156,7 +1156,7 @@ const createSkillPanel = ({
         lineage.append(avatar);
       }
       lineage.append(name);
-      description.append(lineage);
+      description.append(document.createElement("hr"), lineage);
     }
     if (activeAbility.type === "active") {
       const toggle = document.createElement("button");
