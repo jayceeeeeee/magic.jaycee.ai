@@ -152,12 +152,14 @@ editor.setUnlocked(true,4);assert(!selector.options[4].disabled,'Ultimate editor
 selector.value='4';selector.dispatchEvent(new Event('change'));assert(!editor.section.querySelector('[name=skill_4_label]').disabled,'Ultimate inputs remain disabled at Level 4');
 editor.section.querySelector('[name=skill_4_label]').value='My ultimate';await editor.save(editor.getUpdates().skills);assert(savePayload.skills[4].label==='My ultimate','Ultimate edits not saved');
 const levelFour={...active,level:4};
+const permanentNotice=runtime.createVitalsPanel({...options,player:levelFour,activeMasterProfile:{id:'old',username:'My Master',avatarUrl:'https://example.com/avatar.png'},notifications:{...options.notifications,definitions:[{id:'level_four_permanent.v1',stage:'linked_master',content:{level:4,text:'Permanently linked to {masterName}.'}}]}});
+assert(permanentNotice.querySelector('.profile-notice-master-card')?.textContent==='My Master'&&permanentNotice.querySelector('.profile-notice-master-avatar img')?.getAttribute('src')==='https://example.com/avatar.png'&&!permanentNotice.textContent.includes('{masterName}'),'Permanent account notice must render Master name and picture as a profile card');
 const ultimate=runtime.createSkillPanel({activeModels:models,currentLevel:4,passiveModel:{skill:null},ultimateModel:{skillLabel:'Ultimate',skillDescription:'Permanent ultimate description'},player:levelFour,selectedIndex:4});
 assert(ultimate.textContent.includes('Permanent ultimate description')&&!ultimate.querySelector('[data-practice-toggle]')&&!ultimate.querySelector('[data-quest-deadline]'),'Ultimate is not description-only');
 assert(!ultimate.querySelector('[data-skill-index="4"]').disabled,'Ultimate remains locked at Level 4');
-assert(ultimate.querySelector('.profile-ultimate-master')?.textContent==='Master:God','Ultimate without lineage must display God');
+assert(ultimate.querySelector('.profile-ultimate-master')?.textContent==='Linked to:God','Ultimate without lineage must display God');
 const lineageUltimate=runtime.createSkillPanel({activeModels:models,currentLevel:4,ultimateModel:{skillLabel:'Ultimate',skillDescription:'Description'},selectedIndex:3,hasLineageMaster:true,masterLineage:{username:'Lineage Master',avatarUrl:'https://example.com/master.png'}});
-assert(lineageUltimate.querySelector('.profile-ultimate-master')?.textContent==='Master:Lineage Master'&&lineageUltimate.querySelector('.account-master-avatar img')?.getAttribute('src')==='https://example.com/master.png','Ultimate must show its owners Master picture and name');
+assert(lineageUltimate.querySelector('.profile-ultimate-master')?.textContent==='Linked to:Lineage Master'&&lineageUltimate.querySelector('.account-master-avatar img')?.getAttribute('src')==='https://example.com/master.png','Ultimate must show its owners Master picture and name');
 assert(runtime.getActiveQuestInfo({activeModels:models,player:levelFour}).deadline!==null,'Level 4 active skill timer is missing');
 const levelFourActive=runtime.createSkillPanel({activeModels:models,currentLevel:4,passiveModel:{skill:null},player:levelFour,selectedIndex:3});
 assert(levelFourActive.querySelector('[data-skill-practice-details]')&&levelFourActive.querySelector('[data-quest-deadline]'),'Level 4 active descriptions lost their countdown/practice details');

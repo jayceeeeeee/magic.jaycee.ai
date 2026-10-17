@@ -417,11 +417,13 @@ const createMannaBar = (mannaModel, locked = false) => createVitalBar({
     : "0 € / 0 €"
 });
 
-const appendNotificationText = (element, text, textValues = {}) => {
+const appendNotificationText = (element, text, textValues = {}, masterBadgeProfile = null) => {
   String(text).split(/(\{[a-zA-Z]+\})/g).forEach((part) => {
     const key = part.slice(1, -1);
     const value = interpolateNotification(part, textValues);
-    if (['{passiveSkillName}', '{skillOneName}', '{skillTwoName}', '{skillThreeName}', '{skillFourName}', '{skillName}', '{masterName}'].includes(part) && Object.hasOwn(textValues, key)) {
+    if (part === '{masterName}' && masterBadgeProfile) {
+      element.append(createNoticeMasterBadge(masterBadgeProfile));
+    } else if (['{passiveSkillName}', '{skillOneName}', '{skillTwoName}', '{skillThreeName}', '{skillFourName}', '{skillName}', '{masterName}'].includes(part) && Object.hasOwn(textValues, key)) {
       const emphasis = document.createElement("em");
       emphasis.textContent = value;
       element.append(emphasis);
@@ -438,6 +440,7 @@ const createProfileNotice = ({
   onEvent = () => {},
   text = "",
   textValues = {},
+  masterBadgeProfile = null,
   title,
   tone = "notification"
 }) => {
@@ -462,7 +465,7 @@ const createProfileNotice = ({
   lines.forEach((line) => {
     const paragraph = document.createElement("p");
 
-    appendNotificationText(paragraph, line, textValues);
+    appendNotificationText(paragraph, line, textValues, masterBadgeProfile);
     copy.append(paragraph);
   });
   if (content) {
@@ -924,6 +927,7 @@ const createVitalsPanel = ({
       closable: definition.dismissible,
       text: definition.content?.text,
       textValues: values,
+      masterBadgeProfile: definition.id === 'level_four_permanent.v1' ? activeMasterProfile : null,
       title: definition.title,
       tone: definition.tone
     });
@@ -1126,7 +1130,7 @@ const createSkillPanel = ({
       const label = document.createElement("span");
       const name = document.createElement("span");
       lineage.className = "account-master-identity profile-skill-practice-details profile-ultimate-master";
-      label.textContent = "Master:";
+      label.textContent = "Linked to:";
       name.textContent = getDisplayValue(masterLineage?.username)
         || getDisplayValue(masterLineage?.full_name)
         || (hasLineageMaster ? "Master unavailable" : "God");
