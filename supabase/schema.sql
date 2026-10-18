@@ -82,6 +82,7 @@ create table public."profiles" (
   "birth_timezone" text,
   "sex" text,
   "full_name" text,
+  "lore" text default '' not null constraint profiles_lore_length check (char_length(lore) <= 20000),
   "manna_target" double precision default 0,
   "manna_unit" text,
   "manna_cycle" text,

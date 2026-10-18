@@ -11,6 +11,7 @@ const PROFILE_SELECT_COLUMNS = [
   "username",
   "avatar_path",
   "full_name",
+  "lore",
   "birth_date",
   "years_burned",
   "birth_time",

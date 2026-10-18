@@ -534,7 +534,115 @@ const isMasterLinkLocked = (profile) => (
   FEATURED_MASTERS.get(profile?.id)?.linkLocked === true
 );
 
-const createMastersNoticeContent = (profiles, { onSelect = null, isSaving = false, referrerId = null } = {}) => {
+const openMasterCard = (profile, { onSelect = null, onLoadDetails = null, trigger = null } = {}) => {
+  if (isMasterLinkLocked(profile) || document.querySelector('.profile-master-dialog')) return;
+
+  const dialog = document.createElement('dialog');
+  const close = document.createElement('button');
+  const avatar = document.createElement('div');
+  const username = document.createElement('h2');
+  const fullName = document.createElement('p');
+  const lore = document.createElement('div');
+  const details = document.createElement('div');
+  const action = document.createElement('button');
+  dialog.className = 'profile-master-dialog';
+  dialog.setAttribute('aria-labelledby', 'profile-master-card-name');
+  close.className = 'profile-master-dialog-close';
+  close.type = 'button';
+  close.setAttribute('aria-label', 'Close profile card');
+  close.textContent = '×';
+  avatar.className = 'profile-master-dialog-avatar';
+  avatar.textContent = getProfileInitial(profile);
+  if (profile.avatarUrl) {
+    const image = document.createElement('img');
+    image.src = profile.avatarUrl;
+    image.alt = '';
+    image.addEventListener('error', () => avatar.replaceChildren(getProfileInitial(profile)), { once: true });
+    avatar.replaceChildren(image);
+  }
+  username.id = 'profile-master-card-name';
+  username.textContent = getDisplayValue(profile.username) || 'Unknown';
+  fullName.className = 'profile-master-dialog-full-name';
+  fullName.textContent = getDisplayValue(profile.full_name);
+  lore.className = 'profile-master-dialog-lore profile-skill-description';
+  renderSkillMarkdown(lore, getDisplayValue(profile.lore) || 'This story is still being written.');
+  details.className = 'profile-master-dialog-details';
+  details.setAttribute('aria-live', 'polite');
+  action.className = 'profile-master-dialog-action';
+  action.type = 'button';
+  action.textContent = onSelect ? 'Select' : 'OK';
+  const renderDetails = ({ lore: profileLore = profile.lore, game = null, skills = [] } = {}) => {
+    renderSkillMarkdown(lore, getDisplayValue(profileLore) || 'This story is still being written.');
+    let selectedIndex = null;
+    const renderAbilities = () => {
+      const models = { gameForm: game, skillForms: skills };
+      details.replaceChildren(createSkillPanel({
+        passiveModel: getPassiveSkillModel({ ...models, hasLinkedMaster: true }),
+        activeModels: getActiveSkillModels(models),
+        ultimateModel: getUltimateModel(models),
+        currentLevel: 0,
+        selectedIndex,
+        onSelect: (index) => {
+          selectedIndex = selectedIndex === index ? null : index;
+          renderAbilities();
+          details.querySelector(`[data-skill-index="${index}"]`)?.focus({ preventScroll: true });
+        }
+      }));
+    };
+    renderAbilities();
+  };
+  let cleanedUp = false;
+  const cleanup = () => {
+    if (cleanedUp) return;
+    cleanedUp = true;
+    dialog.remove();
+    if (trigger?.isConnected) trigger.focus({ preventScroll: true });
+  };
+  const dismiss = () => {
+    dialog.close();
+    cleanup();
+  };
+  close.addEventListener('click', dismiss);
+  action.addEventListener('click', () => {
+    action.disabled = true;
+    dismiss();
+    if (onSelect) void onSelect(profile);
+  });
+  dialog.addEventListener('close', cleanup, { once: true });
+  dialog.addEventListener('cancel', (event) => {
+    event.preventDefault();
+    dismiss();
+  });
+  dialog.append(close, avatar, username, fullName, lore, details, action);
+  document.body.append(dialog);
+  dialog.showModal();
+  action.focus();
+  if (onLoadDetails) {
+    const load = async () => {
+      details.textContent = 'Loading skills…';
+      details.setAttribute('aria-busy', 'true');
+      try {
+        const data = await onLoadDetails(profile);
+        if (dialog.isConnected) renderDetails(data || {});
+      } catch {
+        if (!dialog.isConnected) return;
+        const message = document.createElement('p');
+        const retry = document.createElement('button');
+        message.textContent = 'The profile details could not be loaded.';
+        retry.type = 'button';
+        retry.className = 'profile-master-dialog-retry';
+        retry.textContent = 'Try again';
+        retry.addEventListener('click', () => void load());
+        details.replaceChildren(message, retry);
+      } finally {
+        details.removeAttribute('aria-busy');
+      }
+    };
+    void load();
+  } else renderDetails();
+};
+
+const createMastersNoticeContent = (profiles, { onSelect = null, onLoadDetails = null, isSaving = false, referrerId = null } = {}) => {
   // Temporary slider lineup; keep other public profiles out of these cards.
   const visibleProfiles = profiles.filter((profile) => (
     FEATURED_MASTERS.has(profile?.id) || profile?.id === referrerId
@@ -556,7 +664,7 @@ const createMastersNoticeContent = (profiles, { onSelect = null, isSaving = fals
 
       group.className = "profile-masters-group";
       if (copy === 0) {
-        group.setAttribute("role", onSelect ? "group" : "list");
+        group.setAttribute("role", "group");
       } else {
         group.setAttribute("aria-hidden", "true");
       }
@@ -566,34 +674,30 @@ const createMastersNoticeContent = (profiles, { onSelect = null, isSaving = fals
         visibleProfiles.forEach((profile) => {
           const card = createNoticeMasterBadge(profile);
 
-          if (!onSelect) card.setAttribute("role", "listitem");
           if (repeat > 0) card.setAttribute("aria-hidden", "true");
-          if (onSelect) {
-            const choice = document.createElement("button");
-            const isLocked = isMasterLinkLocked(profile);
+          const choice = document.createElement("button");
+          const isLocked = isMasterLinkLocked(profile);
 
-            choice.className = `profile-master-choice${isLocked ? " is-locked" : ""}`;
-            choice.type = "button";
-            choice.disabled = isSaving || isLocked;
-            choice.setAttribute("aria-label", isLocked
-              ? `${getDisplayValue(profile.username)}'s game is locked`
-              : `Link to ${getDisplayValue(profile.username)}'s game`);
-            if (isLocked) {
-              choice.title = "This Master's game is temporarily locked.";
-              card.append(createLockedIcon("profile-master-lock-icon"));
-            }
-            if (copy > 0 || repeat > 0) {
-              choice.tabIndex = -1;
-              choice.setAttribute("aria-hidden", "true");
-            }
-            choice.addEventListener("click", () => {
-              if (!choice.disabled) onSelect(profile);
-            });
-            choice.append(card);
-            group.append(choice);
-          } else {
-            group.append(card);
+          choice.className = `profile-master-choice${isLocked ? " is-locked" : ""}`;
+          choice.type = "button";
+          choice.disabled = isSaving || isLocked;
+          choice.setAttribute("aria-label", isLocked
+            ? `${getDisplayValue(profile.username)}'s game is locked`
+            : `View ${getDisplayValue(profile.username)}'s profile`);
+          choice.setAttribute('aria-haspopup', 'dialog');
+          if (isLocked) {
+            choice.title = "This Master's game is temporarily locked.";
+            card.append(createLockedIcon("profile-master-lock-icon"));
           }
+          if (copy > 0 || repeat > 0) {
+            choice.tabIndex = -1;
+            choice.setAttribute("aria-hidden", "true");
+          }
+          choice.addEventListener("click", () => {
+            if (!choice.disabled) openMasterCard(profile, { onSelect, onLoadDetails, trigger: choice });
+          });
+          choice.append(card);
+          group.append(choice);
         });
       }
       track.append(group);
@@ -733,6 +837,7 @@ const createVitalsPanel = ({
   questAcceptError = "",
   onPlay,
   onAcceptMaster,
+  onLoadMasterDetails = null,
   player,
   playerAvatarUrl = "",
   playerProfile,
@@ -867,7 +972,7 @@ const createVitalsPanel = ({
     let action = null;
     const component = definition.content?.component;
     const isQuestAcceptance = ['accept_level_two', 'accept_quest'].includes(definition.content?.action);
-    if (component === 'masters') content = createMastersNoticeContent(publicProfiles, { referrerId });
+    if (component === 'masters') content = createMastersNoticeContent(publicProfiles, { referrerId, onLoadDetails: onLoadMasterDetails });
     else if (component === 'karma_master') content = noticeMasterContent;
     else if (component === 'linked_quest') content = createLinkedMasterNoticeContent({
       masterProfile: activeMasterProfile, questInfo: linkedQuestInfo, level: Number(player?.level) || 1
@@ -877,6 +982,7 @@ const createVitalsPanel = ({
         master.id !== playerProfile?.id && (!isQuestAcceptance || master.id !== activeMasterProfile?.id)
       )), {
         referrerId,
+        onLoadDetails: onLoadMasterDetails,
         onSelect: (master) => {
           if (!isQuestAcceptance) onEvent('clicked');
           onAcceptMaster(master);
@@ -1434,6 +1540,14 @@ export const initJayceePage = async () => {
       questAcceptError,
       onPlay: handlePlayClick,
       onAcceptMaster: handleAcceptMasterClick,
+      onLoadMasterDetails: async (master) => {
+        const [profile, game] = await Promise.all([
+          fetchProfileByUserId(supabaseClient, master.id),
+          fetchUserGameSettings(supabaseClient, master)
+        ]);
+        const skills = await fetchSkillsByIds(supabaseClient, JAYCEE_GAME_SKILL_COLUMNS.map((column) => game?.[column]));
+        return { lore: profile?.lore, game, skills };
+      },
       player: practice?.project(currentPlayer) || currentPlayer,
       adminProfile,
       playerAvatarUrl,

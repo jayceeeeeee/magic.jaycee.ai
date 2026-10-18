@@ -21,6 +21,10 @@ connecte pas à Supabase et n'a pas besoin de Node ni d'un serveur HTTP.
 | `referrals.test.mjs` | Capture et transport d'invitation, métadonnées signup, stockage bloqué, recherche publique et compatibilité avant migration |
 | `menu-sounds.test.mjs` | Destination de Play selon la session, attente de fin du son pour Play/Continue/liens, audio refusé ou bloqué et contrôles désactivés |
 
+`browser.ps1` vérifie aussi les cartes des Masters : lore, cinq boutons de skills
+partagés avec le jeu, consultation du passif, verrouillage des quatre autres,
+confirmation Select, fermeture et sauvegarde du lore depuis le panneau du compte.
+
 Les fichiers `.mjs` sont chargés par la suite navigateur. Les tests backend sont
 dans [../supabase/tests/](../supabase/tests/) et se lancent séparément dans une base
 de test : les mocks ne valident pas l'exécution réelle des fonctions SQL.

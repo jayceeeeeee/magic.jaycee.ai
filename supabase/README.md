@@ -14,6 +14,13 @@ site ne les applique pas à Supabase.
 | [migrations/](migrations/README.md) | Prochaines modifications datées de la base |
 | [tests/](tests/) | Tests SQL réutilisables, avec annulation des changements |
 
+`profiles.lore` contient l'histoire publique du personnage (Markdown, 20 000
+caractères maximum). Elle se modifie dans Account > Skills et se sauvegarde avec
+le bouton Save du compte. Les cartes des Masters la chargent avec les skills ;
+seul le passif y est consultable. `tests/profile_lore.sql` vérifie la sauvegarde,
+la limite de taille et les permissions avec des comptes temporaires, puis annule
+ses changements.
+
 La référence initiale `schema.sql` et `seed.sql` a été capturée en lecture seule
 le **15 octobre 2026**. `schema.sql` suit ensuite les changements préparés dans le
 dépôt ; il peut donc inclure une migration pas encore déployée.

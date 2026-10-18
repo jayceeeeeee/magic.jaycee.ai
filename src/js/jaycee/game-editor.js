@@ -5,6 +5,9 @@ export const createSkillsSection = ({ client, profile, createSection, onChange =
   const { section, content } = createSection("Skills", "is-skills");
   const editor = document.createElement("div");
   const fields = document.createElement("fieldset");
+  const loreLabel = document.createElement("label");
+  const loreCaption = document.createElement("span");
+  const lore = document.createElement("textarea");
   const selectorLabel = document.createElement("label");
   const selectorCaption = document.createElement("span");
   const selector = document.createElement("select");
@@ -22,6 +25,15 @@ export const createSkillsSection = ({ client, profile, createSection, onChange =
   editor.className = "jaycee-game-editor";
   fields.className = "profile-game-skill-fields";
   fields.disabled = true;
+  loreCaption.textContent = "Lore";
+  lore.name = "lore";
+  lore.value = profile.lore || "";
+  lore.rows = 3;
+  lore.maxLength = 20000;
+  lore.placeholder = "Tell your character's story. Markdown is welcome.";
+  lore.addEventListener("input", onChange);
+  loreLabel.append(loreCaption, lore);
+  fields.append(loreLabel);
   selector.name = "skill_selector";
   selectorCaption.textContent = "Skill";
   slots.forEach((slot, index) => {
@@ -152,7 +164,7 @@ export const createSkillsSection = ({ client, profile, createSection, onChange =
       if (unlocked) void load();
     },
     getUpdates: () => {
-      if (section.hidden) return { skills: null };
+      if (section.hidden) return { skills: null, updates: {} };
       if (!loaded) return { error: "Your skills have not loaded yet. Retry before saving." };
       const editable = accessLevel >= 4 ? inputs : inputs.slice(0, 4);
       const skills = editable.map(({ name, description }) => ({ label: name.value.trim(), description: description.value.trim() }));
@@ -165,7 +177,10 @@ export const createSkillsSection = ({ client, profile, createSection, onChange =
       }
       const changed = skills.some((skill, index) => skill.label !== savedSkills[index].label.trim()
         || skill.description !== savedSkills[index].description.trim());
-      return { skills: changed ? (accessLevel >= 4 ? skills : [...skills, { ...savedSkills[4] }]) : null };
+      return {
+        skills: changed ? (accessLevel >= 4 ? skills : [...skills, { ...savedSkills[4] }]) : null,
+        updates: { lore: lore.value.trim() }
+      };
     },
     setSaving: (saving) => { fields.disabled = saving || !loaded; },
     save: async (skills) => {

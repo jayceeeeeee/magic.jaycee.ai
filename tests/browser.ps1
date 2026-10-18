@@ -92,7 +92,44 @@ const unnamedUltimate=runtime.createVitalsPanel({...fourthSkillOptions,ultimateM
 assert(unnamedUltimate.querySelector('em')?.textContent==='your ultimate skill','Missing Ultimate name has no fallback');
 assert(before.textContent.includes('Catalog switch explanation.')&&!before.textContent.includes('Or you can choose to link yourself to another Master.'),'Slider explanation did not come from catalog text');
 assert(before.querySelectorAll('.profile-master-choice').length>0,'Missing carousel');
-before.querySelector('.profile-master-choice').click();assert(switched===masterIds.cedricjbt,'Wrong Master selected');
+const closeCard=async()=>{document.querySelector('.profile-master-dialog-close').click();await new Promise(resolve=>setTimeout(resolve,0));};
+const confirmMaster=async(choice)=>{
+  switched=null;choice.click();
+  const card=document.querySelector('.profile-master-dialog');
+  assert(card?.open&&switched===null,'Badge must preview before linking');
+  assert(card.querySelector('.profile-master-dialog-action').textContent==='Select','Selection card must offer Select');
+  card.querySelector('.profile-master-dialog-action').click();
+  await new Promise(resolve=>setTimeout(resolve,20));
+};
+await confirmMaster(before.querySelector('.profile-master-choice'));assert(switched===masterIds.cedricjbt,'Wrong Master selected');
+let loadCount=0;
+const previewPanel=runtime.createVitalsPanel({...guestSliderOptions,publicProfiles:[{id:masterIds.cedricjbt,username:'Cedricjbt',full_name:'Cedric Test',avatarUrl:'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'}],onLoadMasterDetails:async()=>{loadCount++;return{lore:'A traveler learning to kindle the inner fire.',game:{skill_0:'passive',skill_1:'first',skill_2:'second',skill_3:'third',skill_4:'ultimate'},skills:[{id:'passive',label:'Inner fire',description:'Practice with intention.'},...['first','second','third','ultimate'].map(id=>({id,label:id,description:'Hidden resources'}))]}}});
+document.body.append(previewPanel);
+const previewTrigger=previewPanel.querySelector('.profile-master-choice');previewTrigger.click();
+await new Promise(resolve=>setTimeout(resolve,0));
+let previewCard=document.querySelector('.profile-master-dialog');
+assert(previewCard.open&&previewCard.textContent.includes('Cedric Test'),'Profile card identity missing: '+previewCard.outerHTML);
+assert(previewCard.querySelector('img'),'Profile card picture missing: '+previewCard.outerHTML);
+assert(loadCount===1&&previewCard.textContent.includes('A traveler learning to kindle the inner fire.'),'Lore did not load');
+assert(previewCard.querySelectorAll('.profile-ability-button').length===5&&previewCard.querySelectorAll('.profile-ability-button:disabled').length===4,'Preview must reuse five skills with only passive unlocked');
+assert(!previewCard.textContent.includes('Practice with intention.')&&!previewCard.textContent.includes('Hidden resources'),'Skill details must wait for click');
+previewCard.querySelector('[data-skill-index="0"]').click();
+assert(previewCard.textContent.includes('Practice with intention.')&&!previewCard.querySelector('[data-practice-toggle]'),'Passive must show details without practice controls');
+previewCard.querySelector('[data-skill-index="1"]').click();
+assert(!previewCard.textContent.includes('Hidden resources'),'Locked preview exposed active details');
+previewCard.querySelector('[data-skill-index="0"]').click();
+assert(!previewCard.textContent.includes('Practice with intention.'),'Passive details must toggle closed');
+assert(previewCard.querySelector('.profile-master-dialog-action').textContent==='OK','Informational card must offer OK');
+previewCard.querySelector('.profile-master-dialog-action').click();await new Promise(resolve=>setTimeout(resolve,20));
+assert(!document.querySelector('.profile-master-dialog')&&document.activeElement===previewTrigger,'OK must close and restore focus');
+previewTrigger.click();document.querySelector('.profile-master-dialog-close').click();await new Promise(resolve=>setTimeout(resolve,20));
+assert(!document.querySelector('.profile-master-dialog'),'Cross must close the card');previewPanel.remove();
+previewTrigger.click();
+document.querySelector('.profile-master-dialog').dispatchEvent(new Event('cancel',{cancelable:true}));
+assert(!document.querySelector('.profile-master-dialog'),'Escape cancellation must close the card');
+const errorPreview=runtime.createVitalsPanel({...guestSliderOptions,onLoadMasterDetails:async()=>{throw new Error('offline')}});
+errorPreview.querySelector('.profile-master-choice').click();await new Promise(resolve=>setTimeout(resolve,0));
+assert(document.querySelector('.profile-master-dialog-retry'),'Failed details need retry');await closeCard();
 const lockedChoices=runtime.createVitalsPanel({...options,publicProfiles:[{id:masterIds.jesus,username:'Jesus'},{id:masterIds.cedricjbt,username:'Cedricjbt'},{id:masterIds.yogananda,username:'Yogananda'},{id:'other',username:'Other Master'}]});
 assert(!lockedChoices.textContent.includes('Other Master'),'Slider exposed a profile outside its temporary lineup');
 for(const name of ['Jesus']){
@@ -103,12 +140,12 @@ for(const name of ['Jesus']){
     switched=null;choice.click();assert(switched===null,`${name} can still be linked`);
   }
 }
-lockedChoices.querySelector('.profile-master-choice:not(:disabled)').click();assert(switched===masterIds.cedricjbt,'Available Master cannot be linked');
+await confirmMaster(lockedChoices.querySelector('.profile-master-choice:not(:disabled)'));assert(switched===masterIds.cedricjbt,'Available Master cannot be linked');
 const renamed=runtime.createVitalsPanel({...options,publicProfiles:[{id:masterIds.jesus,username:'Renamed Jesus'},{id:masterIds.cedricjbt,username:'Renamed Cedric'},{id:masterIds.yogananda,username:'Renamed Yogananda'},{id:'impostor',username:'Jesus'}]});
 const primaryChoices=[...renamed.querySelectorAll('.profile-master-choice:not([aria-hidden="true"])')];
 assert(primaryChoices.length===3,'UUID lineup changed after a username change or accepted a matching username');
 assert(primaryChoices[0].disabled&&!primaryChoices[1].disabled&&!primaryChoices[2].disabled,'UUID locks changed after a username change');
-primaryChoices[1].click();assert(switched===masterIds.cedricjbt,'Renamed Master cannot be linked by UUID');
+await confirmMaster(primaryChoices[1]);assert(switched===masterIds.cedricjbt,'Renamed Master cannot be linked by UUID');
 const withReferral={...options,playerProfile:{...options.playerProfile,referrer_id:'inviter'},publicProfiles:[...options.publicProfiles,{id:'inviter',username:'Inviting Master',visibility:true},{id:'stranger',username:'Stranger',visibility:true}]};
 const referredPanel=runtime.createVitalsPanel(withReferral);
 assert(referredPanel.textContent.includes('Inviting Master')&&!referredPanel.textContent.includes('Stranger'),'Referral slider did not add only the saved public referrer');
@@ -136,6 +173,9 @@ assert(editor.section.querySelector('[name=skill_4_label]').disabled,'Ultimate h
 assert([...editor.section.querySelectorAll('.profile-game-skill')].filter(group=>!group.hidden).length===1,'More than one skill visible');
 editor.section.querySelector('[name=skill_1_description]').value='Resources without a skill name';assert(editor.getUpdates().error,'Description without a name accepted');
 editor.section.querySelector('[name=skill_0_label]').value='My passive';editor.section.querySelector('[name=skill_1_label]').value='My first skill';editor.section.querySelector('[name=skill_1_description]').value='[Resources](https://example.com)';
+const loreInput=editor.section.querySelector('[name=lore]');
+assert(loreInput&&loreInput.compareDocumentPosition(selector)&Node.DOCUMENT_POSITION_FOLLOWING,'Lore input must come before skill inputs');
+loreInput.value='My character story';assert(editor.getUpdates().updates.lore==='My character story','Lore edit missing from profile updates');
 selector.value='0';selector.dispatchEvent(new Event('change'));selector.value='1';selector.dispatchEvent(new Event('change'));
 assert(editor.section.querySelector('[name=skill_1_label]').value==='My first skill','Selection change lost draft edits');
 const description=editor.section.querySelector('[name=skill_1_description]');
@@ -180,11 +220,13 @@ window.dispatchEvent(new CustomEvent('jaycee:player-updated',{detail:{player:{..
 const accountSkills=document.querySelector('.is-skills');
 const mannaCycle=document.querySelector('[name=manna_cycle]');assert([...mannaCycle.options].some(option=>option.value==='hour'),'Hour cycle missing from account selector');mannaCycle.value='hour';
 accountSkills.querySelector('[name=skill_0_label]').value='Saved via main account button';
+accountSkills.querySelector('[name=lore]').value='Saved character lore';
 document.querySelector('[data-account-toggle]').click();
 document.querySelector('[data-account-save]').click();await new Promise(resolve=>setTimeout(resolve,20));
 assert(savePayload.skills[0].label==='Saved via main account button','Main account Save did not save skills');
 assert(document.querySelector('[data-account-save-status]').textContent==='Saved.','Account Save did not complete');
 assert(savedProfile.manna_cycle==='hour','Account Save did not persist Hour cycle');
+assert(savedProfile.lore==='Saved character lore','Account Save did not persist lore');
 const visibility=document.querySelector('[name=visibility]');assert(visibility.closest('label').hidden,'Visibility control available below Level 4');
 window.dispatchEvent(new CustomEvent('jaycee:player-updated',{detail:{player:levelFour}}));await new Promise(resolve=>setTimeout(resolve,10));
 assert(!document.querySelector('.is-master').hidden,'Account Master section did not unlock at Level 4');

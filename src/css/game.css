@@ -252,6 +252,146 @@ body {
   display: none;
 }
 
+.profile-master-dialog {
+  box-sizing: border-box;
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100dvh - 40px);
+  margin: auto;
+  padding: 32px 28px 24px;
+  overflow-wrap: anywhere;
+  border: 1px solid rgba(var(--accent-rgb), 0.5);
+  border-radius: 16px;
+  background:
+    radial-gradient(ellipse at top, rgba(var(--accent-rgb), 0.16), transparent 65%),
+    #080e14;
+  color: var(--text);
+  box-shadow: 0 24px 90px #000b, inset 0 1px 0 rgba(var(--accent-rgb), 0.2);
+  font-family: "Rajdhani", sans-serif;
+  text-align: center;
+}
+
+.profile-master-dialog::backdrop {
+  background: rgba(2, 5, 9, 0.8);
+  backdrop-filter: blur(6px);
+}
+
+.profile-master-dialog-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 26px;
+  cursor: pointer;
+}
+
+.profile-master-dialog-avatar {
+  display: grid;
+  place-items: center;
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 16px;
+  overflow: hidden;
+  border: 1px solid rgba(var(--accent-rgb), 0.65);
+  border-radius: 50%;
+  background: rgba(var(--accent-rgb), 0.12);
+  box-shadow: 0 0 0 5px rgba(var(--accent-rgb), 0.06), 0 0 28px rgba(var(--accent-rgb), 0.14);
+  color: var(--accent-soft);
+  font-size: 36px;
+  font-weight: 700;
+}
+
+.profile-master-dialog-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-master-dialog > h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 28px;
+  line-height: 1.15;
+}
+
+.profile-master-dialog-full-name {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 17px;
+}
+
+.profile-master-dialog-lore {
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  text-align: left;
+}
+
+.profile-master-dialog-details {
+  margin: 24px 0;
+  padding-top: 4px;
+  border-top: 1px solid rgba(var(--accent-rgb), 0.18);
+  font-size: 17px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.profile-master-dialog .profile-parameter-panel > h2 {
+  margin: 16px 0 5px;
+  color: #ffac63;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.profile-master-dialog-details p {
+  margin: 0;
+}
+
+.profile-master-dialog-details .profile-skill-description {
+  max-width: 100%;
+  color: var(--muted);
+}
+
+.profile-master-dialog .profile-ability-button {
+  padding-inline: 4px;
+  font-size: 0.72rem;
+}
+
+.profile-master-dialog-action,
+.profile-master-dialog-retry {
+  padding: 10px 24px;
+  border: 1px solid rgba(var(--accent-rgb), 0.6);
+  border-radius: 7px;
+  background: rgba(var(--accent-rgb), 0.14);
+  color: var(--accent-soft);
+  font: 700 16px "Rajdhani", sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.profile-master-dialog-action { width: 100%; }
+.profile-master-dialog-retry { margin-top: 12px; }
+
+.profile-master-dialog button:not(:disabled):hover {
+  background: rgba(var(--accent-rgb), 0.24);
+  color: var(--text);
+}
+
+.profile-master-dialog button:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 3px;
+}
+
 @keyframes profile-masters-passing {
   to { transform: translateX(-50%); }
 }

@@ -649,6 +649,7 @@ export const initJayceeAccountPage = async () => {
         const profileUpdates = {
           full_name: characterUpdates.full_name,
           username: characterUpdates.username,
+          ...skillsResult.updates,
           ...(masterResult.visibility === undefined ? {} : { visibility: masterResult.visibility }),
           ...mapsResult.updates
         };

@@ -150,8 +150,10 @@
   border-width: 0 0 0 1px;
   border-radius: 0;
   background:
+    linear-gradient(120deg, transparent, var(--neon-sheen), transparent),
     linear-gradient(90deg, rgba(var(--accent-rgb), 0.028), transparent 80%),
-    rgba(6, 12, 16, 0.32);
+    rgba(6, 12, 16, 0.94);
+  background-attachment: local;
   backdrop-filter: blur(14px);
   overflow-y: auto;
   pointer-events: auto;
@@ -160,6 +162,10 @@
   transition:
     opacity 220ms ease,
     transform 220ms ease;
+}
+
+.has-account-panel .account-side-panel::after {
+  display: none;
 }
 
 .has-account-panel .is-account-panel-collapsed .account-side-panel {
@@ -478,7 +484,7 @@
 
 .profile-game-skill input,
 .profile-game-skill-fields select,
-.profile-game-skill textarea {
+.profile-game-skill-fields textarea {
   width: 100%;
   box-sizing: border-box;
   min-width: 0;
@@ -581,7 +587,7 @@
 
 .profile-game-skill input:focus-visible,
 .profile-game-skill-fields select:focus-visible,
-.profile-game-skill textarea:focus-visible {
+.profile-game-skill-fields textarea:focus-visible {
   outline: 1px solid var(--accent-soft);
   outline-offset: 2px;
 }
