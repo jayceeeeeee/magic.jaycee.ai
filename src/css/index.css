@@ -163,8 +163,10 @@ body {
   position: absolute;
   bottom: 18%;
   color: var(--accent-soft);
-  font-size: clamp(0.74rem, 2.4vw, 0.92rem);
-  text-shadow: 0 0 12px rgba(var(--accent-rgb), 0.42);
+  font-size: clamp(0.66rem, 2vw, 0.78rem);
+  font-weight: 500;
+  opacity: 0.72;
+  text-shadow: 0 0 6px rgba(var(--accent-rgb), 0.2);
 }
 
 .game-play-button:hover,
