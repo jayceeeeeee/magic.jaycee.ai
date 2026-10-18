@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 180" role="img" aria-labelledby="title desc">
+  <title id="title">Jaycee Core Sigil</title>
+  <desc id="desc">Nine golden points around two interlocking triangles, concentric circles and a central point.</desc>
+  <defs>
+    <radialGradient id="jaycee-glow">
+      <stop offset="0%" stop-color="#E5C788" stop-opacity="0.23"/>
+      <stop offset="100%" stop-color="#E5C788" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="100" cy="90" r="85" fill="url(#jaycee-glow)"/>
+  <g stroke="#CEB178" stroke-width="1.4" fill="none">
+    <circle cx="100" cy="90" r="48"/>
+    <circle cx="100" cy="90" r="35" stroke-opacity="0.42"/>
+    <path d="M100 20 L161 125 L39 125 Z"/>
+    <path d="M100 160 L39 55 L161 55 Z" stroke-opacity="0.7"/>
+    <circle cx="100" cy="90" r="5" fill="#E5C788"/>
+  </g>
+  <g fill="#E5C788">
+    <circle cx="100.00000000" cy="42.00000000" r="2.7"/>
+    <circle cx="130.85380526" cy="53.22986673" r="2.7"/>
+    <circle cx="147.27077214" cy="81.66488747" r="2.7"/>
+    <circle cx="141.56921938" cy="114.00000000" r="2.7"/>
+    <circle cx="116.41696688" cy="135.10524580" r="2.7"/>
+    <circle cx="83.58303312" cy="135.10524580" r="2.7"/>
+    <circle cx="58.43078062" cy="114.00000000" r="2.7"/>
+    <circle cx="52.72922786" cy="81.66488747" r="2.7"/>
+    <circle cx="69.14619474" cy="53.22986673" r="2.7"/>
+  </g>
+</svg>
