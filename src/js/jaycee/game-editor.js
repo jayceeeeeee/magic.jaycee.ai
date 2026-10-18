@@ -28,9 +28,9 @@ export const createSkillsSection = ({ client, profile, createSection, onChange =
   loreCaption.textContent = "Lore";
   lore.name = "lore";
   lore.value = profile.lore || "";
-  lore.rows = 3;
+  lore.rows = 2;
   lore.maxLength = 20000;
-  lore.placeholder = "Tell your character's story. Markdown is welcome.";
+  lore.placeholder = "Write your own character's story in a markdwon format.";
   lore.addEventListener("input", onChange);
   loreLabel.append(loreCaption, lore);
   fields.append(loreLabel);
@@ -48,18 +48,21 @@ export const createSkillsSection = ({ client, profile, createSection, onChange =
 
   const resizeDescription = (description) => {
     if (!description.getClientRects().length) return;
+    const minHeight = parseFloat(window.getComputedStyle(description).minHeight) || 36;
     if (!description.value) {
-      description.style.height = "36px";
+      description.style.height = `${minHeight}px`;
       return;
     }
     description.style.height = "auto";
     const border = description.offsetHeight - description.clientHeight;
-    description.style.height = `${Math.min(200, Math.max(36, description.scrollHeight + border))}px`;
+    description.style.height = `${Math.min(200, Math.max(minHeight, description.scrollHeight + border))}px`;
   };
   const resizeSelected = () => {
+    resizeDescription(lore);
     const selected = inputs[Number(selector.value)];
     if (selected) resizeDescription(selected.description);
   };
+  lore.addEventListener("input", () => resizeDescription(lore));
   const showSelected = () => {
     if (Number(selector.value) >= 4 && accessLevel < 4) selector.value = "0";
     inputs.forEach(({ group }, index) => { group.hidden = index !== Number(selector.value); });
@@ -80,6 +83,7 @@ export const createSkillsSection = ({ client, profile, createSection, onChange =
     caption.textContent = "Name";
     name.name = `skill_${index}_label`;
     name.maxLength = 120;
+    name.placeholder = "Put your skill name.";
     name.addEventListener("input", onChange);
     name.disabled = index === 4;
     descriptionCaption.textContent = "Description";

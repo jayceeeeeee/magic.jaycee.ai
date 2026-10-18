@@ -597,6 +597,8 @@ const openMasterCard = (profile, { onSelect = null, onLoadDetails = null, trigge
     cleanedUp = true;
     dialog.remove();
     if (trigger?.isConnected) trigger.focus({ preventScroll: true });
+    // Restoring focus must not leave the carousel paused after a preview.
+    trigger?.closest('.profile-masters-carousel')?.classList.add('is-resuming');
   };
   const dismiss = () => {
     dialog.close();
@@ -657,6 +659,9 @@ const createMastersNoticeContent = (profiles, { onSelect = null, onLoadDetails =
     carousel.tabIndex = 0;
     carousel.setAttribute("role", "region");
     carousel.setAttribute("aria-label", "Masters in the game room");
+    const pauseOnInteraction = () => carousel.classList.remove('is-resuming');
+    carousel.addEventListener('pointerenter', pauseOnInteraction);
+    carousel.addEventListener('focusin', pauseOnInteraction);
     track.className = "profile-masters-track";
 
     for (let copy = 0; copy < 2; copy += 1) {

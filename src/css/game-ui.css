@@ -496,13 +496,18 @@
   font: inherit;
 }
 
-.profile-game-skill textarea {
+.profile-game-skill-fields textarea {
   height: 36px;
   min-height: 36px;
   max-height: 200px;
   line-height: 20px;
   overflow-y: auto;
   resize: none;
+}
+
+.profile-game-skill-fields textarea[name="lore"] {
+  height: 56px;
+  min-height: 56px;
 }
 
 .profile-visibility-field {

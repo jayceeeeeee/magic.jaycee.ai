@@ -173,7 +173,7 @@ const createReferralControls = (profile) => {
   const refresh = () => {
     input.value = window.JayceeReferral?.createLink(profile.username) || "";
     copy.disabled = share.disabled = !input.value;
-    status.textContent = input.value ? "" : "Save a username to get your invite link.";
+    status.textContent = "";
   };
   const copyLink = async () => {
     refresh();
@@ -271,7 +271,7 @@ const createCharacterSection = ({ avatarUrl = "", profile }) => {
   };
 };
 
-const createMasterSection = ({ client, profile, skills }) => {
+const createMasterSection = ({ client, profile, skills, getUsername = () => profile.username }) => {
   const { section, content } = createSection("Master", "is-master");
   const identity = document.createElement("div");
   const avatar = document.createElement("span");
@@ -302,15 +302,16 @@ const createMasterSection = ({ client, profile, skills }) => {
 
   const refresh = () => {
     const state = skills.getPublicationState();
+    const missing = [...(getDisplayValue(getUsername()) ? [] : ["Username"]), ...state.missing];
     publicationControls.hidden = level < 4;
     section.hidden = level < 4 || !masterId;
     visibilityField.hidden = level < 4;
-    const message = !state.ready ? "Loading your skills..." : state.missing.length
-      ? `Name all five skills before making your account visible. Missing: ${state.missing.join(", ")}.` : "";
+    const message = !state.ready ? "Loading your skills..." : missing.length
+      ? `Choose a username and name all five skills before making your account visible. Missing: ${missing.join(", ")}.` : "";
     hint.textContent = message;
     hint.hidden = level < 4 || !message;
     // A visible account can always be made private, even if skills are incomplete.
-    visibilityInput.disabled = !visibilityInput.checked && (!state.ready || state.missing.length > 0);
+    visibilityInput.disabled = !visibilityInput.checked && (!state.ready || missing.length > 0);
   };
   visibilityInput.addEventListener("change", refresh);
   const setMaster = async (id) => {
@@ -344,7 +345,7 @@ const createMasterSection = ({ client, profile, skills }) => {
       refresh();
       if (level < 4) return {};
       const state = skills.getPublicationState();
-      if (visibilityInput.checked && (!state.ready || state.missing.length)) return { error: hint.textContent };
+      if (visibilityInput.checked && (!state.ready || state.missing.length || !getDisplayValue(getUsername()))) return { error: hint.textContent };
       return { visibility: visibilityInput.checked };
     }
   };
@@ -586,7 +587,8 @@ export const initJayceeAccountPage = async () => {
     const maps = createMapsSection({ profile });
     let master;
     const skills = createSkillsSection({ client, profile, createSection, onChange: () => master?.refresh() });
-    master = createMasterSection({ client, profile, skills });
+    master = createMasterSection({ client, profile, skills, getUsername: () => character.getUpdates().username });
+    character.section.querySelector('[name="username"]').addEventListener("input", () => master.refresh());
     const referral = createReferralControls(profile);
     master.content.append(master.publicationControls, referral.section);
     const playerLevels = new Map();

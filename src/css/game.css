@@ -209,8 +209,8 @@ body {
   padding: 10px 14px 10px 10px;
 }
 
-.game-page .profile-masters-carousel:hover .profile-masters-track,
-.game-page .profile-masters-carousel:focus-within .profile-masters-track {
+.game-page .profile-masters-carousel:not(.is-resuming):hover .profile-masters-track,
+.game-page .profile-masters-carousel:not(.is-resuming):has(:focus-visible) .profile-masters-track {
   animation-play-state: paused;
 }
 
@@ -344,7 +344,7 @@ body {
 
 .profile-master-dialog .profile-parameter-panel > h2 {
   margin: 16px 0 5px;
-  color: #ffac63;
+  color: var(--accent-soft);
   font-family: "Share Tech Mono", monospace;
   font-size: 11px;
   font-weight: 400;
