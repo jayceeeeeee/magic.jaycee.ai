@@ -530,8 +530,17 @@ const FEATURED_MASTERS = new Map([
   ["5dd4e584-2f03-4a94-b442-528ca19492e1", { linkLocked: true }] // Buddha
 ]);
 
+// Display-only profiles; these never participate in account lookup or linking.
+const LOCKED_PREVIEW_MASTERS = [
+  { username: "Amaterasu", avatarUrl: "/src/assets/avatars_pp/amaterasu.jpeg", linkLocked: true },
+  { username: "Moses", avatarUrl: "/src/assets/avatars_pp/moses.jpeg", linkLocked: true },
+  { username: "The greys", avatarUrl: "/src/assets/avatars_pp/greys.jpeg", linkLocked: true },
+  { username: "Sangje", avatarUrl: "/src/assets/avatars_pp/sangje.png", linkLocked: true },
+  { username: "Fu Xi", avatarUrl: "/src/assets/avatars_pp/fuxi.jpeg", linkLocked: true }
+];
+
 const isMasterLinkLocked = (profile) => (
-  FEATURED_MASTERS.get(profile?.id)?.linkLocked === true
+  profile?.linkLocked === true || FEATURED_MASTERS.get(profile?.id)?.linkLocked === true
 );
 
 const openMasterCard = (profile, { onSelect = null, onLoadDetails = null, trigger = null } = {}) => {
@@ -651,14 +660,20 @@ const createMastersNoticeContent = (profiles, { onSelect = null, onLoadDetails =
   ));
   const content = document.createDocumentFragment();
 
-  if (visibleProfiles.length) {
+  const rows = [
+    { profiles: visibleProfiles, reverse: false, label: "Masters in the game room" },
+    { profiles: LOCKED_PREVIEW_MASTERS, reverse: true, label: "Locked Masters" }
+  ];
+
+  rows.forEach(({ profiles: rowProfiles, reverse, label }) => {
+    if (!rowProfiles.length) return;
     const carousel = document.createElement("div");
     const track = document.createElement("div");
 
-    carousel.className = "profile-masters-carousel";
+    carousel.className = `profile-masters-carousel${reverse ? " is-reversed" : ""}`;
     carousel.tabIndex = 0;
     carousel.setAttribute("role", "region");
-    carousel.setAttribute("aria-label", "Masters in the game room");
+    carousel.setAttribute("aria-label", label);
     const pauseOnInteraction = () => carousel.classList.remove('is-resuming');
     carousel.addEventListener('pointerenter', pauseOnInteraction);
     carousel.addEventListener('focusin', pauseOnInteraction);
@@ -673,10 +688,10 @@ const createMastersNoticeContent = (profiles, { onSelect = null, onLoadDetails =
       } else {
         group.setAttribute("aria-hidden", "true");
       }
-      const repetitions = Math.ceil(12 / visibleProfiles.length);
+      const repetitions = Math.ceil(12 / rowProfiles.length);
 
       for (let repeat = 0; repeat < repetitions; repeat += 1) {
-        visibleProfiles.forEach((profile) => {
+        rowProfiles.forEach((profile) => {
           const card = createNoticeMasterBadge(profile);
 
           if (repeat > 0) card.setAttribute("aria-hidden", "true");
@@ -709,7 +724,7 @@ const createMastersNoticeContent = (profiles, { onSelect = null, onLoadDetails =
     }
     carousel.append(track);
     content.append(carousel);
-  }
+  });
 
   return content;
 };

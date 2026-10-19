@@ -50,6 +50,15 @@ const originalUI=window.JayceeUI;
 const guestSliderOptions={...options,player:null,playerProfile:null,activeMasterProfile:null,notifications:{...options.notifications,definitions:[{id:'masters_present.v1',stage:'guest',title:'Notification',content:{component:'masters',text:['Custom guest introduction.','Another paragraph.']}}]}};
 const guestSlider=runtime.createVitalsPanel(guestSliderOptions);
 assert(guestSlider.textContent.includes('Custom guest introduction.')&&guestSlider.textContent.includes('Another paragraph.')&&!guestSlider.textContent.includes("You're in luck"),'Guest slider intro did not come from the catalog');
+assert(guestSlider.querySelectorAll('.profile-masters-carousel').length===2,'Masters must display two carousel rows');
+const previewRow=guestSlider.querySelector('.profile-masters-carousel.is-reversed');
+const previewChoices=[...previewRow.querySelectorAll('.profile-master-choice:not([aria-hidden="true"])')];
+assert(previewChoices.map(choice=>choice.querySelector('.profile-notice-master-name').textContent).join(',')==='Amaterasu,Moses,The greys,Sangje,Fu Xi','Local preview lineup is incorrect');
+for(const choice of previewRow.querySelectorAll('.profile-master-choice')){
+  assert(choice.disabled&&choice.querySelector('.profile-master-lock-icon'),'Local preview must stay locked, including repeated cards');
+  assert(choice.querySelector('img')?.getAttribute('src').startsWith('/src/assets/avatars_pp/'),'Local preview avatar is missing');
+  switched=null;choice.click();assert(switched===null&&!document.querySelector('.profile-master-dialog'),'Local preview opened a profile or linked an account');
+}
 const silentSlider=runtime.createVitalsPanel({...guestSliderOptions,notifications:{...options.notifications,definitions:[{id:'masters_present.v1',stage:'guest',content:{component:'masters'}}]}});
 assert(silentSlider.querySelector('.profile-masters-carousel')&&!silentSlider.textContent.includes("You're in luck"),'Slider inserted hardcoded intro when catalog text was absent');
 const previousPlayerName=window.localStorage.getItem('player_full_name');
@@ -142,7 +151,7 @@ for(const name of ['Jesus']){
 }
 await confirmMaster(lockedChoices.querySelector('.profile-master-choice:not(:disabled)'));assert(switched===masterIds.cedricjbt,'Available Master cannot be linked');
 const renamed=runtime.createVitalsPanel({...options,publicProfiles:[{id:masterIds.jesus,username:'Renamed Jesus'},{id:masterIds.cedricjbt,username:'Renamed Cedric'},{id:masterIds.yogananda,username:'Renamed Yogananda'},{id:'impostor',username:'Jesus'}]});
-const primaryChoices=[...renamed.querySelectorAll('.profile-master-choice:not([aria-hidden="true"])')];
+const primaryChoices=[...renamed.querySelector('.profile-masters-carousel:not(.is-reversed)').querySelectorAll('.profile-master-choice:not([aria-hidden="true"])')];
 assert(primaryChoices.length===3,'UUID lineup changed after a username change or accepted a matching username');
 assert(primaryChoices[0].disabled&&!primaryChoices[1].disabled&&!primaryChoices[2].disabled,'UUID locks changed after a username change');
 await confirmMaster(primaryChoices[1]);assert(switched===masterIds.cedricjbt,'Renamed Master cannot be linked by UUID');

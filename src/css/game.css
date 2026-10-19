@@ -195,6 +195,10 @@ body {
   animation: profile-masters-passing 60s linear infinite;
 }
 
+.game-page .profile-masters-carousel.is-reversed .profile-masters-track {
+  animation-direction: reverse;
+}
+
 .game-page .profile-masters-group {
   display: flex;
   flex: 0 0 auto;
