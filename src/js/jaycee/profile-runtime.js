@@ -629,7 +629,7 @@ const openMasterCard = (profile, { onSelect = null, onLoadDetails = null, trigge
   action.focus();
   if (onLoadDetails) {
     const load = async () => {
-      details.textContent = 'Loading skills…';
+      details.textContent = 'Loading profile…';
       details.setAttribute('aria-busy', 'true');
       try {
         const data = await onLoadDetails(profile);
