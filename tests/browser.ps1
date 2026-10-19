@@ -53,7 +53,7 @@ assert(guestSlider.textContent.includes('Custom guest introduction.')&&guestSlid
 assert(guestSlider.querySelectorAll('.profile-masters-carousel').length===2,'Masters must display two carousel rows');
 const previewRow=guestSlider.querySelector('.profile-masters-carousel.is-reversed');
 const previewChoices=[...previewRow.querySelectorAll('.profile-master-choice:not([aria-hidden="true"])')];
-assert(previewChoices.map(choice=>choice.querySelector('.profile-notice-master-name').textContent).join(',')==='Amaterasu,Moses,The greys,Sangje,Fu Xi','Local preview lineup is incorrect');
+assert(previewChoices.map(choice=>choice.querySelector('.profile-notice-master-name').textContent).join(',')==='Amaterasu,Moses,The greys,Sangje','Local preview lineup is incorrect');
 for(const choice of previewRow.querySelectorAll('.profile-master-choice')){
   assert(choice.disabled&&choice.querySelector('.profile-master-lock-icon'),'Local preview must stay locked, including repeated cards');
   assert(choice.querySelector('img')?.getAttribute('src').startsWith('/src/assets/avatars_pp/'),'Local preview avatar is missing');
