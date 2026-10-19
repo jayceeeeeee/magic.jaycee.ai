@@ -535,7 +535,8 @@ const LOCKED_PREVIEW_MASTERS = [
   { username: "Amaterasu", avatarUrl: "/src/assets/avatars_pp/amaterasu.jpeg", linkLocked: true },
   { username: "Moses", avatarUrl: "/src/assets/avatars_pp/moses.jpeg", linkLocked: true },
   { username: "The greys", avatarUrl: "/src/assets/avatars_pp/greys.jpeg", linkLocked: true },
-  { username: "Sangje", avatarUrl: "/src/assets/avatars_pp/sangje.png", linkLocked: true }
+  { username: "Sangje", avatarUrl: "/src/assets/avatars_pp/sangje.png", linkLocked: true },
+  { username: "Fan Wen", avatarUrl: "/src/assets/avatars_pp/fanwen.jpg", linkLocked: true }
 ];
 
 const isMasterLinkLocked = (profile) => (
