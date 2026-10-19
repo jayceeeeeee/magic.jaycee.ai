@@ -573,7 +573,7 @@ const openMasterCard = (profile, { onSelect = null, onLoadDetails = null, trigge
   fullName.className = 'profile-master-dialog-full-name';
   fullName.textContent = getDisplayValue(profile.full_name);
   lore.className = 'profile-master-dialog-lore profile-skill-description';
-  renderSkillMarkdown(lore, getDisplayValue(profile.lore) || 'This story is still being written.');
+  renderSkillMarkdown(lore, getDisplayValue(profile.lore) || (onLoadDetails ? '' : 'This story is still being written.'));
   details.className = 'profile-master-dialog-details';
   details.setAttribute('aria-live', 'polite');
   action.className = 'profile-master-dialog-action';
