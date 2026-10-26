@@ -22,6 +22,7 @@ export const runQuestLockAuthTests = async (source) => {
     }
   };
   const mockWindow = {
+    JayceeConfig: { supabaseUrl: 'https://dev.example.test', supabasePublishableKey: 'test-public-key' },
     supabase: { createClient: () => client },
     clearTimeout() {}, setTimeout(_callback, milliseconds) { delay = milliseconds; return 1; },
     location: { replace(path) { redirect = path; } }

@@ -1,2 +1,6 @@
 # Local Supabase CLI cache, not application source.
 supabase/.temp/
+.tools/
+.env
+.env.*
+!.env.example

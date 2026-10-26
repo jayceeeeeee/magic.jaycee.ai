@@ -1,6 +1,4 @@
 (function () {
-    const supabaseUrl = "https://ndtnfwyfdfdcxljvvjfd.supabase.co";
-    const supabasePublishableKey = "sb_publishable_lMEHC2xjlGGmTnkI5G-okg_0AVRhiDd";
     const defaultLoginPath = "/login.html";
     const defaultSignupPath = "/signup.html";
     const defaultAccountPath = "/game.html";
@@ -106,8 +104,12 @@
 
     async function getSupabaseClient() {
         if (!supabaseClientPromise) {
-            supabaseClientPromise = loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2")
-                .then(() => window.supabase.createClient(supabaseUrl, supabasePublishableKey));
+            const config = window.JayceeConfig;
+            if (!config?.supabaseUrl || !config?.supabasePublishableKey) {
+                throw new Error("Missing app configuration. Load app-config.js before auth.js.");
+            }
+            supabaseClientPromise = loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0")
+                .then(() => window.supabase.createClient(config.supabaseUrl, config.supabasePublishableKey));
         }
 
         return supabaseClientPromise;

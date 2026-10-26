@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="referrer" content="no-referrer">
+  <title>Connect your account | jaycee.ai</title>
+  <link rel="stylesheet" href="/src/css/global.css">
+  <link rel="stylesheet" href="/src/css/game-ui.css">
+</head>
+<body class="auth-game-page">
+  <main class="auth-page signup-page-main">
+    <section class="auth-panel" aria-labelledby="consent-title">
+      <h1 id="consent-title">Connect your game account</h1>
+      <p data-consent-status role="status">Checking the connection request…</p>
+      <div data-consent-details hidden>
+        <p><strong data-consent-client></strong> wants to connect to your account.</p>
+        <p>The game MCP tools can read your profile and saved progress. They cannot change your game.</p>
+        <p>Requested identity permissions: <span data-consent-scopes></span></p>
+        <p>Return address: <span data-consent-redirect></span></p>
+        <button class="account-button account-button-primary" data-consent-approve>Connect account</button>
+        <button class="account-button" data-consent-deny>Cancel</button>
+      </div>
+    </section>
+  </main>
+  <script src="/src/js/config/app-config.js"></script>
+  <script src="/src/js/auth/auth.js"></script>
+  <script type="module" src="/src/js/auth/oauth-consent.js"></script>
+</body>
+</html>

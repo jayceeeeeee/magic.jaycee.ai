@@ -107,7 +107,8 @@ Il n'inclut aucun utilisateur, profil, jeu personnel, prière, historique de pra
 fichier uploadé ou secret. Les réglages Auth, SMTP, domaines autorisés et clés du
 projet se configurent séparément. Le premier administrateur se désigne dans la base,
 après création de son compte. L'URL et la clé publique utilisées par le site sont
-dans `src/js/auth/auth.js`.
+dans `src/js/config/app-config.js`. Voir [environments.md](environments.md) pour
+la separation production/developpement et le bootstrap de `magic-dev`.
 
 Cette consolidation a été comparée aux définitions de la base connectée, sans
 écriture sur celle-ci. Une restauration complète sur un projet neuf reste à

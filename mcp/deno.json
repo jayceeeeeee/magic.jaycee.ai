@@ -1,0 +1,12 @@
+{
+  "imports": {
+    "@modelcontextprotocol/sdk/server/mcp.js": "npm:@modelcontextprotocol/sdk@1.32.2/server/mcp.js",
+    "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js": "npm:@modelcontextprotocol/sdk@1.32.2/server/webStandardStreamableHttp.js",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2.118.0"
+  },
+  "tasks": {
+    "check": "deno check ../supabase/functions/game-mcp/index.ts",
+    "test": "deno test --allow-env tests/",
+    "serve": "deno run --allow-read --allow-net=127.0.0.1:3000 ../scripts/serve.ts"
+  }
+}

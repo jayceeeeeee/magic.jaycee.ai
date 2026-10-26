@@ -29,6 +29,7 @@ export const runReferralTests = async ({ referralSource, authSource, dataSource 
     return rejectSignup ? { error: { message: 'Try again' } } : { data: { user: { id: 'new-user', identities: [{}] }, session: null }, error: null };
   } } };
   win.supabase = { createClient: () => client };
+  win.JayceeConfig = { supabaseUrl: 'https://dev.example.test', supabasePublishableKey: 'test-public-key' };
   const doc = { readyState: 'loading', addEventListener() {}, querySelector: () => ({ addEventListener() {} }) };
   new Function('window', 'document', authSource)(win, doc);
   await win.JayceeAuth.signUp('invited@example.test', 'password', { data: { full_name: 'Invited', birth_profile: { fullName: 'Invited' } } });
