@@ -1,6 +1,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { createClient } from "@supabase/supabase-js";
+import { z } from "zod";
+import {
+  JAYCEE_GAME_CONFIG,
+  JAYCEE_GAME_CYCLE_LABELS,
+  JAYCEE_GAME_SKILL_COLUMNS,
+} from "./game-config.js";
 
 export const DEV_PROJECT_URL = "https://mylnagvqngsgcmlvwttu.supabase.co";
 
@@ -81,7 +87,7 @@ export function createHandler(projectUrl: string, publicKey: string) {
     const userId = claims.sub;
     const { data: profile, error: profileError } = await client.from("profiles")
       .select(
-        "id,username,full_name,lore,years_burned,manna_target,manna_unit,manna_cycle,locked",
+        "id,username,avatar_path,created_at,theme,primary_color,secondary_color,background_path,birth_date,birth_time,birth_place,birth_place_position,birth_timezone,sex,full_name,lore,manna_target,manna_unit,manna_cycle,visibility,role,master,years_burned,permanent_account_at,locked,master_selection_started_at,referrer_id",
       )
       .eq("id", userId).maybeSingle();
     if (profileError) return json({ error: "Profile lookup failed." }, 503);
@@ -99,14 +105,18 @@ export function createHandler(projectUrl: string, publicKey: string) {
     const result = (value: unknown) => ({
       content: [{ type: "text" as const, text: JSON.stringify(value) }],
     });
+    const toolError = (message: string) => ({
+      isError: true,
+      content: [{ type: "text" as const, text: message }],
+    });
     server.registerTool("get_my_profile", {
       title: "My game profile",
       description:
-        "Read the connected user's game profile and manna target. Does not change game data.",
+        "Read all saved profile fields for the connected user, including their manna target and account email. The current manna balance is calculated by the game, not stored in this profile.",
       inputSchema: {},
       annotations,
       _meta: { securitySchemes },
-    }, () => result({ profile }));
+    }, () => result({ profile, email: userData.user.email ?? null }));
     server.registerTool("get_my_progress", {
       title: "My game progress",
       description:
@@ -137,6 +147,102 @@ export function createHandler(projectUrl: string, publicKey: string) {
         completed_practice_seconds: completions.data,
       });
     });
+    server.registerTool("get_my_game", {
+      title: "My authored game and skills",
+      description:
+        "Read the connected user's own game and skill definitions. These may be used with get_game_config to calculate game values.",
+      inputSchema: {},
+      annotations,
+      _meta: { securitySchemes },
+    }, async () => {
+      const [game, skills] = await Promise.all([
+        client.from("game").select("id,created_at,user_id,skill_0,skill_1,skill_2,skill_3,skill_4")
+          .eq("user_id", userId).maybeSingle(),
+        client.from("skills").select("id,created_at,label,description,user_id")
+          .eq("user_id", userId).order("created_at").limit(100),
+      ]);
+      if (game.error || skills.error) return toolError("Game data could not be loaded.");
+      return result({ game: game.data, skills: skills.data });
+    });
+    server.registerTool("get_my_master_games", {
+      title: "My Masters' games and skills",
+      description:
+        "Read public game and skill definitions of the Masters linked to the connected user's participations, for interpreting quests and calculating progress.",
+      inputSchema: {},
+      annotations,
+      _meta: { securitySchemes },
+    }, async () => {
+      const players = await client.from("player").select("master")
+        .eq("user_id", userId).limit(100);
+      if (players.error) return toolError("Master games could not be loaded.");
+      const masterIds = [...new Set((players.data ?? []).map((row) => row.master))];
+      if (masterIds.length === 0) return result({ masters: [], games: [], skills: [] });
+      const [masters, games] = await Promise.all([
+        client.from("profiles").select("id,username,full_name")
+          .in("id", masterIds).limit(100),
+        client.from("game").select("id,user_id,skill_0,skill_1,skill_2,skill_3,skill_4")
+          .in("user_id", masterIds).limit(100),
+      ]);
+      if (masters.error || games.error) return toolError("Master games could not be loaded.");
+      const skillIds = [...new Set((games.data ?? []).flatMap((game) =>
+        JAYCEE_GAME_SKILL_COLUMNS.map((column) => (game as Record<string, string | null>)[column]).filter(Boolean)
+      ))];
+      if (skillIds.length === 0) return result({ masters: masters.data, games: games.data, skills: [] });
+      const skills = await client.from("skills").select("id,label,description,user_id")
+        .in("id", skillIds).limit(500);
+      if (skills.error) return toolError("Master skills could not be loaded.");
+      return result({ masters: masters.data, games: games.data, skills: skills.data });
+    });
+    server.registerTool("get_my_records", {
+      title: "My game records",
+      description:
+        "Read the connected user's practice completions, prayers or notification receipts, 50 at a time. Use offset for the next page; has_more indicates whether another page exists.",
+      inputSchema: {
+        kind: z.enum(["practice_completions", "prayers", "notifications"]),
+        offset: z.number().int().min(0).max(100000).default(0),
+      },
+      annotations,
+      _meta: { securitySchemes },
+    }, async ({ kind, offset }: { kind: "practice_completions" | "prayers" | "notifications"; offset: number }) => {
+      const pageSize = 50;
+      if (kind === "practice_completions") {
+        const owners = await client.from("player").select("id")
+          .eq("user_id", userId).limit(100);
+        if (owners.error) return toolError("Practice records could not be loaded.");
+        const playerIds = (owners.data ?? []).map((row) => row.id);
+        if (playerIds.length === 0) return result({ kind, offset, records: [], has_more: false });
+        const rows = await client.from("practice_completions")
+          .select("id,player_id,skill_number,completed_at")
+          .in("player_id", playerIds).order("completed_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(offset, offset + pageSize);
+        if (rows.error) return toolError("Practice records could not be loaded.");
+        return result({ kind, offset, records: rows.data?.slice(0, pageSize), has_more: (rows.data?.length ?? 0) > pageSize });
+      }
+      const rows = kind === "prayers"
+        ? await client.from("prayers").select("id,created_at,problem,prayer,username")
+          .eq("user_id", userId).order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(offset, offset + pageSize)
+        : await client.from("user_notifications")
+          .select("notification_id,occurrence,read_at,dismissed_at,clicked_at,completed_at")
+          .eq("user_id", userId).order("notification_id").order("occurrence")
+          .range(offset, offset + pageSize);
+      if (rows.error) return toolError("Game records could not be loaded.");
+      return result({ kind, offset, records: rows.data?.slice(0, pageSize), has_more: (rows.data?.length ?? 0) > pageSize });
+    });
+    server.registerTool("get_game_config", {
+      title: "Game calculation rules",
+      description:
+        "Read the app's public game constants, skill columns and cycle labels for calculations. This is the deployed development version of game-config.js.",
+      inputSchema: {},
+      annotations,
+      _meta: { securitySchemes },
+    }, () => result({
+      game_config: JAYCEE_GAME_CONFIG,
+      skill_columns: JAYCEE_GAME_SKILL_COLUMNS,
+      cycle_labels: JAYCEE_GAME_CYCLE_LABELS,
+    }));
     const transport = new WebStandardStreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
       enableJsonResponse: true,

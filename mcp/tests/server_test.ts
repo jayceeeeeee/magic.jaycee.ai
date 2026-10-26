@@ -2,6 +2,11 @@ import {
   createHandler,
   DEV_PROJECT_URL,
 } from "../../supabase/functions/game-mcp/server.ts";
+import {
+  JAYCEE_GAME_CONFIG as BROWSER_GAME_CONFIG,
+  JAYCEE_GAME_CYCLE_LABELS as BROWSER_CYCLE_LABELS,
+  JAYCEE_GAME_SKILL_COLUMNS as BROWSER_SKILL_COLUMNS,
+} from "../../src/js/config/game-config.js";
 
 const assert = (condition: unknown, message: string) => {
   if (!condition) throw new Error(message);
@@ -89,6 +94,10 @@ function installMock({ locked = false, userId = "owner" } = {}) {
       );
     }
     if (url.pathname === "/rest/v1/profiles") {
+      if (url.searchParams.has("id") && url.searchParams.get("id")?.startsWith("in.")) {
+        assert(url.searchParams.get("id") === "in.(master-one)", "Only linked Master profiles may be read");
+        return Promise.resolve(Response.json([{ id: "master-one", username: "Master" }]));
+      }
       assert(
         url.searchParams.get("id") === "eq.owner",
         "Profile query must use the verified user ID",
@@ -102,7 +111,33 @@ function installMock({ locked = false, userId = "owner" } = {}) {
         url.searchParams.get("user_id") === "eq.owner",
         "Progress must be restricted to its owner",
       );
-      return Promise.resolve(Response.json([{ id: "own-game", level: 2 }]));
+      return Promise.resolve(Response.json([{ id: "own-game", level: 2, master: "master-one" }]));
+    }
+    if (url.pathname === "/rest/v1/game") {
+      if (url.searchParams.get("user_id") === "in.(master-one)") {
+        return Promise.resolve(Response.json([{ id: "master-game", user_id: "master-one", skill_1: "master-skill" }]));
+      }
+      assert(url.searchParams.get("user_id") === "eq.owner", "Game lookup must use owner ID");
+      return Promise.resolve(Response.json({ id: "authored-game", user_id: "owner", skill_0: "own-skill" }));
+    }
+    if (url.pathname === "/rest/v1/skills") {
+      if (url.searchParams.get("id") === "in.(master-skill)") {
+        return Promise.resolve(Response.json([{ id: "master-skill", label: "Quest" }]));
+      }
+      assert(url.searchParams.get("user_id") === "eq.owner", "Skill lookup must use owner ID");
+      return Promise.resolve(Response.json([{ id: "own-skill", user_id: "owner", label: "Prayer" }]));
+    }
+    if (url.pathname === "/rest/v1/practice_completions") {
+      assert(url.searchParams.get("player_id") === "in.(own-game)", "Completions must use own player IDs");
+      return Promise.resolve(Response.json([{ id: "own-completion", player_id: "own-game" }]));
+    }
+    if (url.pathname === "/rest/v1/prayers") {
+      assert(url.searchParams.get("user_id") === "eq.owner", "Prayers must use owner ID");
+      return Promise.resolve(Response.json([]));
+    }
+    if (url.pathname === "/rest/v1/user_notifications") {
+      assert(url.searchParams.get("user_id") === "eq.owner", "Notifications must use owner ID");
+      return Promise.resolve(Response.json([{ notification_id: "welcome.v1" }]));
     }
     if (url.pathname === "/rest/v1/rpc/get_practice_completion_totals") {
       return Promise.resolve(Response.json(3600));
@@ -173,18 +208,18 @@ Deno.test("reject tampered, expired, cross-project, non-OAuth and insufficient-s
     globalThis.fetch = originalFetch;
   }
 });
-Deno.test("only read tools are advertised; calls keep owner scope and user credentials", async () => {
+Deno.test("read tools expose own data and public rules using user credentials", async () => {
   const calls = installMock();
   try {
     const access = await token();
     const listed = await handler(request(access));
     const tools = (await listed.json()).result.tools;
     assert(
-      tools.length === 2 &&
+      tools.length === 6 &&
         tools.every((t: { annotations: { readOnlyHint: boolean } }) =>
           t.annotations.readOnlyHint
         ),
-      "Expected two read-only tools",
+      "Expected six read-only tools",
     );
     const profile = await handler(
       request(access, "tools/call", { name: "get_my_profile", arguments: {} }),
@@ -194,6 +229,30 @@ Deno.test("only read tools are advertised; calls keep owner scope and user crede
         "owner",
       "Wrong profile",
     );
+    const game = await handler(request(access, "tools/call", { name: "get_my_game", arguments: {} }));
+    const gameData = JSON.parse((await game.json()).result.content[0].text);
+    assert(gameData.game.id === "authored-game" && gameData.skills[0].id === "own-skill", "Wrong owned game data");
+    const masters = await handler(request(access, "tools/call", { name: "get_my_master_games", arguments: {} }));
+    const mastersData = JSON.parse((await masters.json()).result.content[0].text);
+    assert(mastersData.masters[0].id === "master-one" && mastersData.skills[0].id === "master-skill", "Wrong linked Master data");
+    for (const [kind, expected] of [
+      ["practice_completions", "own-completion"],
+      ["prayers", undefined],
+      ["notifications", "welcome.v1"],
+    ] as const) {
+      const records = await handler(request(access, "tools/call", {
+        name: "get_my_records", arguments: { kind, offset: 0 },
+      }));
+      const data = JSON.parse((await records.json()).result.content[0].text);
+      assert(data.kind === kind && data.has_more === false, "Wrong records page");
+      if (expected) assert(Object.values(data.records[0]).includes(expected), "Wrong record");
+      else assert(data.records.length === 0, "Expected empty prayers");
+    }
+    const config = await handler(request(access, "tools/call", { name: "get_game_config", arguments: {} }));
+    const rules = JSON.parse((await config.json()).result.content[0].text);
+    assert(JSON.stringify(rules.game_config) === JSON.stringify(BROWSER_GAME_CONFIG), "MCP game config diverged from browser");
+    assert(JSON.stringify(rules.skill_columns) === JSON.stringify(BROWSER_SKILL_COLUMNS), "MCP skill columns diverged");
+    assert(JSON.stringify(rules.cycle_labels) === JSON.stringify(BROWSER_CYCLE_LABELS), "MCP cycle labels diverged");
     const progress = await handler(
       request(access, "tools/call", { name: "get_my_progress", arguments: {} }),
     );

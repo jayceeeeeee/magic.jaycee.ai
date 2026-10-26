@@ -2,7 +2,8 @@
   "version": "5",
   "specifiers": {
     "npm:@modelcontextprotocol/sdk@1.32.2": "1.32.2_zod@4.6.7",
-    "npm:@supabase/supabase-js@2.118.0": "2.118.0"
+    "npm:@supabase/supabase-js@2.118.0": "2.118.0",
+    "npm:zod@4.6.7": "4.6.7"
   },
   "npm": {
     "@hono/node-server@2.1.5_hono@4.13.13": {
@@ -579,7 +580,8 @@
   "workspace": {
     "dependencies": [
       "npm:@modelcontextprotocol/sdk@1.32.2",
-      "npm:@supabase/supabase-js@2.118.0"
+      "npm:@supabase/supabase-js@2.118.0",
+      "npm:zod@4.6.7"
     ]
   }
 }

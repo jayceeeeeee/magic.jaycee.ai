@@ -1,11 +1,33 @@
 # Game MCP (development)
 
-The first version exposes two authenticated, read-only tools:
+The development version exposes six authenticated, read-only tools:
 
-- `get_my_profile`: connected user's name, lore, karma and manna target.
+- `get_my_profile`: all saved profile fields for the connected user, including
+  birth details, lore, karma, manna target/unit/cycle, plus their Auth email.
 - `get_my_progress`: connected user's saved levels, practice seconds, cycle starts,
   accepted quests and completed-practice seconds. Saved values do not include a
   timer still running in a browser tab. At most 100 player records are returned.
+- `get_my_game`: the connected user's authored game and up to 100 own skills.
+- `get_my_master_games`: public game/skill definitions for Masters linked to the
+  connected user's participations.
+- `get_my_records`: own practice completions, prayers or notification receipts,
+  in pages of 50 with `kind` and `offset`.
+- `get_game_config`: game constants, skill columns and cycle labels from the
+  deployed copy of `src/js/config/game-config.js`.
+
+The current manna balance is calculated in the browser from saved profile and
+progress fields and elapsed time; it is not a stored database column. These
+tools expose the inputs and public rules for calculations. They do not read
+another user's private records. `src/js/config/game-config.js` is the only
+maintained source. Before checking or deploying the function, generate its
+deployment artifact from that source:
+
+```powershell
+.tools/deno.exe run --allow-read --allow-write scripts/build-game-mcp.ts
+```
+
+The generated file is ignored by Git. The MCP test checks its values against the
+browser config. Run the build step again after changing the source, then redeploy.
 
 Development endpoint:
 
@@ -40,7 +62,8 @@ will not sign you into this project.
    and choose OAuth. Availability depends on the account/workspace settings.
 3. Let the client register automatically. Sign in with a **development account**
    and approve the request on `/oauth-consent.html`.
-4. Ask for your game profile and progress. Both tools are read-only.
+4. Ask for your profile, progress, game records or calculation rules. All tools
+   are read-only.
 
 OAuth discovery is served at
 `<endpoint>/.well-known/oauth-protected-resource`. The 401 challenge points clients
@@ -65,7 +88,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tests/browser.ps1
 
 MCP tests use real signed test JWTs and mocked database/Auth responses. They check
 signature verification, issuer, audience, expiry, OAuth client identity, required
-scope, owner filters, locked accounts and the advertised read-only tools.
+scope, owner filters, locked accounts, rule parity and the advertised read-only tools.
 Browser tests also cover login return paths and explicit consent/denial.
 
 Both Deno import maps pin package versions; commit their lockfiles when updating
@@ -74,7 +97,7 @@ The gateway JWT check is disabled for this function so OAuth discovery and custo
 401 challenges can work; the function itself authenticates every MCP request.
 
 A real development integration test on 2026-10-26 passed PKCE authorization,
-token exchange, MCP initialization, tool discovery, both tool calls, and rejection
+token exchange, MCP initialization, tool discovery, the original two tool calls, and rejection
 of missing, invalid and ordinary website tokens. Temporary users and OAuth client
 registrations were removed after testing. ChatGPT's own account-linking UI still
 requires a manual connection test.
