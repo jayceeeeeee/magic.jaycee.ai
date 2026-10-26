@@ -33,6 +33,10 @@ Pour une nouvelle modification : creer une migration, tester en dev, mettre a jo
 explicitement demandee. Ne jamais remplacer les donnees de production par celles
 de dev ni appliquer le bootstrap sur un projet existant.
 
+Les profils publics de Buddha, Jesus et Yogananda ont ensuite ete importes avec
+leurs jeux, quinze skills et trois avatars. Voir [seeds/README.md](seeds/README.md)
+pour la correspondance des comptes, le contenu copie et les verifications.
+
 Les reglages Auth, SMTP et secrets sont propres a chaque projet. Les secrets ne
 vont jamais dans `app-config.js`. Le serveur local et le MCP sont documentes dans
 [../mcp/README.md](../mcp/README.md).

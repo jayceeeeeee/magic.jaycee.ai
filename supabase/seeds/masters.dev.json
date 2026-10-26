@@ -1,0 +1,191 @@
+{
+  "games": [
+    {
+      "id": "164a4110-df4c-4fb4-9b18-3c88eb2ca322",
+      "skill_0": "0c7a016b-96ac-465e-af4e-ac9ed3216301",
+      "skill_1": "1d20afae-69ea-4935-af56-61a2b83c2538",
+      "skill_2": "871a2f4b-693b-4c9e-a1e1-82bf65ffef79",
+      "skill_3": "6de4ea19-f15a-470a-8b28-d21c39c1d1ba",
+      "skill_4": "6601863d-4106-4f27-b78a-3ed36b0f077b",
+      "user_id": "b7a38b31-100f-4e03-b3e8-9357c635ecf8",
+      "created_at": "2026-10-09T02:39:53.786847+00:00"
+    },
+    {
+      "id": "b916f170-f294-4077-8665-11faeaf232ec",
+      "skill_0": "7e4c9f6f-ef1e-4ccc-a9a4-c9c6eb0b0699",
+      "skill_1": "49155e99-2726-48e5-95a5-210f7fd4797e",
+      "skill_2": "ed2b54fe-5326-4a85-98a8-fe175dfec507",
+      "skill_3": "b014eb97-25dc-4809-a556-52140978103f",
+      "skill_4": "f8df761e-3b48-43d5-b31d-e1dbbd36fe9f",
+      "user_id": "7abd58ec-1289-403d-932c-dc2df233d079",
+      "created_at": "2026-10-14T22:27:26.61686+00:00"
+    },
+    {
+      "id": "097b8eb3-069e-4ba9-9235-3964dfad1f70",
+      "skill_0": "d318b146-c39f-4569-8980-d19871a28986",
+      "skill_1": "9eea501e-edea-4ec4-ae51-ab5d9574863c",
+      "skill_2": "9049da5e-6ca9-485b-8ec1-2070e7b27ac9",
+      "skill_3": "ccae2b2b-1bf6-4a99-9c3e-b0db07ac62a1",
+      "skill_4": "61112d02-7ea5-4677-b0b9-460f778eec9f",
+      "user_id": "5dd4e584-2f03-4a94-b442-528ca19492e1",
+      "created_at": "2026-10-15T23:32:44.400049+00:00"
+    }
+  ],
+  "skills": [
+    {
+      "id": "6601863d-4106-4f27-b78a-3ed36b0f077b",
+      "label": "Aum Technique",
+      "user_id": "b7a38b31-100f-4e03-b3e8-9357c635ecf8",
+      "created_at": "2026-10-11T00:31:52.1349+00:00",
+      "description": "In Yogananda's teachings, **Aum** is the cosmic vibration underlying all things. The Aum Technique trains your attention to perceive this sacred inner sound, drawing awareness inward and realizing God.\n\nYou will find the Aum Technique in Lesson 8 of the SRF teachings."
+    },
+    {
+      "id": "7e4c9f6f-ef1e-4ccc-a9a4-c9c6eb0b0699",
+      "label": "Bible",
+      "user_id": "7abd58ec-1289-403d-932c-dc2df233d079",
+      "created_at": "2026-10-14T22:27:26.61686+00:00",
+      "description": null
+    },
+    {
+      "id": "49155e99-2726-48e5-95a5-210f7fd4797e",
+      "label": "Baptism",
+      "user_id": "7abd58ec-1289-403d-932c-dc2df233d079",
+      "created_at": "2026-10-14T22:27:26.61686+00:00",
+      "description": null
+    },
+    {
+      "id": "ed2b54fe-5326-4a85-98a8-fe175dfec507",
+      "label": "Communion",
+      "user_id": "7abd58ec-1289-403d-932c-dc2df233d079",
+      "created_at": "2026-10-14T22:27:26.61686+00:00",
+      "description": null
+    },
+    {
+      "id": "f8df761e-3b48-43d5-b31d-e1dbbd36fe9f",
+      "label": "Resurrection",
+      "user_id": "7abd58ec-1289-403d-932c-dc2df233d079",
+      "created_at": "2026-10-14T23:50:21.649703+00:00",
+      "description": null
+    },
+    {
+      "id": "b014eb97-25dc-4809-a556-52140978103f",
+      "label": "Wedding",
+      "user_id": "7abd58ec-1289-403d-932c-dc2df233d079",
+      "created_at": "2026-10-14T22:27:26.61686+00:00",
+      "description": null
+    },
+    {
+      "id": "1d20afae-69ea-4935-af56-61a2b83c2538",
+      "label": "Meditation",
+      "user_id": "b7a38b31-100f-4e03-b3e8-9357c635ecf8",
+      "created_at": "2026-10-09T02:55:41.730362+00:00",
+      "description": "**Your training as a spiritual warrior begins here.**\n\nThrough the Self-Realization Fellowship Lessons, Yogananda guides you step by step toward concentration, mastery of your life energy, meditation, and communion with God.\n\n- Enroll in the SRF Basic Lessons.\n- Study the material as each lesson becomes available.\n- Establish a daily routine of meditation and spiritual practice.\n- If the basic lessons take time to arrive in paper format you can use the SRF application to access it.\n- In the meantime you can also read the book linked in the passive ability and start to train prayer and meditation by yourself.\n\n[Enroll in the SRF Basic Lessons](https://yogananda.org/lessons-programs)."
+    },
+    {
+      "id": "6de4ea19-f15a-470a-8b28-d21c39c1d1ba",
+      "label": "Kriya",
+      "user_id": "b7a38b31-100f-4e03-b3e8-9357c635ecf8",
+      "created_at": "2026-10-09T02:55:41.730362+00:00",
+      "description": "**An ancient spiritual science awaits those who are ready.**\n\nPassed down through Mahavatar Babaji, Lahiri Mahasaya, Sri Yukteswar, and Yogananda, Kriya Yoga is an advanced technique on the path toward Self-Realization that will allow you to burn karma exponentially faster.\n\nReach at least **Lesson 17** before advancing this quest. This is when SRF sends an invitation to apply to Kriya Yoga initiation.\n\nOnce you attended the initiation practice the technique while clicking on the skill.\n\n[Learn about Kriya Yoga initiation and how to apply](https://yogananda.org/kriya-yoga-lessons)."
+    },
+    {
+      "id": "d318b146-c39f-4569-8980-d19871a28986",
+      "label": "Mindfulness",
+      "user_id": "5dd4e584-2f03-4a94-b442-528ca19492e1",
+      "created_at": "2026-10-15T23:32:44.400049+00:00",
+      "description": null
+    },
+    {
+      "id": "0c7a016b-96ac-465e-af4e-ac9ed3216301",
+      "label": "Autobiography",
+      "user_id": "b7a38b31-100f-4e03-b3e8-9357c635ecf8",
+      "created_at": "2026-10-14T21:44:55.986875+00:00",
+      "description": "**Passive effect: Get enlightened by simple words.**\n\nDiscover the extraordinary life of a Yogi, his encounters with supernatural masters, and his mission to bring Kriya Yoga to the world.\n\n[Explore *Autobiography of a Yogi* on the official SRF website](https://yogananda.org/autobiography-of-a-yogi)."
+    },
+    {
+      "id": "871a2f4b-693b-4c9e-a1e1-82bf65ffef79",
+      "label": "Hong Sau",
+      "user_id": "b7a38b31-100f-4e03-b3e8-9357c635ecf8",
+      "created_at": "2026-10-09T02:55:41.730362+00:00",
+      "description": "**Through Hong-Sau, learn to withdraw your attention from the 5 senses and awaken the power of God within.**\n\nProgress through the SRF Lessons and build a regular meditation practice.\n\nWait until **Lesson 4** arrives to start the quest, then practice it while clicking on the skill.\n\nFollow the instructions of each lesson faitfully.\n\n[Access your SRF Lessons account](https://www.srflessons.org/)."
+    },
+    {
+      "id": "61112d02-7ea5-4677-b0b9-460f778eec9f",
+      "label": "Nirvana",
+      "user_id": "5dd4e584-2f03-4a94-b442-528ca19492e1",
+      "created_at": "2026-10-15T23:32:44.400049+00:00",
+      "description": null
+    },
+    {
+      "id": "9049da5e-6ca9-485b-8ec1-2070e7b27ac9",
+      "label": "Compassion",
+      "user_id": "5dd4e584-2f03-4a94-b442-528ca19492e1",
+      "created_at": "2026-10-15T23:32:44.400049+00:00",
+      "description": null
+    },
+    {
+      "id": "ccae2b2b-1bf6-4a99-9c3e-b0db07ac62a1",
+      "label": "Vipassana",
+      "user_id": "5dd4e584-2f03-4a94-b442-528ca19492e1",
+      "created_at": "2026-10-15T23:32:44.400049+00:00",
+      "description": null
+    },
+    {
+      "id": "9eea501e-edea-4ec4-ae51-ab5d9574863c",
+      "label": "Stillness",
+      "user_id": "5dd4e584-2f03-4a94-b442-528ca19492e1",
+      "created_at": "2026-10-15T23:32:44.400049+00:00",
+      "description": null
+    }
+  ],
+  "profiles": [
+    {
+      "id": "b7a38b31-100f-4e03-b3e8-9357c635ecf8",
+      "lore": "In his thirst for God and intense Devotion, Yogananda conquered the whole West with Kriya Yoga and showed to the eyes of everyone to see what it meant to leave its body and Earth like a god letting it sustained for several weeks by the Light of God without even a single breath. He has been granted the title of Avatar of Love.",
+      "theme": "aurora",
+      "username": "Yogananda",
+      "full_name": "Paramahansa Yogananda",
+      "manna_unit": null,
+      "visibility": true,
+      "avatar_path": "paramahansa-yogananda-yogoda-satsanga-society-of-india-front.jpg",
+      "manna_cycle": null,
+      "manna_target": 0,
+      "years_burned": 0,
+      "primary_color": null,
+      "background_path": null,
+      "secondary_color": null
+    },
+    {
+      "id": "7abd58ec-1289-403d-932c-dc2df233d079",
+      "lore": "",
+      "theme": "aurora",
+      "username": "Jesus",
+      "full_name": "Jesus Christ",
+      "manna_unit": null,
+      "visibility": true,
+      "avatar_path": "JC2CCsm4C-2025-bookstore.jpg",
+      "manna_cycle": null,
+      "manna_target": 0,
+      "years_burned": 0,
+      "primary_color": null,
+      "background_path": null,
+      "secondary_color": null
+    },
+    {
+      "id": "5dd4e584-2f03-4a94-b442-528ca19492e1",
+      "lore": "",
+      "theme": "aurora",
+      "username": "Buddha",
+      "full_name": "Sakyamuni Buddha",
+      "manna_unit": null,
+      "visibility": true,
+      "avatar_path": "s-l400.jpg",
+      "manna_cycle": null,
+      "manna_target": 0,
+      "years_burned": 0,
+      "primary_color": null,
+      "background_path": null,
+      "secondary_color": null
+    }
+  ]
+}

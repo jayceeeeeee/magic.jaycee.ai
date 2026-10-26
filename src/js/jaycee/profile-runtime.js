@@ -528,7 +528,7 @@ const FEATURED_MASTERS = new Map([
   ["b7a38b31-100f-4e03-b3e8-9357c635ecf8", { linkLocked: false }], // Yogananda
   ["7abd58ec-1289-403d-932c-dc2df233d079", { linkLocked: true }], // Jesus
   ["5dd4e584-2f03-4a94-b442-528ca19492e1", { linkLocked: true }] // Buddha
-]);
+].map(([id, options]) => [window.JayceeConfig?.masterAccountIds?.[id] || id, options]));
 
 // Display-only profiles; these never participate in account lookup or linking.
 const LOCKED_PREVIEW_MASTERS = [

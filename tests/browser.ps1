@@ -42,7 +42,8 @@ await runInvitePasswordTests(syntaxSources.find(file=>file.name==='invite.js').s
 await runReferralTests({referralSource:syntaxSources.find(file=>file.name==='referral.js').source,authSource:AUTH_SOURCE,dataSource:syntaxSources.find(file=>file.name==='data.js').source});
 await runMenuSoundTests({indexSource:syntaxSources.find(file=>file.name==='index.js').source,loreSource:syntaxSources.find(file=>file.name==='lore.js').source,uiSource:syntaxSources.find(file=>file.name==='ui-sounds.js').source,audioSource:syntaxSources.find(file=>file.name==='sounds.js').source});
 const display=value=>String(value??'').trim();
-const runtime=new Function('JAYCEE_GAME_CONFIG','getDisplayValue','isQuestPending','notificationOccurrence','isNotificationVisible','interpolateNotification','renderSkillMarkdown',RUNTIME)(JAYCEE_GAME_CONFIG,display,isQuestPending,notificationOccurrence,isNotificationVisible,interpolateNotification,(element,markdown)=>{element.textContent=markdown});
+const createRuntime=(win=window)=>new Function('JAYCEE_GAME_CONFIG','getDisplayValue','isQuestPending','notificationOccurrence','isNotificationVisible','interpolateNotification','renderSkillMarkdown','window',RUNTIME)(JAYCEE_GAME_CONFIG,display,isQuestPending,notificationOccurrence,isNotificationVisible,interpolateNotification,(element,markdown)=>{element.textContent=markdown},win);
+const runtime=createRuntime();
 runMannaTests(runtime.getMannaModel);
 const models=[1,2,3].map(level=>({skillLabel:`Skill ${level}`,skill:{id:level},passiveSeconds:100,questSeconds:20}));
 const definitions=[{id:'level_three_prepare.v1',stage:'linked_master',title:'Quest',tone:'quest',content:{level:3,occurrence:'level',action:'accept_quest',component:'master_choices',text:['Review {passiveSkillName} and {skillTwoName}.','In the meantime practice {skillOneName}.','Catalog switch explanation.']}},{id:'master_linked.v1',stage:'linked_master',title:'Quest',tone:'quest',content:{component:'linked_quest'}}];
@@ -53,6 +54,19 @@ const options={activeModels:models,player,playerProfile:{id:'user',username:'Use
 const originalUI=window.JayceeUI;
 const guestSliderOptions={...options,player:null,playerProfile:null,activeMasterProfile:null,notifications:{...options.notifications,definitions:[{id:'masters_present.v1',stage:'guest',title:'Notification',content:{component:'masters',text:['Custom guest introduction.','Another paragraph.']}}]}};
 const guestSlider=runtime.createVitalsPanel(guestSliderOptions);
+const devWindow={location:{hostname:'localhost'},localStorage:window.localStorage};
+new Function('window',syntaxSources.find(file=>file.name==='app-config.js').source)(devWindow);
+const devPanel=createRuntime(devWindow).createVitalsPanel({...guestSliderOptions,publicProfiles:[
+  {id:'0ad611ab-73ad-4ece-a11c-09b13bf5db5d',username:'Yogananda'},
+  {id:'50edc493-a776-41f6-b5e3-0e2d78eff070',username:'Jesus'},
+  {id:'59008ad4-5675-4d25-bdad-ebeea9cd8419',username:'Buddha'}
+]});
+const devChoices=[...devPanel.querySelector('.profile-masters-carousel').querySelectorAll('.profile-master-choice:not([aria-hidden="true"])')];
+assert(devChoices.length===3,'Imported development Masters are missing from the carousel');
+for(const choice of devChoices){
+  const name=choice.querySelector('.profile-notice-master-name').textContent;
+  assert(choice.disabled===(name!=='Yogananda'),'Development Master link locks differ from production');
+}
 assert(guestSlider.textContent.includes('Custom guest introduction.')&&guestSlider.textContent.includes('Another paragraph.')&&!guestSlider.textContent.includes("You're in luck"),'Guest slider intro did not come from the catalog');
 assert(guestSlider.querySelectorAll('.profile-masters-carousel').length===2,'Masters must display two carousel rows');
 const previewRow=guestSlider.querySelector('.profile-masters-carousel.is-reversed');
