@@ -57,15 +57,16 @@ const guestSlider=runtime.createVitalsPanel(guestSliderOptions);
 const devWindow={location:{hostname:'localhost'},localStorage:window.localStorage};
 new Function('window',syntaxSources.find(file=>file.name==='app-config.js').source)(devWindow);
 const devPanel=createRuntime(devWindow).createVitalsPanel({...guestSliderOptions,publicProfiles:[
+  {id:'89cf977d-ecc0-4dbb-8f4f-fe6b9d7067c5',username:'Cedric'},
   {id:'0ad611ab-73ad-4ece-a11c-09b13bf5db5d',username:'Yogananda'},
   {id:'50edc493-a776-41f6-b5e3-0e2d78eff070',username:'Jesus'},
   {id:'59008ad4-5675-4d25-bdad-ebeea9cd8419',username:'Buddha'}
 ]});
 const devChoices=[...devPanel.querySelector('.profile-masters-carousel').querySelectorAll('.profile-master-choice:not([aria-hidden="true"])')];
-assert(devChoices.length===3,'Imported development Masters are missing from the carousel');
+assert(devChoices.length===4,'Imported development Masters are missing from the carousel');
 for(const choice of devChoices){
   const name=choice.querySelector('.profile-notice-master-name').textContent;
-  assert(choice.disabled===(name!=='Yogananda'),'Development Master link locks differ from production');
+  assert(choice.disabled===['Jesus','Buddha'].includes(name),'Development Master link locks differ from production');
 }
 assert(guestSlider.textContent.includes('Custom guest introduction.')&&guestSlider.textContent.includes('Another paragraph.')&&!guestSlider.textContent.includes("You're in luck"),'Guest slider intro did not come from the catalog');
 assert(guestSlider.querySelectorAll('.profile-masters-carousel').length===2,'Masters must display two carousel rows');
