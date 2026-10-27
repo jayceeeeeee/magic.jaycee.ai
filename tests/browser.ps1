@@ -10,6 +10,7 @@ $syntaxSources = ConvertTo-Json -InputObject @(Get-ChildItem -LiteralPath 'src/j
   @{ name = $_.Name; source = Read-BrowserSource $_.FullName }
 }) -Depth 3 -Compress
 $prelude = (Read-BrowserSource 'src/js/config/game-config.js') + (Read-BrowserSource 'src/js/jaycee/notifications.js')
+$prelude += Read-BrowserSource 'src/js/config/manna.js'
 $prelude += Read-BrowserSource 'tests/manna.test.mjs'
 $prelude += Read-BrowserSource 'tests/quest-lock-auth.test.mjs'
 $prelude += Read-BrowserSource 'tests/menu-sounds.test.mjs'
@@ -42,7 +43,7 @@ await runInvitePasswordTests(syntaxSources.find(file=>file.name==='invite.js').s
 await runReferralTests({referralSource:syntaxSources.find(file=>file.name==='referral.js').source,authSource:AUTH_SOURCE,dataSource:syntaxSources.find(file=>file.name==='data.js').source});
 await runMenuSoundTests({indexSource:syntaxSources.find(file=>file.name==='index.js').source,loreSource:syntaxSources.find(file=>file.name==='lore.js').source,uiSource:syntaxSources.find(file=>file.name==='ui-sounds.js').source,audioSource:syntaxSources.find(file=>file.name==='sounds.js').source});
 const display=value=>String(value??'').trim();
-const createRuntime=(win=window)=>new Function('JAYCEE_GAME_CONFIG','getDisplayValue','isQuestPending','notificationOccurrence','isNotificationVisible','interpolateNotification','renderSkillMarkdown','window',RUNTIME)(JAYCEE_GAME_CONFIG,display,isQuestPending,notificationOccurrence,isNotificationVisible,interpolateNotification,(element,markdown)=>{element.textContent=markdown},win);
+const createRuntime=(win=window)=>new Function('JAYCEE_GAME_CONFIG','getDisplayValue','isQuestPending','notificationOccurrence','isNotificationVisible','interpolateNotification','renderSkillMarkdown','window','getMannaModel','normalizeMannaUnit',RUNTIME)(JAYCEE_GAME_CONFIG,display,isQuestPending,notificationOccurrence,isNotificationVisible,interpolateNotification,(element,markdown)=>{element.textContent=markdown},win,getMannaModel,normalizeMannaUnit);
 const runtime=createRuntime();
 runMannaTests(runtime.getMannaModel);
 const models=[1,2,3].map(level=>({skillLabel:`Skill ${level}`,skill:{id:level},passiveSeconds:100,questSeconds:20}));

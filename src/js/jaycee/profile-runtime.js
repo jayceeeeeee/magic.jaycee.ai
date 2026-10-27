@@ -1,6 +1,7 @@
 import { renderSkillMarkdown } from "./markdown.js";
 import { PracticeTimer } from "./practice-timer.js";
 import { SoundEffects } from "./sounds.js";
+import { getMannaModel, normalizeMannaUnit } from "../config/manna.js";
 import { NotificationStore, interpolateNotification, isNotificationVisible, notificationOccurrence, isQuestPending } from "./notifications.js";
 import {
   JAYCEE_ORDER,
@@ -36,13 +37,6 @@ const PROFILE_CORE_METRICS = {
 const PROFILE_RING_FILL_ALPHA = 0.26;
 const ACTIVE_RING_LIMIT = 3;
 const YEAR_SECONDS = JAYCEE_GAME_CONFIG.passive.cycleSeconds;
-const DAY_SECONDS = 24 * 60 * 60;
-const MANNA_CYCLE_SECONDS = {
-  hour: 60 * 60,
-  day: DAY_SECONDS,
-  month: YEAR_SECONDS / 12,
-  year: YEAR_SECONDS
-};
 
 const getLoginUrl = () => (
   new URL(
@@ -151,29 +145,6 @@ const formatYearsFromSeconds = (secondsValue) => {
   return `${years.toLocaleString()}y`;
 };
 
-const normalizeMannaCycle = (cycle) => (
-  Object.prototype.hasOwnProperty.call(MANNA_CYCLE_SECONDS, getDisplayValue(cycle))
-    ? getDisplayValue(cycle)
-    : "year"
-);
-
-const normalizeMannaUnit = (unit) => (
-  /^[A-Z]{3}$/.test(getDisplayValue(unit).toUpperCase())
-    ? getDisplayValue(unit).toUpperCase()
-    : "EUR"
-);
-
-const getMannaCycleSeconds = (cycle, now = new Date()) => {
-  if (cycle === "month") {
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-
-    return Math.max(1, (end.getTime() - start.getTime()) / 1000);
-  }
-
-  return MANNA_CYCLE_SECONDS[cycle] || MANNA_CYCLE_SECONDS.year;
-};
-
 const getCurrencySymbol = (unit) => {
   const currency = normalizeMannaUnit(unit);
 
@@ -223,56 +194,6 @@ const getSelectedActiveLevel = (player, selectedAbilityIndex = 0) => {
   return selectedAbilityIndex >= 1 && selectedAbilityIndex <= level
     ? selectedAbilityIndex
     : level;
-};
-
-const getMannaModel = ({ activeModels = [], player, playerProfile, accountCreatedAt = "", practicePlayers = [], completedPassiveSeconds = 0, selectedAbilityIndex = null, lastSelectedAbilityIndex = null, practicingSkillIndex = null, now = new Date() }) => {
-  const level = Math.min(ACTIVE_RING_LIMIT, Math.max(1, Number(player?.level) || 1));
-  const hasQuest = Number(player?.level) < 4;
-  const mannaTarget = Number(playerProfile?.manna_target);
-  const mannaCycle = normalizeMannaCycle(playerProfile?.manna_cycle);
-  const mannaUnit = normalizeMannaUnit(playerProfile?.manna_unit);
-  const viewIndex = selectedAbilityIndex ?? (hasQuest ? practicingSkillIndex : lastSelectedAbilityIndex ?? practicingSkillIndex ?? 3);
-  const skillNumber = viewIndex >= 1 && viewIndex <= level ? viewIndex
-    : viewIndex == null && hasQuest ? level : null;
-  const skillModel = skillNumber === null ? null : activeModels[skillNumber - 1];
-  const periodSeconds = skillModel ? Number(skillModel.passiveSeconds) : YEAR_SECONDS;
-  const startedAt = new Date((skillNumber !== null ? player?.[`skill_${skillNumber}_start`]
-    : accountCreatedAt) || "");
-  const cycleSeconds = getMannaCycleSeconds(mannaCycle, Number.isFinite(startedAt.getTime()) ? startedAt : now);
-  const periodTarget = Number.isFinite(mannaTarget) && periodSeconds > 0
-    ? mannaTarget * periodSeconds / cycleSeconds : 0;
-  let value = 0;
-  const paused = skillNumber !== null && isQuestPending(player) && skillNumber === Number(player?.level);
-  if (!paused && Number.isFinite(startedAt.getTime()) && periodSeconds > 0) {
-    const elapsedSeconds = Math.min(periodSeconds, Math.max(0, (now.getTime() - startedAt.getTime()) / 1000));
-    if (skillNumber !== null) {
-      // Each active skill keeps its own clock, practice, gain and loss calculation.
-      const practiceSeconds = Math.max(0, Number(player?.[`skill_${skillNumber}_practice`]) || 0);
-      const questSeconds = Number(skillModel?.questSeconds);
-      value = -periodTarget * elapsedSeconds / periodSeconds
-        + (questSeconds > 0 ? periodTarget * practiceSeconds / questSeconds : 0);
-    } else {
-      // Keep the annual overview, without projecting its balance onto active skills.
-      const players = new Map(practicePlayers.filter((row) => row?.id).map((row) => [row.id, row]));
-      players.set(player?.id || 'current', player);
-      const earnedSeconds = [...players.values()].reduce((total, row) => total
-        + activeModels.slice(0, Math.min(3, Number(row?.level) || 0)).reduce((sum, model, index) => {
-          const passiveSeconds = Number(model.passiveSeconds);
-          const questSeconds = Number(model.questSeconds);
-          const practiceSeconds = Math.max(0, Number(row?.[`skill_${index + 1}_practice`]) || 0);
-          return passiveSeconds > 0 && questSeconds > 0
-            ? sum + practiceSeconds * passiveSeconds / questSeconds : sum;
-        }, 0), Math.max(0, Number(completedPassiveSeconds) || 0));
-      value = periodTarget * (earnedSeconds - elapsedSeconds) / periodSeconds;
-    }
-  }
-
-  return {
-    maxAbs: Math.abs(periodTarget) || 1,
-    target: periodTarget,
-    unit: mannaUnit,
-    value
-  };
 };
 
 const getSkillById = (skills, skillId) => (

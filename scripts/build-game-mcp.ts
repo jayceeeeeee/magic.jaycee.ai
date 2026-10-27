@@ -1,9 +1,6 @@
-const source = new URL("../src/js/config/game-config.js", import.meta.url);
-const generated = new URL(
-  "../supabase/functions/game-mcp/game-config.js",
-  import.meta.url,
-);
-
-const contents = await Deno.readTextFile(source);
-await Deno.writeTextFile(generated, contents);
-console.log("Generated the MCP game config from src/js/config/game-config.js");
+for (const name of ["game-config.js", "manna.js"]) {
+  const source = new URL(`../src/js/config/${name}`, import.meta.url);
+  const generated = new URL(`../supabase/functions/game-mcp/${name}`, import.meta.url);
+  await Deno.writeTextFile(generated, await Deno.readTextFile(source));
+  console.log(`Generated MCP ${name} from src/js/config/${name}`);
+}

@@ -1,33 +1,53 @@
 # Game MCP (development)
 
-The development version exposes six authenticated, read-only tools:
+The development version exposes nine authenticated, read-only tools:
 
 - `get_my_profile`: all saved profile fields for the connected user, including
   birth details, lore, karma, manna target/unit/cycle, plus their Auth email.
-- `get_my_progress`: connected user's saved levels, practice seconds, cycle starts,
-  accepted quests and completed-practice seconds. Saved values do not include a
+  `profile.avatar_url` and `profile.background_url` are absolute signed image
+  links usable without authentication, valid for one hour. Refetch after
+  `image_urls_expires_at`. Missing images have null URLs; signing failures are
+  reported in `image_url_errors` without blocking the rest of the profile.
+- `show_profile_image`: displays the own or a linked Master's avatar/background
+  through a registered MCP Apps image viewer. It returns `structuredContent` and
+  a versioned UI resource with the Supabase image origin allowed by its CSP.
+  This avoids relying on external Markdown image rendering or filesystem downloads.
+  Hosts without MCP Apps UI support can still use the returned signed link.
+- `get_my_progress`: connected user's saved levels, current practice counters,
+  cycle starts and accepted quests. Saved values do not include a
   timer still running in a browser tab. At most 100 player records are returned.
+- `get_my_practice_time`: recorded practice reconstructed from completed goal
+  counts and current counters, grouped by slot across participations.
+- `get_my_manna`: annual gross gains, passive losses and net balance, completed
+  and partial gains per participation/Master/skill, plus every unlocked active
+  skill's current-cycle bar. Includes cycle targets and the formulas for arbitrary
+  durations. Pass `time_zone` (e.g. `Asia/Tokyo`) to match the browser's calendar
+  month calculation; the default is UTC. Historical gains are valued with the
+  current profile settings because completions contain no historical target snapshot.
 - `get_my_game`: the connected user's authored game and up to 100 own skills.
 - `get_my_master_games`: public game/skill definitions for Masters linked to the
-  connected user's participations.
+  connected user's participations, with the same signed image fields on each Master.
 - `get_my_records`: own practice completions, prayers or notification receipts,
   in pages of 50 with `kind` and `offset`.
-- `get_game_config`: game constants, skill columns and cycle labels from the
-  deployed copy of `src/js/config/game-config.js`.
+- `get_game_config`: game constants, explicit practice targets, cycle labels and
+  Manna rules/formulas from the deployed config and shared calculation module.
 
-The current manna balance is calculated in the browser from saved profile and
-progress fields and elapsed time; it is not a stored database column. These
-tools expose the inputs and public rules for calculations. They do not read
-another user's private records. `src/js/config/game-config.js` is the only
-maintained source. Before checking or deploying the function, generate its
-deployment artifact from that source:
+Manna is computed from saved profile/progress fields and elapsed time; it is not
+a stored wallet balance. `src/js/config/manna.js` implements the same calculation
+for the browser bar and MCP, using constants from `src/js/config/game-config.js`.
+The annual view includes completion history; an active bar includes only its own
+current cycle. Months use the calendar month at the view's start, while the Moon
+skill's passive cycle is a fixed duration. These tools only read the connected
+user's private records and the public Master definitions. Before checking or
+deploying the function, generate its deployment artifacts from those sources:
 
 ```powershell
 .tools/deno.exe run --allow-read --allow-write scripts/build-game-mcp.ts
 ```
 
-The generated file is ignored by Git. The MCP test checks its values against the
-browser config. Run the build step again after changing the source, then redeploy.
+The generated files are ignored by Git. The MCP tests check config values and
+exercise the shared browser balance rules. Run the build step again after changing
+either source, then redeploy.
 
 Development endpoint:
 

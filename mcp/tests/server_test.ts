@@ -11,6 +11,8 @@ import {
 const assert = (condition: unknown, message: string) => {
   if (!condition) throw new Error(message);
 };
+const near = (actual: number, expected: number) =>
+  Math.abs(actual - expected) < 1e-8 * Math.max(1, Math.abs(expected));
 const endpoint = `${DEV_PROJECT_URL}/functions/v1/game-mcp`;
 const handler = createHandler(DEV_PROJECT_URL, "test-public-key");
 const originalFetch = globalThis.fetch;
@@ -72,7 +74,7 @@ function request(accessToken?: string, method = "tools/list", args?: unknown) {
     }),
   });
 }
-function installMock({ locked = false, userId = "owner" } = {}) {
+function installMock({ locked = false, userId = "owner", historyLength = 1, imageFailure = false } = {}) {
   const calls: { url: URL; auth: string | null }[] = [];
   globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
     const req = new Request(input, init);
@@ -80,6 +82,19 @@ function installMock({ locked = false, userId = "owner" } = {}) {
     calls.push({ url, auth: req.headers.get("Authorization") });
     if (url.pathname.endsWith("/.well-known/jwks.json")) {
       return Promise.resolve(Response.json({ keys: [publicJwk] }));
+    }
+    if (url.pathname.startsWith("/storage/v1/object/sign/users/")) {
+      assert(req.method === "POST", "Images must use signed private-bucket links");
+      assert(["/storage/v1/object/sign/users/owner/avatar photo.jpg",
+        "/storage/v1/object/sign/users/owner/background.png",
+        "/storage/v1/object/sign/users/master-one/master portrait.png"].includes(decodeURIComponent(url.pathname)),
+        "Image path did not resolve to the stored owner/Master image");
+      return req.json().then((body) => {
+        assert(body.expiresIn === 3600, "Image URLs should expire after one hour");
+        return imageFailure
+          ? Response.json({ message: "Object not found", statusCode: 404 }, { status: 404 })
+          : Response.json({ signedURL: `${decodeURIComponent(url.pathname.replace("/storage/v1", ""))}?token=test` });
+      });
     }
     if (url.pathname === "/auth/v1/user") {
       return Promise.resolve(
@@ -94,16 +109,24 @@ function installMock({ locked = false, userId = "owner" } = {}) {
       );
     }
     if (url.pathname === "/rest/v1/profiles") {
+      if (url.searchParams.get("id") === "eq.master-one") {
+        return Promise.resolve(Response.json({ id: "master-one", username: "Master",
+          avatar_path: "master-one/master portrait.png", background_path: null }));
+      }
       if (url.searchParams.has("id") && url.searchParams.get("id")?.startsWith("in.")) {
         assert(url.searchParams.get("id") === "in.(master-one)", "Only linked Master profiles may be read");
-        return Promise.resolve(Response.json([{ id: "master-one", username: "Master" }]));
+        return Promise.resolve(Response.json([{ id: "master-one", username: "Master",
+          avatar_path: `${DEV_PROJECT_URL}/storage/v1/object/public/users/master-one/master%20portrait.png`,
+          background_path: null }]));
       }
       assert(
         url.searchParams.get("id") === "eq.owner",
         "Profile query must use the verified user ID",
       );
       return Promise.resolve(
-        Response.json({ id: "owner", username: "Owner", locked }),
+        Response.json({ id: "owner", username: "Owner", locked, master: "master-one",
+          avatar_path: "avatar photo.jpg", background_path: "users/owner/background.png",
+          manna_target: 10, manna_cycle: "hour", manna_unit: "EUR" }),
       );
     }
     if (url.pathname === "/rest/v1/player") {
@@ -111,25 +134,37 @@ function installMock({ locked = false, userId = "owner" } = {}) {
         url.searchParams.get("user_id") === "eq.owner",
         "Progress must be restricted to its owner",
       );
-      return Promise.resolve(Response.json([{ id: "own-game", level: 2, master: "master-one", skill_1_practice: 0, skill_2_practice: 0, skill_3_practice: 3 }]));
+      if (url.searchParams.has("master") && url.searchParams.get("master") !== "eq.master-one") {
+        return Promise.resolve(Response.json([]));
+      }
+      return Promise.resolve(Response.json([{ id: "own-game", level: 4, master: "master-one",
+        skill_1_practice: 0, skill_2_practice: 0, skill_3_practice: 3,
+        skill_1_start: "2026-01-01T00:00:00Z", skill_2_start: "2026-01-01T00:00:00Z",
+        skill_3_start: "2026-01-01T00:00:00Z" }]));
     }
     if (url.pathname === "/rest/v1/game") {
       if (url.searchParams.get("user_id") === "in.(master-one)") {
-        return Promise.resolve(Response.json([{ id: "master-game", user_id: "master-one", skill_1: "master-skill" }]));
+        return Promise.resolve(Response.json([{ id: "master-game", user_id: "master-one",
+          skill_1: "master-skill", skill_3: "master-earth" }]));
       }
       assert(url.searchParams.get("user_id") === "eq.owner", "Game lookup must use owner ID");
       return Promise.resolve(Response.json({ id: "authored-game", user_id: "owner", skill_0: "own-skill" }));
     }
     if (url.pathname === "/rest/v1/skills") {
-      if (url.searchParams.get("id") === "in.(master-skill)") {
-        return Promise.resolve(Response.json([{ id: "master-skill", label: "Quest" }]));
+      if (url.searchParams.get("id") === "in.(master-skill,master-earth)") {
+        return Promise.resolve(Response.json([{ id: "master-skill", label: "Quest" },
+          { id: "master-earth", label: "Master Earth" }]));
       }
       assert(url.searchParams.get("user_id") === "eq.owner", "Skill lookup must use owner ID");
       return Promise.resolve(Response.json([{ id: "own-skill", user_id: "owner", label: "Prayer" }]));
     }
     if (url.pathname === "/rest/v1/practice_completions") {
       assert(url.searchParams.get("player_id") === "in.(own-game)", "Completions must use own player IDs");
-      return Promise.resolve(Response.json([{ id: "own-completion", player_id: "own-game", skill_number: 3, completed_at: "2026-01-01T00:00:00Z" }]));
+      const offset = Number(url.searchParams.get("offset") || 0);
+      const limit = Number(url.searchParams.get("limit") || 1000);
+      return Promise.resolve(Response.json(Array.from({ length: historyLength }, (_, index) =>
+        ({ id: index === 0 ? "own-completion" : `completion-${index}`, player_id: "own-game",
+          skill_number: 3, completed_at: "2026-01-01T00:00:00Z" })).slice(offset, offset + limit)));
     }
     if (url.pathname === "/rest/v1/prayers") {
       assert(url.searchParams.get("user_id") === "eq.owner", "Prayers must use owner ID");
@@ -212,26 +247,52 @@ Deno.test("read tools expose own data and public rules using user credentials", 
     const listed = await handler(request(access));
     const tools = (await listed.json()).result.tools;
     assert(
-      tools.length === 7 &&
+      tools.length === 9 &&
         tools.every((t: { annotations: { readOnlyHint: boolean } }) =>
           t.annotations.readOnlyHint
         ),
-      "Expected six read-only tools",
+      "Expected nine read-only tools",
     );
     const profile = await handler(
       request(access, "tools/call", { name: "get_my_profile", arguments: {} }),
     );
-    assert(
-      JSON.parse((await profile.json()).result.content[0].text).profile.id ===
-        "owner",
-      "Wrong profile",
-    );
+    const profileData = JSON.parse((await profile.json()).result.content[0].text).profile;
+    assert(profileData.id === "owner", "Wrong profile");
+    assert(profileData.avatar_url === `${DEV_PROJECT_URL}/storage/v1/object/sign/users/owner/avatar%20photo.jpg?token=test` &&
+      profileData.background_url === `${DEV_PROJECT_URL}/storage/v1/object/sign/users/owner/background.png?token=test` &&
+      Date.parse(profileData.image_urls_expires_at) > Date.now(),
+      `Profile must provide absolute usable image links and their expiry: ${JSON.stringify(profileData)}`);
+    const imageTool = tools.find((tool: { name: string }) => tool.name === "show_profile_image");
+    const viewerUri = imageTool._meta.ui.resourceUri;
+    const viewer = await handler(request(access, "resources/read", { uri: viewerUri }));
+    const resource = (await viewer.json()).result.contents[0];
+    assert(resource.mimeType === "text/html;profile=mcp-app" &&
+      resource._meta.ui.csp.resourceDomains[0] === DEV_PROJECT_URL &&
+      resource.text.includes("ui/notifications/tool-result"),
+      "Image viewer must be registered with the host bridge and exact image CSP domain");
+    const displayedImage = await handler(request(access, "tools/call", {
+      name: "show_profile_image", arguments: {},
+    }));
+    const imageData = (await displayedImage.json()).result.structuredContent;
+    assert(imageData.image_url === profileData.avatar_url && imageData.owner_name === "Owner",
+      "Image display must supply fresh viewer data for the authenticated user");
+    const displayedMaster = await handler(request(access, "tools/call", {
+      name: "show_profile_image", arguments: { master_id: "master-one" },
+    }));
+    assert((await displayedMaster.json()).result.structuredContent.owner_name === "Master",
+      "Linked Master images should be displayable");
+    const unlinkedMaster = await handler(request(access, "tools/call", {
+      name: "show_profile_image", arguments: { master_id: "unlinked" },
+    }));
+    assert((await unlinkedMaster.json()).result.isError, "Unlinked profiles must not be exposed through the viewer");
     const game = await handler(request(access, "tools/call", { name: "get_my_game", arguments: {} }));
     const gameData = JSON.parse((await game.json()).result.content[0].text);
     assert(gameData.game.id === "authored-game" && gameData.skills[0].id === "own-skill", "Wrong owned game data");
     const masters = await handler(request(access, "tools/call", { name: "get_my_master_games", arguments: {} }));
     const mastersData = JSON.parse((await masters.json()).result.content[0].text);
     assert(mastersData.masters[0].id === "master-one" && mastersData.skills[0].id === "master-skill", "Wrong linked Master data");
+    assert(mastersData.masters[0].avatar_url === `${DEV_PROJECT_URL}/storage/v1/object/sign/users/master-one/master%20portrait.png?token=test` &&
+      mastersData.masters[0].background_url === null, "Master images must resolve legacy URLs and tolerate missing images");
     for (const [kind, expected] of [
       ["practice_completions", "own-completion"],
       ["prayers", undefined],
@@ -272,14 +333,30 @@ Deno.test("read tools expose own data and public rules using user credentials", 
     );
     const practiceTimeData = JSON.parse((await practiceTime.json()).result.content[0].text);
     assert(
-      practiceTimeData.total_tracked_practice_seconds === 33 &&
-        practiceTimeData.skills[2].completed_goal_target_seconds === 30 &&
+      Math.abs(practiceTimeData.total_tracked_practice_seconds - 33) < 1e-9 &&
+        Math.abs(practiceTimeData.skills[2].completed_goal_target_seconds - 30) < 1e-9 &&
         practiceTimeData.skills[2].current_saved_practice_seconds === 3 &&
         practiceTimeData.skills[0].completed_goal_count === 0,
       "Practice time should combine completed goal targets with saved counters",
     );
+    const manna = await handler(request(access, "tools/call", {
+      name: "get_my_manna", arguments: { time_zone: "Asia/Tokyo" },
+    }));
+    const mannaData = JSON.parse((await manna.json()).result.content[0].text);
+    assert(near(mannaData.annual_overview.gain, 11) && near(mannaData.rules.cycle_targets.day.amount, 240),
+      "Annual gains must include completed goals and partial practice at the current target");
+    const earth = mannaData.participants[0].skills[2];
+    assert(mannaData.participants[0].master_name === "Master" && earth.skill_name === "Master Earth",
+      "Manna must name the Master's skill, not the user's authored skill");
+    assert(near(earth.completed_gain_at_current_settings, 10) && near(earth.current_cycle_bar.gain, 1) &&
+      near(earth.current_cycle_bar.loss, -10) && near(earth.current_cycle_bar.value, -9),
+      "Archived gains must not leak into the active skill bar");
+    const badZone = await handler(request(access, "tools/call", {
+      name: "get_my_manna", arguments: { time_zone: "not-a-timezone" },
+    }));
+    assert((await badZone.json()).result.isError, "Invalid calendar timezone must be rejected");
     assert(
-      calls.filter((c) => c.url.pathname.startsWith("/rest/")).every((c) =>
+      calls.filter((c) => c.url.pathname.startsWith("/rest/") || c.url.pathname.startsWith("/storage/")).every((c) =>
         c.auth === `Bearer ${access}`
       ),
       "Data requests must use user credentials",
@@ -296,6 +373,35 @@ Deno.test("read tools expose own data and public rules using user credentials", 
         JSON.parse(extraResult.content[0].text).profile.id === "owner",
       "Caller overrode user identity",
     );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+Deno.test("unavailable images do not prevent reading the profile", async () => {
+  installMock({ imageFailure: true });
+  try {
+    const response = await handler(request(await token(), "tools/call", {
+      name: "get_my_profile", arguments: {},
+    }));
+    const data = JSON.parse((await response.json()).result.content[0].text);
+    assert(data.profile.id === "owner" && data.profile.avatar_url === null &&
+      data.profile.background_url === null && data.profile.image_urls_expires_at === null &&
+      data.profile.image_url_errors.avatar_url,
+      "Image failures must be explicit while keeping the rest of the profile available");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+Deno.test("Manna includes completion history beyond one PostgREST page", async () => {
+  installMock({ historyLength: 1050 });
+  try {
+    const response = await handler(request(await token(), "tools/call", {
+      name: "get_my_manna", arguments: {},
+    }));
+    const data = JSON.parse((await response.json()).result.content[0].text);
+    assert(data.participants[0].skills[2].completed_goal_count === 1050 &&
+      near(data.annual_overview.gain, 10501),
+      "Manna must aggregate every page without truncation or double counting");
   } finally {
     globalThis.fetch = originalFetch;
   }
