@@ -1,8 +1,6 @@
 # Local Supabase CLI cache, not application source.
 supabase/.temp/
 .tools/
-supabase/functions/game-mcp/game-config.js
-supabase/functions/game-mcp/manna.js
 .env
 .env.*
 !.env.example

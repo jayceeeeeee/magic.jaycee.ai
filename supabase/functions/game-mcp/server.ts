@@ -2,13 +2,13 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { getMannaModel, getMannaRules, getMannaSkillModels } from "./manna.js";
+import { getMannaModel, getMannaRules, getMannaSkillModels } from "../../../src/js/config/manna.js";
+import { GAME_RESOURCES, getGameConfig } from "../../../mcp/game-resources.ts";
 import { PROFILE_IMAGE_MIME, PROFILE_IMAGE_RESOURCE, profileImageWidget } from "./profile-image-widget.ts";
 import {
   JAYCEE_GAME_CONFIG,
-  JAYCEE_GAME_CYCLE_LABELS,
   JAYCEE_GAME_SKILL_COLUMNS,
-} from "./game-config.js";
+} from "../../../src/js/config/game-config.js";
 
 export const DEV_PROJECT_URL = "https://mylnagvqngsgcmlvwttu.supabase.co";
 
@@ -104,6 +104,13 @@ export function createHandler(projectUrl: string, publicKey: string) {
       openWorldHint: false,
     };
     const securitySchemes = [{ type: "oauth2", scopes: ["profile"] }];
+    for (const resource of GAME_RESOURCES) {
+      server.registerResource(resource.name, resource.uri, {
+        title: resource.title, description: resource.description, mimeType: "application/json",
+        annotations: { audience: ["assistant"], priority: 0.8 },
+      }, () => ({ contents: [{ uri: resource.uri, mimeType: "application/json",
+        text: JSON.stringify(resource.read(), null, 2) }] }));
+    }
     server.registerResource("profile-image", PROFILE_IMAGE_RESOURCE,
       { mimeType: PROFILE_IMAGE_MIME }, async () => ({
         contents: [{ uri: PROFILE_IMAGE_RESOURCE, mimeType: PROFILE_IMAGE_MIME,
@@ -472,43 +479,16 @@ export function createHandler(projectUrl: string, publicKey: string) {
     server.registerTool("get_game_config", {
       title: "Game calculation rules",
       description:
-        "Read public game constants and the derived practice goal durations. The practice targets are calculated from the configured cycle and cumulative ratios, so use these explicit values instead of inferring the formula. This is the deployed development version of game-config.js.",
+        "Read the same shared game configuration exposed at game://config, with links to game://rules/manna and game://examples/manna. Includes constants and explicit derived practice targets; use these values instead of inferring the formula. This tool is also available for clients that cannot browse MCP resources.",
       inputSchema: {},
       annotations,
       _meta: { securitySchemes },
     }, () => {
-      const practiceModels = getMannaSkillModels();
-      const practiceGoalTargets = JAYCEE_GAME_CONFIG.activeAbilities.map(
-        (ability, index) => {
-          const targetSeconds = practiceModels[index].questSeconds;
-          const roundedSeconds = Math.round(targetSeconds);
-          const hours = Math.floor(roundedSeconds / 3600);
-          const minutes = Math.floor((roundedSeconds % 3600) / 60);
-          const seconds = roundedSeconds % 60;
-          const display = [
-            hours ? `${hours} h` : "",
-            minutes ? `${minutes} min` : "",
-            seconds ? `${seconds} s` : "",
-          ].filter(Boolean).join(" ");
-          return {
-            skill_number: index + 1,
-            skill_column: ability.skillColumn,
-            fractal_label: ability.fractalLabel,
-            associated_cycle: JAYCEE_GAME_CYCLE_LABELS.activeAbilities[index],
-            target_seconds: targetSeconds,
-            target_display: display,
-          };
-        },
-      );
-      return result({
-        game_config: JAYCEE_GAME_CONFIG,
-        skill_columns: JAYCEE_GAME_SKILL_COLUMNS,
-        cycle_labels: JAYCEE_GAME_CYCLE_LABELS,
-        manna_rules: getMannaRules(),
-        practice_goal_rule:
-          "For active skill at zero-based index i: target_seconds = passive.cycleSeconds / product(activeAbilities[0..i].ratio).",
-        practice_goal_targets: practiceGoalTargets,
-      });
+      const value = result(getGameConfig());
+      return { ...value, content: [...value.content, ...GAME_RESOURCES.map((resource) => ({
+        type: "resource_link" as const, uri: resource.uri, name: resource.name,
+        description: resource.description, mimeType: "application/json",
+      }))] };
     });
     const transport = new WebStandardStreamableHTTPServerTransport({
       sessionIdGenerator: undefined,

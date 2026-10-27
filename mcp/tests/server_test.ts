@@ -392,6 +392,42 @@ Deno.test("unavailable images do not prevent reading the profile", async () => {
     globalThis.fetch = originalFetch;
   }
 });
+Deno.test("authenticated knowledge resources match the config tool and keep private data out", async () => {
+  installMock();
+  try {
+    const access = await token();
+    const listing = await handler(request(access, "resources/list"));
+    const listed = (await listing.json()).result.resources;
+    for (const uri of ["game://config", "game://rules/manna", "game://examples/manna"]) {
+      assert(listed.some((resource: { uri: string; mimeType: string }) => resource.uri === uri && resource.mimeType === "application/json"),
+        `Missing knowledge resource ${uri}`);
+      const anonymous = await handler(request(undefined, "resources/read", { uri }));
+      assert(anonymous.status === 401, "Resources must keep the same authentication as tools");
+      await anonymous.body?.cancel();
+      const response = await handler(request(access, "resources/read", { uri }));
+      const content = (await response.json()).result.contents[0];
+      assert(content.uri === uri && content.mimeType === "application/json", "Incorrect resource representation");
+      const data = JSON.parse(content.text);
+      assert(!content.text.includes('"owner"') && !content.text.includes("owner@example"), "Knowledge resource leaked connected user data");
+      if (uri === "game://config") {
+        const tool = await handler(request(access, "tools/call", { name: "get_game_config", arguments: {} }));
+        const result = (await tool.json()).result;
+        assert(JSON.stringify(data) === JSON.stringify(JSON.parse(result.content[0].text)), "Config tool and resource diverged");
+        assert(result.content.filter((part: { type: string }) => part.type === "resource_link").length === 3,
+          "Config tool must make all three knowledge resources discoverable");
+      } else if (uri === "game://rules/manna") {
+        assert(data.formulas.active_balance === "active_gain + active_loss" && data.behavior.length > 0,
+          "Math resource omitted the formulas or their behavior");
+      } else {
+        assert(data.synthetic && data.active_cycles.length === 3, "Examples must be synthetic and cover every active skill");
+      }
+    }
+    const missing = await handler(request(access, "resources/read", { uri: "game://unknown" }));
+    assert((await missing.json()).error, "Unknown resource must fail instead of resolving arbitrary content");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
 Deno.test("Manna includes completion history beyond one PostgREST page", async () => {
   installMock({ historyLength: 1050 });
   try {
