@@ -5,26 +5,46 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="no-referrer">
   <title>Connect your account | jaycee.ai</title>
+  <link rel="icon" type="image/svg+xml" href="/src/assets/brand/jaycee-core-sigil.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/src/css/global.css">
   <link rel="stylesheet" href="/src/css/game-ui.css">
 </head>
-<body class="auth-game-page">
-  <main class="auth-page signup-page-main">
-    <section class="auth-panel" aria-labelledby="consent-title">
-      <h1 id="consent-title">Connect your game account</h1>
-      <p data-consent-status role="status">Checking the connection request…</p>
+<body class="auth-game-page consent-page">
+  <main class="auth-page consent-main">
+    <section class="auth-panel consent-panel" aria-labelledby="consent-title">
+      <a class="consent-brand" href="/" aria-label="jaycee.ai home"><img src="/src/assets/brand/jaycee-core-sigil.svg" alt="">jaycee.ai</a>
+      <p class="consent-eyebrow">Game account connection</p>
+      <h1 id="consent-title">Continue your adventure</h1>
+      <p class="consent-status" data-consent-status role="status">Checking the connection request…</p>
       <div data-consent-details hidden>
-        <p><strong data-consent-client></strong> wants to connect to your account.</p>
-        <p>The game MCP tools can read your profile and saved progress. They cannot change your game.</p>
-        <p>Requested identity permissions: <span data-consent-scopes></span></p>
-        <p>Return address: <span data-consent-redirect></span></p>
-        <button class="account-button account-button-primary" data-consent-approve>Connect account</button>
-        <button class="account-button" data-consent-deny>Cancel</button>
+        <p class="consent-intro"><strong data-consent-client></strong> wants to connect to your game account.</p>
+        <div class="consent-permission">
+          <span class="consent-permission-icon" aria-hidden="true">↗</span>
+          <div><strong>Your adventure, in the conversation</strong><p>The game MCP tools can read your profile and saved progress. They cannot change your game.</p></div>
+        </div>
+        <details class="consent-technical">
+          <summary>Connection details</summary>
+          <dl><dt>Identity permissions</dt><dd data-consent-scopes></dd><dt>Return address</dt><dd data-consent-redirect></dd></dl>
+        </details>
+        <div class="consent-actions">
+          <button class="account-button consent-cancel" type="button" data-consent-deny>Cancel</button>
+          <button class="account-button auth-submit" type="button" data-consent-approve>Connect account <span aria-hidden="true">→</span></button>
+        </div>
+        <button class="consent-switch" type="button" data-consent-switch>Use another account</button>
       </div>
+      <div class="consent-recovery" data-consent-recovery hidden>
+        <p>Try again, or restart the connection from your application if this request has expired.</p>
+        <button class="account-button consent-cancel" type="button" data-consent-retry>Try again</button>
+      </div>
+      <p class="consent-footnote">You choose what connects to your adventure.</p>
     </section>
   </main>
   <script src="/src/js/config/app-config.js"></script>
   <script src="/src/js/auth/auth.js"></script>
   <script type="module" src="/src/js/auth/oauth-consent.js"></script>
+  <script type="module" src="/src/js/ui-sounds.js"></script>
 </body>
 </html>

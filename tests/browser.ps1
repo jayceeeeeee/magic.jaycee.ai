@@ -18,6 +18,7 @@ $prelude += Read-BrowserSource 'tests/referrals.test.mjs'
 $prelude += Read-BrowserSource 'tests/invite-password.test.mjs'
 $prelude += Read-BrowserSource 'tests/app-config.test.mjs'
 $prelude += Read-BrowserSource 'tests/oauth-consent.test.mjs'
+$prelude += Read-BrowserSource 'tests/auth-flow.test.mjs'
 $authSource = ConvertTo-Json -InputObject ([string](Get-Content 'src/js/auth/auth.js' -Raw -Encoding UTF8)) -Compress
 $checks = ''
 foreach ($path in @('tests/notifications.test.mjs', 'tests/level-two-quest.test.mjs', 'tests/level-three-quest.test.mjs', 'tests/level-four.test.mjs')) {
@@ -39,6 +40,7 @@ core.drawJaycee(coreCanvas,core.createJayceeState());assert(coreCanvas.width>0,'
 await runQuestLockAuthTests(AUTH_SOURCE);
 await runAppConfigTests({configSource:syntaxSources.find(file=>file.name==='app-config.js').source,authSource:AUTH_SOURCE});
 await runOAuthConsentTests(syntaxSources.find(file=>file.name==='oauth-consent.js').source);
+await runAuthFlowTests({authSource:AUTH_SOURCE,pageSource:syntaxSources.find(file=>file.name==='page.js').source,indexSource:syntaxSources.find(file=>file.name==='index.js').source,loreSource:syntaxSources.find(file=>file.name==='lore.js').source,prayerSource:syntaxSources.find(file=>file.name==='prayer.js').source});
 await runInvitePasswordTests(syntaxSources.find(file=>file.name==='invite.js').source);
 await runReferralTests({referralSource:syntaxSources.find(file=>file.name==='referral.js').source,authSource:AUTH_SOURCE,dataSource:syntaxSources.find(file=>file.name==='data.js').source});
 await runMenuSoundTests({indexSource:syntaxSources.find(file=>file.name==='index.js').source,loreSource:syntaxSources.find(file=>file.name==='lore.js').source,uiSource:syntaxSources.find(file=>file.name==='ui-sounds.js').source,audioSource:syntaxSources.find(file=>file.name==='sounds.js').source});

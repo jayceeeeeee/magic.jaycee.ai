@@ -98,6 +98,14 @@ client registration enabled. For a shared preview, set the **dev project's** Sit
 URL and allowed redirects to that preview's HTTPS origin. Keep its frontend on
 the development database.
 
+The consent login keeps its `authorization_id` through signup, including the lore
+and prayer steps. After the prayer, signup returns directly to consent. Email
+confirmation links return to `/login.html?redirect=...`; configure the Auth redirect
+allow list to accept this URL with its query string on each frontend origin
+(for local development, `http://localhost:3000/**`). The confirmation page resumes
+consent once the session is available, including confirmation in another tab.
+An expired authorization request must be restarted from the connecting application.
+
 ## Verify and deploy
 
 ```powershell

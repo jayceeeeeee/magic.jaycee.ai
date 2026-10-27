@@ -123,7 +123,7 @@
         }
     }
 
-    function initAuthPage() {
+    async function initAuthPage() {
         const params = new URLSearchParams(window.location.search);
         const form = document.querySelector("[data-auth-form]");
         let mode = form?.dataset.authMode || (params.get("mode") === "signup" ? "signup" : "login");
@@ -134,16 +134,45 @@
         const password = form?.elements.password;
         const fullName = form?.elements.full_name;
         const signupFields = [...document.querySelectorAll("[data-auth-signup-field]")];
-        const redirectPath = params.get("redirect");
+        const redirectPath = window.JayceeAuth?.getReturnPath();
+        const isConnection = window.JayceeAuth?.isConnectionReturn(redirectPath);
         const fullNameParam = String(params.get("full_name") || params.get("username") || "").trim();
 
         if (!form || !title || !submit || !status || !switcher || !password || !fullName || !window.JayceeAuth) {
             return;
         }
 
+        const onboardingUrl = window.JayceeAuth.withAuthRedirect("/");
+        const pendingKey = `jaycee:confirmation:${redirectPath}`;
+        let awaitingConfirmation = false;
+        try {
+            const startedAt = Number(window.sessionStorage.getItem(pendingKey));
+            awaitingConfirmation = Boolean(isConnection && mode === "signup" && startedAt > 0
+                && Date.now() - startedAt < 24 * 60 * 60 * 1000);
+        } catch { /* The email return URL works without browser storage. */ }
+        function clearPendingConfirmation() {
+            try { window.sessionStorage.removeItem(pendingKey); } catch {}
+        }
+        let navigating = false;
+        async function resumeConnection() {
+            if (!isConnection || navigating) return false;
+            try {
+                const { data, error } = await window.JayceeAuth.getSession();
+                if (error || !data?.session) return false;
+                navigating = true;
+                clearPendingConfirmation();
+                window.location.replace(window.JayceeAuth.getAfterSignInUrl(redirectPath));
+                return true;
+            } catch {
+                return false;
+            }
+        }
+        // Also handles the email confirmation link opening in a new tab.
+        if (await resumeConnection()) return;
+
         function guardSignup() {
-            if (mode === "signup" && !window.JayceeAuth.canAccessSignup()) {
-                window.location.replace("/");
+            if (mode === "signup" && !awaitingConfirmation && !window.JayceeAuth.canAccessSignup()) {
+                window.location.replace(onboardingUrl);
                 return false;
             }
             return true;
@@ -152,16 +181,26 @@
         if (!guardSignup()) return;
         const signupGate = document.querySelector("[data-signup-gate]");
         if (signupGate) signupGate.hidden = false;
-        window.addEventListener("pageshow", guardSignup);
+        window.addEventListener("pageshow", async () => {
+            if (!await resumeConnection()) guardSignup();
+        });
 
         if (fullNameParam) {
             fullName.value = fullNameParam;
+        } else if (mode === "signup") {
+            try { fullName.value = window.localStorage.getItem("player_full_name") || ""; } catch {}
+        }
+
+        const context = document.querySelector("[data-auth-context]");
+        if (context && isConnection) {
+            context.hidden = false;
+            context.textContent = "Connect your game account · Sign in or create an account, then review the connection.";
         }
 
         function createAuthHref(path, nextMode) {
             const nextParams = new URLSearchParams();
 
-            if (redirectPath?.startsWith("/") && !redirectPath.startsWith("//")) {
+            if (redirectPath) {
                 nextParams.set("redirect", redirectPath);
             }
             if (nextMode === "signup" && fullName.value.trim()) {
@@ -192,8 +231,28 @@
             switcher.hidden = false;
             switcher.innerHTML = isSignup
                 ? `Already have an account? <a href="${createAuthHref("/login.html", "login")}" data-auth-mode="login">Log in</a>`
-                : 'No account yet? <a href="/">Sign up</a>';
+                : `No account yet? <a href="${createAuthHref("/signup.html", "signup")}">Sign up</a>`;
             status.textContent = "";
+        }
+
+        async function showConfirmation() {
+            awaitingConfirmation = true;
+            form.hidden = true;
+            password.value = "";
+            status.textContent = isConnection
+                ? "Check your email to confirm your account. The confirmation link will bring you back to connect your game account."
+                : "Check your email to confirm your account, then log in.";
+            if (!isConnection) return;
+            try { window.sessionStorage.setItem(pendingKey, String(Date.now())); } catch {}
+            try {
+                const client = await window.JayceeAuth.getSupabaseClient();
+                client.auth.onAuthStateChange((event) => {
+                    if (event === "SIGNED_IN") window.setTimeout(() => { void resumeConnection(); }, 0);
+                });
+                void resumeConnection();
+            } catch {
+                // The confirmation link can still resume in its own tab.
+            }
         }
 
         switcher.addEventListener("click", (event) => {
@@ -208,6 +267,7 @@
                 return;
             }
             event.preventDefault();
+            if (awaitingConfirmation) return;
             mode = link.dataset.authMode === "signup" ? "signup" : "login";
             const nextParams = new URLSearchParams(window.location.search);
 
@@ -224,6 +284,7 @@
 
         form.addEventListener("submit", async (event) => {
             event.preventDefault();
+            if (awaitingConfirmation) return;
             if (!guardSignup()) return;
             if (submit.disabled) return;
             status.textContent = "";
@@ -239,6 +300,7 @@
             try {
                 result = mode === "signup"
                     ? await window.JayceeAuth.signUp(email, passwordValue, {
+                        emailRedirectTo: new URL(createAuthHref("/login.html", "login"), window.location.origin).href,
                         data: {
                             full_name: fullNameValue || birthProfile?.fullName || "",
                             birth_profile: birthProfile,
@@ -254,7 +316,7 @@
 
             if (result.error) {
                 if (result.error.code === "prayer_required") {
-                    window.location.replace("/");
+                    window.location.replace(onboardingUrl);
                     return;
                 }
                 if (mode === "signup" && isExistingAccountError(result.error)) {
@@ -272,19 +334,25 @@
             }
 
             if (mode === "signup" && !result.data.session) {
-                status.textContent = "Check your email to confirm your account.";
+                await showConfirmation();
                 return;
             }
 
             status.textContent = "You are logged in.";
+            clearPendingConfirmation();
             window.JayceeAuth.refreshHeader();
             await window.JayceeUI?.waitForSound();
-            window.location.href = redirectPath?.startsWith("/") && !redirectPath.startsWith("//")
+            window.location.href = redirectPath
                 ? window.JayceeAuth.getAfterSignInUrl(redirectPath)
                 : window.JayceeAuth.getAfterSignInUrl();
         });
 
         renderMode();
+        if (awaitingConfirmation) await showConfirmation();
+        const callbackParams = new URLSearchParams(window.location.hash.slice(1));
+        if (callbackParams.has("error_description")) {
+            status.textContent = callbackParams.get("error_description");
+        }
         if (mode === "signup") {
             renderSignupAdminConsole();
         }

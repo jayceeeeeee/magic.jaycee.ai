@@ -6,18 +6,18 @@ export const runOAuthConsentTests = async (source) => {
       if (!nodes.has(selector)) nodes.set(selector, { hidden: true, textContent: '', disabled: false, addEventListener(_type, callback) { this.click = callback; } });
       return nodes.get(selector);
     } };
-    let approved = 0, denied = 0, redirected;
+    let approved = 0, denied = 0, redirected, signedOut = 0, reloaded = 0;
     const details = { authorization_id: 'request', client: { name: '<img src=x onerror=alert(1)>' }, scope: 'profile', redirect_uri: 'https://chatgpt.com/callback' };
-    const client = { auth: { getUser: async () => ({ data: { user: signedIn ? { email: 'test@example.test' } : null }, error: null }), oauth: {
+    const client = { auth: { signOut: async (options) => { assert(options.scope === 'local', 'Account switching must use local sign out'); signedOut++; return { error: null }; }, getUser: async () => ({ data: { user: signedIn ? { email: 'test@example.test' } : null }, error: null }), oauth: {
       getAuthorizationDetails: async () => ({ data: previouslyApproved ? { redirect_url: callback } : details, error: responseError }),
       approveAuthorization: async (_id, options) => { approved++; assert(options.skipBrowserRedirect, 'SDK redirect must be disabled for validation'); return { data: { redirect_url: callback }, error: null }; },
       denyAuthorization: async () => { denied++; return { data: { redirect_url: callback }, error: null }; }
     } } };
-    const win = { location: { search: '?authorization_id=request', replace(url) { redirected = url; }, assign(url) { redirected = url; } }, JayceeAuth: { getSupabaseClient: async () => client } };
+    const win = { location: { search: '?authorization_id=request', reload() { reloaded++; }, replace(url) { redirected = url; }, assign(url) { redirected = url; } }, JayceeAuth: { getSupabaseClient: async () => client } };
     // Extract the initializer without running the page's automatic entrypoint.
     const initializer = source.slice(0, source.lastIndexOf('if (document.querySelector'));
     const init = new Function(initializer + '\nreturn initOAuthConsent;')();
-    return { init: () => init({ win, doc }), win, nodes, approved: () => approved, denied: () => denied, redirect: () => redirected };
+    return { init: () => init({ win, doc }), win, nodes, approved: () => approved, denied: () => denied, redirect: () => redirected, signedOut: () => signedOut, reloaded: () => reloaded };
   };
   const flush = async () => { await new Promise(resolve => setTimeout(resolve, 0)); };
   const anonymous = createContext({ signedIn: false });
@@ -27,6 +27,7 @@ export const runOAuthConsentTests = async (source) => {
   const owner = createContext(); await owner.init();
   assert(owner.approved() === 0 && owner.denied() === 0 && !owner.nodes.get('[data-consent-details]').hidden, 'Consent must require a user decision');
   assert(owner.nodes.get('[data-consent-client]').textContent.startsWith('<img'), 'Client name must be assigned as text');
+  owner.nodes.get('[data-consent-approve]').click(); await flush();
   owner.nodes.get('[data-consent-approve]').click(); await flush();
   assert(owner.approved() === 1 && owner.redirect() === 'https://chatgpt.com/callback?code=test', 'Explicit approval failed');
   const denied = createContext(); await denied.init(); denied.nodes.get('[data-consent-deny]').click(); await flush();
@@ -40,4 +41,12 @@ export const runOAuthConsentTests = async (source) => {
   assert(!previous.redirect(), 'Previous approval must wait for Continue');
   previous.nodes.get('[data-consent-approve]').click();
   assert(previous.redirect() === 'https://chatgpt.com/callback?code=test' && previous.approved() === 0, 'Previously approved connections cannot resume');
+  const accountSwitch = createContext(); await accountSwitch.init();
+  accountSwitch.nodes.get('[data-consent-switch]').click(); await flush();
+  const switchedLogin = new URL(accountSwitch.redirect(), 'https://dev.example.test');
+  assert(accountSwitch.signedOut() === 1 && switchedLogin.searchParams.get('redirect') === '/oauth-consent.html?authorization_id=request', 'Account switching lost the request');
+  const expired = createContext({ responseError: { message: 'Authorization request expired' } }); await expired.init();
+  assert(!expired.nodes.get('[data-consent-recovery]').hidden && expired.nodes.get('[data-consent-details]').hidden, 'Expired requests need a recovery state');
+  expired.nodes.get('[data-consent-retry]').click();
+  assert(expired.reloaded() === 1, 'Retry did not reload the request');
 };

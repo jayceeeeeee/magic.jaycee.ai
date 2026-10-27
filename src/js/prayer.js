@@ -133,7 +133,9 @@
                 created_at: new Date().toISOString(),
             }));
             await window.JayceeUI?.waitForSound();
-            (isEmbedded ? window.top : window).location.href = window.JayceeReferral?.withReferral("/game.html") || "/game.html";
+            const destination = window.JayceeAuth?.isConnectionReturn?.()
+                ? window.JayceeAuth.withAuthRedirect("/signup.html") : "/game.html";
+            (isEmbedded ? window.top : window).location.href = window.JayceeReferral?.withReferral(destination) || destination;
         } catch (error) {
             console.error("Jaycee prayer could not be saved", error);
             setStatus(error?.message || "Prayer could not be sent.", "error");

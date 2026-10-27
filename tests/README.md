@@ -19,6 +19,7 @@ connecte pas à Supabase et n'a pas besoin de Node ni d'un serveur HTTP.
 | `quest-lock-auth.test.mjs` | Connexion, déconnexion et échéances d'accès |
 | `app-config.test.mjs` | Choix de la base par hostname, configuration absente, credentials transmis au client |
 | `oauth-consent.test.mjs` | Retour apres login, consentement explicite, refus et validation de la destination OAuth |
+| `auth-flow.test.mjs` | Conservation de la demande MCP pendant login, inscription, lore, prière et confirmation email ; reprise après rechargement et rejet des redirections externes |
 | `invite-password.test.mjs` | Invitation Supabase, reprise après rechargement, confirmation du mot de passe, erreurs Auth, changement de session et sortie |
 | `referrals.test.mjs` | Capture et transport d'invitation, métadonnées signup, stockage bloqué, recherche publique et compatibilité avant migration |
 | `menu-sounds.test.mjs` | Destination de Play selon la session, attente de fin du son pour Play/Continue/liens, audio refusé ou bloqué et contrôles désactivés |

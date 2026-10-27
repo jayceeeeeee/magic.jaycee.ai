@@ -16,6 +16,11 @@
         } catch (error) {
             console.warn("Main menu session could not be checked", error);
         }
+        if (window.JayceeAuth?.isConnectionReturn?.()) {
+            destination = destination === "/game.html"
+                ? window.JayceeAuth.getReturnPath()
+                : window.JayceeAuth.withAuthRedirect(destination);
+        }
         await Promise.all([launchTransition, window.JayceeUI?.waitForSound()]);
         window.location.href = window.JayceeReferral?.withReferral(destination) || destination;
     });

@@ -119,12 +119,37 @@
         return new URL(path, window.location.origin).href;
     }
 
-    function getAfterSignInUrl(path = defaultAfterSignInPath) {
+    // Resolve before checking the origin: browsers normalize backslashes and dot segments.
+    function getReturnPath(value = new URLSearchParams(window.location.search).get("redirect")) {
+        if (typeof value !== "string" || !value.startsWith("/") || /[\\\u0000-\u001f\u007f]/.test(value)) return "";
+        try {
+            const url = new URL(value, window.location.origin);
+            return url.origin === window.location.origin ? `${url.pathname}${url.search}${url.hash}` : "";
+        } catch {
+            return "";
+        }
+    }
+
+    function withAuthRedirect(path) {
+        const returnPath = getReturnPath();
+        if (!returnPath) return path;
+        const url = new URL(path, window.location.origin);
+        url.searchParams.set("redirect", returnPath);
+        return `${url.pathname}${url.search}${url.hash}`;
+    }
+
+    function isConnectionReturn(path = getReturnPath()) {
+        if (!path) return false;
+        const url = new URL(path, window.location.origin);
+        return url.pathname === "/oauth-consent.html" && Boolean(url.searchParams.get("authorization_id"));
+    }
+
+    function getAfterSignInUrl(path = getReturnPath() || defaultAfterSignInPath) {
         return getCurrentUrl(path);
     }
 
     function getLoginUrl(path = defaultLoginPath) {
-        return getCurrentUrl(path);
+        return getCurrentUrl(withAuthRedirect(path));
     }
 
     function getAuthUrl(mode = "login", path = mode === "signup" ? defaultSignupPath : defaultLoginPath) {
@@ -278,6 +303,12 @@
     }
 
     async function init() {
+        if (isConnectionReturn()) {
+            document.querySelectorAll("[data-connection-context]").forEach((notice) => { notice.hidden = false; });
+            document.querySelectorAll('a[href="/login.html"], a[href="/signup.html"]').forEach((link) => {
+                link.setAttribute("href", withAuthRedirect(link.getAttribute("href")));
+            });
+        }
         const client = await getSupabaseClient();
         try {
             await checkAccountAccess();
@@ -317,12 +348,15 @@
         getAccountUrl,
         getAuthUrl,
         getLoginUrl,
+        getReturnPath,
         getSession,
+        isConnectionReturn,
         refreshHeader,
         signIn,
         signOut,
         signOutLockedAccount,
         signUp,
+        withAuthRedirect,
     };
 
     if (document.readyState === "loading") {

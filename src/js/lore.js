@@ -16,7 +16,8 @@
             new Promise((resolve) => window.setTimeout(resolve, 220)),
             window.JayceeUI?.waitForSound()
         ]);
-        window.location.href = window.JayceeReferral?.withReferral("/prayer.html") || "/prayer.html";
+        const destination = window.JayceeAuth?.withAuthRedirect?.("/prayer.html") || "/prayer.html";
+        window.location.href = window.JayceeReferral?.withReferral(destination) || destination;
     }
 
     form?.addEventListener("submit", (event) => {
