@@ -41,11 +41,11 @@ export async function initOAuthConsent({ win = window, doc = document } = {}) {
                 && ["localhost", "127.0.0.1", "[::1]"].includes(redirect.hostname))) {
                 throw new Error("The authorization server returned an unexpected return address.");
             }
-            doc.querySelector("[data-consent-client]").textContent = "Your previously approved application";
-            doc.querySelector("[data-consent-scopes]").textContent = "Previously approved permissions";
+            doc.querySelector("[data-consent-client]").textContent = "Your application";
+            doc.querySelector("[data-consent-scopes]").textContent = "Same permissions as your previous connection";
             doc.querySelector("[data-consent-redirect]").textContent = redirect.origin + redirect.pathname;
-            status.textContent = `Signed in as ${user.email || "your game account"}. You already approved this connection.`;
-            approve.textContent = "Continue";
+            status.textContent = `Signed in as ${user.email || "your game account"}. Ready to reconnect. Continue to finish connecting your account.`;
+            approve.textContent = "Reconnect account";
             details.hidden = false;
             approve.addEventListener("click", () => win.location.assign(redirect.href));
             deny.addEventListener("click", () => win.location.assign("/"));
