@@ -29,35 +29,56 @@ The development version exposes nine authenticated, read-only tools:
   connected user's participations, with the same signed image fields on each Master.
 - `get_my_records`: own practice completions, prayers or notification receipts,
   in pages of 50 with `kind` and `offset`.
-- `get_game_config`: game constants, explicit practice targets, cycle labels and
-  Manna rules/formulas from the shared calculation module. It returns the same
-  configuration as the config resource and links to the three knowledge resources,
-  so clients without resource browsing can still read the rules.
+- `get_game_rules`: the complete, immutable `GAME_RULES` catalog, without player
+  data or calculations. Identical to `magicdev://game/rules`.
 
-The server also exposes three authenticated JSON knowledge resources:
+`get_game_rules` replaces the removed `get_game_config` tool. Refresh tool
+discovery in existing clients after deployment.
+
+The server exposes two resources: the authoritative JSON rules and the MCP Apps
+image viewer. The three legacy knowledge views have been removed.
 
 | URI | Content |
 | --- | --- |
-| `game://config` | Complete game constants, cycles, ratios and derived practice targets |
-| `game://rules/manna` | Mathematical variables, formulas, per-skill models and balance behavior |
-| `game://examples/manna` | Synthetic worked examples for active skills, annual balance and calendar months |
+| `magicdev://game/rules` | Complete versioned `GAME_RULES`, including documented equations and conventions |
+| `ui://magic/profile-image-v1.html` | MCP Apps interface for showing profile images |
 
-`mcp/game-resources.ts` builds these representations directly from the game modules.
-Examples execute the actual calculation engine; they contain no connected user's data.
+`supabase/functions/game-mcp/mcp-resources.ts` builds these representations from
+the authoritative `game-rules.ts` in the same directory.
+Worked examples are kept only in `mcp/tests/manna_examples_test.ts` as regression
+fixtures, not shipped by the server.
 The resources explain the rules; tools execute personal calculations with the user's
 records. No prompts or packaged plugin skills are registered yet.
 
 Manna is computed from saved profile/progress fields and elapsed time; it is not
-a stored wallet balance. `src/js/config/manna.js` implements the same calculation
-for the browser bar and MCP, using constants from `src/js/config/game-config.js`.
+a stored wallet balance. `supabase/functions/game-mcp/manna.js` is the one maintained
+calculation engine. All game consumers use `GAME_RULES` directly; there is no
+`game-config.js` adapter, legacy configuration resource or `get_game_config` tool.
+The browser files in `src/js/config/` are generated from these canonical sources.
 The annual view includes completion history; an active bar includes only its own
 current cycle. Months use the calendar month at the view's start, while the Moon
 skill's passive cycle is a fixed duration. These tools only read the connected
-user's private records and the public Master definitions. The function imports the
-canonical modules directly from `src/js/config/`; there are no generated config or
-math copies inside the Edge Function directory and no copy/build step.
-Changes to those shared modules still require redeploying the MCP to update its
-running version. Resources are served by the MCP, not a separate remote code store.
+user's private records and the public Master definitions. All Edge implementation
+files are now at the function root; no import reaches into frontend or `mcp/` files.
+Changing local sources still requires redeploying the MCP to update its running
+version. Resources are served by the MCP, not a separate remote code store.
+
+## Editing rules and synchronizing the website
+
+Edit **only** `supabase/functions/game-mcp/game-rules.ts` for constants and rule
+documentation, and `manna.js` there for engine changes. Do not edit generated
+`src/js/config/game-rules.js` or `manna.js` manually.
+
+```powershell
+.tools/deno.exe run --allow-read --allow-write=src/js/config scripts/sync-game.ts
+.tools/deno.exe run --allow-read scripts/sync-game.ts --check
+```
+
+The generator copies the JavaScript-compatible TypeScript rules (removing its
+single const assertion) and engine, rewriting only local rules imports. Commit
+the artifacts for the existing static host. The development server, frontend
+audit, browser suite and MCP checks reject stale artifacts. No runtime fetch of
+rules, additional service or frontend access to Supabase source files is needed.
 
 Development endpoint:
 
@@ -124,7 +145,8 @@ An expired authorization request must be restarted from the connecting applicati
 
 ```powershell
 .tools/deno.exe check --config mcp/deno.json supabase/functions/game-mcp/index.ts
-.tools/deno.exe test --config mcp/deno.json --allow-env mcp/tests/
+.tools/deno.exe test --config mcp/deno.json --allow-env --allow-read mcp/tests/
+.tools/deno.exe run --allow-read scripts/check-frontend.ts
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/browser.ps1
 ```
 
@@ -136,11 +158,20 @@ tools and resources, deterministic examples and absence of private data in rules
 Browser tests also cover login return paths and explicit consent/denial.
 
 Both Deno import maps pin package versions; commit their lockfiles when updating
-dependencies. Deploy from the repository so the bundler can resolve the entire
-import graph: `supabase/functions/game-mcp/`, `mcp/game-resources.ts` and the two
-canonical modules in `src/js/config/`. Uploading only the function directory is
-no longer sufficient. The deployment bundle includes those imports automatically;
-do not recreate copies of the config files in the Edge Function folder.
+dependencies. Deploy `supabase/functions/game-mcp/` with all implementation files
+at its root (`index.ts`, `server.ts`, `mcp-tools.ts`, `mcp-resources.ts`,
+`resource-profile-image.ts`, `game-rules.ts`, `manna.js`, `deno.json`). No external local
+dependencies or parent-directory paths are required in the deployment.
+
+File responsibilities are explicit:
+
+- `server.ts`: HTTP transport, OAuth authentication and request-scoped registration.
+- `mcp-tools.ts`: all `registerTool` calls and their handlers.
+- `mcp-resources.ts`: all `registerResource` calls and resource readers.
+- `resource-profile-image.ts`: HTML/UI content for the image resource.
+- `game-rules.ts`: authoritative data catalog, independent of MCP registration.
+- `manna.js`: deterministic calculations used by tools and the browser.
+
 The gateway JWT check is disabled for this function so OAuth discovery and custom
 401 challenges can work; the function itself authenticates every MCP request.
 

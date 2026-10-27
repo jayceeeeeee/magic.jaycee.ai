@@ -1,4 +1,4 @@
-import { JAYCEE_GAME_SKILL_COLUMNS } from "./game-config.js";
+import { GAME_RULES } from "./game-rules.js";
 
 export const JAYCEE_GAME_TABLE = "game";
 export const JAYCEE_PLAYER_TABLE = "player";
@@ -27,7 +27,7 @@ const PROFILE_SELECT_COLUMNS = [
   "referrer_id",
   "locked"
 ].join(", ");
-const GAME_SELECT_COLUMNS = ["id", "user_id", ...JAYCEE_GAME_SKILL_COLUMNS].join(", ");
+const GAME_SELECT_COLUMNS = ["id", "user_id", ...GAME_RULES.skills.map((skill) => skill.skillColumn)].join(", ");
 const SIGNED_IMAGE_URL_DURATION_SECONDS = 60 * 60;
 const PLAYER_SELECT_COLUMNS = "id, user_id, master, level, level_2_accepted_at, level_3_accepted_at, skill_1_practice, skill_2_practice, skill_3_practice, skill_1_start, skill_2_start, skill_3_start";
 

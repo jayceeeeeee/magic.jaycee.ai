@@ -14,7 +14,7 @@ La configuration publique des connexions est dans `src/js/config/app-config.js` 
 | Emplacement | Rôle |
 | --- | --- |
 | `*.html` | Pages publiques ; `account.html` redirige vers le panneau du jeu |
-| `src/js/config/game-config.js` | Durées des cycles et configuration du jeu |
+| `supabase/functions/game-mcp/game-rules.ts` | Règles officielles ; version navigateur générée dans `src/js/config/game-rules.js` |
 | `src/js/config/data.js` | Lectures/écritures et appels aux fonctions Supabase |
 | `src/js/auth/` | Connexion, inscription, définition du mot de passe après invitation Supabase et contrôle d'accès au compte |
 | `src/js/referral.js` | Liens d'invitation et transport du paramètre `ref` jusqu'au signup |

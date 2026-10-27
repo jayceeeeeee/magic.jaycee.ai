@@ -41,7 +41,7 @@ export const runReferralTests = async ({ referralSource, authSource, dataSource 
   assert(submitted.email === 'direct@example.test' && !submitted.options.data.full_name,
     'Email-only signup must reach Supabase without a prayer or name');
 
-  const data = new Function('JAYCEE_GAME_SKILL_COLUMNS', dataSource + '\nreturn {fetchProfileByUserId,fetchPublicProfiles};')([]);
+  const data = new Function('GAME_RULES', dataSource + '\nreturn {fetchProfileByUserId,fetchPublicProfiles};')({skills:[]});
   const selections = [];
   const legacyClient = { from() { return { select(columns) { selections.push(columns); return {
     eq() { return { maybeSingle: async () => columns.includes('referrer_id')

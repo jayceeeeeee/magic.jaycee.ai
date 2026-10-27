@@ -1,4 +1,6 @@
 // Verify local references and module reachability without contacting Supabase.
+import { syncGame } from "./sync-game.ts";
+await syncGame(true);
 const root = new URL("../", import.meta.url);
 const modules = new Set<string>();
 const visited = new Set<string>();

@@ -2,11 +2,8 @@ import {
   createHandler,
   DEV_PROJECT_URL,
 } from "../../supabase/functions/game-mcp/server.ts";
-import {
-  JAYCEE_GAME_CONFIG as BROWSER_GAME_CONFIG,
-  JAYCEE_GAME_CYCLE_LABELS as BROWSER_CYCLE_LABELS,
-  JAYCEE_GAME_SKILL_COLUMNS as BROWSER_SKILL_COLUMNS,
-} from "../../src/js/config/game-config.js";
+import { GAME_RULES } from "../../supabase/functions/game-mcp/game-rules.ts";
+import { GAME_RULES as BROWSER_RULES } from "../../src/js/config/game-rules.js";
 
 const assert = (condition: unknown, message: string) => {
   if (!condition) throw new Error(message);
@@ -306,19 +303,10 @@ Deno.test("read tools expose own data and public rules using user credentials", 
       if (expected) assert(Object.values(data.records[0]).includes(expected), "Wrong record");
       else assert(data.records.length === 0, "Expected empty prayers");
     }
-    const config = await handler(request(access, "tools/call", { name: "get_game_config", arguments: {} }));
-    const rules = JSON.parse((await config.json()).result.content[0].text);
-    assert(JSON.stringify(rules.game_config) === JSON.stringify(BROWSER_GAME_CONFIG), "MCP game config diverged from browser");
-    assert(JSON.stringify(rules.skill_columns) === JSON.stringify(BROWSER_SKILL_COLUMNS), "MCP skill columns diverged");
-    assert(JSON.stringify(rules.cycle_labels) === JSON.stringify(BROWSER_CYCLE_LABELS), "MCP cycle labels diverged");
-    assert(
-      rules.practice_goal_targets.map((target: { target_display: string }) => target.target_display).join(",") ===
-        "4 h 48 min,12 min,30 s" &&
-        Math.abs(rules.practice_goal_targets[1].target_seconds - 720) < 1e-9 &&
-        Math.abs(rules.practice_goal_targets[2].target_seconds - 30) < 1e-9 &&
-        rules.practice_goal_rule.includes("product(activeAbilities[0..i].ratio)"),
-      "Practice targets should be derived from game config and explain their rule",
-    );
+    assert(!tools.some((tool: { name: string }) => tool.name === "get_game_config"), "Obsolete config tool must not be advertised");
+    const rulesResponse = await handler(request(access, "tools/call", { name: "get_game_rules", arguments: {} }));
+    const rules = JSON.parse((await rulesResponse.json()).result.content[0].text);
+    assert(JSON.stringify(rules) === JSON.stringify(BROWSER_RULES), "Official rules must match the browser");
     const progress = await handler(
       request(access, "tools/call", { name: "get_my_progress", arguments: {} }),
     );
@@ -392,13 +380,15 @@ Deno.test("unavailable images do not prevent reading the profile", async () => {
     globalThis.fetch = originalFetch;
   }
 });
-Deno.test("authenticated knowledge resources match the config tool and keep private data out", async () => {
+Deno.test("authenticated knowledge resources match official rules and keep private data out", async () => {
   installMock();
   try {
     const access = await token();
     const listing = await handler(request(access, "resources/list"));
     const listed = (await listing.json()).result.resources;
-    for (const uri of ["game://config", "game://rules/manna", "game://examples/manna"]) {
+    assert(listed.length === 2 && listed.some((resource: { uri: string }) => resource.uri === "ui://magic/profile-image-v1.html"),
+      "Only official rules and the image viewer should be advertised");
+    for (const uri of ["magicdev://game/rules"]) {
       assert(listed.some((resource: { uri: string; mimeType: string }) => resource.uri === uri && resource.mimeType === "application/json"),
         `Missing knowledge resource ${uri}`);
       const anonymous = await handler(request(undefined, "resources/read", { uri }));
@@ -409,21 +399,16 @@ Deno.test("authenticated knowledge resources match the config tool and keep priv
       assert(content.uri === uri && content.mimeType === "application/json", "Incorrect resource representation");
       const data = JSON.parse(content.text);
       assert(!content.text.includes('"owner"') && !content.text.includes("owner@example"), "Knowledge resource leaked connected user data");
-      if (uri === "game://config") {
-        const tool = await handler(request(access, "tools/call", { name: "get_game_config", arguments: {} }));
-        const result = (await tool.json()).result;
-        assert(JSON.stringify(data) === JSON.stringify(JSON.parse(result.content[0].text)), "Config tool and resource diverged");
-        assert(result.content.filter((part: { type: string }) => part.type === "resource_link").length === 3,
-          "Config tool must make all three knowledge resources discoverable");
-      } else if (uri === "game://rules/manna") {
-        assert(data.formulas.active_balance === "active_gain + active_loss" && data.behavior.length > 0,
-          "Math resource omitted the formulas or their behavior");
-      } else {
-        assert(data.synthetic && data.active_cycles.length === 3, "Examples must be synthetic and cover every active skill");
-      }
+      const tool = await handler(request(access, "tools/call", { name: "get_game_rules", arguments: {} }));
+      const result = (await tool.json()).result;
+      assert(JSON.stringify(data) === JSON.stringify(GAME_RULES) &&
+        JSON.stringify(data) === JSON.stringify(JSON.parse(result.content[0].text)), "Official Resource, Tool and rules must be identical");
+      assert(Object.keys(result).join() === "content", "Rules tool must return only immutable rules");
     }
-    const missing = await handler(request(access, "resources/read", { uri: "game://unknown" }));
-    assert((await missing.json()).error, "Unknown resource must fail instead of resolving arbitrary content");
+    for (const uri of ["game://config", "game://rules/manna", "game://examples/manna", "game://unknown"]) {
+      const removed = await handler(request(access, "resources/read", { uri }));
+      assert((await removed.json()).error, "Removed or unknown resources must not resolve");
+    }
   } finally {
     globalThis.fetch = originalFetch;
   }

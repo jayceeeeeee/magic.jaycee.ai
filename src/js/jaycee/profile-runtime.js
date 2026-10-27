@@ -1,12 +1,9 @@
+import { GAME_RULES } from "../config/game-rules.js";
 import { renderSkillMarkdown } from "./markdown.js";
 import { PracticeTimer } from "./practice-timer.js";
 import { SoundEffects } from "./sounds.js";
 import { getMannaModel, normalizeMannaUnit } from "../config/manna.js";
 import { NotificationStore, interpolateNotification, isNotificationVisible, notificationOccurrence, isQuestPending } from "./notifications.js";
-import {
-  JAYCEE_GAME_CONFIG,
-  JAYCEE_GAME_SKILL_COLUMNS
-} from "../config/game-config.js";
 import {
   acceptQuest,
   switchMaster,
@@ -26,7 +23,7 @@ import {
 } from "../config/data.js";
 
 const ACTIVE_RING_LIMIT = 3;
-const YEAR_SECONDS = JAYCEE_GAME_CONFIG.passive.cycleSeconds;
+const YEAR_SECONDS = GAME_RULES.skills[0].cycleSeconds;
 
 const getSignupUrl = () => {
   return new URL("/signup.html", window.location.origin);
@@ -159,24 +156,17 @@ const getSkillById = (skills, skillId) => (
 );
 
 const getPassiveSkillModel = ({ gameForm, skillForms, hasLinkedMaster = false }) => ({
-  cycleSeconds: JAYCEE_GAME_CONFIG.passive.cycleSeconds,
-  distanceMeters: JAYCEE_GAME_CONFIG.passive.zoneMeters,
-  label: JAYCEE_GAME_CONFIG.passive.fractalLabel,
-  skill: hasLinkedMaster ? getSkillById(skillForms, gameForm?.[JAYCEE_GAME_CONFIG.passive.skillColumn]) : null
+  cycleSeconds: GAME_RULES.skills[0].cycleSeconds,
+  distanceMeters: GAME_RULES.skills[0].zoneMeters,
+  label: GAME_RULES.skills[0].fractalLabel,
+  skill: hasLinkedMaster ? getSkillById(skillForms, gameForm?.[GAME_RULES.skills[0].skillColumn]) : null
 });
 
 const getActiveSkillModels = ({ gameForm, skillForms }) => {
-  let previousQuestSeconds = Number(JAYCEE_GAME_CONFIG.passive.cycleSeconds);
-  let previousDistanceMeters = Number(JAYCEE_GAME_CONFIG.passive.zoneMeters);
-
-  return JAYCEE_GAME_CONFIG.activeAbilities.map((abilityConfig) => {
+  return GAME_RULES.skills.slice(1, 4).map((abilityConfig) => {
     const skill = getSkillById(skillForms, gameForm?.[abilityConfig.skillColumn]);
-    const ratio = Number(abilityConfig.ratio);
-    const questSeconds = previousQuestSeconds / ratio;
-    const distanceMeters = previousDistanceMeters / ratio;
-
-    previousQuestSeconds = questSeconds;
-    previousDistanceMeters = distanceMeters;
+    const questSeconds = abilityConfig.practiceGoalSeconds;
+    const distanceMeters = abilityConfig.zoneMeters;
 
     return {
       cycleSeconds: questSeconds,
@@ -191,10 +181,10 @@ const getActiveSkillModels = ({ gameForm, skillForms }) => {
 };
 
 const getUltimateModel = ({ gameForm, skillForms }) => {
-  const skill = getSkillById(skillForms, gameForm?.[JAYCEE_GAME_CONFIG.ultimate.skillColumn]);
+  const skill = getSkillById(skillForms, gameForm?.[GAME_RULES.skills[4].skillColumn]);
 
   return {
-    label: JAYCEE_GAME_CONFIG.ultimate.fractalLabel,
+    label: GAME_RULES.skills[4].fractalLabel,
     skillLabel: getDisplayValue(skill?.label),
     skillDescription: typeof skill?.description === "string" ? skill.description : ""
   };
@@ -672,10 +662,8 @@ const getPendingPrayerActiveMs = () => {
 };
 
 const getFirstActiveSkillMs = () => {
-  const firstActiveAbility = JAYCEE_GAME_CONFIG.activeAbilities?.[0];
-  const ratio = Number(firstActiveAbility?.ratio) || 1;
-
-  return (JAYCEE_GAME_CONFIG.passive.cycleSeconds / ratio) * 1000;
+  const firstActiveAbility = GAME_RULES.skills.slice(1, 4)?.[0];
+  return firstActiveAbility.practiceGoalSeconds * 1000;
 };
 
 const formatKarmaYears = (yearsValue) => {
@@ -725,8 +713,8 @@ const createVitalsPanel = ({
   const levelBadge = document.createElement("p");
   const bars = document.createElement("div");
   const profileLabel = document.createElement("h2");
-  const lifeMaxYears = JAYCEE_GAME_CONFIG.lifeMaxYears;
-  const lifeMaxSeconds = JAYCEE_GAME_CONFIG.lifeMaxYears * YEAR_SECONDS;
+  const lifeMaxYears = GAME_RULES.lifeMaxYears;
+  const lifeMaxSeconds = GAME_RULES.lifeMaxYears * YEAR_SECONDS;
   const hasPlayerProfile = Boolean(playerProfile);
   const displayLevel = Math.max(1, Number(totalLevel) || 1);
   const effectivePlayer = player
@@ -795,7 +783,7 @@ const createVitalsPanel = ({
       locked: !(Number(capabilityLevel ?? player?.level) >= 2),
       max: lifeMaxSeconds,
       tone: "health",
-      valueText: `${lifeValueText} / ${JAYCEE_GAME_CONFIG.lifeMaxYears.toLocaleString()}y`
+      valueText: `${lifeValueText} / ${GAME_RULES.lifeMaxYears.toLocaleString()}y`
     }),
     createMannaBar(mannaModel, !(Number(capabilityLevel ?? player?.level) >= 2))
   );
@@ -855,7 +843,7 @@ const createVitalsPanel = ({
       });
       const linkStatus = document.createElement("p");
       const createdAt = Date.parse(playerProfile?.master_selection_started_at || accountCreatedAt);
-      const selectionDurationSeconds = JAYCEE_GAME_CONFIG.activeAbilities[0].cycleSeconds;
+      const selectionDurationSeconds = GAME_RULES.skills.slice(1, 4)[0].cycleSeconds;
       const countdown = createQuestCountdown(createdAt + selectionDurationSeconds * 1000);
 
       if (countdown && !isQuestAcceptance) masterChoices.prepend(countdown);
@@ -937,7 +925,7 @@ const createVitalsPanel = ({
 };
 
 const createGameForm = (settings) => Object.fromEntries(
-  JAYCEE_GAME_SKILL_COLUMNS.map((column) => [column, getDisplayValue(settings?.[column])])
+  GAME_RULES.skills.map((skill) => skill.skillColumn).map((column) => [column, getDisplayValue(settings?.[column])])
 );
 
 
@@ -1249,7 +1237,7 @@ export const initJayceePage = async () => {
     }
     activeMasterGame = masterGame || await fetchUserGameSettings(supabaseClient, masterProfile);
 
-    skills = await fetchSkillsByIds(supabaseClient, JAYCEE_GAME_SKILL_COLUMNS.map((column) => activeMasterGame?.[column]));
+    skills = await fetchSkillsByIds(supabaseClient, GAME_RULES.skills.map((skill) => skill.skillColumn).map((column) => activeMasterGame?.[column]));
     skillForms = createSkillForms(skills);
     gameSettings = activeMasterGame;
     gameForm = createGameForm(gameSettings);
@@ -1339,7 +1327,7 @@ export const initJayceePage = async () => {
           fetchProfileByUserId(supabaseClient, master.id),
           fetchUserGameSettings(supabaseClient, master)
         ]);
-        const skills = await fetchSkillsByIds(supabaseClient, JAYCEE_GAME_SKILL_COLUMNS.map((column) => game?.[column]));
+        const skills = await fetchSkillsByIds(supabaseClient, GAME_RULES.skills.map((skill) => skill.skillColumn).map((column) => game?.[column]));
         return { lore: profile?.lore, game, skills };
       },
       player: practice?.project(currentPlayer) || currentPlayer,
@@ -1477,8 +1465,8 @@ export const initJayceePage = async () => {
       const health = (getAgeInSeconds(playerProfile.birth_date) || 0)
         + (Number(playerProfile.years_burned) || 0) * YEAR_SECONDS;
       updateVitalBar(shell.querySelector("[data-profile-vitals] .is-health"), {
-        current: health, max: JAYCEE_GAME_CONFIG.lifeMaxYears * YEAR_SECONDS,
-        valueText: `${formatYearsFromSeconds(health)} / ${JAYCEE_GAME_CONFIG.lifeMaxYears.toLocaleString()}y`
+        current: health, max: GAME_RULES.lifeMaxYears * YEAR_SECONDS,
+        valueText: `${formatYearsFromSeconds(health)} / ${GAME_RULES.lifeMaxYears.toLocaleString()}y`
       });
     }
 
@@ -1715,7 +1703,7 @@ export const initJayceePage = async () => {
     } else {
       gameSettings = hasUserProfile ? await fetchUserGameSettings(client, profile) : null;
       gameForm = createGameForm(gameSettings);
-      skills = await fetchSkillsByIds(client, JAYCEE_GAME_SKILL_COLUMNS.map((column) => gameSettings?.[column]));
+      skills = await fetchSkillsByIds(client, GAME_RULES.skills.map((skill) => skill.skillColumn).map((column) => gameSettings?.[column]));
       skillForms = createSkillForms(skills);
       currentPlayer = profile && playerProfile
         ? await fetchPlayerForGame(client, playerProfile, profile)

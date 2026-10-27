@@ -89,7 +89,7 @@ pour enregistrer l'invitant dans les profils. Le test SQL correspondant est
 
 1. Créer une migration avec la procédure de [migrations/README.md](migrations/README.md).
 2. Mettre à jour la référence `schema.sql` et le test concerné, sans réécrire les migrations déjà appliquées.
-3. Vérifier dans une base de test. Les changements de durées doivent aussi rester cohérents avec `src/js/config/game-config.js`.
+3. Vérifier dans une base de test. Les changements de durées doivent aussi rester cohérents avec `GAME_RULES` dans `supabase/functions/game-mcp/game-rules.ts`.
 4. Déployer uniquement la nouvelle migration, après demande explicite de déploiement.
 
 **Ne pas relancer `schema.sql` ou `seed.sql` sur le projet existant.** Ce sont les

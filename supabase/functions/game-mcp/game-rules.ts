@@ -1,0 +1,215 @@
+// Authoritative rules. The browser generator removes only the const assertion.
+export const GAME_RULES = Object.freeze(
+  {
+    version: "1.0.0",
+    description:
+      "Official immutable Magic Dev rules. Skill columns identify existing slots; Fractal labels do not create entities. Player-defined Skill names and identities remain in the database.",
+    lifeMaxYears: 1000000,
+    baseZoneMeters: 40075017,
+    ratios: [1826.211, 24, 24],
+    skills: [
+      {
+        skillColumn: "skill_0",
+        fractalLabel: "Stars",
+        cycleLabel: "Year",
+        cycleSeconds: 31556926.08,
+        practiceGoalSeconds: null,
+        zoneMeters: 40075017,
+      },
+      {
+        skillColumn: "skill_1",
+        fractalLabel: "Moon",
+        cycleLabel: "Month",
+        skillLabel: "Prayer",
+        cycleSeconds: 2551442.803,
+        practiceGoalSeconds: 17280,
+        zoneMeters: 21944,
+      },
+      {
+        skillColumn: "skill_2",
+        fractalLabel: "Sun",
+        cycleLabel: "Day",
+        cycleSeconds: 86400,
+        practiceGoalSeconds: 720,
+        zoneMeters: 914,
+      },
+      {
+        skillColumn: "skill_3",
+        fractalLabel: "Earth",
+        cycleLabel: "Hour",
+        cycleSeconds: 3600,
+        practiceGoalSeconds: 30,
+        zoneMeters: 38,
+      },
+      {
+        skillColumn: "skill_4",
+        fractalLabel: "Body",
+        cycleLabel: null,
+        cycleSeconds: null,
+        practiceGoalSeconds: null,
+        zoneMeters: null,
+      },
+    ],
+    units: {
+      duration: "seconds",
+      zone: "integer meters",
+      manna: "Current profile unit; no currency exchange is performed.",
+    },
+    scaling: {
+      description:
+        "Ratios document cumulative practice and spatial scaling from Stars. Use the fixed practiceGoalSeconds and zoneMeters directly, without runtime division. Zones are rounded once to the nearest meter after cumulative scaling. Skill cycle durations are independent constants, never derived from ratios.",
+    },
+    normalization: {
+      description:
+        "Year, day and hour use the corresponding fixed Stars, Sun and Earth cycleSeconds. A profile calendar month is dynamic and distinct from the Moon Skill cycle, despite the preserved Month display label.",
+      month:
+        "Use the calendar month containing the selected Skill start, or Auth account creation for the annual view; fall back to now when the start is invalid. Compute boundaries in the supplied IANA timezone, including daylight-saving transitions. The browser defaults to its local timezone; MCP defaults to UTC.",
+      defaultCycle: "year",
+      defaultUnit: "EUR",
+      allowedCycles: ["hour", "day", "month", "year"],
+      precision:
+        "Compute with full floating-point precision; round only for display. Practice goals and integer zones are already fixed values.",
+    },
+    manna: {
+      variables: {
+        A: {
+          description: "Current profile Manna target amount.",
+          unit: "profile Manna unit",
+        },
+        C: {
+          description:
+            "Profile reference cycle duration after calendar normalization.",
+          unit: "seconds",
+        },
+        P: {
+          description: "Selected Skill fixed cycle duration.",
+          unit: "seconds",
+        },
+        Q: {
+          description: "Selected Skill fixed practice objective.",
+          unit: "seconds",
+        },
+        t: {
+          description: "Elapsed time since the selected Skill cycle began.",
+          unit: "seconds",
+        },
+        p: {
+          description: "Current saved practice duration for that Skill.",
+          unit: "seconds",
+        },
+        D: { description: "Any requested duration.", unit: "seconds" },
+        T: {
+          description: "Manna target for the selected Skill cycle.",
+          unit: "profile Manna unit",
+        },
+        E: {
+          description:
+            "Archived completion credits plus eligible partial practice, across participations.",
+          unit: "credited cycle seconds",
+        },
+        completion_count_i: {
+          description: "Archived completed objective count for Skill i.",
+          unit: "count",
+        },
+        partial_practice_i: {
+          description:
+            "Eligible saved partial practice for unlocked Skill i, once per participation.",
+          unit: "seconds",
+        },
+        P_i: {
+          description: "Fixed cycle duration of Skill i.",
+          unit: "seconds",
+        },
+        Q_i: {
+          description: "Fixed practice objective of Skill i.",
+          unit: "seconds",
+        },
+        account_age_seconds: {
+          description: "Time elapsed since Auth account creation.",
+          unit: "seconds",
+        },
+        year_seconds: {
+          description: "The fixed Stars cycleSeconds.",
+          unit: "seconds",
+        },
+      },
+      equations: {
+        target_for_any_duration: {
+          expression: "M(D) = A * D / C",
+          description:
+            "Convert the profile Manna objective proportionally to any duration D.",
+        },
+        skill_target: {
+          expression: "T = A * P / C",
+          description: "Manna target for the selected Skill cycle.",
+        },
+        active_gain: {
+          expression: "Gain = T * p / Q",
+          description:
+            "Earn Manna proportionally to saved practice and the fixed objective. Gain is not capped.",
+        },
+        active_loss: {
+          expression: "Loss = -T * min(max(t, 0), P) / P",
+          description:
+            "Accumulate passive loss from elapsed time, capped at one Skill cycle and clamped at zero for future starts.",
+        },
+        active_balance: {
+          expression: "Balance = Gain + Loss",
+          description:
+            "Current active-cycle net balance; excludes archived completions.",
+        },
+        annual_earned_credit_seconds: {
+          expression:
+            "E = sum(completion_count_i * P_i) + sum(partial_practice_i * P_i / Q_i)",
+          description:
+            "Combine archived objectives and eligible partial practice from all participations without counting the current participation twice.",
+        },
+        annual_gain: {
+          expression: "AnnualGain = A / C * E",
+          description:
+            "Value earned credits at current profile settings, without capping annual gains.",
+        },
+        annual_loss: {
+          expression:
+            "AnnualLoss = -A / C * min(max(account_age_seconds, 0), year_seconds)",
+          description:
+            "Passive loss begins at Auth account creation and is capped at one fixed Stars year.",
+        },
+        annual_balance: {
+          expression: "AnnualBalance = AnnualGain + AnnualLoss",
+          description: "Annual overview net balance across participations.",
+        },
+      },
+      behavior: [
+        "Practice and its labels belong to each participation's Master game, not the user's authored game.",
+        "Each active Skill has its own start, counter and balance. Practice in another slot does not change its bar.",
+        "Current quest at level 2 or 3 is paused until accepted; other unlocked Skills and the annual overview are not paused.",
+        "Completing an objective archives a completion, keeps excess practice as remainder and restarts that Skill's cycle. Expired level-4 cycles can restart on game synchronization without creating a completion or erasing partial practice.",
+        "Active bars show the current cycle only. Archived goals contribute to the annual passive/ultimate overview, not to an active bar.",
+        "Annual overview starts at Auth account creation, includes all participations, caps only passive elapsed loss at one configured year and does not cap gains.",
+        "All displayed and reconstructed amounts use the current profile target and unit. Completions do not store historical target amounts or Manna earnings; gains are revalued, not an immutable financial ledger.",
+        "Manna is a computed game balance, not a stored wallet. Unsaved browser timer seconds are unavailable to the MCP. Authoritative player balances are calculated by the deterministic engine, never delegated to an AI.",
+        "Invalid starts or unaccepted current quests produce no gain or loss. Negative saved practice and archived credits are clamped to zero. Eligible partial practice follows existing unlocked-slot rules.",
+      ],
+    },
+  } as const,
+);
+
+// Freeze the nested catalog too; consumers cannot modify the official rules.
+for (const skill of GAME_RULES.skills) Object.freeze(skill);
+for (const definition of Object.values(GAME_RULES.manna.variables)) {
+  Object.freeze(definition);
+}
+for (const equation of Object.values(GAME_RULES.manna.equations)) {
+  Object.freeze(equation);
+}
+Object.freeze(GAME_RULES.skills);
+Object.freeze(GAME_RULES.ratios);
+Object.freeze(GAME_RULES.normalization.allowedCycles);
+Object.freeze(GAME_RULES.manna.behavior);
+Object.freeze(GAME_RULES.manna.variables);
+Object.freeze(GAME_RULES.manna.equations);
+Object.freeze(GAME_RULES.manna);
+Object.freeze(GAME_RULES.units);
+Object.freeze(GAME_RULES.scaling);
+Object.freeze(GAME_RULES.normalization);

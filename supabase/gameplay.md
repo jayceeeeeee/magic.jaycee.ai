@@ -33,13 +33,19 @@ Ultimate et la visibilité au niveau 4. Les droits déjà acquis restent accessi
 après un changement de Master. Le panneau du compte sauvegarde les skills avant
 de publier le profil ; les cinq noms doivent être renseignés.
 
-Les durées sont partagées avec `src/js/config/game-config.js` :
+Les règles fixes sont définies dans `supabase/functions/game-mcp/game-rules.ts`
+(`GAME_RULES`), puis générées pour le navigateur par `scripts/sync-game.ts` :
 
 | Skill | Cycle passif | Objectif de pratique, en secondes |
 | --- | --- | --- |
-| 1 / Moon | 2551442.803 secondes | `31556926.08 / 1826.211` |
-| 2 / Sun | 86400 secondes | `31556926.08 / 1826.211 / 24` |
-| 3 / Earth | 3600 secondes | `31556926.08 / 1826.211 / 576` |
+| 1 / Moon | 2551442.803 secondes | 17280 |
+| 2 / Sun | 86400 secondes | 720 |
+| 3 / Earth | 3600 secondes | 30 |
+
+Ces objectifs sont fixes ; les ratios restent des références. Les fonctions SQL
+existantes conservent leurs divisions équivalentes, sans modification de la base.
+Les zones fixes Stars/Moon/Sun/Earth sont 40075017/21944/914/38 mètres entiers.
+Le cycle Moon reste distinct d'un mois calendaire.
 
 Au niveau 4, les cycles expirés redémarrent à l'heure serveur sans effacer la
 pratique et sans créer de complétion. `practice_completions` garde une ligne par

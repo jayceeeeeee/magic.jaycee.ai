@@ -1,5 +1,5 @@
+import { GAME_RULES } from "../config/game-rules.js";
 ﻿import { fetchUserGameSettings, fetchSkillsByIds, saveOwnGame } from "../config/data.js";
-import { JAYCEE_GAME_SKILL_COLUMNS } from "../config/game-config.js";
 
 export const createSkillsSection = ({ client, profile, createSection, onChange = () => {} }) => {
   const { section, content } = createSection("Skills", "is-skills");
@@ -117,8 +117,8 @@ export const createSkillsSection = ({ client, profile, createSection, onChange =
     retry.hidden = true;
     loading = (async () => {
       const game = await fetchUserGameSettings(client, profile);
-      const skills = await fetchSkillsByIds(client, JAYCEE_GAME_SKILL_COLUMNS.map((column) => game?.[column]));
-      savedSkills = JAYCEE_GAME_SKILL_COLUMNS.map((column) => {
+      const skills = await fetchSkillsByIds(client, GAME_RULES.skills.map((skill) => skill.skillColumn).map((column) => game?.[column]));
+      savedSkills = GAME_RULES.skills.map((skill) => skill.skillColumn).map((column) => {
         const skill = skills.find((item) => item.id === game?.[column]);
         return { label: skill?.label || "", description: skill?.description || "" };
       });

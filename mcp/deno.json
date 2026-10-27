@@ -6,8 +6,9 @@
     "zod": "npm:zod@4.6.7"
   },
   "tasks": {
-    "check": "deno check ../supabase/functions/game-mcp/index.ts",
-    "test": "deno test --allow-env tests/",
+    "sync:game": "deno run --allow-read --allow-write=../src/js/config ../scripts/sync-game.ts",
+    "check": "deno run --allow-read ../scripts/sync-game.ts --check && deno check ../supabase/functions/game-mcp/index.ts",
+    "test": "deno run --allow-read ../scripts/sync-game.ts --check && deno test --allow-env --allow-read tests/",
     "serve": "deno run --allow-read --allow-net=127.0.0.1:3000 ../scripts/serve.ts"
   }
 }

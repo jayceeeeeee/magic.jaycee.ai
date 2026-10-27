@@ -1,4 +1,6 @@
 // Local static server. Never serves database files, tests, tooling or Git metadata.
+import { syncGame } from "./sync-game.ts";
+await syncGame(true);
 const root = new URL("../", import.meta.url);
 const types: Record<string, string> = {
   html: "text/html; charset=utf-8",

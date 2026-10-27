@@ -1,4 +1,4 @@
-import { getMannaCycleSeconds, getMannaModel, getMannaRules, getMannaSkillModels } from "../../src/js/config/manna.js";
+import { getMannaCycleSeconds, getMannaModel, getMannaRules, getMannaSkillModels } from "../../supabase/functions/game-mcp/manna.js";
 import { runMannaTests } from "../../tests/manna.test.mjs";
 
 const near = (actual: number, expected: number) => {

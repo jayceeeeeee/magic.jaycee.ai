@@ -1,5 +1,6 @@
-export const runGamePageTests = async ({ source, gameConfig, skillColumns, mannaModel, questPending, normalizeUnit, html, styles }) => {
+export const runGamePageTests = async ({ source, gameRules, mannaModel, questPending, normalizeUnit, html, styles }) => {
   const assert = (value, message) => { if (!value) throw new Error(message); };
+  const skillColumns = gameRules.skills.map(skill => skill.skillColumn);
   const user = { id: 'player', created_at: '2026-01-01T00:00:00Z' };
   for (const { account, linked = false, username = '' } of [{ account: null }, { account: user }, { account: user, linked: true }, { account: null, username: 'Master' }]) {
     const frame = document.createElement('iframe');
@@ -24,7 +25,7 @@ export const runGamePageTests = async ({ source, gameConfig, skillColumns, manna
     const dependencies = {
       console: { error: (...values) => errors.push(values.map(String).join(' ')), warn() {} },
       window: win, document: doc,
-      JAYCEE_GAME_CONFIG: gameConfig, JAYCEE_GAME_SKILL_COLUMNS: skillColumns, getMannaModel: mannaModel,
+      GAME_RULES: gameRules, getMannaModel: mannaModel,
       isQuestPending: questPending,
       normalizeMannaUnit: normalizeUnit,
       getDisplayValue: value => String(value ?? '').trim(),

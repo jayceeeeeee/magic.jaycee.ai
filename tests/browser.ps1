@@ -1,6 +1,8 @@
 # Browser regression suite. Run from the repository root with Chrome installed.
 # Uses mocks; writes only to TEMP and never connects to Supabase.
 $ErrorActionPreference = 'Stop'
+& .\.tools\deno.exe run --allow-read scripts/sync-game.ts --check
+if ($LASTEXITCODE -ne 0) { throw 'Browser game artifacts are stale. Run scripts/sync-game.ts.' }
 $checkDir = Join-Path $env:TEMP ('jaycee-browser-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $checkDir | Out-Null
 function Read-BrowserSource($path) {
@@ -9,7 +11,7 @@ function Read-BrowserSource($path) {
 $syntaxSources = ConvertTo-Json -InputObject @(Get-ChildItem -LiteralPath 'src/js' -Recurse -Filter '*.js' | Where-Object { $_.FullName -notmatch '[\\/]vendor[\\/]' } | ForEach-Object {
   @{ name = $_.Name; source = Read-BrowserSource $_.FullName }
 }) -Depth 3 -Compress
-$prelude = (Read-BrowserSource 'src/js/config/game-config.js') + (Read-BrowserSource 'src/js/jaycee/notifications.js')
+$prelude = (Read-BrowserSource 'src/js/config/game-rules.js') + (Read-BrowserSource 'src/js/jaycee/notifications.js')
 $prelude += Read-BrowserSource 'src/js/config/manna.js'
 $prelude += Read-BrowserSource 'tests/manna.test.mjs'
 $prelude += Read-BrowserSource 'tests/quest-lock-auth.test.mjs'
@@ -36,7 +38,7 @@ $browser = @'
 const assert=(value,message)=>{if(!value)throw new Error(message)};
 const syntaxSources=SYNTAX_SOURCES;
 for(const file of syntaxSources){try{new Function(file.source.replace(/\bimport\.meta\b/g,'({url:"file:///syntax-check.js"})'));}catch(error){throw new Error(`${file.name}: ${error.message}`);}}
-await runGamePageTests({source:syntaxSources.find(file=>file.name==='profile-runtime.js').source,gameConfig:JAYCEE_GAME_CONFIG,skillColumns:JAYCEE_GAME_SKILL_COLUMNS,mannaModel:getMannaModel,questPending:isQuestPending,normalizeUnit:normalizeMannaUnit,html:GAME_HTML,styles:GAME_STYLES});
+await runGamePageTests({source:syntaxSources.find(file=>file.name==='profile-runtime.js').source,gameRules:GAME_RULES,mannaModel:getMannaModel,questPending:isQuestPending,normalizeUnit:normalizeMannaUnit,html:GAME_HTML,styles:GAME_STYLES});
 await runQuestLockAuthTests(AUTH_SOURCE);
 await runAppConfigTests({configSource:syntaxSources.find(file=>file.name==='app-config.js').source,authSource:AUTH_SOURCE});
 await runOAuthConsentTests(syntaxSources.find(file=>file.name==='oauth-consent.js').source);
@@ -45,7 +47,7 @@ await runInvitePasswordTests(syntaxSources.find(file=>file.name==='invite.js').s
 await runReferralTests({referralSource:syntaxSources.find(file=>file.name==='referral.js').source,authSource:AUTH_SOURCE,dataSource:syntaxSources.find(file=>file.name==='data.js').source});
 await runMenuSoundTests({indexSource:syntaxSources.find(file=>file.name==='index.js').source,loreSource:syntaxSources.find(file=>file.name==='lore.js').source,uiSource:syntaxSources.find(file=>file.name==='ui-sounds.js').source,audioSource:syntaxSources.find(file=>file.name==='sounds.js').source});
 const display=value=>String(value??'').trim();
-const createRuntime=(win=window)=>new Function('JAYCEE_GAME_CONFIG','getDisplayValue','isQuestPending','notificationOccurrence','isNotificationVisible','interpolateNotification','renderSkillMarkdown','window','getMannaModel','normalizeMannaUnit',RUNTIME)(JAYCEE_GAME_CONFIG,display,isQuestPending,notificationOccurrence,isNotificationVisible,interpolateNotification,(element,markdown)=>{element.textContent=markdown},win,getMannaModel,normalizeMannaUnit);
+const createRuntime=(win=window)=>new Function('GAME_RULES','getDisplayValue','isQuestPending','notificationOccurrence','isNotificationVisible','interpolateNotification','renderSkillMarkdown','window','getMannaModel','normalizeMannaUnit',RUNTIME)(GAME_RULES,display,isQuestPending,notificationOccurrence,isNotificationVisible,interpolateNotification,(element,markdown)=>{element.textContent=markdown},win,getMannaModel,normalizeMannaUnit);
 const runtime=createRuntime();
 runMannaTests(runtime.getMannaModel);
 const models=[1,2,3].map(level=>({skillLabel:`Skill ${level}`,skill:{id:level},passiveSeconds:100,questSeconds:20}));
@@ -105,10 +107,10 @@ window.JayceeUI=originalUI;
 const selectionStart=new Date().toISOString();
 const selectionOptions={...options,player:null,activeMasterProfile:null,accountCreatedAt:selectionStart,notifications:{...options.notifications,definitions:[{id:'choose_master.v1',stage:'choose_master',content:{component:'master_choices'}}]}};
 const selection=runtime.createVitalsPanel(selectionOptions);
-assert(Number(selection.querySelector('[data-quest-deadline]').dataset.questDeadline)===Date.parse(selectionStart)+JAYCEE_GAME_CONFIG.activeAbilities[0].cycleSeconds*1000,'First selection countdown must use the Moon cycle');
+assert(Number(selection.querySelector('[data-quest-deadline]').dataset.questDeadline)===Date.parse(selectionStart)+GAME_RULES.skills[1].cycleSeconds*1000,'First selection countdown must use the Moon cycle');
 const restartedStart=new Date(Date.parse(selectionStart)+60000).toISOString();
 const restarted=runtime.createVitalsPanel({...selectionOptions,playerProfile:{...options.playerProfile,master_selection_started_at:restartedStart}});
-assert(Number(restarted.querySelector('[data-quest-deadline]').dataset.questDeadline)===Date.parse(restartedStart)+JAYCEE_GAME_CONFIG.activeAbilities[0].cycleSeconds*1000,'Countdown must reflect administrator unlock');
+assert(Number(restarted.querySelector('[data-quest-deadline]').dataset.questDeadline)===Date.parse(restartedStart)+GAME_RULES.skills[1].cycleSeconds*1000,'Countdown must reflect administrator unlock');
 const before=runtime.createVitalsPanel(options);
 assert(before.querySelectorAll('[data-notification-key]').length===1,'Quest visible before acceptance');
 assert(before.querySelectorAll('em').length===3,'Skill names are not italic');
@@ -191,7 +193,7 @@ assert(runtime.getActiveQuestInfo({activeModels:models,player:active}).deadline!
 for(const row of [player,active]){const skills=runtime.createSkillPanel({activeModels:models,currentLevel:3,passiveModel:{skill:null},player:row,selectedIndex:3});assert(skills.querySelector('[data-practice-toggle]').disabled===isQuestPending(row),'Wrong practice availability');}
 let savePayload;
 let saveOrder=[];
-const createSkillsSection=new Function('fetchUserGameSettings','fetchSkillsByIds','saveOwnGame','JAYCEE_GAME_SKILL_COLUMNS',EDITOR)(async()=>({skill_4:'ultimate'}),async()=>[{id:'ultimate',label:'Existing ultimate',description:'Keep these resources'}],async(...args)=>{savePayload={skills:args[1],argumentCount:args.length};saveOrder.push('skills')},JAYCEE_GAME_SKILL_COLUMNS);
+const createSkillsSection=new Function('fetchUserGameSettings','fetchSkillsByIds','saveOwnGame','GAME_RULES',EDITOR)(async()=>({skill_4:'ultimate'}),async()=>[{id:'ultimate',label:'Existing ultimate',description:'Keep these resources'}],async(...args)=>{savePayload={skills:args[1],argumentCount:args.length};saveOrder.push('skills')},GAME_RULES);
 const profile={id:'user',master:'old',username:'User'};
 window.JayceeReferral={createLink:username=>username?`https://example.test/?ref=${encodeURIComponent(username)}`:'',getUsername:()=>''};
 const editor=createSkillsSection({client:{},profile,createSection:()=>{const section=document.createElement('section'),content=document.createElement('div');section.append(content);return{section,content}}});
