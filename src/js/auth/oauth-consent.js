@@ -13,6 +13,10 @@ export async function initOAuthConsent({ win = window, doc = document } = {}) {
         if (!authorizationId) throw new Error("This connection request is missing its authorization ID.");
         const client = await win.JayceeAuth.getSupabaseClient();
         const { data: { user }, error: userError } = await client.auth.getUser();
+        // A network/server failure does not mean the user needs to log in.
+        // Keep this request on screen so it can be retried without a redirect loop.
+        if (userError && userError.name !== "AuthSessionMissingError"
+            && (!userError.status || userError.status >= 500)) throw userError;
         if (userError || !user) {
             win.location.replace(loginPath);
             return;

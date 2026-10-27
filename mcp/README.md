@@ -100,11 +100,14 @@ the development database.
 
 The consent login keeps its `authorization_id` through signup. Signup only asks
 for an email and password; lore, name entry and prayer are optional narrative
-steps outside the signup flow. After signup, users return directly to consent. Email
-confirmation links return to `/login.html?redirect=...`; configure the Auth redirect
+steps outside the signup flow. After signup, users return directly to consent. MCP email
+confirmation links return to `/login.html?confirmation=mcp`; configure the Auth redirect
 allow list to accept this URL with its query string on each frontend origin
-(for local development, `http://localhost:3000/**`). The confirmation page resumes
-consent once the session is available, including confirmation in another tab.
+(for local development, `http://localhost:3000/**`). The email tab confirms the account
+and asks the user to return to the original connection window. That original window
+resumes consent once the shared session is verified, including when focused again.
+The email tab never redirects to ChatGPT because it lacks the initiating window's
+OAuth context.
 An expired authorization request must be restarted from the connecting application.
 
 ## Verify and deploy

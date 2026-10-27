@@ -1,6 +1,6 @@
 export const runOAuthConsentTests = async (source) => {
   const assert = (value, message) => { if (!value) throw new Error(message); };
-  const createContext = ({ signedIn = true, responseError = null, callback = 'https://chatgpt.com/callback?code=test', previouslyApproved = false } = {}) => {
+  const createContext = ({ signedIn = true, userError = null, responseError = null, callback = 'https://chatgpt.com/callback?code=test', previouslyApproved = false } = {}) => {
     const nodes = new Map();
     const doc = { querySelector(selector) {
       if (!nodes.has(selector)) nodes.set(selector, { hidden: true, textContent: '', disabled: false, addEventListener(_type, callback) { this.click = callback; } });
@@ -8,7 +8,7 @@ export const runOAuthConsentTests = async (source) => {
     } };
     let approved = 0, denied = 0, redirected, signedOut = 0, reloaded = 0;
     const details = { authorization_id: 'request', client: { name: '<img src=x onerror=alert(1)>' }, scope: 'profile', redirect_uri: 'https://chatgpt.com/callback' };
-    const client = { auth: { signOut: async (options) => { assert(options.scope === 'local', 'Account switching must use local sign out'); signedOut++; return { error: null }; }, getUser: async () => ({ data: { user: signedIn ? { email: 'test@example.test' } : null }, error: null }), oauth: {
+    const client = { auth: { signOut: async (options) => { assert(options.scope === 'local', 'Account switching must use local sign out'); signedOut++; return { error: null }; }, getUser: async () => ({ data: { user: signedIn ? { email: 'test@example.test' } : null }, error: userError }), oauth: {
       getAuthorizationDetails: async () => ({ data: previouslyApproved ? { redirect_url: callback } : details, error: responseError }),
       approveAuthorization: async (_id, options) => { approved++; assert(options.skipBrowserRedirect, 'SDK redirect must be disabled for validation'); return { data: { redirect_url: callback }, error: null }; },
       denyAuthorization: async () => { denied++; return { data: { redirect_url: callback }, error: null }; }
@@ -24,6 +24,15 @@ export const runOAuthConsentTests = async (source) => {
   await anonymous.init();
   const login = new URL(anonymous.redirect(), 'https://dev.example.test');
   assert(login.pathname === '/login.html' && login.searchParams.get('redirect') === '/oauth-consent.html?authorization_id=request', 'Login lost the OAuth request');
+  const rejectedSession = createContext({ signedIn: false, userError: { status: 401, message: 'Invalid session' } });
+  await rejectedSession.init();
+  assert(new URL(rejectedSession.redirect(), 'https://dev.example.test').pathname === '/login.html', 'Rejected sessions must offer login');
+  for (const error of [{ status: 503, message: 'Auth temporarily unavailable' }, { message: 'Network request failed' }]) {
+    const unavailable = createContext({ signedIn: false, userError: error }); await unavailable.init();
+    assert(!unavailable.redirect() && !unavailable.nodes.get('[data-consent-recovery]').hidden
+      && unavailable.nodes.get('[data-consent-status]').textContent === error.message,
+      'Temporary Auth errors must stay on consent with recovery instead of redirecting to login');
+  }
   const owner = createContext(); await owner.init();
   assert(owner.approved() === 0 && owner.denied() === 0 && !owner.nodes.get('[data-consent-details]').hidden, 'Consent must require a user decision');
   assert(owner.nodes.get('[data-consent-client]').textContent.startsWith('<img'), 'Client name must be assigned as text');

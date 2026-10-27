@@ -20,9 +20,35 @@
         const password = form?.elements.password;
         const redirectPath = window.JayceeAuth?.getReturnPath();
         const isConnection = window.JayceeAuth?.isConnectionReturn(redirectPath);
+        const callbackParams = new URLSearchParams(window.location.hash.slice(1));
+        const isEmailConfirmation = params.get("confirmation") === "mcp"
+            || (isConnection && callbackParams.get("type") === "signup");
         const fullNameParam = String(params.get("full_name") || params.get("username") || "").trim();
 
         if (!form || !title || !submit || !status || !switcher || !password || !window.JayceeAuth) {
+            return;
+        }
+
+        // The mail tab has no initiating OAuth window context. It only confirms
+        // the shared session; the original connection window resumes consent.
+        if (isEmailConfirmation) {
+            form.hidden = switcher.hidden = true;
+            try {
+                if (callbackParams.has("error_description")) throw new Error(callbackParams.get("error_description"));
+                const { data, error } = await window.JayceeAuth.getSession();
+                if (error) throw error;
+                if (data?.session) {
+                    const client = await window.JayceeAuth.getSupabaseClient();
+                    const { data: verified, error: userError } = await client.auth.getUser();
+                    if (userError) throw userError;
+                    if (!verified?.user) throw new Error("Your session could not be verified. Return to the original connection window and log in.");
+                }
+                status.textContent = data?.session
+                    ? "Email confirmed. Return to the original connection window to continue."
+                    : "Return to the original connection window and log in to continue.";
+            } catch (error) {
+                status.textContent = error?.message || "The email confirmation could not be completed.";
+            }
             return;
         }
 
@@ -37,23 +63,44 @@
             try { window.sessionStorage.removeItem(pendingKey); } catch {}
         }
         let navigating = false;
+        let resuming = false;
+        let resumeError = "";
         async function resumeConnection() {
-            if (!isConnection || navigating) return false;
+            if (!isConnection || navigating || resuming) return false;
+            resuming = true;
             try {
                 const { data, error } = await window.JayceeAuth.getSession();
-                if (error || !data?.session) return false;
+                if (error) throw error;
+                if (!data?.session) return false;
+                // Consent verifies the user with Auth, not just browser storage.
+                // Use the same check here so a rejected saved session cannot bounce back.
+                const client = await window.JayceeAuth.getSupabaseClient();
+                const { data: verified, error: userError } = await client.auth.getUser();
+                if (userError) throw userError;
+                if (!verified?.user || verified.user.id !== data.session.user?.id) {
+                    throw new Error("Your saved session could not be verified. Please log in again.");
+                }
+                resumeError = "";
                 navigating = true;
                 clearPendingConfirmation();
                 window.location.replace(window.JayceeAuth.getAfterSignInUrl(redirectPath));
                 return true;
-            } catch {
+            } catch (error) {
+                resumeError = error?.message || "Your session could not be verified. Please log in again.";
+                status.textContent = resumeError;
                 return false;
+            } finally {
+                resuming = false;
             }
         }
-        // Also handles the email confirmation link opening in a new tab.
+        // Another tab may have confirmed the email and established the session.
         if (await resumeConnection()) return;
 
         window.addEventListener("pageshow", () => { void resumeConnection(); });
+        window.addEventListener("focus", () => { void resumeConnection(); });
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") void resumeConnection();
+        });
 
         function createAuthHref(path, nextMode) {
             const nextParams = new URLSearchParams();
@@ -86,14 +133,16 @@
             switcher.innerHTML = isSignup
                 ? `Already have an account? <a href="${createAuthHref("/login.html", "login")}" data-auth-mode="login">Log in</a>`
                 : `No account yet? <a href="${createAuthHref("/signup.html", "signup")}">Sign up</a>`;
-            status.textContent = "";
+            status.textContent = resumeError;
         }
 
         async function showConfirmation() {
             awaitingConfirmation = true;
             form.hidden = true;
             password.value = "";
-            status.textContent = "Check your email to confirm your account.";
+            status.textContent = isConnection
+                ? "Check your email to confirm your account, then return to this window."
+                : "Check your email to confirm your account.";
             if (!isConnection) return;
             try { window.sessionStorage.setItem(pendingKey, String(Date.now())); } catch {}
             try {
@@ -103,7 +152,7 @@
                 });
                 void resumeConnection();
             } catch {
-                // The confirmation link can still resume in its own tab.
+                // Returning to this window checks the shared session again.
             }
         }
 
@@ -122,7 +171,8 @@
             try {
                 result = mode === "signup"
                     ? await window.JayceeAuth.signUp(email, passwordValue, {
-                        emailRedirectTo: new URL(createAuthHref("/login.html", "login"), window.location.origin).href,
+                        emailRedirectTo: new URL(isConnection ? "/login.html?confirmation=mcp"
+                            : createAuthHref("/login.html", "login"), window.location.origin).href,
                         data: {
                             full_name: fullNameParam,
                         },
@@ -165,7 +215,6 @@
 
         renderMode();
         if (awaitingConfirmation) await showConfirmation();
-        const callbackParams = new URLSearchParams(window.location.hash.slice(1));
         if (callbackParams.has("error_description")) {
             status.textContent = callbackParams.get("error_description");
         }
