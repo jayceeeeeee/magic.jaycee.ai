@@ -120,19 +120,15 @@ export function createHandler(projectUrl: string, publicKey: string) {
     server.registerTool("get_my_progress", {
       title: "My game progress",
       description:
-        "Read the connected user's saved levels, practice seconds, cycle starts, quest acceptance and completed practice totals. These are saved values, not a live running timer.",
+        "Read the connected user's saved levels, current practice counters, cycle starts and quest acceptance. Completed practice history is available separately through get_my_records; no cycle-equivalent total is included here.",
       inputSchema: {},
       annotations,
       _meta: { securitySchemes },
     }, async () => {
-      const [players, completions] = await Promise.all([
-        client.from("player").select(
-          "id,master,level,skill_1_practice,skill_2_practice,skill_3_practice,skill_1_start,skill_2_start,skill_3_start,level_2_accepted_at,level_3_accepted_at",
-        )
-          .eq("user_id", userId).order("id").limit(100),
-        client.rpc("get_practice_completion_totals"),
-      ]);
-      if (players.error || completions.error) {
+      const players = await client.from("player").select(
+        "id,master,level,skill_1_practice,skill_2_practice,skill_3_practice,skill_1_start,skill_2_start,skill_3_start,level_2_accepted_at,level_3_accepted_at",
+      ).eq("user_id", userId).order("id").limit(100);
+      if (players.error) {
         return {
           isError: true,
           content: [{
@@ -144,13 +140,77 @@ export function createHandler(projectUrl: string, publicKey: string) {
       return result({
         retrieved_at: new Date().toISOString(),
         players: players.data,
-        completed_practice_seconds: completions.data,
+      });
+    });
+    server.registerTool("get_my_practice_time", {
+      title: "My recorded practice time",
+      description:
+        "Use this to answer how long the connected user has practiced. Practice belongs to the skills taught by the Masters linked to their player participations, not the user's own authored skills from get_my_game. Use get_my_progress and get_my_master_games to resolve the Master and skill names: player.master matches games.user_id, and game.skill_N matches skills.id for skill_number N. These totals aggregate each numbered slot across all participations; if multiple Masters contribute, do not label the aggregate with one Master's skill name. Completed goals count at their configured practice target, and current saved counters are added. This is game-recorded practice, not an independent stopwatch log.",
+      inputSchema: {},
+      annotations,
+      _meta: { securitySchemes },
+    }, async () => {
+      const players = await client.from("player").select(
+        "id,skill_1_practice,skill_2_practice,skill_3_practice",
+      ).eq("user_id", userId).order("id").limit(100);
+      if (players.error) return toolError("Practice time could not be loaded.");
+      const playerRows = players.data ?? [];
+      const playerIds = playerRows.map((row) => row.id);
+      const completedGoals = new Map<number, number>([[1, 0], [2, 0], [3, 0]]);
+      if (playerIds.length > 0) {
+        const pageSize = 1000;
+        for (let offset = 0;; offset += pageSize) {
+          const rows = await client.from("practice_completions")
+            .select("skill_number")
+            .in("player_id", playerIds)
+            .order("completed_at").order("id")
+            .range(offset, offset + pageSize - 1);
+          if (rows.error) return toolError("Practice time could not be loaded.");
+          for (const row of rows.data ?? []) {
+            completedGoals.set(
+              row.skill_number,
+              (completedGoals.get(row.skill_number) ?? 0) + 1,
+            );
+          }
+          if ((rows.data?.length ?? 0) < pageSize) break;
+        }
+      }
+      let denominator = 1;
+      const skills = JAYCEE_GAME_CONFIG.activeAbilities.map((ability, index) => {
+        denominator *= ability.ratio;
+        const skillNumber = index + 1;
+        const completedGoalCount = completedGoals.get(skillNumber) ?? 0;
+        const goalPracticeSeconds = JAYCEE_GAME_CONFIG.passive.cycleSeconds / denominator;
+        const completedGoalTargetSeconds = completedGoalCount * goalPracticeSeconds;
+        const currentPracticeSeconds = playerRows.reduce((sum, row) =>
+          sum +
+            (Number((row as Record<string, unknown>)[`skill_${skillNumber}_practice`]) || 0),
+          0,
+        );
+        return {
+          skill_number: skillNumber,
+          completed_goal_count: completedGoalCount,
+          goal_target_seconds: goalPracticeSeconds,
+          completed_goal_target_seconds: completedGoalTargetSeconds,
+          current_saved_practice_seconds: currentPracticeSeconds,
+          tracked_practice_seconds: completedGoalTargetSeconds + currentPracticeSeconds,
+        };
+      });
+      return result({
+        retrieved_at: new Date().toISOString(),
+        basis:
+          "Completed goals are reconstructed at their configured practice target; current saved counters are added. This is game-recorded practice, not an independent stopwatch log.",
+        skills,
+        total_tracked_practice_seconds: skills.reduce(
+          (sum, skill) => sum + skill.tracked_practice_seconds,
+          0,
+        ),
       });
     });
     server.registerTool("get_my_game", {
       title: "My authored game and skills",
       description:
-        "Read the connected user's own game and skill definitions. These may be used with get_game_config to calculate game values.",
+        "Read the game and skills authored by the connected user for other players to learn. These are not the skills the user practices as a student. Do not use these skill names to label the user's practice time or quest progress; use get_my_master_games for that. These definitions may be used with get_game_config to calculate values for the user's authored game.",
       inputSchema: {},
       annotations,
       _meta: { securitySchemes },
@@ -167,7 +227,7 @@ export function createHandler(projectUrl: string, publicKey: string) {
     server.registerTool("get_my_master_games", {
       title: "My Masters' games and skills",
       description:
-        "Read public game and skill definitions of the Masters linked to the connected user's participations, for interpreting quests and calculating progress.",
+        "Read the public games and skills taught by the Masters linked to the connected user's player participations. Use these skill names to describe the user's own practice time and quest progress. Match player.master from get_my_progress to games.user_id, then match game.skill_N to skills.id for skill_number N. The user's authored game returned by get_my_game serves a different role and must not supply these practice labels.",
       inputSchema: {},
       annotations,
       _meta: { securitySchemes },
@@ -234,15 +294,45 @@ export function createHandler(projectUrl: string, publicKey: string) {
     server.registerTool("get_game_config", {
       title: "Game calculation rules",
       description:
-        "Read the app's public game constants, skill columns and cycle labels for calculations. This is the deployed development version of game-config.js.",
+        "Read public game constants and the derived practice goal durations. The practice targets are calculated from the configured cycle and cumulative ratios, so use these explicit values instead of inferring the formula. This is the deployed development version of game-config.js.",
       inputSchema: {},
       annotations,
       _meta: { securitySchemes },
-    }, () => result({
-      game_config: JAYCEE_GAME_CONFIG,
-      skill_columns: JAYCEE_GAME_SKILL_COLUMNS,
-      cycle_labels: JAYCEE_GAME_CYCLE_LABELS,
-    }));
+    }, () => {
+      let cumulativeRatio = 1;
+      const practiceGoalTargets = JAYCEE_GAME_CONFIG.activeAbilities.map(
+        (ability, index) => {
+          cumulativeRatio *= ability.ratio;
+          const targetSeconds =
+            JAYCEE_GAME_CONFIG.passive.cycleSeconds / cumulativeRatio;
+          const roundedSeconds = Math.round(targetSeconds);
+          const hours = Math.floor(roundedSeconds / 3600);
+          const minutes = Math.floor((roundedSeconds % 3600) / 60);
+          const seconds = roundedSeconds % 60;
+          const display = [
+            hours ? `${hours} h` : "",
+            minutes ? `${minutes} min` : "",
+            seconds ? `${seconds} s` : "",
+          ].filter(Boolean).join(" ");
+          return {
+            skill_number: index + 1,
+            skill_column: ability.skillColumn,
+            fractal_label: ability.fractalLabel,
+            associated_cycle: JAYCEE_GAME_CYCLE_LABELS.activeAbilities[index],
+            target_seconds: targetSeconds,
+            target_display: display,
+          };
+        },
+      );
+      return result({
+        game_config: JAYCEE_GAME_CONFIG,
+        skill_columns: JAYCEE_GAME_SKILL_COLUMNS,
+        cycle_labels: JAYCEE_GAME_CYCLE_LABELS,
+        practice_goal_rule:
+          "For active skill at zero-based index i: target_seconds = passive.cycleSeconds / product(activeAbilities[0..i].ratio).",
+        practice_goal_targets: practiceGoalTargets,
+      });
+    });
     const transport = new WebStandardStreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
       enableJsonResponse: true,

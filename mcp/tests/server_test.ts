@@ -111,7 +111,7 @@ function installMock({ locked = false, userId = "owner" } = {}) {
         url.searchParams.get("user_id") === "eq.owner",
         "Progress must be restricted to its owner",
       );
-      return Promise.resolve(Response.json([{ id: "own-game", level: 2, master: "master-one" }]));
+      return Promise.resolve(Response.json([{ id: "own-game", level: 2, master: "master-one", skill_1_practice: 0, skill_2_practice: 0, skill_3_practice: 3 }]));
     }
     if (url.pathname === "/rest/v1/game") {
       if (url.searchParams.get("user_id") === "in.(master-one)") {
@@ -129,7 +129,7 @@ function installMock({ locked = false, userId = "owner" } = {}) {
     }
     if (url.pathname === "/rest/v1/practice_completions") {
       assert(url.searchParams.get("player_id") === "in.(own-game)", "Completions must use own player IDs");
-      return Promise.resolve(Response.json([{ id: "own-completion", player_id: "own-game" }]));
+      return Promise.resolve(Response.json([{ id: "own-completion", player_id: "own-game", skill_number: 3, completed_at: "2026-01-01T00:00:00Z" }]));
     }
     if (url.pathname === "/rest/v1/prayers") {
       assert(url.searchParams.get("user_id") === "eq.owner", "Prayers must use owner ID");
@@ -138,9 +138,6 @@ function installMock({ locked = false, userId = "owner" } = {}) {
     if (url.pathname === "/rest/v1/user_notifications") {
       assert(url.searchParams.get("user_id") === "eq.owner", "Notifications must use owner ID");
       return Promise.resolve(Response.json([{ notification_id: "welcome.v1" }]));
-    }
-    if (url.pathname === "/rest/v1/rpc/get_practice_completion_totals") {
-      return Promise.resolve(Response.json(3600));
     }
     throw new Error(`Unexpected request: ${url.pathname}`);
   }) as typeof fetch;
@@ -215,7 +212,7 @@ Deno.test("read tools expose own data and public rules using user credentials", 
     const listed = await handler(request(access));
     const tools = (await listed.json()).result.tools;
     assert(
-      tools.length === 6 &&
+      tools.length === 7 &&
         tools.every((t: { annotations: { readOnlyHint: boolean } }) =>
           t.annotations.readOnlyHint
         ),
@@ -253,14 +250,33 @@ Deno.test("read tools expose own data and public rules using user credentials", 
     assert(JSON.stringify(rules.game_config) === JSON.stringify(BROWSER_GAME_CONFIG), "MCP game config diverged from browser");
     assert(JSON.stringify(rules.skill_columns) === JSON.stringify(BROWSER_SKILL_COLUMNS), "MCP skill columns diverged");
     assert(JSON.stringify(rules.cycle_labels) === JSON.stringify(BROWSER_CYCLE_LABELS), "MCP cycle labels diverged");
+    assert(
+      rules.practice_goal_targets.map((target: { target_display: string }) => target.target_display).join(",") ===
+        "4 h 48 min,12 min,30 s" &&
+        Math.abs(rules.practice_goal_targets[1].target_seconds - 720) < 1e-9 &&
+        Math.abs(rules.practice_goal_targets[2].target_seconds - 30) < 1e-9 &&
+        rules.practice_goal_rule.includes("product(activeAbilities[0..i].ratio)"),
+      "Practice targets should be derived from game config and explain their rule",
+    );
     const progress = await handler(
       request(access, "tools/call", { name: "get_my_progress", arguments: {} }),
     );
     const result = JSON.parse((await progress.json()).result.content[0].text);
     assert(
       result.players[0].id === "own-game" &&
-        result.completed_practice_seconds === 3600,
+        !("completed_practice_seconds" in result),
       "Wrong progress",
+    );
+    const practiceTime = await handler(
+      request(access, "tools/call", { name: "get_my_practice_time", arguments: {} }),
+    );
+    const practiceTimeData = JSON.parse((await practiceTime.json()).result.content[0].text);
+    assert(
+      practiceTimeData.total_tracked_practice_seconds === 33 &&
+        practiceTimeData.skills[2].completed_goal_target_seconds === 30 &&
+        practiceTimeData.skills[2].current_saved_practice_seconds === 3 &&
+        practiceTimeData.skills[0].completed_goal_count === 0,
+      "Practice time should combine completed goal targets with saved counters",
     );
     assert(
       calls.filter((c) => c.url.pathname.startsWith("/rest/")).every((c) =>
