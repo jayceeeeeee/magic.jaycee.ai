@@ -20,8 +20,6 @@ export const runReferralTests = async ({ referralSource, authSource, dataSource 
   privateWin = context(privateWin.JayceeReferral.withReferral('/signup.html'), blocked);
   assert(privateWin.JayceeReferral.getUsername() === 'Yogananda', 'URL fallback lost the referral without storage');
 
-  storage.setItem('player_full_name', 'Invited');
-  storage.setItem('pending_prayer', JSON.stringify({ username: 'Invited', problem: 'Problem', prayer: 'Prayer', created_at: new Date().toISOString() }));
   let submitted;
   let rejectSignup = true;
   const client = { auth: { signUp: async (input) => {
@@ -39,6 +37,9 @@ export const runReferralTests = async ({ referralSource, authSource, dataSource 
   assert(submitted.options.data.referral_username === 'Cedricjbt' && submitted.options.data.full_name === 'Invited'
     && submitted.options.data.birth_profile.fullName === 'Invited', 'Signup did not send referral metadata alongside the existing fields');
   assert(!win.JayceeReferral.getUsername(), 'Successful signup retained stale attribution');
+  await win.JayceeAuth.signUp('direct@example.test', 'password');
+  assert(submitted.email === 'direct@example.test' && !submitted.options.data.full_name,
+    'Email-only signup must reach Supabase without a prayer or name');
 
   const data = new Function('JAYCEE_GAME_SKILL_COLUMNS', dataSource + '\nreturn {fetchProfileByUserId,fetchPublicProfiles};')([]);
   const selections = [];

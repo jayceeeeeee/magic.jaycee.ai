@@ -132,21 +132,6 @@ export const fetchUserGameSettings = async (client, profile) => {
   return data || null;
 };
 
-export const updateUserGameSettings = async (client, profile, values) => {
-  if (!profile?.id) return null;
-
-  const { data, error } = await client
-    .from(JAYCEE_GAME_TABLE)
-    .update(values)
-    .eq("user_id", profile.id)
-    .select(GAME_SELECT_COLUMNS)
-    .maybeSingle();
-
-  if (error) throw error;
-
-  return data || null;
-};
-
 export const fetchPlayersForUser = async (client, userProfile) => {
   if (!userProfile?.id) return [];
 
@@ -280,28 +265,3 @@ export const saveOwnGame = async (client, skills) => {
 export const getAvatarImageUrl = async (client, profile) => (
   getUserImageUrl(client, profile, profile?.avatar_path)
 );
-
-const loadImage = (imageUrl) => (
-  new Promise((resolve, reject) => {
-    if (!imageUrl) {
-      resolve(null);
-      return;
-    }
-
-    const image = new Image();
-
-    image.crossOrigin = "anonymous";
-    image.addEventListener("load", () => resolve(image), { once: true });
-    image.addEventListener("error", () => reject(new Error("Jaycee image could not be loaded.")), { once: true });
-    image.src = imageUrl;
-  })
-);
-
-export const loadOptionalImage = async (imageUrl) => {
-  try {
-    return await loadImage(imageUrl);
-  } catch (error) {
-    console.warn("Optional Jaycee image could not be loaded", error);
-    return null;
-  }
-};

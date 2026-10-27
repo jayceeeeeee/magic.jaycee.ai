@@ -4,11 +4,6 @@ import { SoundEffects } from "./sounds.js";
 import { getMannaModel, normalizeMannaUnit } from "../config/manna.js";
 import { NotificationStore, interpolateNotification, isNotificationVisible, notificationOccurrence, isQuestPending } from "./notifications.js";
 import {
-  JAYCEE_ORDER,
-  createJayceeState,
-  drawJaycee
-} from "./profile-core.js";
-import {
   JAYCEE_GAME_CONFIG,
   JAYCEE_GAME_SKILL_COLUMNS
 } from "../config/game-config.js";
@@ -26,36 +21,15 @@ import {
   fetchUserGameSettings,
   getAvatarImageUrl,
   getDisplayValue,
-  loadOptionalImage,
   recordSkillPractice,
   syncSkillProgress,
 } from "../config/data.js";
 
-const PROFILE_CORE_METRICS = {
-  fullSquare: true
-};
-const PROFILE_RING_FILL_ALPHA = 0.26;
 const ACTIVE_RING_LIMIT = 3;
 const YEAR_SECONDS = JAYCEE_GAME_CONFIG.passive.cycleSeconds;
 
-const getLoginUrl = () => (
-  new URL(
-    window.JayceeAuth?.getLoginUrl
-      ? window.JayceeAuth.getLoginUrl()
-      : "/login.html",
-    window.location.origin
-  )
-);
-
 const getSignupUrl = () => {
   return new URL("/signup.html", window.location.origin);
-};
-
-const redirectToLogin = () => {
-  const loginUrl = getLoginUrl();
-
-  loginUrl.searchParams.set("redirect", `${window.location.pathname}${window.location.search}`);
-  window.location.href = loginUrl.href;
 };
 
 const redirectToSignup = () => {
@@ -68,8 +42,6 @@ const redirectToSignup = () => {
   }
   window.location.href = window.JayceeReferral?.withReferral(signupUrl.href) || signupUrl.href;
 };
-
-const getEmptyLabels = (count) => Array.from({ length: count }, () => "");
 
 const formatDuration = (secondsValue, { compact = true } = {}) => {
   let seconds = Math.round(Number(secondsValue));
@@ -96,20 +68,6 @@ const formatDuration = (secondsValue, { compact = true } = {}) => {
   }
 
   return parts.join(" ");
-};
-
-const formatDistance = (metersValue) => {
-  const meters = Number(metersValue);
-
-  if (!Number.isFinite(meters) || meters <= 0) return "";
-
-  if (meters >= 1000) {
-    const kilometers = meters / 1000;
-
-    return `${Number.isInteger(kilometers) ? kilometers : Number(kilometers.toFixed(2))}km`;
-  }
-
-  return `${Number.isInteger(meters) ? meters : Number(meters.toFixed(2))}m`;
 };
 
 const getAgeInYears = (birthDate) => {
@@ -240,37 +198,6 @@ const getUltimateModel = ({ gameForm, skillForms }) => {
     skillLabel: getDisplayValue(skill?.label),
     skillDescription: typeof skill?.description === "string" ? skill.description : ""
   };
-};
-
-const createGameSelect = (profiles, selectedUsername = "") => {
-  const label = document.createElement("label");
-  const text = document.createElement("span");
-  const select = document.createElement("select");
-  const defaultOption = document.createElement("option");
-
-  label.className = "profile-fractal-select";
-  text.textContent = "Choose a game";
-  defaultOption.value = "";
-  defaultOption.textContent = "jaycee";
-  select.replaceChildren(defaultOption, ...profiles.map((profile) => {
-    const option = document.createElement("option");
-    const username = getDisplayValue(profile.username);
-
-    option.value = username;
-    option.textContent = username;
-
-    return option;
-  }));
-  select.value = selectedUsername;
-  select.addEventListener("change", () => {
-    const username = getDisplayValue(select.value);
-
-    if (!username) return;
-    window.location.href = `/game.html?username=${encodeURIComponent(username)}`;
-  });
-  label.append(text, select);
-
-  return label;
 };
 
 const updateVitalBar = (bar, { centered = false, current, max, valueText }) => {
@@ -818,9 +745,6 @@ const createVitalsPanel = ({
     || getDisplayValue(playerProfile?.full_name)
     || (!hasPlayerProfile ? storedUsername : "")
     || "Unknown";
-  const channelUsername = getDisplayValue(profile?.username)
-    || getDisplayValue(window.localStorage.getItem("pending_prayer_target_username"))
-    || "";
   const noticeMasterProfile = adminProfile || publicProfiles.find((publicProfile) => (
     getDisplayValue(publicProfile.role).toLowerCase() === "admin"
   )) || publicProfiles[0] || null;
@@ -1012,23 +936,10 @@ const createVitalsPanel = ({
   return panel;
 };
 
-const getPublicProfileUsernameFromUrl = () => {
-  const params = new URLSearchParams(window.location.search);
-  const queryUsername = getDisplayValue(params.get("username"));
-
-  if (queryUsername) return queryUsername;
-  if (!window.location.pathname.endsWith("/game.html")) return "";
-
-  const match = window.location.pathname.match(/\/jaycee-([^/]+)\.html$/);
-
-  return match && match[1] !== "profile" ? decodeURIComponent(match[1]) : "";
-};
-
 const createGameForm = (settings) => Object.fromEntries(
   JAYCEE_GAME_SKILL_COLUMNS.map((column) => [column, getDisplayValue(settings?.[column])])
 );
 
-const createEmptyGameSettings = () => createGameForm(null);
 
 const createSkillForms = (skills) => (
   (skills || []).map((skill) => ({
@@ -1240,50 +1151,21 @@ const attachProfileAvatarUrls = async (client, profiles) => Promise.all(
   })
 );
 
-const createProfileCoreState = ({
-  avatarImage,
-  hasUserProfile
-}) => {
-  return {
-    ...createJayceeState({
-      coreSquareLabels: getEmptyLabels(JAYCEE_ORDER.length),
-      rings: []
-    }),
-    activeSquareNumber: 0,
-    metrics: PROFILE_CORE_METRICS,
-    squareBorderAlpha: 0.46,
-    squareFillAlpha: hasUserProfile ? 0 : PROFILE_RING_FILL_ALPHA,
-    squareCellBorderAlpha: 0.34,
-    squareSubCellBorderAlpha: hasUserProfile ? 0.18 : undefined,
-    showSquareInteriorFractals: hasUserProfile,
-    mapSquare: null,
-    squareBackgroundImage: null,
-    squareCenterBackgroundImage: avatarImage
-  };
-};
-
 export const initJayceePage = async () => {
   const shell = document.querySelector("[data-profile-shell]");
-  const canvas = document.querySelector("[data-profile-canvas]");
-  const publicUsername = getDisplayValue(shell?.dataset.profileUsername) || getPublicProfileUsernameFromUrl();
-  const pageMode = getDisplayValue(shell?.dataset.profileMode) || (publicUsername ? "public" : "profile");
-  const isGamePage = document.body.classList.contains("game-page");
-  const isPresentPage = pageMode === "present";
-  const isEditableProfilePage = pageMode === "profile" && !publicUsername;
-  const hasUserProfile = Boolean(publicUsername) || isEditableProfilePage;
-  const shouldRenderGameInterface = isGamePage || hasUserProfile;
-
-  if (!shell || !canvas) return;
+  const gamePanel = shell?.querySelector("[data-game-content]");
+  if (!shell || !gamePanel) return;
+  const publicUsername = getDisplayValue(new URLSearchParams(window.location.search).get("username"));
+  const hasUserProfile = Boolean(publicUsername);
 
   let publicProfiles = [];
-  let avatarImage = null;
   let adminProfile = null;
   let activeMasterProfile = null;
   let masterLineage = null;
   let activeMasterGame = null;
   let currentProfile = null;
   let currentPlayer = null;
-  let gameForm = createEmptyGameSettings();
+  let gameForm = createGameForm(null);
   let gameSettings = null;
   let isPlayerSaving = false;
   let playerAvatarUrl = "";
@@ -1311,13 +1193,13 @@ export const initJayceePage = async () => {
     if (descriptionCloseTimer) window.clearTimeout(descriptionCloseTimer);
     selectedAbilityIndex = null;
     closingAbilityIndex = index;
-    renderCoreParameters();
+    renderSkillPanel();
     renderVitalsPanel();
     shell.querySelector(`[data-skill-index="${index}"]`)?.focus();
     descriptionCloseTimer = window.setTimeout(() => {
       closingAbilityIndex = null;
       descriptionCloseTimer = 0;
-      renderCoreParameters();
+      renderSkillPanel();
     }, 180);
   };
   const applySkillProgress = ({ player, years_burned, completed_occurrence, completed_skills = [], completed_passive_seconds }) => {
@@ -1346,9 +1228,8 @@ export const initJayceePage = async () => {
         closeSkillDescription(selectedAbilityIndex);
       } else {
         renderVitalsPanel();
-        renderCoreParameters();
+        renderSkillPanel();
       }
-      scheduleRenderCore();
     }
   };
   const loadMasterGame = async (masterProfile, masterGame = null) => {
@@ -1395,7 +1276,7 @@ export const initJayceePage = async () => {
     } finally {
       isPlayerSaving = false;
       renderVitalsPanel();
-      renderCoreParameters();
+      renderSkillPanel();
     }
   };
 
@@ -1416,41 +1297,14 @@ export const initJayceePage = async () => {
     } finally {
       isQuestAcceptSaving = false;
       renderVitalsPanel();
-      renderCoreParameters();
-    }
-  };
-
-  const renderPresentControls = () => {
-    if (!canvas) return;
-
-    const corePanel = canvas.closest(".game-core-panel");
-    const existingControls = corePanel?.querySelector("[data-profile-present-controls]");
-
-    if (!corePanel || !isPresentPage) {
-      existingControls?.remove();
-      corePanel?.classList.remove("has-fractal-controls");
-      return;
-    }
-
-    const controls = existingControls || document.createElement("div");
-
-    corePanel.classList.add("has-fractal-controls");
-    controls.className = "profile-fractal-selectors";
-    controls.dataset.profilePresentControls = "";
-    controls.replaceChildren(createGameSelect(publicProfiles));
-
-    if (!existingControls) {
-      corePanel.insertBefore(controls, canvas);
+      renderSkillPanel();
     }
   };
 
   const renderVitalsPanel = () => {
-    if (!canvas) return;
+    const existingPanel = gamePanel?.querySelector("[data-profile-vitals]");
 
-    const corePanel = canvas.closest(".game-core-panel");
-    const existingPanel = corePanel?.querySelector("[data-profile-vitals]");
-
-    if (!corePanel || !shouldRenderGameInterface) {
+    if (!gamePanel) {
       existingPanel?.remove();
       return;
     }
@@ -1505,21 +1359,18 @@ export const initJayceePage = async () => {
     if (existingPanel) {
       existingPanel.replaceWith(panel);
     } else {
-      corePanel.insertBefore(panel, corePanel.firstChild);
+      gamePanel.insertBefore(panel, gamePanel.firstChild);
     }
     sounds.notify(Array.from(panel.querySelectorAll('[data-notification-key]'),
       (notice) => notice.dataset.notificationKey));
     updateLiveUI();
   };
 
-  const renderCoreParameters = () => {
-    if (!canvas) return;
+  const renderSkillPanel = () => {
+    const existingPanel = gamePanel?.querySelector("[data-profile-parameters]");
+    const existingInventoryTitle = gamePanel?.querySelector("[data-profile-inventory-title]");
 
-    const corePanel = canvas.closest(".game-core-panel");
-    const existingPanel = corePanel?.querySelector("[data-profile-parameters]");
-    const existingInventoryTitle = corePanel?.querySelector("[data-profile-inventory-title]");
-
-    if (!corePanel || !playerProfile || !activeMasterProfile || !currentPlayer) {
+    if (!gamePanel || !playerProfile || !activeMasterProfile || !currentPlayer) {
       existingPanel?.remove();
       existingInventoryTitle?.remove();
       return;
@@ -1540,9 +1391,7 @@ export const initJayceePage = async () => {
     });
     const panel = createSkillPanel({
       activeModels,
-      currentLevel: playerProfile
-        ? Math.max(0, Number(currentPlayer?.level) || 0)
-        : (document.body.classList.contains("game-page") ? 1 : 0),
+      currentLevel: Math.max(0, Number(currentPlayer.level) || 0),
       onSelect: (index) => {
         if (descriptionCloseTimer) {
           window.clearTimeout(descriptionCloseTimer);
@@ -1557,7 +1406,7 @@ export const initJayceePage = async () => {
         closingAbilityIndex = null;
         selectedAbilityIndex = index;
         lastMannaAbilityIndex = index;
-        renderCoreParameters();
+        renderSkillPanel();
         renderVitalsPanel();
       },
       onTogglePractice: (index) => {
@@ -1584,7 +1433,7 @@ export const initJayceePage = async () => {
       ultimateModel
     });
 
-    if (!corePanel || !panel) {
+    if (!gamePanel || !panel) {
       existingPanel?.remove();
       existingInventoryTitle?.remove();
       return;
@@ -1593,7 +1442,7 @@ export const initJayceePage = async () => {
     if (existingPanel) {
       existingPanel.replaceWith(panel);
     } else {
-      corePanel.insertBefore(panel, canvas);
+      gamePanel.append(panel);
     }
 
     existingInventoryTitle?.remove();
@@ -1700,23 +1549,6 @@ export const initJayceePage = async () => {
     }
   };
 
-  const renderCore = () => {
-    if (!canvas) return;
-    if (document.body.classList.contains("game-page")) return;
-
-    const coreState = createProfileCoreState({
-      avatarImage,
-      hasUserProfile
-    });
-    drawJaycee(canvas, coreState);
-  };
-
-  const scheduleRenderCore = () => {
-    if (!canvas) return;
-
-    window.requestAnimationFrame(renderCore);
-  };
-
   const handleAcceptMasterClick = async (masterProfile) => {
     if (isMasterSaving || isQuestAcceptSaving || !masterProfile?.id || !playerProfile || !supabaseClient
       || isMasterLinkLocked(masterProfile)
@@ -1754,7 +1586,7 @@ export const initJayceePage = async () => {
     } finally {
       isMasterSaving = false;
       renderVitalsPanel();
-      renderCoreParameters();
+      renderSkillPanel();
     }
   };
 
@@ -1810,9 +1642,7 @@ export const initJayceePage = async () => {
     }
 
     renderVitalsPanel();
-    renderPresentControls();
-    renderCoreParameters();
-    scheduleRenderCore();
+    renderSkillPanel();
   };
 
   window.addEventListener("jaycee:account-updated", refreshPlayerProfile);
@@ -1859,16 +1689,7 @@ export const initJayceePage = async () => {
       }
     });
 
-    if (isEditableProfilePage && !user) {
-      redirectToLogin();
-      return;
-    }
-
-    const profile = !hasUserProfile
-      ? null
-      : publicUsername
-        ? await fetchProfileByUsername(client, publicUsername)
-        : await fetchProfileByUserId(client, user.id);
+    const profile = publicUsername ? await fetchProfileByUsername(client, publicUsername) : null;
     currentProfile = profile;
     playerProfile = user
       ? getDisplayValue(profile?.id) === getDisplayValue(user.id)
@@ -1909,21 +1730,19 @@ export const initJayceePage = async () => {
       }
     }
 
-    if (isPresentPage || hasUserProfile || isGamePage) {
-      try {
-        publicProfiles = await attachProfileAvatarUrls(client, await fetchPublicProfiles(client, 100, {
-          referrerId: playerProfile?.referrer_id || null,
-          referralUsername: playerProfile ? "" : window.JayceeReferral?.getUsername() || ""
-        }));
-        if (activeMasterProfile) {
-          activeMasterProfile = publicProfiles.find((publicProfile) => (
-            getDisplayValue(publicProfile.id) === getDisplayValue(activeMasterProfile.id)
-          )) || activeMasterProfile;
-        }
-      } catch (error) {
-        console.warn("Jaycee public profiles could not be loaded", error);
-        publicProfiles = [];
+    try {
+      publicProfiles = await attachProfileAvatarUrls(client, await fetchPublicProfiles(client, 100, {
+        referrerId: playerProfile?.referrer_id || null,
+        referralUsername: playerProfile ? "" : window.JayceeReferral?.getUsername() || ""
+      }));
+      if (activeMasterProfile) {
+        activeMasterProfile = publicProfiles.find((publicProfile) => (
+          getDisplayValue(publicProfile.id) === getDisplayValue(activeMasterProfile.id)
+        )) || activeMasterProfile;
       }
+    } catch (error) {
+      console.warn("Jaycee public profiles could not be loaded", error);
+      publicProfiles = [];
     }
     try {
       const fetchedAdminProfile = await fetchAdminProfile(client);
@@ -1938,9 +1757,6 @@ export const initJayceePage = async () => {
         getDisplayValue(publicProfile.role).toLowerCase() === "admin"
       )) || null;
     }
-    avatarImage = hasUserProfile
-      ? await loadOptionalImage(await getAvatarImageUrl(client, profile))
-      : null;
     if (playerProfile) {
       practice = new PracticeTimer({
         userId: playerProfile.id,
@@ -1952,21 +1768,8 @@ export const initJayceePage = async () => {
       if (currentPlayer) applySkillProgress(await syncSkillProgress(client, currentPlayer.id));
     }
     shell.hidden = false;
-    renderCore();
-    if (canvas) {
-      const resizeObserver = new ResizeObserver(scheduleRenderCore);
-
-      resizeObserver.observe(canvas);
-      if (canvas.parentElement) {
-        resizeObserver.observe(canvas.parentElement);
-      }
-      window.addEventListener("resize", scheduleRenderCore);
-      window.addEventListener("load", scheduleRenderCore);
-    }
     renderVitalsPanel();
-    renderPresentControls();
-    renderCoreParameters();
-    scheduleRenderCore();
+    renderSkillPanel();
     let uiClock = 0;
     let questClock = 0;
     const startClocks = () => {

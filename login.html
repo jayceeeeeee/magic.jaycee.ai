@@ -12,19 +12,13 @@
   <link rel="stylesheet" href="/src/css/game-ui.css">
 </head>
 <body class="auth-game-page">
-  <jaycee-banner></jaycee-banner>
 
   <main class="auth-page signup-page-main">
     <section class="auth-panel" aria-labelledby="auth-title">
       <h1 class="game-brand-title" id="auth-title"><a href="/">jaycee.ai</a></h1>
       <p class="auth-eyebrow">Jaycee.ai&gt; Account login</p>
-      <p class="auth-context" data-auth-context hidden></p>
 
       <form class="auth-form" data-auth-form data-auth-mode="login">
-        <label data-auth-signup-field hidden>
-          <span>Full name</span>
-          <input type="text" name="full_name" autocomplete="name">
-        </label>
         <label>
           <span>Email</span>
           <input type="email" name="email" autocomplete="email" required>
@@ -41,9 +35,7 @@
     </section>
   </main>
 
-  <jaycee-footer></jaycee-footer>
 
-  <script src="/src/js/shell/shell.js"></script>
   <script src="/src/js/referral.js"></script>
   <script src="/src/js/auth/invite.js"></script>
   <script src="/src/js/config/app-config.js"></script>

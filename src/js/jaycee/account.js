@@ -441,14 +441,14 @@ const mountAccountPanel = () => {
 
   const shell = document.createElement("aside");
 
-  shell.className = "jaycee-settings-page is-account-page is-account-panel-collapsed";
+  shell.className = "account-panel-shell is-account-panel-collapsed";
   shell.dataset.accountShell = "";
   shell.innerHTML = `
     <a class="account-hud-trigger donate-hud-trigger" href="https://buy.stripe.com/14A14o70HbZXdtr73FfQI01" target="_blank" rel="noopener noreferrer">Donate</a>
     <button class="account-hud-trigger" type="button" data-account-toggle aria-controls="account-panel" aria-expanded="false" aria-label="Open account">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"></path><path d="M4.5 20a7.5 7.5 0 0 1 15 0"></path></svg>
     </button>
-    <section class="jaycee-settings-panel account-side-panel" id="account-panel" aria-labelledby="account-title" tabindex="-1">
+    <section class="account-side-panel" id="account-panel" aria-labelledby="account-title" tabindex="-1">
       <div class="profile-settings-header"><p class="profile-kicker">jaycee.ai &gt; account</p><h1 id="account-title">Account</h1></div>
       <div class="profile-resonance-status" data-account-status aria-live="polite">Loading account...</div>
       <div class="jaycee-account-sections" data-account-sections></div>
@@ -505,7 +505,7 @@ export const initJayceeAccountPage = async () => {
   const saveButton = document.querySelector("[data-account-save]");
   const logoutButton = document.querySelector("[data-account-logout]");
   const saveStatus = document.querySelector("[data-account-save-status]");
-  const panel = document.querySelector("[data-account-shell] .jaycee-settings-panel");
+  const panel = document.querySelector("[data-account-shell] .account-side-panel");
   const toggleButton = document.querySelector("[data-account-toggle]");
 
   if (!shell || !sections || !saveButton) return;
@@ -679,7 +679,6 @@ export const initJayceeAccountPage = async () => {
         referral.refresh();
         if (profileUpdates.visibility !== true) await skills.save(skillsResult.skills);
         setStatus(saveStatus, "Saved.");
-        window.JayceeAuth?.refreshHeader?.();
         window.dispatchEvent(new CustomEvent("jaycee:account-updated", {
           detail: {
             profile: { ...profile }

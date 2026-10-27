@@ -12,14 +12,15 @@ connecte pas à Supabase et n'a pas besoin de Node ni d'un serveur HTTP.
 
 | Fichier | Couverture |
 | --- | --- |
-| `browser.ps1` | Syntaxe des modules JS, rendu du canvas, notifications, placeholders, carrousel et locks, compte à rebours, acceptation, panneau du compte et sauvegarde des skills |
+| `browser.ps1` | Syntaxe des modules JS, notifications, placeholders, carrousel et locks, compte à rebours, acceptation, panneau du compte et sauvegarde des skills |
+| `game-page.test.mjs` | Démarrage du jeu avec son HTML et CSS actuels, visiteur et compte connecté, mise en page mobile et style des boutons |
 | `notifications.test.mjs` | Reçus, stockage local, reconnexion, isolation des comptes et reprises après erreur |
 | `level-two-quest.test.mjs`, `level-three-quest.test.mjs`, `level-four.test.mjs` | Éligibilité des notifications aux différents niveaux |
 | `manna.test.mjs` | Calculs par skill et cumul annuel |
 | `quest-lock-auth.test.mjs` | Connexion, déconnexion et échéances d'accès |
 | `app-config.test.mjs` | Choix de la base par hostname, configuration absente, credentials transmis au client |
 | `oauth-consent.test.mjs` | Retour apres login, consentement explicite, refus et validation de la destination OAuth |
-| `auth-flow.test.mjs` | Conservation de la demande MCP pendant login, inscription, lore, prière et confirmation email ; reprise après rechargement et rejet des redirections externes |
+| `auth-flow.test.mjs` | Inscription directe sans nom ni prière, retour MCP après login et confirmation email, reprise après rechargement, parcours narratif séparé et rejet des redirections externes |
 | `invite-password.test.mjs` | Invitation Supabase, reprise après rechargement, confirmation du mot de passe, erreurs Auth, changement de session et sortie |
 | `referrals.test.mjs` | Capture et transport d'invitation, métadonnées signup, stockage bloqué, recherche publique et compatibilité avant migration |
 | `menu-sounds.test.mjs` | Destination de Play selon la session, attente de fin du son pour Play/Continue/liens, audio refusé ou bloqué et contrôles désactivés |
@@ -31,3 +32,7 @@ confirmation Select, fermeture et sauvegarde du lore depuis le panneau du compte
 Les fichiers `.mjs` sont chargés par la suite navigateur. Les tests backend sont
 dans [../supabase/tests/](../supabase/tests/) et se lancent séparément dans une base
 de test : les mocks ne valident pas l'exécution réelle des fonctions SQL.
+
+`.tools/deno.exe run --allow-read scripts/check-frontend.ts` vérifie aussi que les
+ressources et imports locaux existent, que les modules du frontend sont accessibles
+depuis les pages et que les variables CSS utilisées sont définies.

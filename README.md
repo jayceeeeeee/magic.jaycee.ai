@@ -19,9 +19,8 @@ La configuration publique des connexions est dans `src/js/config/app-config.js` 
 | `src/js/auth/` | Connexion, inscription, définition du mot de passe après invitation Supabase et contrôle d'accès au compte |
 | `src/js/referral.js` | Liens d'invitation et transport du paramètre `ref` jusqu'au signup |
 | `src/js/jaycee/profile-runtime.js` | Interface du jeu, notifications et pratique |
-| `src/js/jaycee/profile-core.js` | Dessin du canvas, sans démarrage automatique |
 | `src/js/jaycee/account.js`, `game-editor.js` | Panneau du compte et édition des skills |
-| `src/js/shell/`, `src/css/`, `src/assets/` | Habillage partagé, styles et ressources |
+| `src/css/`, `src/assets/` | Styles et ressources du jeu |
 | `src/js/ui-sounds.js`, `src/js/jaycee/sounds.js` | Sons partagés des boutons/liens et effets du jeu |
 | [supabase/](supabase/README.md) | Code backend SQL, catalogue des notifications et tests DB |
 | [tests/](tests/README.md) | Tests du navigateur avec données simulées |
@@ -36,7 +35,10 @@ Depuis la racine, avec Chrome installé sous Windows :
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/browser.ps1
+.tools/deno.exe run --allow-read scripts/check-frontend.ts
 ```
 
 Cette commande utilise des mocks et ne modifie aucune base connectée.
+Le contrôle frontend vérifie les références locales, les imports atteignables depuis
+les pages et les variables CSS, sans accès réseau.
 Les tests SQL sont séparés et se lancent uniquement dans une base de test choisie.

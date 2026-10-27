@@ -1,7 +1,5 @@
 (function () {
     const defaultLoginPath = "/login.html";
-    const defaultSignupPath = "/signup.html";
-    const defaultAccountPath = "/game.html";
     const defaultAfterSignInPath = "/game.html";
     let supabaseClientPromise = null;
     let accessCheck = null;
@@ -15,7 +13,6 @@
                 const client = await getSupabaseClient();
                 // Sessions have already been revoked on the server. Clear local state too.
                 await client.auth.signOut({ scope: "local" });
-                setBannerSignedOut();
                 if (redirect) window.location.replace("/");
             })().finally(() => { lockSignOut = null; });
         }
@@ -49,35 +46,6 @@
             throw error;
         }).finally(() => { accessCheck = null; });
         return accessCheck;
-    }
-
-    function canAccessSignup(now = Date.now()) {
-        try {
-            const prayer = JSON.parse(window.localStorage.getItem("pending_prayer") || "null");
-            const name = window.localStorage.getItem("player_full_name")?.trim();
-            const submittedAt = Date.parse(prayer?.created_at || "");
-
-            return Boolean(name && prayer && !prayer.signup_consumed_at
-                && typeof prayer.problem === "string" && prayer.problem.trim()
-                && typeof prayer.prayer === "string" && prayer.prayer.trim()
-                && prayer.username === name && Number.isFinite(submittedAt)
-                && submittedAt <= now && now - submittedAt <= 24 * 60 * 60 * 1000);
-        } catch {
-            return false;
-        }
-    }
-
-    function consumeSignupEligibility() {
-        try {
-            const prayer = JSON.parse(window.localStorage.getItem("pending_prayer") || "null");
-
-            if (prayer) {
-                prayer.signup_consumed_at = new Date().toISOString();
-                window.localStorage.setItem("pending_prayer", JSON.stringify(prayer));
-            }
-        } catch {
-            // Account creation has succeeded even if browser storage is unavailable.
-        }
     }
 
     function loadScript(src) {
@@ -152,99 +120,7 @@
         return getCurrentUrl(withAuthRedirect(path));
     }
 
-    function getAuthUrl(mode = "login", path = mode === "signup" ? defaultSignupPath : defaultLoginPath) {
-        const url = new URL(path, window.location.origin);
-        if (mode !== "login" && path === defaultLoginPath) {
-            url.searchParams.set("mode", mode);
-        }
-        return url.href;
-    }
-
-    function getAccountUrl(path = defaultAccountPath) {
-        return getCurrentUrl(path);
-    }
-
-    function getDisplayName(user) {
-        return user?.user_metadata?.full_name || user?.email || "Account";
-    }
-
-    function getPublicProfileUrl(username) {
-        const value = getDisplayValue(username);
-
-        return value ? `/game.html?username=${encodeURIComponent(value)}` : "";
-    }
-
-    function getDisplayValue(value) {
-        return value === null || value === undefined ? "" : String(value).trim();
-    }
-
-    async function getProfileSettings(user) {
-        if (!user?.id) {
-            return null;
-        }
-
-        try {
-            const client = await getSupabaseClient();
-            const { data, error } = await client
-                .from("profiles")
-                .select("username")
-                .eq("id", user.id)
-                .maybeSingle();
-
-            if (error) {
-                return null;
-            }
-
-            return data || null;
-        } catch {
-            return null;
-        }
-    }
-
-    function setBannerSignedOut() {
-        document.querySelectorAll("jaycee-banner").forEach((banner) => {
-            banner.removeAttribute("auth-state");
-            banner.removeAttribute("public-profile-url");
-            banner.removeAttribute("user-name");
-            banner.connectedCallback();
-        });
-    }
-
-    function setBannerSignedIn(user, displayName = getDisplayName(user), publicProfileUrl = "") {
-        document.querySelectorAll("jaycee-banner").forEach((banner) => {
-            banner.setAttribute("auth-state", "signed-in");
-            if (publicProfileUrl) {
-                banner.setAttribute("public-profile-url", publicProfileUrl);
-            } else {
-                banner.removeAttribute("public-profile-url");
-            }
-            banner.setAttribute("user-name", displayName);
-            banner.connectedCallback();
-        });
-    }
-
-    async function refreshHeader() {
-        const client = await getSupabaseClient();
-        const { data } = await client.auth.getSession();
-
-        if (data.session?.user) {
-            window.JayceeReferral?.clear();
-            const profile = await getProfileSettings(data.session.user);
-
-            setBannerSignedIn(
-                data.session.user,
-                profile?.username || getDisplayName(data.session.user),
-                getPublicProfileUrl(profile?.username)
-            );
-        } else {
-            setBannerSignedOut();
-        }
-    }
-
     async function signUp(email, password, options = {}) {
-        if (!canAccessSignup()) {
-            return { data: { user: null, session: null }, error: { message: "Please complete the prayer first.", code: "prayer_required" } };
-        }
         const client = await getSupabaseClient();
         const result = await client.auth.signUp({
             email,
@@ -256,7 +132,6 @@
         });
 
         if (!result.error && result.data?.user && result.data.user.identities?.length !== 0) {
-            consumeSignupEligibility();
             window.JayceeReferral?.clear();
         }
 
@@ -297,14 +172,11 @@
 
     async function signOut() {
         const client = await getSupabaseClient();
-        const result = await client.auth.signOut();
-        await refreshHeader();
-        return result;
+        return client.auth.signOut();
     }
 
     async function init() {
         if (isConnectionReturn()) {
-            document.querySelectorAll("[data-connection-context]").forEach((notice) => { notice.hidden = false; });
             document.querySelectorAll('a[href="/login.html"], a[href="/signup.html"]').forEach((link) => {
                 link.setAttribute("href", withAuthRedirect(link.getAttribute("href")));
             });
@@ -315,23 +187,13 @@
         } catch (error) {
             console.warn("Account access could not be checked", error);
         }
-        await refreshHeader();
 
         client.auth.onAuthStateChange((_event, session) => {
             window.clearTimeout(accessTimer);
             if (session?.user) {
+                window.JayceeReferral?.clear();
                 // Auth callbacks must not await another Auth operation.
                 window.setTimeout(() => { void checkAccountAccess().catch(() => {}); }, 0);
-                getProfileSettings(session.user)
-                    .then((profile) => {
-                        setBannerSignedIn(
-                            session.user,
-                            profile?.username || getDisplayName(session.user),
-                            getPublicProfileUrl(profile?.username)
-                        );
-                    });
-            } else {
-                setBannerSignedOut();
             }
         });
         window.addEventListener("online", () => { void checkAccountAccess().catch(() => {}); });
@@ -341,17 +203,13 @@
     }
 
     window.JayceeAuth = {
-        canAccessSignup,
         checkAccountAccess,
         getSupabaseClient,
         getAfterSignInUrl,
-        getAccountUrl,
-        getAuthUrl,
         getLoginUrl,
         getReturnPath,
         getSession,
         isConnectionReturn,
-        refreshHeader,
         signIn,
         signOut,
         signOutLockedAccount,

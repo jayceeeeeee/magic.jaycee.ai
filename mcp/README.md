@@ -98,8 +98,9 @@ client registration enabled. For a shared preview, set the **dev project's** Sit
 URL and allowed redirects to that preview's HTTPS origin. Keep its frontend on
 the development database.
 
-The consent login keeps its `authorization_id` through signup, including the lore
-and prayer steps. After the prayer, signup returns directly to consent. Email
+The consent login keeps its `authorization_id` through signup. Signup only asks
+for an email and password; lore, name entry and prayer are optional narrative
+steps outside the signup flow. After signup, users return directly to consent. Email
 confirmation links return to `/login.html?redirect=...`; configure the Auth redirect
 allow list to accept this URL with its query string on each frontend origin
 (for local development, `http://localhost:3000/**`). The confirmation page resumes

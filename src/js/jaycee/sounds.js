@@ -1,7 +1,6 @@
 const SOURCES = {
   menuPlay: new URL('../../assets/sounds/play_main_menu.mp3', import.meta.url).href,
   buttonClick: new URL('../../assets/sounds/first_click_skill.mp3', import.meta.url).href,
-  skillOpen: new URL('../../assets/sounds/first_click_skill.mp3', import.meta.url).href,
   skillStart: new URL('../../assets/sounds/start_skill.mp3', import.meta.url).href,
   notification: new URL('../../assets/sounds/new_notification.mp3', import.meta.url).href,
   notificationConfirm: new URL('../../assets/sounds/first_click_skill.mp3', import.meta.url).href

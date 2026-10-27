@@ -16,6 +16,7 @@ body {
 }
 
 .lore-page::before {
+    z-index: -1;
     content: "";
     position: fixed;
     inset: auto -12vw -16vh;

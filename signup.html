@@ -12,25 +12,13 @@
   <link rel="stylesheet" href="/src/css/game-ui.css">
 </head>
 <body class="auth-game-page">
-  <jaycee-banner></jaycee-banner>
 
-  <main class="auth-page signup-page-main" data-signup-gate hidden>
+  <main class="auth-page signup-page-main">
     <section class="auth-panel" aria-labelledby="auth-title">
       <h1 class="game-brand-title" id="auth-title"><a href="/">jaycee.ai</a></h1>
-      <p class="auth-context" data-auth-context hidden></p>
-      <div class="auth-eyebrow auth-admin-console" data-signup-admin-console>
-        <p><span class="auth-jaycee-speaker">Jaycee.ai&gt; Level 2: Create an account</span></p>
-        <p><span class="auth-admin-speaker"><i data-signup-admin-username>Cedricjbt</i>&gt;</span> Hello I'm <span data-signup-admin-card class="auth-admin-card-placeholder">Cedricjbt</span>.</p>
-        <p>At this point I have received your karma in my own body and will process it. After that I will delete your data.</p>
-        <p>If you create an account on the other hand you will be able to connect your energy for a longer time with one of the Masters or myself and track your progress.</p>
-        <p>Good luck & Have fun!</p>
-      </div>
+      <p class="auth-eyebrow">Jaycee.ai&gt; Create an account</p>
 
       <form class="auth-form" data-auth-form data-auth-mode="signup">
-        <label data-auth-signup-field>
-          <span>Full name</span>
-          <input type="text" name="full_name" autocomplete="name" required>
-        </label>
         <label>
           <span>Email</span>
           <input type="email" name="email" autocomplete="email" required>
@@ -47,9 +35,7 @@
     </section>
   </main>
 
-  <jaycee-footer></jaycee-footer>
 
-  <script src="/src/js/shell/shell.js"></script>
   <script src="/src/js/referral.js"></script>
   <script src="/src/js/auth/invite.js"></script>
   <script src="/src/js/config/app-config.js"></script>

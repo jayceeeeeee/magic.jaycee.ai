@@ -1,1011 +1,343 @@
 :root {
-    color-scheme: dark;
+  color-scheme: dark;
 
-    --page-bg: #071113;
-    --card: rgba(10, 24, 27, 0.88);
-    --card-strong: rgba(12, 30, 33, 0.95);
-    --surface: rgba(7, 21, 24, 0.82);
-    --surface-soft: rgba(83, 220, 198, 0.13);
-    --surface-muted: rgba(255, 255, 255, 0.06);
-    --deep-accent-bg: #041113;
-    --banner-bg: rgba(6, 17, 20, 0.9);
-    --footer-bg: rgba(6, 17, 20, 0.9);
-    --text: #f2fffb;
-    --muted: #a9c3be;
-    --metal: #c4ddd6;
-    --accent: #53dcc6;
-    --accent-soft: #ffd56b;
-    --accent-ink: #041113;
-    --accent-rgb: 83, 220, 198;
-    --accent-line: rgba(var(--accent-rgb), 0.42);
-    --field-border: rgba(196, 221, 214, 0.2);
-    --field-border-soft: rgba(196, 221, 214, 0.14);
-    --bg-oracle-text: "NORTH  STAR  AUM  LIGHT";
-    --bg-oracle-color: rgba(83, 220, 198, 0.08);
-    --bg-oracle-spacing: 0.2em;
-    --bg-top-glow: rgba(255, 213, 107, 0.18);
-    --bg-grid-line: rgba(255, 255, 255, 0.025);
-    --bg-grid-line-alt: rgba(255, 255, 255, 0.02);
-    --bg-scan-line: rgba(var(--accent-rgb), 0.035);
-    --bg-base: linear-gradient(145deg, rgba(7, 17, 19, 0.98) 0%, rgba(18, 44, 45, 0.98) 48%, rgba(22, 23, 41, 0.98) 100%);
-    --button-glow: linear-gradient(145deg, rgba(83, 220, 198, 0.14), rgba(255, 213, 107, 0.08) 42%);
-    --active-button-bg: linear-gradient(145deg, #53dcc6, #ffd56b);
-    --panel-light: linear-gradient(145deg, rgba(255, 255, 255, 0.08), transparent 32%);
-    --panel-aura: linear-gradient(315deg, rgba(var(--accent-rgb), 0.08), transparent 42%);
-    --card-fill: linear-gradient(135deg, rgba(24, 52, 54, 0.9), rgba(11, 25, 29, 0.96));
-    --image-filter: grayscale(6%) contrast(1.05) saturate(1.08);
-    --logo-filter: none;
-    --jaycee-logo-current: var(--jaycee-logo-dark);
+  --page-bg: #05070a;
+  --surface: rgba(7, 21, 24, 0.82);
+  --text: #f2fffb;
+  --muted: #a9c3be;
+  --accent: #53dcc6;
+  --accent-soft: #ffd56b;
+  --accent-rgb: 83, 220, 198;
+  --accent-line: rgba(var(--accent-rgb), 0.42);
+  --field-border: rgba(196, 221, 214, 0.2);
 }
-
 * {
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 @view-transition {
-    navigation: auto;
+  navigation: auto;
 }
-
 ::view-transition-old(root),
 ::view-transition-new(root) {
-    animation-duration: 420ms;
-    animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation-duration: 420ms;
+  animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-
 .game-brand-title {
-    view-transition-name: jaycee-title;
+  view-transition-name: jaycee-title;
 }
-
 .game-brand-title a {
-    color: inherit;
-    text-decoration: none;
+  color: inherit;
+  text-decoration: none;
 }
-
 .game-brand-title a:focus-visible {
-    outline: 2px solid currentColor;
-    outline-offset: 6px;
+  outline: 2px solid currentColor;
+  outline-offset: 6px;
 }
-
 [hidden] {
-    display: none !important;
+  display: none !important;
 }
-
 html {
-    scroll-behavior: smooth;
-    background: var(--page-bg);
+  scroll-behavior: smooth;
+  background: var(--page-bg);
 }
-
 body {
-    --neon-border-soft: rgba(var(--accent-rgb), 0.22);
-    --neon-border: rgba(var(--accent-rgb), 0.32);
-    --neon-border-strong: rgba(var(--accent-rgb), 0.78);
-    --neon-line: rgba(var(--accent-rgb), 0.74);
-    --neon-sheen: rgba(var(--accent-rgb), 0.08);
-    --neon-shadow: rgba(var(--accent-rgb), 0.16);
-    --neon-shadow-strong: rgba(var(--accent-rgb), 0.54);
-    position: relative;
-    min-height: 100vh;
-    margin: 0;
-    background: transparent;
-    color: var(--text);
-    font-family: "Rajdhani", Arial, sans-serif;
-    letter-spacing: 0;
-    overflow-x: hidden;
+  --neon-border: rgba(var(--accent-rgb), 0.32);
+  --neon-border-strong: rgba(var(--accent-rgb), 0.78);
+  --neon-sheen: rgba(var(--accent-rgb), 0.08);
+  position: relative;
+  min-height: 100vh;
+  margin: 0;
+  background: var(--page-bg);
+  isolation: isolate;
+  color: var(--text);
+  font-family: "Rajdhani", Arial, sans-serif;
+  letter-spacing: 0;
+  overflow-x: hidden;
 }
-
-body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -2;
-    background:
-        radial-gradient(circle at 50% -10%, var(--bg-top-glow), transparent 28rem),
-        var(--bg-base),
-        linear-gradient(var(--bg-grid-line) 1px, transparent 1px),
-        linear-gradient(90deg, var(--bg-grid-line-alt) 1px, transparent 1px);
-    background-size: auto, auto, 56px 56px, 56px 56px;
-    opacity: 1;
-}
-
-body::after {
-    content: var(--bg-oracle-text);
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    color: var(--bg-oracle-color);
-    font-family: "Share Tech Mono", monospace;
-    font-size: 1rem;
-    line-height: 2.2;
-    letter-spacing: var(--bg-oracle-spacing);
-    overflow: hidden;
-    pointer-events: none;
-    white-space: pre-wrap;
-    word-spacing: 1.2rem;
-    background:
-        repeating-linear-gradient(
-            90deg,
-            transparent 0 30px,
-            var(--bg-scan-line) 30px 31px,
-            transparent 31px 72px
-        );
-    opacity: 0.42;
-}
-
-.site-header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 5;
-    width: 100%;
-    padding: 10px 16px;
-    border-bottom: 1px solid var(--neon-border);
-    background: var(--banner-bg);
-    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
-    backdrop-filter: blur(8px);
-}
-
-.site-header-inner {
-    width: min(100%, 1120px);
-    min-height: 40px;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 470px) minmax(0, 1fr);
-    align-items: center;
-    gap: 14px;
-    margin: 0 auto;
-}
-
-.site-brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-    color: var(--text);
-    text-decoration: none;
-}
-
-.site-logo {
-    width: 34px;
-    height: 34px;
-    flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid rgba(var(--accent-rgb), 0.46);
-    border-radius: 6px;
-    background: var(--button-glow);
-    color: var(--accent);
-    font-family: "Share Tech Mono", monospace;
-    font-size: 1rem;
-    line-height: 1;
-    text-transform: uppercase;
-    box-shadow: 0 8px 20px rgba(var(--accent-rgb), 0.08);
-}
-
-.site-logo-image {
-    width: 34px;
-    height: 34px;
-    flex: 0 0 auto;
-    object-fit: contain;
-}
-
-.site-logo-current {
-    display: block;
-    background-image: var(--jaycee-logo-current);
-    background-position: center;
-    background-repeat: no-repeat;
-    background-size: contain;
-}
-
-.site-brand-name {
-    overflow: hidden;
-    font-size: 1.04rem;
-    font-weight: 700;
-    line-height: 1;
-    text-overflow: ellipsis;
-    text-transform: lowercase;
-    white-space: nowrap;
-}
-
-.temple-header-note {
-    min-width: 0;
-    width: 100%;
-    max-width: 470px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    justify-self: center;
-    overflow: hidden;
-    text-align: center;
-}
-
-.temple-header-note p {
-    flex: 1 1 auto;
-    min-width: 0;
-    max-width: 430px;
-    margin: 0;
-    overflow: hidden;
-    font-family: "Share Tech Mono", monospace;
-    color: var(--accent-soft);
-    font-size: 0.72rem;
-    font-weight: 500;
-    line-height: 1.35;
-    text-shadow: 0 0 10px rgba(var(--accent-rgb), 0.14);
-    text-transform: uppercase;
-}
-
-.temple-donate-link {
-    flex: 0 0 auto;
-    min-height: 29px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 7px 10px;
-    border: 1px solid var(--neon-border);
-    border-radius: 6px;
-    background:
-        var(--button-glow),
-        var(--surface);
-    color: var(--accent);
-    font-size: 0.705rem;
-    font-weight: 700;
-    line-height: 1;
-    text-decoration: none;
-    text-transform: uppercase;
-    box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.12);
-    transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
-}
-
-.temple-header-track {
-    display: inline-block;
-    width: max-content;
-    transform: translateX(0);
-}
-
-.temple-header-note p.is-overflowing .temple-header-track {
-    animation: temple-header-scroll 8s linear infinite alternate;
-}
-
-.temple-header-note p a {
-    color: var(--accent);
-    text-decoration: underline;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 3px;
-}
-
-.temple-header-note p a:hover,
-.temple-header-note p a:focus-visible {
-    color: var(--accent-soft);
-}
-
-.temple-donate-link:hover,
-.temple-donate-link:focus-visible {
-    border-color: var(--neon-border-strong);
-    background:
-        var(--active-button-bg),
-        var(--accent);
-    color: var(--accent-ink);
-    transform: translateY(-1px);
-}
-
-.site-header .account-menu-button {
-    justify-self: end;
-    display: none;
-    width: 34px;
-    height: 34px;
-    min-height: 34px;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin-top: 0;
-    padding: 0;
-    border: 1px solid var(--field-border);
-    border-radius: 6px;
-    background: var(--surface-muted);
-    color: var(--accent);
-    font: inherit;
-    line-height: 1;
-    text-transform: none;
-    box-shadow: none;
-    cursor: pointer;
-    transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
-}
-
-.site-header .account-menu-icon {
-    display: inline-flex;
-    width: 16px;
-    flex: 0 0 16px;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.site-header .account-menu-icon span {
-    width: 16px;
-    height: 1px;
-    background: currentColor;
-    box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.24);
-}
-
-.site-header.has-account-menu .account-menu-button {
-    width: auto;
-    min-width: 34px;
-    padding: 0 10px;
-    display: inline-flex;
-}
-
-.site-header.has-account-menu .account-menu-button .account-menu-label {
-    width: auto;
-    height: auto;
-    overflow: hidden;
-    background: none;
-    box-shadow: none;
-    color: currentColor;
-    font-size: 0.78rem;
-    font-weight: 700;
-    line-height: 1;
-    max-width: 128px;
-    text-overflow: ellipsis;
-    text-transform: uppercase;
-    white-space: nowrap;
-}
-
-.site-header .account-menu-button:hover,
-.site-header .account-menu-button:focus-visible,
-.site-header .account-menu-button:active,
-.site-header .account-menu-button.is-pressed,
-.site-header.is-menu-open .account-menu-button {
-    border-color: var(--neon-border-strong);
-    background: var(--button-glow), var(--surface);
-    color: var(--accent);
-    transform: translateY(-1px);
-    box-shadow: 0 0 14px rgba(var(--accent-rgb), 0.16);
-}
-
-@keyframes temple-header-scroll {
-    0%,
-    12% {
-        transform: translateX(0);
-    }
-
-    88%,
-    100% {
-        transform: translateX(calc(-1 * var(--temple-scroll-distance, 0px)));
-    }
-}
-
-.account-nav {
-    justify-self: end;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 8px;
-    flex: 0 0 auto;
-}
-
-.site-header.has-account-menu .account-nav {
-    position: absolute;
-    top: calc(100% + 8px);
-    right: max(16px, calc((100vw - 1120px) / 2));
-    z-index: 20;
-    display: none;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 6px;
-    min-width: 148px;
-    padding: 8px;
-    border: 1px solid var(--field-border);
-    border-radius: 8px;
-    background: var(--banner-bg);
-    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
-    backdrop-filter: blur(8px);
-}
-
-.site-header.has-account-menu.is-menu-open .account-nav {
-    display: flex;
-}
-
 .account-button {
-    min-height: 34px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 8px 12px;
-    border: 1px solid var(--field-border);
-    border-radius: 6px;
-    color: var(--text);
-    font-family: "Rajdhani", Arial, sans-serif;
-    font-size: 0.84rem;
-    font-weight: 700;
-    line-height: 1;
-    text-decoration: none;
-    text-transform: uppercase;
-    white-space: nowrap;
-    cursor: pointer;
-    transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border: 1px solid var(--field-border);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.24);
+  color: var(--text);
+  font-family: "Rajdhani", Arial, sans-serif;
+  font-size: 0.84rem;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease,
+    transform 160ms ease;
 }
-
 .account-button:hover,
 .account-button:focus-visible {
-    border-color: var(--neon-border-strong);
-    transform: translateY(-1px);
+  border-color: var(--neon-border-strong);
+  transform: translateY(-1px);
 }
-
 .account-button:disabled {
-    cursor: wait;
-    opacity: 0.62;
-    transform: none;
-}
-
-.account-button-ghost {
-    background: var(--surface-muted);
-    color: var(--muted);
+  cursor: wait;
+  opacity: 0.62;
+  transform: none;
 }
 
 .account-button-primary {
-    border-color: rgba(var(--accent-rgb), 0.58);
-    background: var(--active-button-bg);
-    color: var(--accent-ink);
-    box-shadow: 0 8px 22px rgba(var(--accent-rgb), 0.12);
+  border-color: rgba(var(--accent-rgb), 0.58);
+  background: rgba(var(--accent-rgb), 0.1);
+  color: var(--accent);
+  box-shadow: 0 8px 22px rgba(var(--accent-rgb), 0.12);
 }
-
 .account-button-primary:hover,
 .account-button-primary:focus-visible {
-    box-shadow: 0 10px 26px rgba(var(--accent-rgb), 0.18);
+  box-shadow: 0 10px 26px rgba(var(--accent-rgb), 0.18);
 }
-
-.site-footer {
-    position: fixed;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    z-index: 5;
-    padding: 12px 16px;
-    border-top: 1px solid var(--neon-border-soft);
-    background: var(--footer-bg);
-    box-shadow: 0 -8px 22px rgba(0, 0, 0, 0.18);
-    backdrop-filter: blur(8px);
-}
-
-.site-footer-inner {
-    width: min(100%, 1120px);
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 8px 12px;
-    margin: 0 auto;
-    color: var(--muted);
-    font-size: 0.86rem;
-    font-weight: 500;
-    line-height: 1.2;
-}
-
-.site-footer a {
-    color: var(--accent-soft);
-    text-decoration: none;
-    text-underline-offset: 3px;
-    transition: color 160ms ease, opacity 160ms ease, transform 160ms ease;
-}
-
-.site-footer a:hover,
-.site-footer a:focus-visible {
-    color: var(--accent);
-    text-decoration: underline;
-}
-
-.auth-page {
-    width: min(100% - 28px, 420px);
-    min-height: 100vh;
-    display: grid;
-    align-items: center;
-    margin: 0 auto;
-    padding: 96px 0 84px;
-}
-
 .auth-game-page {
-    min-height: 100vh;
-    overflow-x: hidden;
-    background:
-        radial-gradient(circle at 50% 26%, rgba(var(--accent-rgb), 0.16), transparent 34%),
-        radial-gradient(circle at 50% 90%, rgba(255, 213, 107, 0.07), transparent 34%),
-        linear-gradient(180deg, #080d12 0%, #05070a 58%, #030405 100%);
+  min-height: 100vh;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 50% 26%, rgba(var(--accent-rgb), 0.16),
+    transparent 34%),
+    radial-gradient(circle at 50% 90%, rgba(255, 213, 107, 0.07), transparent
+    34%),
+    linear-gradient(180deg, #080d12 0%, #05070a 58%, #030405 100%);
 }
-
 .auth-game-page::before {
-    content: "";
-    position: fixed;
-    inset: auto -12vw -16vh;
-    height: 58vh;
-    pointer-events: none;
-    background:
-        linear-gradient(rgba(var(--accent-rgb), 0.14) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(var(--accent-rgb), 0.12) 1px, transparent 1px);
-    background-size: 44px 44px;
-    opacity: 0.34;
-    transform: perspective(620px) rotateX(62deg);
-    transform-origin: bottom center;
-    mask-image: linear-gradient(to top, black, transparent 78%);
-}
-
-.auth-game-page > jaycee-banner,
-.auth-game-page > jaycee-footer {
-    display: none;
+  z-index: -1;
+  content: "";
+  position: fixed;
+  inset: auto -12vw -16vh;
+  height: 58vh;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(var(--accent-rgb), 0.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--accent-rgb), 0.12) 1px, transparent 1px);
+  background-size: 44px 44px;
+  opacity: 0.34;
+  transform: perspective(620px) rotateX(62deg);
+  transform-origin: bottom center;
+  mask-image: linear-gradient(to top, black, transparent 78%);
 }
 
 .auth-game-page .auth-page {
-    width: min(100% - 32px, 460px);
-    min-height: 100svh;
-    padding: 24px 0;
+  display: grid;
+  align-items: center;
+  margin: 0 auto;
+  width: min(100% - 32px, 460px);
+  min-height: 100svh;
+  padding: 24px 0;
 }
-
 .auth-game-page .signup-page-main {
-    width: min(100% - 32px, 720px);
+  width: min(100% - 32px, 720px);
 }
-
-.auth-panel {
-    padding: 24px;
-    border: 1px solid var(--field-border);
-    border-radius: 8px;
-    background: var(--card);
-    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.18);
-    backdrop-filter: blur(8px);
-}
-
 .auth-game-page .auth-panel {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    gap: 16px;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    box-shadow: none;
-    backdrop-filter: none;
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 16px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 }
-
 .auth-game-page .signup-page-main .auth-panel {
-    width: 100%;
-    justify-items: center;
-    gap: clamp(24px, 5svh, 46px);
+  width: 100%;
+  justify-items: center;
+  gap: clamp(24px, 5svh, 46px);
 }
-
-.auth-eyebrow {
-    margin: 0 0 8px;
-    color: var(--accent);
-    font-family: "Share Tech Mono", monospace;
-    font-size: 0.78rem;
-    line-height: 1;
-    text-transform: uppercase;
-}
-
-.auth-panel h1 {
-    margin: 0 0 18px;
-    font-size: 2rem;
-    line-height: 1;
-}
-
 .auth-game-page .auth-eyebrow {
-    width: min(100%, 780px);
-    margin: 0;
-    justify-self: center;
-    padding-inline: 22px;
-    color: var(--accent);
-    font-family: "Share Tech Mono", monospace;
-    font-size: clamp(0.86rem, 2.3vw, 1.02rem);
-    line-height: 1.35;
-    text-align: left;
-    text-transform: none;
-    text-shadow: 0 0 16px rgba(var(--accent-rgb), 0.28);
+  width: min(100%, 780px);
+  margin: 0;
+  justify-self: center;
+  padding-inline: 22px;
+  color: var(--accent);
+  font-family: "Share Tech Mono", monospace;
+  font-size: clamp(0.86rem, 2.3vw, 1.02rem);
+  line-height: 1.35;
+  text-align: left;
+  text-transform: none;
+  text-shadow: 0 0 16px rgba(var(--accent-rgb), 0.28);
 }
-
-.auth-game-page .auth-admin-console {
-    display: grid;
-    gap: 9px;
-    color: var(--accent-soft);
-}
-
-.auth-game-page .auth-admin-console p {
-    margin: 0;
-}
-
-.auth-game-page .auth-jaycee-speaker {
-    color: var(--accent);
-}
-
-.auth-game-page .auth-admin-speaker {
-    color: #ffd56b;
-}
-
-.auth-game-page .auth-admin-card,
-.auth-game-page .auth-admin-card-placeholder {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    margin-inline: 4px;
-    padding: 5px 8px 5px 5px;
-    border: 1px solid rgba(var(--accent-rgb), 0.24);
-    border-radius: 7px;
-    background:
-        linear-gradient(90deg, rgba(var(--accent-rgb), 0.1), transparent 72%),
-        rgba(0, 0, 0, 0.22);
-    color: var(--text);
-    font-family: "Rajdhani", sans-serif;
-    font-size: 0.88rem;
-    font-weight: 800;
-    line-height: 1;
-    text-transform: uppercase;
-    vertical-align: middle;
-}
-
-.auth-game-page .auth-admin-card-avatar {
-    width: 30px;
-    aspect-ratio: 1;
-    display: grid;
-    place-items: center;
-    overflow: hidden;
-    border: 1px solid rgba(var(--accent-rgb), 0.24);
-    border-radius: 5px;
-    background: rgba(0, 0, 0, 0.24);
-    color: rgba(255, 255, 255, 0.68);
-    font-size: 0.95rem;
-}
-
-.auth-game-page .auth-admin-card-avatar img {
-    width: 100%;
-    height: 100%;
-    display: block;
-    object-fit: cover;
-}
-
-.auth-game-page .auth-admin-card-name {
-    max-width: 112px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
 .auth-game-page .auth-panel h1 {
-    margin: 0;
-    color: var(--text);
-    font-family: "Rajdhani", sans-serif;
-    font-size: clamp(2rem, 7vw, 3.8rem);
-    font-weight: 700;
-    letter-spacing: 0;
-    line-height: 0.8;
-    text-align: center;
-    text-transform: lowercase;
-    text-shadow:
-        0 0 18px rgba(var(--accent-rgb), 0.28),
-        0 10px 34px rgba(0, 0, 0, 0.36);
+  margin: 0;
+  color: var(--text);
+  font-family: "Rajdhani", sans-serif;
+  font-size: clamp(2rem, 7vw, 3.8rem);
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 0.8;
+  text-align: center;
+  text-transform: lowercase;
+  text-shadow:
+    0 0 18px rgba(var(--accent-rgb), 0.28),
+    0 10px 34px rgba(0, 0, 0, 0.36);
 }
-
 .auth-game-page .signup-page-main .auth-panel h1 {
-    font-size: clamp(3.2rem, 12vw, 6.5rem);
-    text-shadow:
-        0 0 22px rgba(var(--accent-rgb), 0.34),
-        0 12px 46px rgba(0, 0, 0, 0.42);
+  font-size: clamp(3.2rem, 12vw, 6.5rem);
+  text-shadow:
+    0 0 22px rgba(var(--accent-rgb), 0.34),
+    0 12px 46px rgba(0, 0, 0, 0.42);
 }
-
-.auth-form {
-    display: grid;
-    gap: 14px;
-}
-
 .auth-game-page .auth-form {
-    width: 100%;
-    gap: 10px;
+  display: grid;
+  width: 100%;
+  gap: 10px;
 }
-
 .auth-game-page .signup-page-main .auth-form {
-    width: min(100%, 780px);
-    gap: 12px;
+  width: min(100%, 780px);
+  gap: 12px;
 }
-
 .auth-form label {
-    display: grid;
-    gap: 6px;
-    color: var(--muted);
-    font-size: 0.88rem;
-    font-weight: 600;
-    text-transform: uppercase;
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-transform: uppercase;
 }
-
 .auth-game-page .auth-form label {
-    color: var(--accent-soft);
-    font-family: "Share Tech Mono", monospace;
-    font-size: 0.72rem;
+  color: var(--accent-soft);
+  font-family: "Share Tech Mono", monospace;
+  font-size: 0.72rem;
 }
-
 .auth-game-page .signup-page-main .auth-form label {
-    gap: 7px;
+  gap: 7px;
 }
-
 .auth-game-page .signup-page-main .auth-form label span {
-    padding-left: 20px;
+  padding-left: 20px;
 }
-
 .auth-form input {
-    width: 100%;
-    min-height: 42px;
-    padding: 10px 12px;
-    border: 1px solid var(--field-border);
-    border-radius: 6px;
-    background: var(--surface);
-    color: var(--text);
-    font: inherit;
-    font-size: 1rem;
-    outline: none;
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid var(--field-border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem;
+  outline: none;
 }
-
 .auth-game-page .auth-form input {
-    min-height: 46px;
-    border-color: rgba(var(--accent-rgb), 0.28);
-    border-radius: 999px;
-    background:
-        linear-gradient(90deg, rgba(var(--accent-rgb), 0.08), transparent 72%),
-        rgba(0, 0, 0, 0.24);
-    color: var(--text);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  min-height: 46px;
+  border-color: rgba(var(--accent-rgb), 0.28);
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, rgba(var(--accent-rgb), 0.08), transparent 72%),
+    rgba(0, 0, 0, 0.24);
+  color: var(--text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
-
 .auth-game-page .signup-page-main .auth-form input {
-    min-height: 54px;
-    padding-inline: 20px;
-    font-size: clamp(1rem, 2.6vw, 1.16rem);
-    font-weight: 600;
+  min-height: 54px;
+  padding-inline: 20px;
+  font-size: clamp(1rem, 2.6vw, 1.16rem);
+  font-weight: 600;
 }
-
 .auth-form input:focus {
-    border-color: var(--neon-border-strong);
-    box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.12);
+  border-color: var(--neon-border-strong);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.12);
 }
-
 .auth-submit {
-    width: 100%;
-    margin-top: 4px;
+  width: 100%;
+  margin-top: 4px;
 }
-
 .auth-game-page .auth-submit {
-    min-height: 42px;
-    border-color: rgba(255, 191, 96, 0.56);
-    border-radius: 999px;
-    background:
-        linear-gradient(90deg, rgba(255, 191, 96, 0.28), rgba(255, 177, 66, 0.1)),
-        rgba(0, 0, 0, 0.24);
-    color: #ffd56b;
-    box-shadow: 0 0 18px rgba(255, 177, 66, 0.09);
+  min-height: 48px;
+  border-radius: 999px;
+  justify-self: center;
+  width: auto;
+  padding: 0 28px;
+  border-color: rgba(var(--accent-rgb), 0.48);
+  background:
+    radial-gradient(circle, rgba(var(--accent-rgb), 0.16), transparent 64%),
+    rgba(0, 0, 0, 0.28);
+  color: var(--accent);
+  font-family: "Rajdhani", sans-serif;
+  font-size: 1rem;
+  font-weight: 800;
+  box-shadow:
+    0 0 24px rgba(var(--accent-rgb), 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
-
-.auth-game-page .signup-page-main .auth-submit {
-    min-height: 48px;
-    justify-self: center;
-    width: auto;
-    padding: 0 28px;
-    border-color: rgba(var(--accent-rgb), 0.48);
-    background:
-        radial-gradient(circle, rgba(var(--accent-rgb), 0.16), transparent 64%),
-        rgba(0, 0, 0, 0.28);
-    color: var(--accent);
-    font-family: "Rajdhani", sans-serif;
-    font-size: 1rem;
-    font-weight: 800;
-    box-shadow:
-        0 0 24px rgba(var(--accent-rgb), 0.16),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-
 .auth-game-page .auth-submit:hover,
 .auth-game-page .auth-submit:focus-visible {
-    border-color: rgba(255, 213, 107, 0.84);
-    background:
-        linear-gradient(90deg, rgba(255, 191, 96, 0.36), rgba(255, 177, 66, 0.14)),
-        rgba(0, 0, 0, 0.28);
-    color: #ffe59a;
+  border-color: var(--neon-border-strong);
+  background: rgba(var(--accent-rgb), 0.18);
+  color: var(--text);
 }
-
 .auth-submit:disabled {
-    cursor: wait;
-    opacity: 0.68;
-    transform: none;
+  cursor: wait;
+  opacity: 0.68;
+  transform: none;
 }
-
 .auth-status {
-    min-height: 1.2em;
-    margin: 14px 0 0;
-    color: var(--accent-soft);
-    font-size: 0.92rem;
-    line-height: 1.3;
+  min-height: 1.2em;
+  margin: 14px 0 0;
+  color: var(--accent-soft);
+  font-size: 0.92rem;
+  line-height: 1.3;
 }
-
 .auth-game-page .signup-page-main .auth-status:empty {
-    display: none;
+  display: none;
 }
-
 .auth-game-page .auth-status,
 .auth-game-page .auth-switch {
-    text-align: center;
+  text-align: center;
 }
-
 .auth-switch {
-    margin: 3px 0 0;
-    color: var(--muted);
-    font-size: 0.92rem;
-    line-height: 1.3;
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.3;
 }
-
 .auth-game-page .signup-page-main .auth-panel:has(.auth-status:empty) .auth-switch {
-    margin-top: calc(-1 * clamp(12px, 3svh, 28px));
+  margin-top: calc(-1 * clamp(12px, 3svh, 28px));
 }
-
 .auth-switch a {
-    color: var(--accent-soft);
-    text-decoration: none;
+  color: var(--accent-soft);
+  text-decoration: none;
 }
-
 .auth-switch a:hover,
 .auth-switch a:focus-visible {
-    color: var(--accent);
-    text-decoration: underline;
-    text-underline-offset: 3px;
-}
-
-.account-details {
-    display: grid;
-    gap: 12px;
-    margin: 0 0 18px;
-}
-
-.account-details div {
-    display: grid;
-    gap: 4px;
-    padding: 12px;
-    border: 1px solid var(--field-border-soft);
-    border-radius: 6px;
-    background: var(--surface-muted);
-}
-
-.account-details dt {
-    color: var(--muted);
-    font-size: 0.78rem;
-    font-weight: 700;
-    line-height: 1;
-    text-transform: uppercase;
-}
-
-.account-details dd {
-    margin: 0;
-    color: var(--text);
-    font-size: 1rem;
-    line-height: 1.2;
-    word-break: break-word;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 @media (max-width: 620px) {
-    .site-header {
-        padding: 8px 10px;
-    }
+  .account-button {
+    min-height: 32px;
+    padding: 8px 9px;
+    font-size: 0.76rem;
+  }
 
-    .site-header-inner {
-        min-height: 38px;
-        grid-template-columns: 32px minmax(0, 1fr) 34px;
-        gap: 8px;
-    }
-
-    .site-logo {
-        width: 32px;
-        height: 32px;
-    }
-
-    .site-logo-image {
-        width: 32px;
-        height: 32px;
-    }
-
-    .site-brand-name {
-        display: none;
-    }
-
-    .temple-header-note {
-        max-width: 100%;
-        gap: 5px;
-    }
-
-    .temple-header-note p {
-        max-width: 100%;
-        overflow: hidden;
-        font-size: 0.62rem;
-        line-height: 1.35;
-        white-space: nowrap;
-    }
-
-    .temple-donate-link {
-        min-height: 27px;
-        padding: 6px 8px;
-        font-size: 0.625rem;
-    }
-
-    .temple-header-track {
-        display: inline-block;
-    }
-
-    .temple-header-note p.is-overflowing .temple-header-track {
-        animation-duration: 7s;
-    }
-
-    .site-header .account-menu-button {
-        display: inline-flex;
-    }
-
-    .site-header.has-account-menu .account-menu-button {
-        width: 34px;
-        max-width: 34px;
-        padding: 0;
-    }
-
-    .site-header.has-account-menu .account-menu-button .account-menu-label {
-        display: none;
-    }
-
-    .account-nav {
-        position: absolute;
-        top: calc(100% + 8px);
-        right: 10px;
-        z-index: 20;
-        display: none;
-        flex-direction: column;
-        align-items: stretch;
-        gap: 6px;
-        min-width: 112px;
-        padding: 8px;
-        border: 1px solid var(--field-border);
-        border-radius: 8px;
-        background: var(--banner-bg);
-        box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
-        backdrop-filter: blur(8px);
-    }
-
-    .site-header.is-menu-open .account-nav {
-        display: flex;
-    }
-
-    .account-button {
-        min-height: 32px;
-        padding: 8px 9px;
-        font-size: 0.76rem;
-    }
-
-    .site-footer {
-        padding: 10px 12px;
-    }
-
-    .auth-game-page .signup-page-main {
-        width: min(100% - 24px, 460px);
-    }
-
-    .auth-game-page .auth-eyebrow {
-        padding-inline: 17px;
-    }
-
-    .auth-game-page .signup-page-main .auth-form label span {
-        padding-left: 17px;
-    }
-
-    .auth-game-page .signup-page-main .auth-submit {
-        justify-self: center;
-    }
+  .auth-game-page .signup-page-main {
+    width: min(100% - 24px, 460px);
+  }
+  .auth-game-page .auth-eyebrow {
+    padding-inline: 17px;
+  }
+  .auth-game-page .signup-page-main .auth-form label span {
+    padding-left: 17px;
+  }
+  .auth-game-page .signup-page-main .auth-submit {
+    justify-self: center;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    html {
-        scroll-behavior: auto;
-    }
-
-    ::view-transition-old(root),
-    ::view-transition-new(root) {
-        animation-duration: 1ms;
-    }
-
-    .temple-header-track {
-        animation: none;
-    }
+  html {
+    scroll-behavior: auto;
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 1ms;
+  }
 }

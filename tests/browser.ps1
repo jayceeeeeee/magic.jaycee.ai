@@ -19,7 +19,10 @@ $prelude += Read-BrowserSource 'tests/invite-password.test.mjs'
 $prelude += Read-BrowserSource 'tests/app-config.test.mjs'
 $prelude += Read-BrowserSource 'tests/oauth-consent.test.mjs'
 $prelude += Read-BrowserSource 'tests/auth-flow.test.mjs'
+$prelude += Read-BrowserSource 'tests/game-page.test.mjs'
 $authSource = ConvertTo-Json -InputObject ([string](Get-Content 'src/js/auth/auth.js' -Raw -Encoding UTF8)) -Compress
+$gameHtml = ConvertTo-Json -InputObject ([string](Get-Content 'game.html' -Raw -Encoding UTF8)) -Compress
+$gameStyles = ConvertTo-Json -InputObject ([string]((Get-Content 'src/css/global.css' -Raw -Encoding UTF8) + (Get-Content 'src/css/game-ui.css' -Raw -Encoding UTF8) + (Get-Content 'src/css/game.css' -Raw -Encoding UTF8))) -Compress
 $checks = ''
 foreach ($path in @('tests/notifications.test.mjs', 'tests/level-two-quest.test.mjs', 'tests/level-three-quest.test.mjs', 'tests/level-four.test.mjs')) {
   $checks += "`nawait (async()=>{`n" + (Read-BrowserSource $path) + "`n})();`n"
@@ -33,10 +36,7 @@ $browser = @'
 const assert=(value,message)=>{if(!value)throw new Error(message)};
 const syntaxSources=SYNTAX_SOURCES;
 for(const file of syntaxSources){try{new Function(file.source.replace(/\bimport\.meta\b/g,'({url:"file:///syntax-check.js"})'));}catch(error){throw new Error(`${file.name}: ${error.message}`);}}
-const coreSource=syntaxSources.find(file=>file.name==='profile-core.js').source;
-const core=new Function(coreSource+'\nreturn {createJayceeState,drawJaycee};')();
-const coreCanvas=document.createElement('canvas');coreCanvas.style.width='200px';coreCanvas.style.height='200px';document.body.append(coreCanvas);
-core.drawJaycee(coreCanvas,core.createJayceeState());assert(coreCanvas.width>0,'Core canvas did not render');coreCanvas.remove();
+await runGamePageTests({source:syntaxSources.find(file=>file.name==='profile-runtime.js').source,gameConfig:JAYCEE_GAME_CONFIG,skillColumns:JAYCEE_GAME_SKILL_COLUMNS,mannaModel:getMannaModel,questPending:isQuestPending,normalizeUnit:normalizeMannaUnit,html:GAME_HTML,styles:GAME_STYLES});
 await runQuestLockAuthTests(AUTH_SOURCE);
 await runAppConfigTests({configSource:syntaxSources.find(file=>file.name==='app-config.js').source,authSource:AUTH_SOURCE});
 await runOAuthConsentTests(syntaxSources.find(file=>file.name==='oauth-consent.js').source);
@@ -277,8 +277,8 @@ document.querySelector('.is-character [name=username]').value='Renamed User';
 document.querySelector('[data-account-save]').click();await new Promise(resolve=>setTimeout(resolve,20));
 assert(new URL(document.querySelector('[data-referral-link]').value).searchParams.get('ref')==='Renamed User','Referral link did not refresh after saving a new username');
 '@
-$browser = $browser.Replace('AUTH_SOURCE', $authSource).Replace('RUNTIME', $runtime).Replace('EDITOR', $editor).Replace('ACCOUNT', $account).Replace('SYNTAX_SOURCES', $syntaxSources)
-$html = '<!doctype html><body>RUNNING<script>(async()=>{try{' + $prelude + $checks + $browser + "document.body.textContent='PASS: JavaScript syntax, canvas, notifications, Level 2/3 acceptance, clocks, practice gating, skill names, Master carousel, game validation/save and live Skills unlock.';}catch(error){document.body.textContent='FAIL: '+error.stack;}})();</script>"
+$browser = $browser.Replace('AUTH_SOURCE', $authSource).Replace('RUNTIME', $runtime).Replace('EDITOR', $editor).Replace('ACCOUNT', $account).Replace('SYNTAX_SOURCES', $syntaxSources).Replace('GAME_HTML', $gameHtml).Replace('GAME_STYLES', $gameStyles)
+$html = '<!doctype html><body>RUNNING<script>(async()=>{try{' + $prelude + $checks + $browser + "document.body.textContent='PASS: JavaScript syntax, game UI, notifications, Level 2/3 acceptance, clocks, practice gating, skill names, Master carousel, game validation/save and live Skills unlock.';}catch(error){document.body.textContent='FAIL: '+error.stack;}})();</script>"
 Set-Content -LiteralPath (Join-Path $checkDir 'check.html') -Value $html -Encoding UTF8
 $process = Start-Process 'C:/Program Files/Google/Chrome/Application/chrome.exe' -ArgumentList @('--headless','--disable-gpu','--disable-software-rasterizer','--in-process-gpu','--no-sandbox','--no-first-run','--virtual-time-budget=5000','--dump-dom',('--user-data-dir='+(Join-Path $checkDir 'profile')),('file:///'+(Join-Path $checkDir 'check.html').Replace('\','/'))) -RedirectStandardOutput (Join-Path $checkDir 'stdout.txt') -RedirectStandardError (Join-Path $checkDir 'stderr.txt') -WindowStyle Hidden -PassThru
 if (-not $process.WaitForExit(20000)) {
