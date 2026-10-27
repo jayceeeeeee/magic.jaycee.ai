@@ -15,10 +15,14 @@ export const runAuthFlowTests = async ({ authSource, pageSource, indexSource, lo
     });
     win.self = win.top = win;
     new Function('window', 'document', authSource)(win, { readyState: 'loading', addEventListener() {} });
-    let session = null, signupOptions, signups = 0, authListener, userError = null, verifiedUser;
+    let session = null, signupOptions, signups = 0, authListener, userError = null, verifiedUser, signedOut = 0;
     const client = { auth: {
       getSession: async () => ({ data: { session } }),
       getUser: async () => ({ data: { user: verifiedUser === undefined ? session?.user || null : verifiedUser }, error: userError }),
+      signOut: async options => {
+        assert(options.scope === 'local', 'Deleted-account recovery must only clear the current session');
+        signedOut++; session = null; return { error: null };
+      },
       onAuthStateChange: callback => { authListener = callback; }
     }, from: () => ({ insert: async () => ({ error: null }) }) };
     Object.assign(win.JayceeAuth, {
@@ -40,7 +44,7 @@ export const runAuthFlowTests = async ({ authSource, pageSource, indexSource, lo
     return { doc, win, storage, init, mountForm,
       session: value => { session = value ? { user: { id: 'session-user' }, ...value } : null; },
       verifiedUser: value => { verifiedUser = value; }, userError: value => { userError = value; },
-      options: () => signupOptions, signups: () => signups,
+      options: () => signupOptions, signups: () => signups, signedOut: () => signedOut,
       confirm: () => { session = { user: { id: 'session-user' } }; authListener?.('SIGNED_IN', session); } };
   };
   const login = setup(); login.mountForm(); await login.init();
@@ -115,6 +119,22 @@ export const runAuthFlowTests = async ({ authSource, pageSource, indexSource, lo
     'A server-rejected browser session must stay on login instead of looping back to consent');
   stale.doc.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true })); await tick();
   assert(stale.win.location.href === origin + target, 'Rejected saved session prevented a fresh password login');
+  for (const error of [
+    { status: 403, code: 'user_not_found', message: 'User from sub claim in JWT does not exist' },
+    { status: 403, message: 'User from sub claim in JWT does not exist' }
+  ]) {
+    const deleted = setup(); deleted.mountForm(); deleted.session({}); deleted.userError(error);
+    await deleted.init();
+    deleted.win.dispatchEvent(new Event('focus')); deleted.win.dispatchEvent(new Event('pageshow')); await tick();
+    assert(deleted.signedOut() === 1 && !deleted.win.location.href && !deleted.doc.querySelector('form').hidden
+      && deleted.doc.querySelector('[data-auth-status]').textContent.includes('Log in with another account')
+      && !deleted.doc.querySelector('[data-auth-status]').textContent.includes('JWT'),
+      'Deleted accounts must clear the saved session and leave a usable login without a raw JWT error');
+    assert(new URL(deleted.doc.querySelector('[data-auth-switch] a').getAttribute('href'), origin).searchParams.get('redirect') === target,
+      'Deleted-account recovery lost the pending MCP request');
+    deleted.doc.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true })); await tick();
+    assert(deleted.win.location.href === origin + target, 'Deleted-account recovery prevented a fresh login');
+  }
   const missingUser = setup(); missingUser.mountForm(); missingUser.session({}); missingUser.verifiedUser(null);
   await missingUser.init();
   assert(!missingUser.win.location.href && missingUser.doc.querySelector('[data-auth-status]').textContent.includes('log in again'),

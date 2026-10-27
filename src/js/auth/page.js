@@ -86,6 +86,23 @@
                 window.location.replace(window.JayceeAuth.getAfterSignInUrl(redirectPath));
                 return true;
             } catch (error) {
+                if (error?.code === "user_not_found"
+                    || /^User from sub claim in JWT does not exist\.?$/i.test(error?.message || "")) {
+                    // Account deletion leaves a saved browser session behind.
+                    // Forget it so focus/pageshow cannot keep retrying this user.
+                    try {
+                        const client = await window.JayceeAuth.getSupabaseClient();
+                        const { error: signOutError } = await client.auth.signOut({ scope: "local" });
+                        if (signOutError) throw signOutError;
+                        clearPendingConfirmation();
+                        awaitingConfirmation = false;
+                        resumeError = "Your previous account is no longer available. Log in with another account or sign up.";
+                    } catch {
+                        resumeError = "Your previous session could not be cleared. Please try again.";
+                    }
+                    status.textContent = resumeError;
+                    return false;
+                }
                 resumeError = error?.message || "Your session could not be verified. Please log in again.";
                 status.textContent = resumeError;
                 return false;

@@ -71,7 +71,6 @@ export async function initOAuthConsent({ win = window, doc = document } = {}) {
         doc.querySelector("[data-consent-scopes]").textContent = data.scope || "None";
         doc.querySelector("[data-consent-redirect]").textContent = data.redirect_uri;
         status.textContent = `Signed in as ${user.email || "your game account"}.`;
-        details.hidden = false;
         const decide = async (approved) => {
             if (approve.disabled || deny.disabled) return;
             approve.disabled = deny.disabled = true;
@@ -91,6 +90,7 @@ export async function initOAuthConsent({ win = window, doc = document } = {}) {
                 }
                 win.location.assign(redirect.href);
             } catch (error) {
+                details.hidden = false;
                 status.textContent = error.message || "The connection could not be completed.";
                 approve.disabled = deny.disabled = false;
                 if (switchAccount) switchAccount.disabled = false;
@@ -98,6 +98,16 @@ export async function initOAuthConsent({ win = window, doc = document } = {}) {
         };
         approve.addEventListener("click", () => { void decide(true); });
         deny.addEventListener("click", () => { void decide(false); });
+        // Connect consents to the identity and session permissions explained on
+        // the first screen. ChatGPT requests all four, including on first signup.
+        // Other permissions still need a separate review before approval.
+        const scopes = String(data.scope || "").trim().split(/\s+/).filter(Boolean);
+        const explainedScopes = new Set(["openid", "email", "offline_access", "profile"]);
+        if (scopes.length > 0 && scopes.every(scope => explainedScopes.has(scope))) {
+            await decide(true);
+        } else {
+            details.hidden = false;
+        }
     } catch (error) {
         accountChoice.hidden = true;
         details.hidden = true;

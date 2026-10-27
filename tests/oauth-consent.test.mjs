@@ -1,13 +1,13 @@
 export const runOAuthConsentTests = async (source) => {
   const assert = (value, message) => { if (!value) throw new Error(message); };
-  const createContext = ({ signedIn = true, userError = null, responseError = null, callback = 'https://chatgpt.com/callback?code=test', previouslyApproved = false, email = 'test@example.test', request = { boundTo: null } } = {}) => {
+  const createContext = ({ signedIn = true, userError = null, responseError = null, callback = 'https://chatgpt.com/callback?code=test', previouslyApproved = false, scope = 'openid email offline_access profile', email = 'test@example.test', request = { boundTo: null } } = {}) => {
     const nodes = new Map();
     const doc = { querySelector(selector) {
       if (!nodes.has(selector)) nodes.set(selector, { hidden: true, textContent: '', disabled: false, addEventListener(_type, callback) { this.click = callback; } });
       return nodes.get(selector);
     } };
     let approved = 0, denied = 0, redirected, signedOut = 0, reloaded = 0, detailsRead = 0;
-    const details = { authorization_id: 'request', client: { name: '<img src=x onerror=alert(1)>' }, scope: 'profile', redirect_uri: 'https://chatgpt.com/callback' };
+    const details = { authorization_id: 'request', client: { name: '<img src=x onerror=alert(1)>' }, scope, redirect_uri: 'https://chatgpt.com/callback' };
     const client = { auth: { signOut: async (options) => { assert(options.scope === 'local', 'Account switching must use local sign out'); signedOut++; return { error: null }; }, getUser: async () => ({ data: { user: signedIn ? { email } : null }, error: userError }), oauth: {
       getAuthorizationDetails: async () => {
         detailsRead++;
@@ -44,13 +44,27 @@ export const runOAuthConsentTests = async (source) => {
       && unavailable.nodes.get('[data-consent-status]').textContent === error.message,
       'Temporary Auth errors must stay on consent with recovery instead of redirecting to login');
   }
-  const owner = createContext(); await owner.init();
-  assert(owner.approved() === 0 && owner.denied() === 0 && !owner.nodes.get('[data-consent-details]').hidden, 'Consent must require a user decision');
+  const owner = createContext(); await owner.init({ chooseAccount: false });
+  assert(owner.approved() === 0 && owner.detailsRead() === 0 && !owner.nodes.get('[data-consent-account]').hidden, 'Consent must require a user decision');
+  owner.nodes.get('[data-consent-continue]').click(); await flush();
+  owner.nodes.get('[data-consent-continue]').click(); await flush();
+  assert(owner.approved() === 1 && owner.redirect() === 'https://chatgpt.com/callback?code=test'
+    && owner.nodes.get('[data-consent-details]').hidden, 'New accounts must connect with a single click, without duplicate approval');
   assert(owner.nodes.get('[data-consent-client]').textContent.startsWith('<img'), 'Client name must be assigned as text');
   owner.nodes.get('[data-consent-approve]').click(); await flush();
   owner.nodes.get('[data-consent-approve]').click(); await flush();
   assert(owner.approved() === 1 && owner.redirect() === 'https://chatgpt.com/callback?code=test', 'Explicit approval failed');
-  const denied = createContext(); await denied.init(); denied.nodes.get('[data-consent-deny]').click(); await flush();
+  for (const scope of ['profile', 'profile offline_access email openid', '  openid   email offline_access profile  ']) {
+    const standard = createContext({ scope }); await standard.init();
+    assert(standard.approved() === 1 && standard.redirect() === 'https://chatgpt.com/callback?code=test'
+      && standard.nodes.get('[data-consent-details]').hidden, `Explained permissions need a second confirmation: ${scope}`);
+  }
+  const additional = createContext({ scope: 'profile email phone' }); await additional.init();
+  assert(additional.approved() === 0 && !additional.nodes.get('[data-consent-details]').hidden
+    && additional.nodes.get('[data-consent-scopes]').textContent === 'profile email phone', 'Additional identity permissions must be reviewed before approval');
+  additional.nodes.get('[data-consent-approve]').click(); await flush();
+  assert(additional.approved() === 1 && additional.redirect(), 'Reviewed additional permissions cannot be approved');
+  const denied = createContext({ scope: 'profile email phone' }); await denied.init(); denied.nodes.get('[data-consent-deny]').click(); await flush();
   assert(denied.denied() === 1 && denied.approved() === 0, 'Cancel approved the connection');
   const invalid = createContext({ callback: 'https://attacker.example/callback?code=test' });
   await invalid.init(); invalid.nodes.get('[data-consent-approve]').click(); await flush();
@@ -73,10 +87,9 @@ export const runOAuthConsentTests = async (source) => {
   assert(accountSwitch.signedOut() === 1 && switchedLogin.searchParams.get('redirect') === '/oauth-consent.html?authorization_id=request', 'Account switching lost the request');
   accountSwitch.nodes.get('[data-consent-continue]').click(); await flush();
   assert(accountSwitch.detailsRead() === 0 && request.boundTo === null, 'Switching accounts must not consume the first account authorization');
-  const otherAccount = createContext({ email: 'other@example.test', request }); await otherAccount.init();
-  assert(otherAccount.nodes.get('[data-consent-status]').textContent.includes('other@example.test')
-    && !otherAccount.nodes.get('[data-consent-details]').hidden, 'Switched account cannot load the pending consent');
-  otherAccount.nodes.get('[data-consent-approve]').click(); await flush();
+  const otherAccount = createContext({ email: 'other@example.test', request }); await otherAccount.init({ chooseAccount: false });
+  assert(otherAccount.nodes.get('[data-consent-status]').textContent.includes('other@example.test'), 'Switched account identity is missing');
+  otherAccount.nodes.get('[data-consent-continue]').click(); await flush();
   assert(otherAccount.approved() === 1 && otherAccount.redirect() === 'https://chatgpt.com/callback?code=test', 'Switched account could not complete authorization');
   const returningAccount = createContext({ previouslyApproved: true }); await returningAccount.init({ chooseAccount: false });
   returningAccount.nodes.get('[data-consent-continue]').click();
