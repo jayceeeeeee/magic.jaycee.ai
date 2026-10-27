@@ -132,7 +132,7 @@
   gap: 6px;
   margin-top: -2px;
 }
-.has-account-panel .profile-settings-actions button {
+.has-account-panel .account-panel-action {
   width: 100%;
   min-height: 42px;
   border-radius: 3px;
@@ -912,6 +912,9 @@
 }
 .jaycee-account-section {
   min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 11px;
   padding: 0 0 11px;
   border: 0;
   border-bottom: 1px solid rgba(var(--accent-rgb), 0.14);
@@ -957,6 +960,11 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+.profile-referral-actions .account-button {
+  min-height: 32px;
+  padding: 7px 11px;
+  border-radius: 6px;
 }
 .profile-referral p {
   margin: 0;
@@ -1089,7 +1097,7 @@
   align-items: center;
   gap: 10px;
 }
-.profile-settings-actions button {
+.account-panel-action {
   min-height: 34px;
   padding: 7px 12px;
   border: 1px solid rgba(var(--accent-rgb), 0.28);
@@ -1099,12 +1107,12 @@
   cursor: pointer;
   font: inherit;
 }
-.profile-settings-actions button:hover,
-.profile-settings-actions button:focus-visible {
+.account-panel-action:hover,
+.account-panel-action:focus-visible {
   border-color: var(--neon-border-strong);
   box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.1);
 }
-.profile-settings-actions button:disabled {
+.account-panel-action:disabled {
   cursor: wait;
   opacity: 0.72;
 }

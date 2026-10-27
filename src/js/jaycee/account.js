@@ -43,7 +43,7 @@ const createSection = (title, className = "") => {
   const heading = document.createElement("h2");
   const content = document.createElement("div");
 
-  section.className = ["profile-resonance-column", "jaycee-account-section", className].filter(Boolean).join(" ");
+  section.className = ["jaycee-account-section", className].filter(Boolean).join(" ");
   heading.className = "profile-section-label";
   heading.textContent = title;
   content.className = "jaycee-account-section-content";
@@ -453,8 +453,8 @@ const mountAccountPanel = () => {
       <div class="profile-resonance-status" data-account-status aria-live="polite">Loading account...</div>
       <div class="jaycee-account-sections" data-account-sections></div>
       <div class="profile-settings-actions" data-account-actions hidden>
-        <button type="button" data-account-save>Save</button>
-        <button type="button" data-account-logout>Log out</button>
+        <button class="account-panel-action" type="button" data-account-save>Save</button>
+        <button class="account-panel-action" type="button" data-account-logout>Log out</button>
         <p data-account-save-status aria-live="polite"></p>
         <p class="account-help">Need help? <a href="mailto:jaubertcedric13@gmail.com">contact me</a>.</p>
       </div>
@@ -470,7 +470,7 @@ const createGuestLoginSection = () => {
   form.innerHTML = `
     <label class="profile-field-wide"><span>Email</span><input type="email" name="email" autocomplete="email" required></label>
     <label class="profile-field-wide"><span>Password</span><input type="password" name="password" autocomplete="current-password" required></label>
-    <button class="account-button account-button-primary profile-field-wide" type="submit">Log in</button>
+    <button class="account-panel-action profile-field-wide" type="submit">Log in</button>
     <p class="profile-field-wide" role="status" data-panel-login-status></p>`;
   form.addEventListener("submit", async (event) => {
     event.preventDefault();

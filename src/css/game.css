@@ -36,9 +36,9 @@ body {
   min-height: 100svh;
   display: grid;
   margin: 0 auto;
-  align-content: center;
+  align-content: start;
   gap: clamp(18px, 4svh, 30px);
-  padding: 24px 0;
+  padding: clamp(64px, 10svh, 96px) 0 24px;
 }
 .game-title {
   margin: 0;
@@ -552,7 +552,7 @@ body {
 @media (max-width: 620px) {
   .game-shell {
     width: min(100% - 20px, 460px);
-    padding: 10px 0;
+    padding-bottom: 16px;
   }
   .game-page .game-content-panel {
     height: auto;

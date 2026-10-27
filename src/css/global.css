@@ -87,6 +87,11 @@ body {
   transform: none;
 }
 
+.account-button-ghost {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+}
+
 .account-button-primary {
   border-color: rgba(var(--accent-rgb), 0.58);
   background: rgba(var(--accent-rgb), 0.1);
