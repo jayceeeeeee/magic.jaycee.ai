@@ -4,6 +4,8 @@ export async function initOAuthConsent({ win = window, doc = document } = {}) {
     const approve = doc.querySelector("[data-consent-approve]");
     const deny = doc.querySelector("[data-consent-deny]");
     const switchAccount = doc.querySelector("[data-consent-switch]");
+    const accountChoice = doc.querySelector("[data-consent-account]");
+    const continueAccount = doc.querySelector("[data-consent-continue]");
     const recovery = doc.querySelector("[data-consent-recovery]");
     doc.querySelector("[data-consent-retry]")?.addEventListener("click", () => win.location.reload());
     const authorizationId = new URLSearchParams(win.location.search).get("authorization_id");
@@ -21,8 +23,10 @@ export async function initOAuthConsent({ win = window, doc = document } = {}) {
             win.location.replace(loginPath);
             return;
         }
+        let choosingAccount = true;
         switchAccount?.addEventListener("click", async () => {
-            if (approve.disabled || deny.disabled) return;
+            if (!choosingAccount || continueAccount.disabled) return;
+            continueAccount.disabled = true;
             approve.disabled = deny.disabled = switchAccount.disabled = true;
             try {
                 const { error } = await client.auth.signOut({ scope: "local" });
@@ -31,7 +35,23 @@ export async function initOAuthConsent({ win = window, doc = document } = {}) {
             } catch (error) {
                 status.textContent = error.message || "Could not switch accounts. Please try again.";
                 approve.disabled = deny.disabled = switchAccount.disabled = false;
+                continueAccount.disabled = false;
             }
+        });
+        // Loading authorization details can auto-approve an existing grant and
+        // bind this request to the current user. Choose the account BEFORE that
+        // call so switching accounts preserves a pending authorization request.
+        status.textContent = `Signed in as ${user.email || "your game account"}.`;
+        accountChoice.hidden = false;
+        await new Promise(resolve => {
+            continueAccount.addEventListener("click", () => {
+                if (!choosingAccount || continueAccount.disabled) return;
+                choosingAccount = false;
+                continueAccount.disabled = switchAccount.disabled = true;
+                accountChoice.hidden = true;
+                status.textContent = "Loading the connection request…";
+                resolve();
+            });
         });
         const { data, error } = await client.auth.oauth.getAuthorizationDetails(authorizationId);
         if (error) throw error;
@@ -41,14 +61,9 @@ export async function initOAuthConsent({ win = window, doc = document } = {}) {
                 && ["localhost", "127.0.0.1", "[::1]"].includes(redirect.hostname))) {
                 throw new Error("The authorization server returned an unexpected return address.");
             }
-            doc.querySelector("[data-consent-client]").textContent = "Your application";
-            doc.querySelector("[data-consent-scopes]").textContent = "Same permissions as your previous connection";
-            doc.querySelector("[data-consent-redirect]").textContent = redirect.origin + redirect.pathname;
-            status.textContent = `Signed in as ${user.email || "your game account"}. Ready to reconnect. Continue to finish connecting your account.`;
-            approve.textContent = "Reconnect account";
-            details.hidden = false;
-            approve.addEventListener("click", () => win.location.assign(redirect.href));
-            deny.addEventListener("click", () => win.location.assign("/"));
+            // The Connect click already confirmed this account. A remembered
+            // grant needs no second confirmation before returning to the app.
+            win.location.assign(redirect.href);
             return;
         }
         if (!data || !("authorization_id" in data)) throw new Error("This connection request is no longer available.");
@@ -84,6 +99,7 @@ export async function initOAuthConsent({ win = window, doc = document } = {}) {
         approve.addEventListener("click", () => { void decide(true); });
         deny.addEventListener("click", () => { void decide(false); });
     } catch (error) {
+        accountChoice.hidden = true;
         details.hidden = true;
         status.textContent = error.message || "This connection request could not be loaded.";
         if (recovery) recovery.hidden = false;

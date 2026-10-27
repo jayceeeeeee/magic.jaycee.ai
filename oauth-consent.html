@@ -19,6 +19,26 @@
       <p class="consent-eyebrow">Game account connection</p>
       <h1 id="consent-title">Continue your adventure</h1>
       <p class="consent-status" data-consent-status role="status">Checking the connection request…</p>
+      <div data-consent-account hidden>
+        <p class="consent-intro">Connect your game account to your application.</p>
+        <div class="consent-permission">
+          <span class="consent-permission-icon" aria-hidden="true">↗</span>
+          <div><strong>Your adventure, in the conversation</strong><p>The game MCP tools can read your profile and saved progress. They cannot change your game.</p></div>
+        </div>
+        <details class="consent-technical">
+          <summary>Game MCP permissions</summary>
+          <dl>
+            <dt>Profile</dt><dd>Read your game profile.</dd>
+            <dt>Saved progress</dt><dd>Read your level, skills and saved adventure progress.</dd>
+            <dt>Game changes</dt><dd>Read only. The game MCP tools cannot modify your game or saved progress.</dd>
+          </dl>
+        </details>
+        <div class="consent-actions">
+          <a class="account-button consent-cancel" href="/">Cancel</a>
+          <button class="account-button auth-submit" type="button" data-consent-continue>Connect account <span aria-hidden="true">→</span></button>
+        </div>
+        <button class="consent-switch" type="button" data-consent-switch>Use another account</button>
+      </div>
       <div data-consent-details hidden>
         <p class="consent-intro"><strong data-consent-client></strong> wants to connect to your game account.</p>
         <div class="consent-permission">
@@ -33,7 +53,6 @@
           <button class="account-button consent-cancel" type="button" data-consent-deny>Cancel</button>
           <button class="account-button auth-submit" type="button" data-consent-approve>Connect account <span aria-hidden="true">→</span></button>
         </div>
-        <button class="consent-switch" type="button" data-consent-switch>Use another account</button>
       </div>
       <div class="consent-recovery" data-consent-recovery hidden>
         <p>Try again, or restart the connection from your application if this request has expired.</p>
