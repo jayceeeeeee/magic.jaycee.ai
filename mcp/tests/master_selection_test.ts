@@ -1,9 +1,8 @@
 import {
-  MASTER_PICKER_RESOURCE,
+  loadMasterChoices,
   registerMasterTools,
 } from "../../supabase/functions/game-mcp/master-tools.ts";
 import { DEV_MASTER_ACCOUNT_IDS } from "../../supabase/functions/game-mcp/master-catalog.js";
-import { MASTER_PICKER_HTML } from "../../supabase/functions/game-mcp/resource-master-picker.generated.ts";
 import { GAME_RULES } from "../../supabase/functions/game-mcp/game-rules.ts";
 
 const assert = (value: unknown, message: string) => {
@@ -183,6 +182,7 @@ function fixture(
   });
   return {
     tools,
+    choices: () => loadMasterChoices(client as any, "owner", profile),
     calls,
     writes: () => writes,
     call: (name: string, args = {}) => tools.get(name)!.callback(args),
@@ -193,7 +193,7 @@ Deno.test("onboarding exposes existing deadline, shared card policy and public d
   const f = fixture({ referrer: true });
   const state = (await f.call("get_onboarding_state")).structuredContent;
   assert(
-    state.requires_master_selection && state.next_tool === "show_master_picker",
+    state.requires_master_selection && state.next_tool === "show_game",
     "Empty account must choose a Master",
   );
   assert(
@@ -203,40 +203,18 @@ Deno.test("onboarding exposes existing deadline, shared card policy and public d
     ) < 2000,
     "Selection deadline must use the existing Moon cycle",
   );
-  const picker = (await f.call("show_master_picker")).structuredContent;
+  const choices = await f.choices();
   assert(
-    picker.masters.length === 3 &&
-      picker.masters.some((row: any) => row.id === referrerId),
+    choices.length === 3 && choices.some((row) => row.id === referrerId),
     "Referrer and featured cards must be preserved",
   );
   assert(
-    picker.masters.find((row: any) => row.id === lockedId).linkLocked,
+    choices.find((row) => row.id === lockedId)?.linkLocked,
     "Locked featured Master must stay locked",
   );
   assert(
-    picker.masters.find((row: any) => row.id === lockedId).selectable ===
-        false &&
-      picker.masters.find((row: any) => row.id === masterId).selectable ===
-        true,
-    "The model must distinguish displayed cards from available choices",
-  );
-  assert(
-    picker.locked_preview_masters.length === 5 &&
-      picker.locked_preview_masters.some((row: any) =>
-        row.username === "Muhammad"
-      ) &&
-      picker.locked_preview_masters.some((row: any) =>
-        row.username === "Moses"
-      ) &&
-      picker.locked_preview_masters.every((row: any) =>
-        row.selectable === false &&
-        row.status === "locked" && row.source === "preview_only" && !row.id
-      ),
-    "The model must see all five UI preview characters as locked, without database IDs",
-  );
-  assert(
-    !JSON.stringify(picker).includes("avatar_path"),
-    "Return usable images instead of storage paths",
+    !f.tools.has("show_master_picker"),
+    "Standalone picker must not be registered",
   );
   const details = (await f.call("get_master_details", { master_id: masterId }))
     .structuredContent;
@@ -258,11 +236,6 @@ Deno.test("onboarding exposes existing deadline, shared card policy and public d
 });
 Deno.test("selection uses the existing RPC, is retry-safe and cannot change a linked Master", async () => {
   const f = fixture();
-  assert(
-    f.tools.get("show_master_picker")!.config._meta.ui.resourceUri ===
-      MASTER_PICKER_RESOURCE,
-    "Picker needs its registered resource",
-  );
   assert(
     f.tools.get("select_master")!.config.annotations.readOnlyHint === false,
     "Selection is a write",
@@ -301,33 +274,17 @@ Deno.test("expired accounts and database failures cannot complete selection", as
       "Do not leak database diagnostics",
     );
   }
-  const expired = (await fixture({ expired: true }).call("show_master_picker"))
-    .structuredContent;
+  const expired =
+    (await fixture({ expired: true }).call("get_onboarding_state"))
+      .structuredContent;
   assert(
-    expired.selection_expired && expired.masters.length === 0,
-    "Expired picker must not offer selection",
+    expired.selection_expired && expired.next_tool === "show_game",
+    "Expired onboarding must preserve deadline and route to the game",
   );
-  const linked = (await fixture({ linked: true }).call("show_master_picker"))
+  const linked = (await fixture({ linked: true }).call("get_onboarding_state"))
     .structuredContent;
   assert(
-    !linked.requires_master_selection && linked.masters.length === 0,
+    !linked.requires_master_selection,
     "Existing account must continue its game",
-  );
-});
-Deno.test("MCP resource bundles the shared UI and assets without browser authentication", () => {
-  assert(
-    MASTER_PICKER_HTML.includes("profile-masters-carousel") &&
-      MASTER_PICKER_HTML.includes("profile-master-dialog"),
-    "Shared UI missing",
-  );
-  assert(
-    MASTER_PICKER_HTML.includes("data:image/jpeg;base64,") &&
-      !MASTER_PICKER_HTML.includes('avatarUrl: "/src/'),
-    "Preview assets must work in the sandbox",
-  );
-  assert(
-    MASTER_PICKER_HTML.includes('request("tools/call"') &&
-      !MASTER_PICKER_HTML.includes("getSupabaseClient"),
-    "Widget must use authenticated MCP tools",
   );
 });

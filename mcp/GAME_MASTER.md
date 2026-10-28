@@ -86,7 +86,7 @@ Run from the repository root:
 .tools/deno.exe check --config mcp/deno.json supabase/functions/game-mcp/index.ts
 .tools/deno.exe test --config mcp/deno.json --allow-env --allow-read mcp/tests/
 .tools/deno.exe run --allow-read scripts/sync-game.ts --check
-.tools/deno.exe run --allow-read scripts/build-master-picker.ts --check
+.tools/deno.exe run --allow-read scripts/build-mcp-ui.ts --check
 ```
 
 Signed-JWT/mock-HTTP tests cover initialization with empty client capabilities,

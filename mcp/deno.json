@@ -7,9 +7,9 @@
   },
   "tasks": {
     "sync:game": "deno run --allow-read --allow-write=../src/js/config ../scripts/sync-game.ts",
-    "build:ui": "deno run --allow-read --allow-write=../supabase/functions/game-mcp --allow-run ../scripts/build-master-picker.ts",
-    "check": "deno run --allow-read ../scripts/sync-game.ts --check && deno run --allow-read ../scripts/build-master-picker.ts --check && deno check ../supabase/functions/game-mcp/index.ts",
-    "test": "deno run --allow-read ../scripts/sync-game.ts --check && deno run --allow-read ../scripts/build-master-picker.ts --check && deno test --allow-env --allow-read tests/",
+    "build:ui": "deno run --allow-read --allow-write=../supabase/functions/game-mcp --allow-run ../scripts/build-mcp-ui.ts",
+    "check": "deno run --allow-read ../scripts/sync-game.ts --check && deno run --allow-read ../scripts/build-mcp-ui.ts --check && deno check ../supabase/functions/game-mcp/index.ts",
+    "test": "deno run --allow-read ../scripts/sync-game.ts --check && deno run --allow-read ../scripts/build-mcp-ui.ts --check && deno test --allow-env --allow-read tests/",
     "serve": "deno run --allow-read --allow-net=127.0.0.1:3000 ../scripts/serve.ts"
   }
 }

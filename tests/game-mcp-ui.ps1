@@ -1,6 +1,6 @@
 param([switch]$CheckpointClock)
 $ErrorActionPreference = 'Stop'
-& .\.tools\deno.exe run --allow-read scripts/build-master-picker.ts --check
+& .\.tools\deno.exe run --allow-read scripts/build-mcp-ui.ts --check
 if ($LASTEXITCODE -ne 0) { throw 'MCP UI artifacts are stale' }
 $modeArgs = @()
 if ($CheckpointClock) { $modeArgs = @('--checkpoint-clock') }

@@ -5,7 +5,7 @@ instructions, the `game_master` prompt and three world resources. See
 [the Game Master guide](GAME_MASTER.md) for the narrative, protocol access,
 authority boundaries, client fallbacks and verification.
 
-The development version exposes twenty-four authenticated tools. Fifteen are read-only;
+The development version exposes twenty-three authenticated tools. Fourteen are read-only;
 nine actions write through the existing database APIs. `save_practice`,
 `record_game_notifications` and `prepare_account_avatar_upload` are app-only.
 
@@ -69,9 +69,9 @@ First-Master onboarding:
 
 - `get_onboarding_state`: detects an account without a Master and returns its
   existing selection deadline. Start here when using the plugin with a new account.
-- `show_master_picker`: renders the same carousel, profile dialog, Markdown and
+- `show_game`: includes the same carousel, profile dialog, Markdown and
   ability previews used by `game.html`, including featured/locked Masters and the
-  saved referrer. Already-linked and expired accounts do not receive choices.
+  saved referrer inside the full game. Selection remains subject to account access.
   Results explicitly mark database cards with `selectable` and `status` and
   include `locked_preview_masters` from the same catalog as the second carousel:
   Amaterasu, Moses, Muhammad, The greys and Sangje. These display-only characters
@@ -83,7 +83,7 @@ First-Master onboarding:
   A repeated selection returns the existing participation without restarting it.
 
 The first profile read also returns `onboarding.next_tool`. Installation/OAuth
-alone does not trigger a UI; the client must invoke the onboarding/picker tool.
+alone does not trigger a UI; the client must invoke `show_game`.
 No packaged plugin skill is maintained in this repository.
 
 Existing read tools:
@@ -116,12 +116,11 @@ Existing read tools:
 `get_game_rules` replaces the removed `get_game_config` tool. Refresh tool
 discovery in existing clients after deployment.
 
-The server exposes the authoritative JSON rules and three MCP Apps views.
+The server exposes the authoritative JSON rules, three world guides and two MCP Apps views.
 
 | URI | Content |
 | --- | --- |
 | `magicdev://game/rules` | Complete versioned `GAME_RULES`, including documented equations and conventions |
-| `ui://magic/master-picker-v3.html` | Shared Master selector with an authenticated MCP adapter |
 | `ui://magic/game-v5.html` | Complete main game interface using the site controller and an MCP data adapter |
 | `ui://magic/account-v2.html` | Shared Account panel, own skill editor and photo chooser with an MCP adapter |
 
@@ -130,7 +129,7 @@ the authoritative `game-rules.ts` in the same directory.
 Worked examples are kept only in `mcp/tests/manna_examples_test.ts` as regression
 fixtures, not shipped by the server.
 The resources explain the rules; tools execute personal calculations with the user's
-records. No prompts or packaged plugin skills are registered yet.
+records. The `game_master` prompt embeds the world guides; no packaged plugin skill is maintained.
 
 Manna is computed from saved profile/progress fields and elapsed time; it is not
 a stored wallet balance. `supabase/functions/game-mcp/manna.js` is the one maintained
@@ -226,13 +225,11 @@ An expired authorization request must be restarted from the connecting applicati
 
 ## Verify and deploy
 
-The Master picker shares `src/js/jaycee/master-picker.js`, `skill-panel.js`,
-`markdown.js` and `src/css/master-picker.css` with the website. The MCP entry point
-`mcp/ui/master-picker.js` only adapts tool results and actions to the host bridge;
-it has no browser Supabase session. Preview avatars are embedded for the sandbox.
-The generator bundles these sources into
-`supabase/functions/game-mcp/resource-master-picker.generated.ts`. Commit this
-artifact; never edit it manually. Edge deployment needs no frontend files or
+The main game includes the website's shared Master picker, Skill previews and
+styles through `mcp/ui/game.js`. There is no standalone picker tool or UI bundle.
+The game and Account adapters use the host bridge without a browser Supabase
+session. `scripts/build-mcp-ui.ts` generates their HTML modules and shared assets.
+Commit these artifacts; never edit them manually. Edge deployment needs no frontend files or
 runtime filesystem reads. The featured/locked catalog and development account
 mapping are authoritative in `supabase/functions/game-mcp/master-catalog.js`;
 `sync-game.ts` generates the browser catalog and classic app-config mapping.
@@ -241,8 +238,8 @@ After modifying shared UI, styles, rules, catalog or assets:
 
 ```powershell
 .tools/deno.exe run --allow-read --allow-write=src/js/config scripts/sync-game.ts
-.tools/deno.exe run --allow-read --allow-write=supabase/functions/game-mcp --allow-run=.tools/deno.exe scripts/build-master-picker.ts
-.tools/deno.exe run --allow-read scripts/build-master-picker.ts --check
+.tools/deno.exe run --allow-read --allow-write=supabase/functions/game-mcp --allow-run=.tools/deno.exe scripts/build-mcp-ui.ts
+.tools/deno.exe run --allow-read scripts/build-mcp-ui.ts --check
 ```
 
 The read-only check detects stale generated UI without running a bundler. Version
@@ -253,7 +250,6 @@ the UI URI when a change would break a cached view.
 .tools/deno.exe test --config mcp/deno.json --allow-env --allow-read mcp/tests/
 .tools/deno.exe run --allow-read scripts/check-frontend.ts
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/browser.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File tests/mcp-ui.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/game-mcp-ui.ps1
 ```
 
@@ -272,7 +268,7 @@ Both Deno import maps pin package versions; commit their lockfiles when updating
 dependencies. Deploy `supabase/functions/game-mcp/` with all implementation files
 at its root (`index.ts`, `server.ts`, `mcp-tools.ts`, `mcp-resources.ts`,
 `account-tools.ts`, `master-tools.ts`, `master-catalog.js`,
-`resource-master-picker.generated.ts`, `game-tools.ts`, `resource-game.generated.ts`,
+`game-master.ts`, `resource-account.generated.ts`, `game-tools.ts`, `resource-game.generated.ts`,
 `resource-ui-assets.generated.ts`, `game-rules.ts`, `manna.js`, `deno.json`). No external local
 dependencies or parent-directory paths are required in the deployment.
 

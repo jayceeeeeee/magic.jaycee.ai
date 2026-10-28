@@ -1,5 +1,5 @@
 $ErrorActionPreference = 'Stop'
-& .\.tools\deno.exe run --allow-read scripts/build-master-picker.ts --check
+& .\.tools\deno.exe run --allow-read scripts/build-mcp-ui.ts --check
 if ($LASTEXITCODE -ne 0) { throw 'MCP UI artifacts are stale' }
 & .\.tools\deno.exe run --allow-read --allow-write=.tools tests/account-mcp-ui.ts
 if ($LASTEXITCODE -ne 0) { throw 'Could not build Account harness' }

@@ -245,7 +245,7 @@ Deno.test("read tools expose own data and public rules using user credentials", 
     const listed = await handler(request(access));
     const tools = (await listed.json()).result.tools;
     assert(
-      tools.length === 24 &&
+      tools.length === 23 && !tools.some((tool: { name: string }) => tool.name === "show_master_picker") &&
         tools.every((t: { name: string; annotations: { readOnlyHint: boolean } }) =>
           t.annotations.readOnlyHint === (!["select_master","change_master","sync_game_progress","save_practice","accept_quest","record_game_notifications","update_account_profile","save_account_skills","prepare_account_avatar_upload"].includes(t.name))
         ),
@@ -365,19 +365,11 @@ Deno.test("authenticated knowledge resources match official rules and keep priva
     const access = await token();
     const listing = await handler(request(access, "resources/list"));
     const listed = (await listing.json()).result.resources;
-    assert(listed.length === 7 && listed.some((resource: { uri: string }) => resource.uri === "ui://magic/account-v2.html"),
+    assert(listed.length === 6 && listed.some((resource: { uri: string }) => resource.uri === "ui://magic/account-v2.html"),
       "Official rules and all UI resources should be advertised");
     const accountResponse = await handler(request(access, "resources/read", { uri: "ui://magic/account-v2.html" }));
     const account = (await accountResponse.json()).result.contents[0];
     assert(account.mimeType === "text/html;profile=mcp-app" && account._meta.ui.csp.connectDomains.join() === DEV_PROJECT_URL && account.text.includes("account-embed") && !account.text.includes("owner@example"), "Account resource must share presentation without embedding private data");
-    const picker = await handler(request(access, "resources/read", { uri: "ui://magic/master-picker-v3.html" }));
-    const pickerResource = (await picker.json()).result.contents[0];
-    assert(pickerResource.mimeType === "text/html;profile=mcp-app" &&
-      pickerResource._meta.ui.csp.connectDomains.length === 0 &&
-      pickerResource.text.includes("Choose your Master"), "Master picker must be served as a self-contained MCP App");
-    const anonymousPicker = await handler(request(undefined, "resources/read", { uri: "ui://magic/master-picker-v3.html" }));
-    assert(anonymousPicker.status === 401, "Master picker resource must require OAuth");
-    await anonymousPicker.body?.cancel();
     for (const uri of ["magicdev://game/rules"]) {
       assert(listed.some((resource: { uri: string; mimeType: string }) => resource.uri === uri && resource.mimeType === "application/json"),
         `Missing knowledge resource ${uri}`);
@@ -395,7 +387,7 @@ Deno.test("authenticated knowledge resources match official rules and keep priva
         JSON.stringify(data) === JSON.stringify(JSON.parse(result.content[0].text)), "Official Resource, Tool and rules must be identical");
       assert(Object.keys(result).join() === "content", "Rules tool must return only immutable rules");
     }
-    for (const uri of ["ui://magic/profile-image-v1.html", "game://config", "game://rules/manna", "game://examples/manna", "game://unknown"]) {
+    for (const uri of ["ui://magic/master-picker-v3.html", "ui://magic/profile-image-v1.html", "game://config", "game://rules/manna", "game://examples/manna", "game://unknown"]) {
       const removed = await handler(request(access, "resources/read", { uri }));
       assert((await removed.json()).error, "Removed or unknown resources must not resolve");
     }

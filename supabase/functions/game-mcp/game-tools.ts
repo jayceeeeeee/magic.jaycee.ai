@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { z } from "zod";
 import { loadMasterChoices } from "./master-tools.ts";
+import { LOCKED_PREVIEW_MASTERS } from "./master-catalog.js";
 import { GAME_RULES } from "./game-rules.ts";
 
 export const GAME_RESOURCE = "ui://magic/game-v5.html";
@@ -144,7 +145,15 @@ export function registerGameTools(
       master_game: game,
       skills,
       lineage,
-      masters: await Promise.all(masters.map(imageProfile)),
+      masters: await Promise.all(masters.map(async (row) => ({
+        ...await imageProfile(row),
+        selectable: !row.linkLocked,
+        status: row.linkLocked ? "locked" : "available",
+        source: "database",
+      }))),
+      locked_preview_masters: LOCKED_PREVIEW_MASTERS.map(({ username }) => ({
+        username, linkLocked: true, selectable: false, status: "locked", source: "preview_only",
+      })),
       notifications: catalog.data || [],
       receipts,
       completed_passive_seconds: Number(totals.data) || 0,

@@ -5,10 +5,8 @@ import { GAME_RULES } from "./game-rules.ts";
 import {
   DEV_MASTER_ACCOUNT_IDS,
   getFeaturedMasters,
-  LOCKED_PREVIEW_MASTERS,
 } from "./master-catalog.js";
 
-export const MASTER_PICKER_RESOURCE = "ui://magic/master-picker-v3.html";
 const featured = getFeaturedMasters(DEV_MASTER_ACCOUNT_IDS);
 const readAnnotations = {
   readOnlyHint: true,
@@ -63,7 +61,7 @@ export function registerMasterTools(server: McpServer, {
       master_id: profile.master || null,
       selection_deadline: deadline,
       selection_expired: !!deadline && Date.parse(deadline) <= Date.now(),
-      next_tool: requiresSelection ? "show_master_picker" : "get_my_progress",
+      next_tool: requiresSelection ? "show_game" : "get_my_progress",
     };
   };
   const choices = () => loadMasterChoices(client, userId, profile);
@@ -82,73 +80,18 @@ export function registerMasterTools(server: McpServer, {
   server.registerTool("get_onboarding_state", {
     title: "My game onboarding",
     description:
-      "Check this when starting with the game plugin as Magic Dev's Game Master, the AI guide distinct from the chosen Master. The MCP account follows the authenticated Level 1 path; do not replay website Guest Prayer. If requires_master_selection is true, call show_master_picker so the user can choose their first Master. Returns the existing selection deadline; does not start or extend it or change state. Never choose for the player. If UI is unsupported, explain returned choices in text and use get_master_details to discuss teachings before an explicit selection.",
+      "Check this when starting with the game plugin as Magic Dev's Game Master, the AI guide distinct from the chosen Master. The MCP account follows the authenticated Level 1 path; do not replay website Guest Prayer. If requires_master_selection is true, call show_game so the user can choose their first Master. Returns the existing selection deadline; does not start or extend it or change state. Never choose for the player. If UI is unsupported, explain returned choices in text and use get_master_details to discuss teachings before an explicit selection.",
     inputSchema: {},
     annotations: readAnnotations,
     _meta: { securitySchemes },
   }, guarded(async () => result(await state())));
 
   server.registerTool(
-    "show_master_picker",
-    {
-      title: "Choose my first Master",
-      description:
-        "Display the game's shared Master selector for a connected account without a Master. The user can inspect profiles and abilities, then explicitly select their first Master. Only masters with selectable=true are available for selection. Locked database Masters and locked_preview_masters are displayed but cannot be chosen; preview-only characters have no database account or game. Use after get_onboarding_state requests selection.",
-      inputSchema: {},
-      annotations: readAnnotations,
-      _meta: {
-        securitySchemes,
-        ui: { resourceUri: MASTER_PICKER_RESOURCE },
-        "openai/outputTemplate": MASTER_PICKER_RESOURCE,
-      },
-    },
-    guarded(async () => {
-      const onboarding = await state();
-      const showChoices = onboarding.requires_master_selection &&
-        !onboarding.selection_expired;
-      const masters = showChoices
-        ? await Promise.all((await choices()).map(async (row) => {
-          // Only public card fields enter the model/UI result.
-          const images = await withProfileImageUrls({
-            id: row.id,
-            avatar_path: row.avatar_path,
-          });
-          return {
-            id: row.id,
-            username: row.username,
-            full_name: row.full_name,
-            avatarUrl: images.avatar_url,
-            linkLocked: row.linkLocked,
-            selectable: !row.linkLocked,
-            status: row.linkLocked ? "locked" : "available",
-            source: "database",
-          };
-        }))
-        : [];
-      return result({
-        ...onboarding,
-        masters,
-        // Same catalog as the UI's second carousel, without inventing DB IDs.
-        locked_preview_masters: showChoices
-          ? LOCKED_PREVIEW_MASTERS.map(({ username }) => ({
-            username,
-            linkLocked: true,
-            selectable: false,
-            status: "locked",
-            source: "preview_only",
-          }))
-          : [],
-        referrer_id: profile?.referrer_id || null,
-      });
-    }),
-  );
-
-  server.registerTool(
     "get_master_details",
     {
       title: "Preview an available Master",
       description:
-        "Read the public story and five abilities of a Master offered by show_master_picker. Does not select the Master or start a quest.",
+        "Read the public story and five abilities of a Master offered by show_game. Does not select the Master or start a quest.",
       inputSchema: { master_id: z.string().uuid() },
       annotations: readAnnotations,
       _meta: { securitySchemes, ui: { visibility: ["app", "model"] } },
@@ -192,7 +135,7 @@ export function registerMasterTools(server: McpServer, {
     {
       title: "Select my first Master",
       description:
-        "Save the first Master explicitly chosen by the user from show_master_picker. This starts their Level 1 quest immediately. Never choose on the user's behalf. Does not support changing an existing Master.",
+        "Save the first Master explicitly chosen by the user from show_game. This starts their Level 1 quest immediately. Never choose on the user's behalf. Does not support changing an existing Master.",
       inputSchema: { master_id: z.string().uuid() },
       annotations: {
         ...readAnnotations,

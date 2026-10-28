@@ -10,7 +10,7 @@ const owner = "11111111-1111-4111-8111-111111111111",
   master = "89cf977d-ecc0-4dbb-8f4f-fe6b9d7067c5",
   playerId = "22222222-2222-4222-8222-222222222222";
 function fixture(
-  { locked = false, level = 1, pending = false, foreign = false } = {},
+  { locked = false, level = 1, pending = false, foreign = false, unlinked = false } = {},
 ) {
   const started = new Date().toISOString();
   const player = {
@@ -25,9 +25,9 @@ function fixture(
     level_3_accepted_at: pending ? null : started,
   };
   const calls: { name: string; args: any }[] = [];
-  const profile = { id: owner, username: "Player", master };
+  const profile = { id: owner, username: "Player", master: unlinked ? null : master };
   const data: Record<string, any[]> = {
-    player: [player],
+    player: unlinked ? [] : [player],
     profiles: [profile, {
       id: master,
       username: "Master",
@@ -162,6 +162,21 @@ Deno.test("game snapshot and full view share authoritative data and presentation
     !f.calls.some((c) => c.name === "sync_skill_progress"),
     "Read state must not mutate progression",
   );
+});
+
+Deno.test("the main game handles first-Master onboarding without a separate picker", async () => {
+  const f = fixture({ unlinked: true });
+  const data = (await f.call("show_game")).structuredContent;
+  assert(data.profile.master === null && data.players.length === 0 && data.master === null,
+    "A new account must remain unlinked when opening the game");
+  assert(data.masters.length > 0 && data.masters.every((row: any) =>
+    row.selectable === !row.linkLocked && row.source === "database"),
+    "The game must expose actual Master choices and their eligibility");
+  assert(data.locked_preview_masters.length === 5 && data.locked_preview_masters.every((row: any) =>
+    !row.id && row.selectable === false && row.source === "preview_only"),
+    "Display-only Masters must remain identifiable without database IDs");
+  assert(!f.calls.some(call => call.name === "switch_player_master"),
+    "Opening onboarding must never select a Master");
 });
 Deno.test("practice saves use owner and quest clock checks; measuring tool stays app-only", async () => {
   const f = fixture();

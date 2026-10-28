@@ -91,7 +91,7 @@ export function registerTools(
     {
       title: "My game profile",
       description:
-        "Read all saved profile fields for the connected user, including their manna target and account email. If onboarding.requires_master_selection is true, call show_master_picker to let the user choose their first Master. avatar_url and background_url are full signed image links, valid for one hour (image_urls_expires_at). Use show_game or show_account to display the profile in its interactive interface. Missing or inaccessible images have null URLs. For calculated Manna gains, losses, balances and cycle targets use get_my_manna; balances are not stored in this profile.",
+        "Read all saved profile fields for the connected user, including their manna target and account email. If onboarding.requires_master_selection is true, call show_game to let the user choose their first Master. avatar_url and background_url are full signed image links, valid for one hour (image_urls_expires_at). Use show_game or show_account to display the profile in its interactive interface. Missing or inaccessible images have null URLs. For calculated Manna gains, losses, balances and cycle targets use get_my_manna; balances are not stored in this profile.",
       inputSchema: {},
       annotations,
       _meta: { securitySchemes },
@@ -101,7 +101,7 @@ export function registerTools(
         profile: await withProfileImageUrls(profile),
         email: user.email ?? null,
         onboarding: { requires_master_selection: !!profile && !profile.master,
-          next_tool: profile && !profile.master ? "show_master_picker" : "get_my_progress" },
+          next_tool: profile && !profile.master ? "show_game" : "get_my_progress" },
       }),
   );
   server.registerTool("get_my_progress", {
