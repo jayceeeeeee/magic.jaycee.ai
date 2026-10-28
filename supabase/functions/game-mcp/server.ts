@@ -97,7 +97,8 @@ export function createHandler(projectUrl: string, publicKey: string) {
     const transport = new WebStandardStreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
       enableJsonResponse: true,
-      maxRequestBodySize: 16384,
+      // Account lore and five descriptions can each contain 20,000 characters.
+      maxRequestBodySize: 768 * 1024,
     });
     try {
       await server.connect(transport);

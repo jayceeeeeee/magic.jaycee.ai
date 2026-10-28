@@ -244,9 +244,9 @@ Deno.test("read tools expose own data and public rules using user credentials", 
     const listed = await handler(request(access));
     const tools = (await listed.json()).result.tools;
     assert(
-      tools.length === 20 &&
+      tools.length === 25 &&
         tools.every((t: { name: string; annotations: { readOnlyHint: boolean } }) =>
-          t.annotations.readOnlyHint === (!["select_master","change_master","sync_game_progress","save_practice","accept_quest","record_game_notifications"].includes(t.name))
+          t.annotations.readOnlyHint === (!["select_master","change_master","sync_game_progress","save_practice","accept_quest","record_game_notifications","update_account_profile","save_account_skills","prepare_account_avatar_upload"].includes(t.name))
         ),
       "Game actions must be advertised as writes",
     );
@@ -386,8 +386,11 @@ Deno.test("authenticated knowledge resources match official rules and keep priva
     const access = await token();
     const listing = await handler(request(access, "resources/list"));
     const listed = (await listing.json()).result.resources;
-    assert(listed.length === 4 && listed.some((resource: { uri: string }) => resource.uri === "ui://magic/profile-image-v1.html"),
-      "Official rules and both UI resources should be advertised");
+    assert(listed.length === 5 && listed.some((resource: { uri: string }) => resource.uri === "ui://magic/account-v2.html"),
+      "Official rules and all UI resources should be advertised");
+    const accountResponse = await handler(request(access, "resources/read", { uri: "ui://magic/account-v2.html" }));
+    const account = (await accountResponse.json()).result.contents[0];
+    assert(account.mimeType === "text/html;profile=mcp-app" && account._meta.ui.csp.connectDomains.join() === DEV_PROJECT_URL && account.text.includes("account-embed") && !account.text.includes("owner@example"), "Account resource must share presentation without embedding private data");
     const picker = await handler(request(access, "resources/read", { uri: "ui://magic/master-picker-v3.html" }));
     const pickerResource = (await picker.json()).result.contents[0];
     assert(pickerResource.mimeType === "text/html;profile=mcp-app" &&

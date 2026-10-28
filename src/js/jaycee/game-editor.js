@@ -1,7 +1,13 @@
 import { GAME_RULES } from "../config/game-rules.js";
 ﻿import { fetchUserGameSettings, fetchSkillsByIds, saveOwnGame } from "../config/data.js";
 
-export const createSkillsSection = ({ client, profile, createSection, onChange = () => {} }) => {
+export const createSkillsSection = ({ client, profile, createSection, data = {}, onChange = () => {} }) => {
+  const api = {
+    fetchUserGameSettings: (...args) => fetchUserGameSettings(...args),
+    fetchSkillsByIds: (...args) => fetchSkillsByIds(...args),
+    saveOwnGame: (...args) => saveOwnGame(...args),
+    ...data
+  };
   const { section, content } = createSection("Skills", "is-skills");
   const editor = document.createElement("div");
   const fields = document.createElement("fieldset");
@@ -116,8 +122,8 @@ export const createSkillsSection = ({ client, profile, createSection, onChange =
     setStatus("Loading your game...");
     retry.hidden = true;
     loading = (async () => {
-      const game = await fetchUserGameSettings(client, profile);
-      const skills = await fetchSkillsByIds(client, GAME_RULES.skills.map((skill) => skill.skillColumn).map((column) => game?.[column]));
+      const game = await api.fetchUserGameSettings(client, profile);
+      const skills = await api.fetchSkillsByIds(client, GAME_RULES.skills.map((skill) => skill.skillColumn).map((column) => game?.[column]));
       savedSkills = GAME_RULES.skills.map((skill) => skill.skillColumn).map((column) => {
         const skill = skills.find((item) => item.id === game?.[column]);
         return { label: skill?.label || "", description: skill?.description || "" };
@@ -189,7 +195,7 @@ export const createSkillsSection = ({ client, profile, createSection, onChange =
     setSaving: (saving) => { fields.disabled = saving || !loaded; },
     save: async (skills) => {
       if (!skills) return;
-      await saveOwnGame(client, skills);
+      await api.saveOwnGame(client, skills);
       savedSkills = skills.map((skill) => ({ ...skill }));
     }
   };

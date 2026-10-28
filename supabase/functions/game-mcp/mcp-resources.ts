@@ -4,6 +4,8 @@ import { MASTER_PICKER_RESOURCE } from "./master-tools.ts";
 import { MASTER_PICKER_HTML } from "./resource-master-picker.generated.ts";
 import { GAME_HTML } from "./resource-game.generated.ts";
 import { GAME_RESOURCE } from "./game-tools.ts";
+import { ACCOUNT_RESOURCE } from "./account-tools.ts";
+import { ACCOUNT_HTML } from "./resource-account.generated.ts";
 import {
   PROFILE_IMAGE_MIME,
   PROFILE_IMAGE_RESOURCE,
@@ -14,6 +16,10 @@ export const GAME_RULES_URI = "magicdev://game/rules";
 
 // Resources expose content to read. Tool handlers live in mcp-tools.ts.
 export function registerResources(server: McpServer, projectUrl: string) {
+  server.registerResource("account", ACCOUNT_RESOURCE, { mimeType: "text/html;profile=mcp-app" }, async () => ({ contents: [{
+    uri: ACCOUNT_RESOURCE, mimeType: "text/html;profile=mcp-app", text: ACCOUNT_HTML,
+    _meta: { ui: { prefersBorder: true, csp: { resourceDomains: [projectUrl, "data:", "blob:", "https://fonts.googleapis.com", "https://fonts.gstatic.com"], connectDomains: [projectUrl] } } },
+  }] }));
   server.registerResource("game", GAME_RESOURCE, { mimeType: "text/html;profile=mcp-app" }, async () => ({contents:[{
     uri:GAME_RESOURCE,mimeType:"text/html;profile=mcp-app",text:GAME_HTML,
     _meta:{ui:{prefersBorder:true,csp:{resourceDomains:[projectUrl,"data:","https://fonts.googleapis.com","https://fonts.gstatic.com"],connectDomains:[]}}},

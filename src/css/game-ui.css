@@ -1080,6 +1080,20 @@
   color: var(--muted);
   cursor: default;
 }
+/* Native form controls and their empty states use the panel's typeface. */
+.has-account-panel input,
+.has-account-panel select,
+.has-account-panel textarea {
+  font-family: "Rajdhani", Arial, sans-serif;
+}
+.has-account-panel input::placeholder,
+.has-account-panel textarea::placeholder {
+  font: inherit;
+}
+.has-account-panel input::-webkit-datetime-edit,
+.has-account-panel input::-webkit-datetime-edit-fields-wrapper {
+  font: inherit;
+}
 .profile-details-controls input:focus,
 .profile-details-controls select:focus {
   border-color: var(--neon-border-strong);

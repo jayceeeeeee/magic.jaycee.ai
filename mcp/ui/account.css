@@ -1,0 +1,15 @@
+/* Only the container changes: the panel, fields and fonts use game-ui.css. */
+body.account-embed { min-height: 0; padding: 0; }
+.account-embed.has-account-panel .account-panel-shell { position: relative; min-height: 0; }
+.account-embed.has-account-panel .account-side-panel {
+  position: relative;
+  inset: auto;
+  width: min(430px, 100%);
+  margin-inline: auto;
+  padding-top: 18px;
+  overflow: visible;
+}
+.account-embed .account-hud-trigger { display: none; }
+.account-embed.has-account-panel .profile-manna-fields {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}

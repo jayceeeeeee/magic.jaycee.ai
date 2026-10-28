@@ -1,8 +1,40 @@
 # Game MCP (development)
 
-The development version exposes twenty authenticated tools. Fourteen are read-only;
-six game actions write through existing game RPCs. `save_practice` and
-`record_game_notifications` are available to the app UI only.
+The development version exposes twenty-five authenticated tools. Sixteen are read-only;
+nine actions write through the existing database APIs. `save_practice`,
+`record_game_notifications` and `prepare_account_avatar_upload` are app-only.
+
+**`show_account`** ("affiche mon compte") opens the Account panel separately from
+the game. It imports the site's `account-panel.js`, `game-editor.js`, CSS and
+embedded fonts; only panel positioning changes to fit the host. `account.js`
+remains the site's bootstrap. Native website data/auth and MCP adapters feed the
+same component. Every restored view revalidates saved data before mounting.
+
+- `get_account_state`: saved panel fields, ordered own skills, Master identity,
+  level unlocks and referral link, without opening a view.
+- `update_account_profile`: patch character, Map/Manna, lore or visibility fields.
+  Map unlocks at Level 2; lore/skills at Level 3; Ultimate/publication at Level 4.
+  Permanent accounts retain all unlocks. Only explicitly allowed fields are writable.
+- `save_account_skills`: five ordered own slots, through `save_own_game`.
+  Level 3 saves must preserve the existing Ultimate. Publication requires a username
+  and five named skills, saved first as on the site.
+- `prepare_account_avatar_upload`: the native photo chooser requests an owner-scoped
+  signed PUT URL, uploads directly to private Storage, then saves the filename.
+  PNG/JPEG/WebP/GIF up to 5 MB; the server checks stored metadata before linking it.
+  Credentials stay on the server. File selection/upload must be tested in ChatGPT
+  as well as the browser harness because hosts can impose additional restrictions.
+
+Account saves update model context with a completion event, without copying birth
+details or other private values into an automatic conversation message. OAuth
+disconnection stays in the host's plugin settings; the website Log out button is
+hidden in this view. Referral links default to the dev Auth Site URL
+`http://localhost:3000`; set Edge secret `MCP_SITE_URL` to the HTTPS **dev frontend**
+origin when using a shared preview. They never default to production.
+
+`tests/account-mcp-ui.ps1` verifies the bundled Account view, fonts, revalidation,
+level gates, save failure/retry, skills/publication ordering, referral refresh,
+file upload and model-context updates. Account tool tests additionally verify
+owner scoping, protected fields, validation, publication and avatar paths.
 
 The main entry point is **`show_game`** ("affiche le game"). It displays the same
 main game shell, controller, notifications, profile HUD, abilities and practice
@@ -84,7 +116,7 @@ Existing read tools:
 `get_game_rules` replaces the removed `get_game_config` tool. Refresh tool
 discovery in existing clients after deployment.
 
-The server exposes the authoritative JSON rules and two MCP Apps views.
+The server exposes the authoritative JSON rules and four MCP Apps views.
 
 | URI | Content |
 | --- | --- |
@@ -92,6 +124,7 @@ The server exposes the authoritative JSON rules and two MCP Apps views.
 | `ui://magic/profile-image-v1.html` | MCP Apps interface for showing profile images |
 | `ui://magic/master-picker-v3.html` | Shared Master selector with an authenticated MCP adapter |
 | `ui://magic/game-v3.html` | Complete main game interface using the site controller and an MCP data adapter |
+| `ui://magic/account-v2.html` | Shared Account panel, own skill editor and photo chooser with an MCP adapter |
 
 `supabase/functions/game-mcp/mcp-resources.ts` builds these representations from
 the authoritative `game-rules.ts` in the same directory.

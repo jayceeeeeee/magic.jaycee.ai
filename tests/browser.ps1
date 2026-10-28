@@ -32,8 +32,7 @@ foreach ($path in @('tests/notifications.test.mjs', 'tests/level-two-quest.test.
 $sharedUI = (Read-BrowserSource 'src/js/config/master-catalog.js') + (Read-BrowserSource 'src/js/jaycee/skill-panel.js').Replace('const ACTIVE_RING_LIMIT = 3;', '') + (Read-BrowserSource 'src/js/jaycee/master-picker.js')
 $runtime = ConvertTo-Json -InputObject ($sharedUI + (Read-BrowserSource 'src/js/jaycee/profile-runtime.js') + "`nreturn {createVitalsPanel,createSkillPanel,getActiveQuestInfo,getMannaModel};") -Compress
 $editor = ConvertTo-Json -InputObject ((Read-BrowserSource 'src/js/jaycee/game-editor.js') + "`nreturn createSkillsSection;") -Compress
-$accountSource = Read-BrowserSource 'src/js/jaycee/account.js'
-$accountSource = $accountSource.Substring(0, $accountSource.LastIndexOf('if (document.readyState'))
+$accountSource = Read-BrowserSource 'src/js/jaycee/account-panel.js'
 $account = ConvertTo-Json -InputObject ($accountSource + "`nreturn initJayceeAccountPage;") -Compress
 $browser = @'
 const assert=(value,message)=>{if(!value)throw new Error(message)};
