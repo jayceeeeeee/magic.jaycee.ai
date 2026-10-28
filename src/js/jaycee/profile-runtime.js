@@ -933,7 +933,7 @@ export const initJayceePage = async ({ data = null, auth = window.JayceeAuth, no
       button.classList.toggle("is-practicing", isPracticing);
       button.setAttribute("aria-pressed", String(button.classList.contains("is-active")));
       button.dataset.state = isPracticing
-        ? `Using · ${formatDuration(Math.floor(practice.elapsed()), { compact: false }) || "0s"}`
+        ? `Using · ${formatDuration(Math.floor(practice.sessionElapsed()), { compact: false }) || "0s"}`
         : index === 0 ? "Passive" : button.disabled ? "" : index === 4 ? "Ultimate" : "Ready";
     });
     shell.querySelectorAll("[data-practice-toggle]").forEach((button) => {

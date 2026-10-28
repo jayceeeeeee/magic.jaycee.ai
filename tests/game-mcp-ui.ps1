@@ -1,7 +1,10 @@
+param([switch]$CheckpointClock)
 $ErrorActionPreference = 'Stop'
 & .\.tools\deno.exe run --allow-read scripts/build-master-picker.ts --check
 if ($LASTEXITCODE -ne 0) { throw 'MCP UI artifacts are stale' }
-& .\.tools\deno.exe run --allow-read --allow-write=.tools tests/game-mcp-ui.ts
+$modeArgs = @()
+if ($CheckpointClock) { $modeArgs = @('--checkpoint-clock') }
+& .\.tools\deno.exe run --allow-read --allow-write=.tools tests/game-mcp-ui.ts @modeArgs
 if ($LASTEXITCODE -ne 0) { throw 'Could not build game harness' }
 $taskDir = Join-Path (Get-Location) '.tools'
 $chrome = 'C:/Program Files/Google/Chrome/Application/chrome.exe'

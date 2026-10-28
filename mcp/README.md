@@ -123,7 +123,7 @@ The server exposes the authoritative JSON rules and four MCP Apps views.
 | `magicdev://game/rules` | Complete versioned `GAME_RULES`, including documented equations and conventions |
 | `ui://magic/profile-image-v1.html` | MCP Apps interface for showing profile images |
 | `ui://magic/master-picker-v3.html` | Shared Master selector with an authenticated MCP adapter |
-| `ui://magic/game-v3.html` | Complete main game interface using the site controller and an MCP data adapter |
+| `ui://magic/game-v5.html` | Complete main game interface using the site controller and an MCP data adapter |
 | `ui://magic/account-v2.html` | Shared Account panel, own skill editor and photo chooser with an MCP adapter |
 
 `supabase/functions/game-mcp/mcp-resources.ts` builds these representations from

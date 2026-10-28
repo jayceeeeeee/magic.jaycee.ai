@@ -1,5 +1,6 @@
 import { GAME_HTML } from "../supabase/functions/game-mcp/resource-game.generated.ts";
 import { UI_ASSETS } from "../supabase/functions/game-mcp/resource-ui-assets.generated.ts";
+const checkpointClock = Deno.args.includes("--checkpoint-clock");
 const owner = "11111111-1111-4111-8111-111111111111",
   master = "89cf977d-ecc0-4dbb-8f4f-fe6b9d7067c5",
   playerId = "22222222-2222-4222-8222-222222222222";
@@ -95,7 +96,7 @@ const fixture = {
 const bridge = `const frame=document.querySelector('iframe');let state=${
   JSON.stringify(fixture)
 };
-let saved=[],messages=[],contexts=[],accepted=0,failSave=true,gameReads=0,staleFlashes=0;
+let saved=[],messages=[],contexts=[],accepted=0,failSave=${!checkpointClock},gameReads=0,staleFlashes=0;
 const cached=structuredClone(state);
 state.receipts=[{notification_id:'welcome.v1',occurrence:'once',read_at:new Date().toISOString()}];
 window.addEventListener('message',event=>{if(event.source!==frame.contentWindow)return;const m=event.data;
@@ -115,7 +116,7 @@ if(name==='get_master_details')reply({structuredContent:{master_id:args.master_i
 if(name==='save_practice'){
 saved.push(args);
 if(failSave){failSave=false;reply({isError:true,content:[{type:'text',text:'Practice could not be saved. Keep the game open and retry.'}]});}
-else {state.players[0]={...state.players[0],skill_1_practice:args.practice_seconds,level:2};reply({structuredContent:{player:state.players[0],years_burned:0,completed_passive_seconds:0,completed_occurrence:'test',completed_skills:[1]}});}
+else {state.players[0]={...state.players[0],skill_1_practice:args.practice_seconds,level:${checkpointClock ? 1 : 2}};reply({structuredContent:{player:state.players[0],years_burned:0,completed_passive_seconds:0,completed_occurrence:${checkpointClock ? "null" : "'test'"},completed_skills:${checkpointClock ? "[]" : "[1]"}}});}
 }
 if(name==='accept_quest'){accepted++;state.players[0]={...state.players[0],level_2_accepted_at:new Date().toISOString(),skill_2_start:new Date().toISOString()};reply({structuredContent:{player:state.players[0],years_burned:0}});}
 }});
@@ -152,6 +153,17 @@ assert(frame.contentWindow.__played.at(-1)===${
 },'Start sound missing');
 await new Promise(r=>setTimeout(r,200));
 assert(doc.querySelector('[data-practice-toggle="1"]').textContent==='Stop','Start did not start the timer');
+if (${checkpointClock}) {
+  await new Promise(r=>setTimeout(r,11000));
+  const using=doc.querySelector('[data-skill-index="1"]').dataset.state;
+  assert(/^Using · 11s$/.test(using),'Using reset at the ten-second checkpoint: '+using);
+  assert(saved.length===1&&saved[0].practice_seconds>=9&&saved[0].practice_seconds<11,'Checkpoint did not save its measured slice');
+  doc.querySelector('[data-practice-toggle="1"]').click();
+  await wait(()=>saved.length===2);
+  assert(saved[1].practice_seconds>=11&&saved[1].practice_seconds<13,'Stop lost or double-counted checkpointed practice');
+  document.body.textContent='PASS: Using clock continues past the MCP checkpoint and saved practice remains exact.';
+  return;
+}
 doc.querySelector('[data-practice-toggle="1"]').click();
 assert(frame.contentWindow.__played.at(-1)===${
   JSON.stringify(UI_ASSETS["/src/assets/sounds/first_click_skill.mp3"])
@@ -177,9 +189,9 @@ document.body.textContent='PASS: complete shared game, fonts, quest/profile, Sta
 }catch(e){document.body.textContent='FAIL: '+e.stack;}})();`;
 await Deno.writeTextFile(
   ".tools/game-mcp-browser.html",
-  `<!doctype html><body style="margin:0;background:#05070a"><iframe title="Game" style="width:390px;height:1000px;border:0"></iframe><script>${bridge}${checks}</script></body>`,
+  `<!doctype html><meta charset="utf-8"><body style="margin:0;background:#05070a"><iframe title="Game" style="width:390px;height:1000px;border:0"></iframe><script>${bridge}${checks}</script></body>`,
 );
 await Deno.writeTextFile(
   ".tools/game-mcp-preview.html",
-  `<!doctype html><body style="margin:0;background:#05070a"><iframe title="Game" style="width:390px;height:1000px;border:0"></iframe><script>${bridge}</script></body>`,
+  `<!doctype html><meta charset="utf-8"><body style="margin:0;background:#05070a"><iframe title="Game" style="width:390px;height:1000px;border:0"></iframe><script>${bridge}</script></body>`,
 );

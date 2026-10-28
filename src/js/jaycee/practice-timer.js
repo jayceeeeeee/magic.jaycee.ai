@@ -10,12 +10,18 @@ export class PracticeTimer {
   start(playerId, skillNumber, questStart) {
     if (![1, 2, 3].includes(skillNumber)) return;
     this.stop();
-    this.active = { playerId, skillNumber, questStart, since: performance.now() };
+    const now = performance.now();
+    this.active = { playerId, skillNumber, questStart, since: now, sessionSince: now };
     this.onChange();
   }
 
   elapsed() {
     return this.active ? Math.max(0, performance.now() - this.active.since) / 1000 : 0;
+  }
+
+  // Checkpoints move `since` for saving slices, but the visible session continues.
+  sessionElapsed() {
+    return this.active ? Math.max(0, performance.now() - this.active.sessionSince) / 1000 : 0;
   }
 
   stop() {

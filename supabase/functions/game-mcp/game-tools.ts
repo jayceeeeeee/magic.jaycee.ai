@@ -4,7 +4,7 @@ import { z } from "zod";
 import { loadMasterChoices } from "./master-tools.ts";
 import { GAME_RULES } from "./game-rules.ts";
 
-export const GAME_RESOURCE = "ui://magic/game-v3.html";
+export const GAME_RESOURCE = "ui://magic/game-v5.html";
 const read = {
   readOnlyHint: true,
   destructiveHint: false,
