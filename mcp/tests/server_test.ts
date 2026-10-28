@@ -244,11 +244,11 @@ Deno.test("read tools expose own data and public rules using user credentials", 
     const listed = await handler(request(access));
     const tools = (await listed.json()).result.tools;
     assert(
-      tools.length === 9 &&
-        tools.every((t: { annotations: { readOnlyHint: boolean } }) =>
-          t.annotations.readOnlyHint
+      tools.length === 13 &&
+        tools.every((t: { name: string; annotations: { readOnlyHint: boolean } }) =>
+          t.annotations.readOnlyHint === (t.name !== "select_master")
         ),
-      "Expected nine read-only tools",
+      "Only first-Master selection should be a write tool",
     );
     const profile = await handler(
       request(access, "tools/call", { name: "get_my_profile", arguments: {} }),
@@ -386,8 +386,16 @@ Deno.test("authenticated knowledge resources match official rules and keep priva
     const access = await token();
     const listing = await handler(request(access, "resources/list"));
     const listed = (await listing.json()).result.resources;
-    assert(listed.length === 2 && listed.some((resource: { uri: string }) => resource.uri === "ui://magic/profile-image-v1.html"),
-      "Only official rules and the image viewer should be advertised");
+    assert(listed.length === 3 && listed.some((resource: { uri: string }) => resource.uri === "ui://magic/profile-image-v1.html"),
+      "Official rules and both UI resources should be advertised");
+    const picker = await handler(request(access, "resources/read", { uri: "ui://magic/master-picker-v2.html" }));
+    const pickerResource = (await picker.json()).result.contents[0];
+    assert(pickerResource.mimeType === "text/html;profile=mcp-app" &&
+      pickerResource._meta.ui.csp.connectDomains.length === 0 &&
+      pickerResource.text.includes("Choose your Master"), "Master picker must be served as a self-contained MCP App");
+    const anonymousPicker = await handler(request(undefined, "resources/read", { uri: "ui://magic/master-picker-v2.html" }));
+    assert(anonymousPicker.status === 401, "Master picker resource must require OAuth");
+    await anonymousPicker.body?.cancel();
     for (const uri of ["magicdev://game/rules"]) {
       assert(listed.some((resource: { uri: string; mimeType: string }) => resource.uri === uri && resource.mimeType === "application/json"),
         `Missing knowledge resource ${uri}`);

@@ -1,6 +1,7 @@
 // Browser artifacts are committed for static hosting. Edit the Edge sources only.
+import { DEV_MASTER_ACCOUNT_IDS } from "../supabase/functions/game-mcp/master-catalog.js";
 const root = new URL("../", import.meta.url);
-const sources = ["game-rules.ts", "manna.js"];
+const sources = ["game-rules.ts", "manna.js", "master-catalog.js"];
 export async function syncGame(check = false) {
   for (const name of sources) {
     const source = new URL(`supabase/functions/game-mcp/${name}`, root);
@@ -23,6 +24,18 @@ export async function syncGame(check = false) {
       );
     }
     await Deno.writeTextFile(target, content);
+  }
+  // app-config.js is a classic script used before module loading on every page.
+  // Generate its environment mapping from the same catalog used by the MCP.
+  const configUrl = new URL("src/js/config/app-config.js", root);
+  const config = (await Deno.readTextFile(configUrl)).replaceAll("\r\n", "\n");
+  const mapping = JSON.stringify(DEV_MASTER_ACCOUNT_IDS, null, 4)
+    .split("\n").map((line, index) => index ? "        " + line : line).join("\n");
+  const updated = config.replace(/masterAccountIds: Object\.freeze\(\{[\s\S]*?\}\)/,
+    `masterAccountIds: Object.freeze(${mapping})`);
+  if (updated !== config) {
+    if (check) throw new Error("Stale development Master IDs. Run scripts/sync-game.ts.");
+    await Deno.writeTextFile(configUrl, updated);
   }
 }
 if (import.meta.main) {

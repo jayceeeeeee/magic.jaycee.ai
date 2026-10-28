@@ -24,30 +24,31 @@ $prelude += Read-BrowserSource 'tests/auth-flow.test.mjs'
 $prelude += Read-BrowserSource 'tests/game-page.test.mjs'
 $authSource = ConvertTo-Json -InputObject ([string](Get-Content 'src/js/auth/auth.js' -Raw -Encoding UTF8)) -Compress
 $gameHtml = ConvertTo-Json -InputObject ([string](Get-Content 'game.html' -Raw -Encoding UTF8)) -Compress
-$gameStyles = ConvertTo-Json -InputObject ([string]((Get-Content 'src/css/global.css' -Raw -Encoding UTF8) + (Get-Content 'src/css/game-ui.css' -Raw -Encoding UTF8) + (Get-Content 'src/css/game.css' -Raw -Encoding UTF8))) -Compress
+$gameStyles = ConvertTo-Json -InputObject ([string]((Get-Content 'src/css/global.css' -Raw -Encoding UTF8) + (Get-Content 'src/css/game-ui.css' -Raw -Encoding UTF8) + (Get-Content 'src/css/game.css' -Raw -Encoding UTF8) + (Get-Content 'src/css/master-picker.css' -Raw -Encoding UTF8))) -Compress
 $checks = ''
 foreach ($path in @('tests/notifications.test.mjs', 'tests/level-two-quest.test.mjs', 'tests/level-three-quest.test.mjs', 'tests/level-four.test.mjs')) {
   $checks += "`nawait (async()=>{`n" + (Read-BrowserSource $path) + "`n})();`n"
 }
-$runtime = ConvertTo-Json -InputObject ((Read-BrowserSource 'src/js/jaycee/profile-runtime.js') + "`nreturn {createVitalsPanel,createSkillPanel,getActiveQuestInfo,getMannaModel};") -Compress
+$sharedUI = (Read-BrowserSource 'src/js/config/master-catalog.js') + (Read-BrowserSource 'src/js/jaycee/skill-panel.js').Replace('const ACTIVE_RING_LIMIT = 3;', '') + (Read-BrowserSource 'src/js/jaycee/master-picker.js')
+$runtime = ConvertTo-Json -InputObject ($sharedUI + (Read-BrowserSource 'src/js/jaycee/profile-runtime.js') + "`nreturn {createVitalsPanel,createSkillPanel,getActiveQuestInfo,getMannaModel};") -Compress
 $editor = ConvertTo-Json -InputObject ((Read-BrowserSource 'src/js/jaycee/game-editor.js') + "`nreturn createSkillsSection;") -Compress
 $accountSource = Read-BrowserSource 'src/js/jaycee/account.js'
 $accountSource = $accountSource.Substring(0, $accountSource.LastIndexOf('if (document.readyState'))
 $account = ConvertTo-Json -InputObject ($accountSource + "`nreturn initJayceeAccountPage;") -Compress
 $browser = @'
 const assert=(value,message)=>{if(!value)throw new Error(message)};
-const syntaxSources=SYNTAX_SOURCES;
+const syntaxSources=__SYNTAX_SOURCES__;
 for(const file of syntaxSources){try{new Function(file.source.replace(/\bimport\.meta\b/g,'({url:"file:///syntax-check.js"})'));}catch(error){throw new Error(`${file.name}: ${error.message}`);}}
-await runGamePageTests({source:syntaxSources.find(file=>file.name==='profile-runtime.js').source,gameRules:GAME_RULES,mannaModel:getMannaModel,questPending:isQuestPending,normalizeUnit:normalizeMannaUnit,html:GAME_HTML,styles:GAME_STYLES});
-await runQuestLockAuthTests(AUTH_SOURCE);
-await runAppConfigTests({configSource:syntaxSources.find(file=>file.name==='app-config.js').source,authSource:AUTH_SOURCE});
+await runGamePageTests({source:__SHARED_UI__ + syntaxSources.find(file=>file.name==='profile-runtime.js').source,gameRules:GAME_RULES,mannaModel:getMannaModel,questPending:isQuestPending,normalizeUnit:normalizeMannaUnit,html:__GAME_HTML__,styles:__GAME_STYLES__});
+await runQuestLockAuthTests(__AUTH_SOURCE__);
+await runAppConfigTests({configSource:syntaxSources.find(file=>file.name==='app-config.js').source,authSource:__AUTH_SOURCE__});
 await runOAuthConsentTests(syntaxSources.find(file=>file.name==='oauth-consent.js').source);
-await runAuthFlowTests({authSource:AUTH_SOURCE,pageSource:syntaxSources.find(file=>file.name==='page.js').source,indexSource:syntaxSources.find(file=>file.name==='index.js').source,loreSource:syntaxSources.find(file=>file.name==='lore.js').source,prayerSource:syntaxSources.find(file=>file.name==='prayer.js').source});
+await runAuthFlowTests({authSource:__AUTH_SOURCE__,pageSource:syntaxSources.find(file=>file.name==='page.js').source,indexSource:syntaxSources.find(file=>file.name==='index.js').source,loreSource:syntaxSources.find(file=>file.name==='lore.js').source,prayerSource:syntaxSources.find(file=>file.name==='prayer.js').source});
 await runInvitePasswordTests(syntaxSources.find(file=>file.name==='invite.js').source);
-await runReferralTests({referralSource:syntaxSources.find(file=>file.name==='referral.js').source,authSource:AUTH_SOURCE,dataSource:syntaxSources.find(file=>file.name==='data.js').source});
+await runReferralTests({referralSource:syntaxSources.find(file=>file.name==='referral.js').source,authSource:__AUTH_SOURCE__,dataSource:syntaxSources.find(file=>file.name==='data.js').source});
 await runMenuSoundTests({indexSource:syntaxSources.find(file=>file.name==='index.js').source,loreSource:syntaxSources.find(file=>file.name==='lore.js').source,uiSource:syntaxSources.find(file=>file.name==='ui-sounds.js').source,audioSource:syntaxSources.find(file=>file.name==='sounds.js').source});
 const display=value=>String(value??'').trim();
-const createRuntime=(win=window)=>new Function('GAME_RULES','getDisplayValue','isQuestPending','notificationOccurrence','isNotificationVisible','interpolateNotification','renderSkillMarkdown','window','getMannaModel','normalizeMannaUnit',RUNTIME)(GAME_RULES,display,isQuestPending,notificationOccurrence,isNotificationVisible,interpolateNotification,(element,markdown)=>{element.textContent=markdown},win,getMannaModel,normalizeMannaUnit);
+const createRuntime=(win=window)=>new Function('GAME_RULES','getDisplayValue','isQuestPending','notificationOccurrence','isNotificationVisible','interpolateNotification','renderSkillMarkdown','window','getMannaModel','normalizeMannaUnit',__RUNTIME__)(GAME_RULES,display,isQuestPending,notificationOccurrence,isNotificationVisible,interpolateNotification,(element,markdown)=>{element.textContent=markdown},win,getMannaModel,normalizeMannaUnit);
 const runtime=createRuntime();
 runMannaTests(runtime.getMannaModel);
 const models=[1,2,3].map(level=>({skillLabel:`Skill ${level}`,skill:{id:level},passiveSeconds:100,questSeconds:20}));
@@ -193,7 +194,7 @@ assert(runtime.getActiveQuestInfo({activeModels:models,player:active}).deadline!
 for(const row of [player,active]){const skills=runtime.createSkillPanel({activeModels:models,currentLevel:3,passiveModel:{skill:null},player:row,selectedIndex:3});assert(skills.querySelector('[data-practice-toggle]').disabled===isQuestPending(row),'Wrong practice availability');}
 let savePayload;
 let saveOrder=[];
-const createSkillsSection=new Function('fetchUserGameSettings','fetchSkillsByIds','saveOwnGame','GAME_RULES',EDITOR)(async()=>({skill_4:'ultimate'}),async()=>[{id:'ultimate',label:'Existing ultimate',description:'Keep these resources'}],async(...args)=>{savePayload={skills:args[1],argumentCount:args.length};saveOrder.push('skills')},GAME_RULES);
+const createSkillsSection=new Function('fetchUserGameSettings','fetchSkillsByIds','saveOwnGame','GAME_RULES',__EDITOR__)(async()=>({skill_4:'ultimate'}),async()=>[{id:'ultimate',label:'Existing ultimate',description:'Keep these resources'}],async(...args)=>{savePayload={skills:args[1],argumentCount:args.length};saveOrder.push('skills')},GAME_RULES);
 const profile={id:'user',master:'old',username:'User'};
 window.JayceeReferral={createLink:username=>username?`https://example.test/?ref=${encodeURIComponent(username)}`:'',getUsername:()=>''};
 const editor=createSkillsSection({client:{},profile,createSection:()=>{const section=document.createElement('section'),content=document.createElement('div');section.append(content);return{section,content}}});
@@ -242,7 +243,7 @@ let copiedReferral,sharedReferral;
 const referralNavigator={language:'en',clipboard:{writeText:async(value)=>{copiedReferral=value;}},share:async(value)=>{sharedReferral=value.url;}};
 const client={from(){return{update(values){savedProfile=values;saveOrder.push('profile');return{eq:async()=>({error:null})}}}}};
 window.JayceeAuth={getSupabaseClient:async()=>client,getSession:async()=>({data:{session:{user:{id:'user'}}}})};
-const init=new Function('PROFILE_TABLE','USER_IMAGES_BUCKET','fetchProfileByUserId','fetchPlayersForUser','getAvatarImageUrl','getDisplayValue','createSkillsSection','navigator',ACCOUNT)('profiles','users',async(_client,id)=>id==='old'?{id:'old',username:'Linked Master'}:profile,async()=>[{...player,level:2}],async()=>'',display,createSkillsSection,referralNavigator);
+const init=new Function('PROFILE_TABLE','USER_IMAGES_BUCKET','fetchProfileByUserId','fetchPlayersForUser','getAvatarImageUrl','getDisplayValue','createSkillsSection','navigator',__ACCOUNT__)('profiles','users',async(_client,id)=>id==='old'?{id:'old',username:'Linked Master'}:profile,async()=>[{...player,level:2}],async()=>'',display,createSkillsSection,referralNavigator);
 await init();assert(document.querySelector('.is-skills').hidden,'Account Skills shown at Level 2');
 assert(document.querySelector('.is-master [data-referral-link]').value==='https://example.test/?ref=User','Master referral link was not rendered from the saved username');
 assert(document.querySelector('.is-master').hidden,'Account Master section shown at Level 2');
@@ -279,7 +280,7 @@ document.querySelector('.is-character [name=username]').value='Renamed User';
 document.querySelector('[data-account-save]').click();await new Promise(resolve=>setTimeout(resolve,20));
 assert(new URL(document.querySelector('[data-referral-link]').value).searchParams.get('ref')==='Renamed User','Referral link did not refresh after saving a new username');
 '@
-$browser = $browser.Replace('AUTH_SOURCE', $authSource).Replace('RUNTIME', $runtime).Replace('EDITOR', $editor).Replace('ACCOUNT', $account).Replace('SYNTAX_SOURCES', $syntaxSources).Replace('GAME_HTML', $gameHtml).Replace('GAME_STYLES', $gameStyles)
+$browser = $browser.Replace('__AUTH_SOURCE__', $authSource).Replace('__RUNTIME__', $runtime).Replace('__SHARED_UI__', (ConvertTo-Json -InputObject $sharedUI -Compress)).Replace('__EDITOR__', $editor).Replace('__ACCOUNT__', $account).Replace('__SYNTAX_SOURCES__', $syntaxSources).Replace('__GAME_HTML__', $gameHtml).Replace('__GAME_STYLES__', $gameStyles)
 $html = '<!doctype html><body>RUNNING<script>(async()=>{try{' + $prelude + $checks + $browser + "document.body.textContent='PASS: JavaScript syntax, game UI, notifications, Level 2/3 acceptance, clocks, practice gating, skill names, Master carousel, game validation/save and live Skills unlock.';}catch(error){document.body.textContent='FAIL: '+error.stack;}})();</script>"
 Set-Content -LiteralPath (Join-Path $checkDir 'check.html') -Value $html -Encoding UTF8
 $process = Start-Process 'C:/Program Files/Google/Chrome/Application/chrome.exe' -ArgumentList @('--headless','--disable-gpu','--disable-software-rasterizer','--in-process-gpu','--no-sandbox','--no-first-run','--virtual-time-budget=5000','--dump-dom',('--user-data-dir='+(Join-Path $checkDir 'profile')),('file:///'+(Join-Path $checkDir 'check.html').Replace('\','/'))) -RedirectStandardOutput (Join-Path $checkDir 'stdout.txt') -RedirectStandardError (Join-Path $checkDir 'stderr.txt') -WindowStyle Hidden -PassThru

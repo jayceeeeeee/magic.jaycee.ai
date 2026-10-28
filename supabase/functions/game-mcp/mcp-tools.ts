@@ -4,6 +4,7 @@ import { z } from "zod";
 import { GAME_RULES } from "./game-rules.ts";
 import { getMannaModel, getMannaRules, getMannaSkillModels } from "./manna.js";
 import { PROFILE_IMAGE_RESOURCE } from "./resource-profile-image.ts";
+import { registerMasterTools } from "./master-tools.ts";
 
 // Each request supplies its authenticated, user-scoped client and verified identity.
 export function registerTools(
@@ -81,12 +82,13 @@ export function registerTools(
       ...(Object.keys(errors).length ? { image_url_errors: errors } : {}),
     };
   };
+  registerMasterTools(server, { client, userId, profile, user, withProfileImageUrls });
   server.registerTool(
     "get_my_profile",
     {
       title: "My game profile",
       description:
-        "Read all saved profile fields for the connected user, including their manna target and account email. avatar_url and background_url are full signed image links, valid for one hour (image_urls_expires_at). To display an image inside the chat, use show_profile_image, which supplies a registered viewer; an image URL in text alone does not guarantee inline rendering. Missing or inaccessible images have null URLs. For calculated Manna gains, losses, balances and cycle targets use get_my_manna; balances are not stored in this profile.",
+        "Read all saved profile fields for the connected user, including their manna target and account email. If onboarding.requires_master_selection is true, call show_master_picker to let the user choose their first Master. avatar_url and background_url are full signed image links, valid for one hour (image_urls_expires_at). To display an image inside the chat, use show_profile_image, which supplies a registered viewer; an image URL in text alone does not guarantee inline rendering. Missing or inaccessible images have null URLs. For calculated Manna gains, losses, balances and cycle targets use get_my_manna; balances are not stored in this profile.",
       inputSchema: {},
       annotations,
       _meta: { securitySchemes },
@@ -95,6 +97,8 @@ export function registerTools(
       result({
         profile: await withProfileImageUrls(profile),
         email: user.email ?? null,
+        onboarding: { requires_master_selection: !!profile && !profile.master,
+          next_tool: profile && !profile.master ? "show_master_picker" : "get_my_progress" },
       }),
   );
   server.registerTool(

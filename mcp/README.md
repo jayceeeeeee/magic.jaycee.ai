@@ -1,6 +1,30 @@
 # Game MCP (development)
 
-The development version exposes nine authenticated, read-only tools:
+The development version exposes thirteen authenticated tools. Twelve are read-only;
+`select_master` writes the first Master choice through the existing game RPC.
+
+First-Master onboarding:
+
+- `get_onboarding_state`: detects an account without a Master and returns its
+  existing selection deadline. Start here when using the plugin with a new account.
+- `show_master_picker`: renders the same carousel, profile dialog, Markdown and
+  ability previews used by `game.html`, including featured/locked Masters and the
+  saved referrer. Already-linked and expired accounts do not receive choices.
+  Results explicitly mark database cards with `selectable` and `status` and
+  include `locked_preview_masters` from the same catalog as the second carousel:
+  Amaterasu, Moses, Muhammad, The greys and Sangje. These display-only characters
+  have no database ID or selectable game and must not be described as available.
+- `get_master_details`: reads only public preview fields for an offered Master.
+- `select_master`: saves an explicit user choice using `switch_player_master`
+  with the connected user's client. It checks account access first, refuses locked,
+  self and unavailable choices, and does not support changing an existing Master.
+  A repeated selection returns the existing participation without restarting it.
+
+The first profile read also returns `onboarding.next_tool`. Installation/OAuth
+alone does not trigger a UI; the client must invoke the onboarding/picker tool.
+No packaged plugin skill is maintained in this repository.
+
+Existing read tools:
 
 - `get_my_profile`: all saved profile fields for the connected user, including
   birth details, lore, karma, manna target/unit/cycle, plus their Auth email.
@@ -35,13 +59,13 @@ The development version exposes nine authenticated, read-only tools:
 `get_game_rules` replaces the removed `get_game_config` tool. Refresh tool
 discovery in existing clients after deployment.
 
-The server exposes two resources: the authoritative JSON rules and the MCP Apps
-image viewer. The three legacy knowledge views have been removed.
+The server exposes the authoritative JSON rules and two MCP Apps views.
 
 | URI | Content |
 | --- | --- |
 | `magicdev://game/rules` | Complete versioned `GAME_RULES`, including documented equations and conventions |
 | `ui://magic/profile-image-v1.html` | MCP Apps interface for showing profile images |
+| `ui://magic/master-picker-v2.html` | Shared Master selector with an authenticated MCP adapter |
 
 `supabase/functions/game-mcp/mcp-resources.ts` builds these representations from
 the authoritative `game-rules.ts` in the same directory.
@@ -113,8 +137,9 @@ will not sign you into this project.
    and choose OAuth. Availability depends on the account/workspace settings.
 3. Let the client register automatically. Sign in with a **development account**
    and approve the request on `/oauth-consent.html`.
-4. Ask for your profile, progress, game records or calculation rules. All tools
-   are read-only.
+4. Ask to start the game or choose a Master. New accounts can select their first
+   Master in the inline UI; this starts the Level 1 quest. Existing accounts can
+   read their profile, progress, records and calculation rules.
 
 OAuth discovery is served at
 `<endpoint>/.well-known/oauth-protected-resource`. The 401 challenge points clients
@@ -143,16 +168,43 @@ An expired authorization request must be restarted from the connecting applicati
 
 ## Verify and deploy
 
+The Master picker shares `src/js/jaycee/master-picker.js`, `skill-panel.js`,
+`markdown.js` and `src/css/master-picker.css` with the website. The MCP entry point
+`mcp/ui/master-picker.js` only adapts tool results and actions to the host bridge;
+it has no browser Supabase session. Preview avatars are embedded for the sandbox.
+The generator bundles these sources into
+`supabase/functions/game-mcp/resource-master-picker.generated.ts`. Commit this
+artifact; never edit it manually. Edge deployment needs no frontend files or
+runtime filesystem reads. The featured/locked catalog and development account
+mapping are authoritative in `supabase/functions/game-mcp/master-catalog.js`;
+`sync-game.ts` generates the browser catalog and classic app-config mapping.
+
+After modifying shared UI, styles, rules, catalog or assets:
+
+```powershell
+.tools/deno.exe run --allow-read --allow-write=src/js/config scripts/sync-game.ts
+.tools/deno.exe run --allow-read --allow-write=supabase/functions/game-mcp --allow-run=.tools/deno.exe scripts/build-master-picker.ts
+.tools/deno.exe run --allow-read scripts/build-master-picker.ts --check
+```
+
+The read-only check detects stale generated UI without running a bundler. Version
+the UI URI when a change would break a cached view.
+
 ```powershell
 .tools/deno.exe check --config mcp/deno.json supabase/functions/game-mcp/index.ts
 .tools/deno.exe test --config mcp/deno.json --allow-env --allow-read mcp/tests/
 .tools/deno.exe run --allow-read scripts/check-frontend.ts
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/browser.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File tests/mcp-ui.ps1
 ```
 
 MCP tests use real signed test JWTs and mocked database/Auth responses. They check
 signature verification, issuer, audience, expiry, OAuth client identity, required
-scope, owner filters, locked accounts, rule parity and the advertised read-only tools.
+scope, owner filters, locked accounts, rule parity and write/read annotations.
+Onboarding tests cover selection deadlines, public previews, referral and locked
+choices, write failures and retries. The MCP UI browser test mocks the host bridge
+and verifies the shared dialog, Markdown, skill preview, mobile width and failed
+save recovery; it writes a preview screenshot under `.tools/`.
 They also check resource listing/reading, resource authentication, parity between
 tools and resources, deterministic examples and absence of private data in rules.
 Browser tests also cover login return paths and explicit consent/denial.
@@ -160,13 +212,15 @@ Browser tests also cover login return paths and explicit consent/denial.
 Both Deno import maps pin package versions; commit their lockfiles when updating
 dependencies. Deploy `supabase/functions/game-mcp/` with all implementation files
 at its root (`index.ts`, `server.ts`, `mcp-tools.ts`, `mcp-resources.ts`,
-`resource-profile-image.ts`, `game-rules.ts`, `manna.js`, `deno.json`). No external local
+`resource-profile-image.ts`, `master-tools.ts`, `master-catalog.js`,
+`resource-master-picker.generated.ts`, `game-rules.ts`, `manna.js`, `deno.json`). No external local
 dependencies or parent-directory paths are required in the deployment.
 
 File responsibilities are explicit:
 
 - `server.ts`: HTTP transport, OAuth authentication and request-scoped registration.
-- `mcp-tools.ts`: all `registerTool` calls and their handlers.
+- `mcp-tools.ts`: read tools and registration of the onboarding tools.
+- `master-tools.ts`: onboarding state, Master previews and first selection.
 - `mcp-resources.ts`: all `registerResource` calls and resource readers.
 - `resource-profile-image.ts`: HTML/UI content for the image resource.
 - `game-rules.ts`: authoritative data catalog, independent of MCP registration.
@@ -186,7 +240,7 @@ requires a manual connection test.
 This endpoint is deliberately limited to the development project. Supabase's
 `profile` scope controls identity information; it does **not** narrow database
 permissions. OAuth tokens retain the user's existing database permissions outside
-these two MCP tools. Before production, define client-specific RLS/RPC permissions
+the advertised MCP tools. Before production, define client-specific RLS/RPC permissions
 and token audience/resource binding, test revocation, choose the hosted consent
 page origin, and review the deployment configuration. Do not remove the dev guard
 or point this endpoint at the live game as a shortcut.

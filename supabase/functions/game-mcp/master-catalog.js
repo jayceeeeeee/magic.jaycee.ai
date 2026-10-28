@@ -1,0 +1,52 @@
+// Shared presentation policy. Database RPCs remain authoritative for eligibility.
+/** @type {Array<[string, {linkLocked: boolean}]>} */
+export const FEATURED_MASTER_OPTIONS = [
+  ["d70b5c69-daae-4a77-9955-4385439ae292", { linkLocked: false }],
+  ["b7a38b31-100f-4e03-b3e8-9357c635ecf8", { linkLocked: false }],
+  ["7abd58ec-1289-403d-932c-dc2df233d079", { linkLocked: true }],
+  ["5dd4e584-2f03-4a94-b442-528ca19492e1", { linkLocked: true }],
+];
+export const DEV_MASTER_ACCOUNT_IDS = {
+  "d70b5c69-daae-4a77-9955-4385439ae292":
+    "89cf977d-ecc0-4dbb-8f4f-fe6b9d7067c5",
+  "b7a38b31-100f-4e03-b3e8-9357c635ecf8":
+    "0ad611ab-73ad-4ece-a11c-09b13bf5db5d",
+  "7abd58ec-1289-403d-932c-dc2df233d079":
+    "50edc493-a776-41f6-b5e3-0e2d78eff070",
+  "5dd4e584-2f03-4a94-b442-528ca19492e1":
+    "59008ad4-5675-4d25-bdad-ebeea9cd8419",
+};
+/** @param {Record<string, string>} accountIds */
+export const getFeaturedMasters = (accountIds = {}) =>
+  new Map(
+    FEATURED_MASTER_OPTIONS.map((
+      [id, options],
+    ) => [accountIds[id] || id, options]),
+  );
+export const LOCKED_PREVIEW_MASTERS = [
+  {
+    username: "Amaterasu",
+    avatarUrl: "/src/assets/avatars_pp/amaterasu.jpeg",
+    linkLocked: true,
+  },
+  {
+    username: "Moses",
+    avatarUrl: "/src/assets/avatars_pp/moses.jpeg",
+    linkLocked: true,
+  },
+  {
+    username: "Muhammad",
+    avatarUrl: "/src/assets/avatars_pp/muhammad.jpeg",
+    linkLocked: true,
+  },
+  {
+    username: "The greys",
+    avatarUrl: "/src/assets/avatars_pp/greys.jpeg",
+    linkLocked: true,
+  },
+  {
+    username: "Sangje",
+    avatarUrl: "/src/assets/avatars_pp/sangje.png",
+    linkLocked: true,
+  },
+];
