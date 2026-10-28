@@ -234,6 +234,18 @@ Deno.test("onboarding exposes existing deadline, shared card policy and public d
   }
   assert(f.writes() === 0, "Previews must never start a quest");
 });
+Deno.test("production Master choices retain original IDs rather than development copies", async () => {
+  const originalId = "d70b5c69-daae-4a77-9955-4385439ae292";
+  const developmentId = DEV_MASTER_ACCOUNT_IDS[originalId];
+  const client = { rpc: async () => ({ data: [
+    { id: originalId, username: "Production Master" },
+    { id: developmentId, username: "Development copy" },
+  ], error: null }) };
+  const choices = await loadMasterChoices(client as any, "owner", null, {});
+  assert(choices.length === 1 && choices[0].id === originalId,
+    "Production must not filter out its original Master or offer development IDs");
+});
+
 Deno.test("selection uses the existing RPC, is retry-safe and cannot change a linked Master", async () => {
   const f = fixture();
   assert(

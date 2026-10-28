@@ -1,11 +1,11 @@
-# Game MCP (development)
+# Game MCP
 
 The connected AI can act as the **Game Master** through standard server
 instructions, the `game_master` prompt and three world resources. See
 [the Game Master guide](GAME_MASTER.md) for the narrative, protocol access,
 authority boundaries, client fallbacks and verification.
 
-The development version exposes twenty-three authenticated tools. Fourteen are read-only;
+The server exposes twenty-three authenticated tools. Fourteen are read-only;
 nine actions write through the existing database APIs. `save_practice`,
 `record_game_notifications` and `prepare_account_avatar_upload` are app-only.
 
@@ -33,8 +33,9 @@ Account saves update model context with a completion event, without copying birt
 details or other private values into an automatic conversation message. OAuth
 disconnection stays in the host's plugin settings; the website Log out button is
 hidden in this view. Referral links default to the dev Auth Site URL
-`http://localhost:3000`; set Edge secret `MCP_SITE_URL` to the HTTPS **dev frontend**
-origin when using a shared preview. They never default to production.
+`http://localhost:3000` in development and `https://magic.jaycee.ai` in production.
+Set Edge secret `MCP_SITE_URL` to the HTTPS dev frontend origin for a shared preview.
+Production rejects an override pointing at another origin.
 
 `tests/account-mcp-ui.ps1` verifies the bundled Account view, fonts, revalidation,
 level gates, save failure/retry, skills/publication ordering, referral refresh,
@@ -121,7 +122,7 @@ The server exposes the authoritative JSON rules, three world guides and two MCP 
 | URI | Content |
 | --- | --- |
 | `magicdev://game/rules` | Complete versioned `GAME_RULES`, including documented equations and conventions |
-| `ui://magic/game-v5.html` | Complete main game interface using the site controller and an MCP data adapter |
+| `ui://magic/game-v6.html` | Complete main game interface with server-selected environment and Master IDs |
 | `ui://magic/account-v2.html` | Shared Account panel, own skill editor and photo chooser with an MCP adapter |
 
 `supabase/functions/game-mcp/mcp-resources.ts` builds these representations from
@@ -165,8 +166,13 @@ Development endpoint:
 
 `https://mylnagvqngsgcmlvwttu.supabase.co/functions/v1/game-mcp`
 
-The Edge Function is in `../supabase/functions/game-mcp/`. It refuses to start
-against any project other than `magic-dev`. It uses the public project key and
+Production endpoint:
+
+`https://ndtnfwyfdfdcxljvvjfd.supabase.co/functions/v1/game-mcp`
+
+The Edge Function is in `../supabase/functions/game-mcp/`. `environment.ts` allows
+only the development and production project URLs. The server sends the matching
+Master ID mapping to the game adapter; production uses original IDs. It uses the public project key and
 the connected user's token; it never uses a service-role key. Owner filters and
 the existing database RLS apply to every data request. Locked accounts are denied.
 
@@ -268,7 +274,7 @@ Both Deno import maps pin package versions; commit their lockfiles when updating
 dependencies. Deploy `supabase/functions/game-mcp/` with all implementation files
 at its root (`index.ts`, `server.ts`, `mcp-tools.ts`, `mcp-resources.ts`,
 `account-tools.ts`, `master-tools.ts`, `master-catalog.js`,
-`game-master.ts`, `resource-account.generated.ts`, `game-tools.ts`, `resource-game.generated.ts`,
+`game-master.ts`, `environment.ts`, `resource-account.generated.ts`, `game-tools.ts`, `resource-game.generated.ts`,
 `resource-ui-assets.generated.ts`, `game-rules.ts`, `manna.js`, `deno.json`). No external local
 dependencies or parent-directory paths are required in the deployment.
 
@@ -291,15 +297,37 @@ of missing, invalid and ordinary website tokens. Temporary users and OAuth clien
 registrations were removed after testing. ChatGPT's own account-linking UI still
 requires a manual connection test.
 
-## Before a production release
+## Production release
 
-This endpoint is deliberately limited to the development project. Supabase's
-`profile` scope controls identity information; it does **not** narrow database
-permissions. OAuth tokens retain the user's existing database permissions outside
-the advertised MCP tools. Before production, define client-specific RLS/RPC permissions
-and token audience/resource binding, test revocation, choose the hosted consent
-page origin, and review the deployment configuration. Do not remove the dev guard
-or point this endpoint at the live game as a shortcut.
+The release uses explicit project configuration rather than replacing development
+IDs or disabling project validation. Production defaults to the public site for
+referral links; `MCP_SITE_URL` is optional there and must retain the production origin.
+Development continues to use its isolated project and account mapping.
+
+Enable OAuth Server in production with Site URL `https://magic.jaycee.ai`,
+Authorization Path `/oauth-consent.html`, dynamic client registration for clients
+that need it, and the appropriate confirmation redirects (including
+`https://magic.jaycee.ai/login.html?confirmation=mcp`). Publish the consent page
+and its dependencies with the rest of the website before connecting a client.
+Deploy only the `game-mcp` function with `deno.json`, all relative dependencies and
+`verify_jwt=false`; the handler authenticates every request except public OAuth
+resource discovery. The SDK import map and authentication behavior are unchanged.
+
+Supabase's `profile` scope controls identity information and does not narrow
+database permissions. A connected OAuth application receives the user's existing
+database permissions. Consent explicitly states this; it must be granted only to
+trusted clients. MCP tools additionally filter owned rows, verify quest ownership,
+reject locked users and validate project issuer, audience, expiry and OAuth client
+identity. Keep existing RLS and RPC enforcement; project migration history and
+player data must not be replayed or copied for this release.
+
+Validate live discovery, unauthenticated rejection and production OAuth sign-in.
+Then check tool discovery, rules, Master previews, Account links and the main game
+on an authorized test account. Revoke the test connection after checking it; do
+not claim that offline JWTs are instantly invalidated by revocation. Unit tests
+cover production/development token isolation, correct project discovery, original
+Master IDs, Account origins and owner-scoped actions. A client connection test is
+still needed after deployment.
 
 References: [OpenAI MCP server guide](https://developers.openai.com/plugins/build/mcp-server),
 [OpenAI authentication guide](https://developers.openai.com/plugins/build/auth),

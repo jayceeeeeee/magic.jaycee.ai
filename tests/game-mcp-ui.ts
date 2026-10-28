@@ -1,11 +1,13 @@
 import { GAME_HTML } from "../supabase/functions/game-mcp/resource-game.generated.ts";
 import { UI_ASSETS } from "../supabase/functions/game-mcp/resource-ui-assets.generated.ts";
+import { DEV_MASTER_ACCOUNT_IDS } from "../supabase/functions/game-mcp/master-catalog.js";
 const checkpointClock = Deno.args.includes("--checkpoint-clock");
 const owner = "11111111-1111-4111-8111-111111111111",
   master = "89cf977d-ecc0-4dbb-8f4f-fe6b9d7067c5",
   playerId = "22222222-2222-4222-8222-222222222222";
 const fixture = {
   kind: "game_state",
+  master_account_ids: DEV_MASTER_ACCOUNT_IDS,
   user: { id: owner, created_at: new Date().toISOString() },
   profile: {
     id: owner,

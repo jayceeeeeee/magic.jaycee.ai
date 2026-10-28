@@ -94,5 +94,5 @@ prompt discovery/retrieval, resource discovery/reading, unknown prompt errors,
 authentication, absence of private data, generated constant parity and tool use
 without prompt activation. Existing tests cover owner scoping, Master selection,
 practice, quest acceptance, Account permissions and Manna. These checks cannot
-prove that a hosted AI follows narrative guidance correctly. No deployment or
-live database changes are part of this implementation.
+prove that a hosted AI follows narrative guidance correctly. Production and
+development configuration and release checks are documented in README.md.

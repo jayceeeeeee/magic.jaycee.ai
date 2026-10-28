@@ -4,14 +4,12 @@ import { GAME_MASTER_INSTRUCTIONS, registerGameMasterPrompt } from "./game-maste
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { createClient } from "@supabase/supabase-js";
+import { getEnvironment } from "./environment.ts";
 
-export const DEV_PROJECT_URL = "https://mylnagvqngsgcmlvwttu.supabase.co";
+export { DEV_PROJECT_URL } from "./environment.ts";
 
 export function createHandler(projectUrl: string, publicKey: string) {
-  // This prototype must not be deployed against the live game by accident.
-  if (projectUrl !== DEV_PROJECT_URL) {
-    throw new Error("The MCP prototype requires magic-dev.");
-  }
+  const environment = getEnvironment(projectUrl);
   const resource = `${projectUrl}/functions/v1/game-mcp`;
   const metadataUrl = `${resource}/.well-known/oauth-protected-resource`;
   const challenge =
@@ -92,12 +90,12 @@ export function createHandler(projectUrl: string, publicKey: string) {
       return json({ error: "This game account is locked." }, 403);
     }
 
-    const server = new McpServer({ name: "magic-game-dev", version: "0.1.0" }, {
+    const server = new McpServer({ name: environment.serverName, version: "0.2.0" }, {
       instructions: GAME_MASTER_INSTRUCTIONS,
     });
     registerGameMasterPrompt(server);
     registerResources(server, projectUrl);
-    registerTools(server, { client, userId, profile, user: userData.user });
+    registerTools(server, { client, userId, profile, user: userData.user, environment });
     const transport = new WebStandardStreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
       enableJsonResponse: true,

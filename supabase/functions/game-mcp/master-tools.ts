@@ -7,7 +7,6 @@ import {
   getFeaturedMasters,
 } from "./master-catalog.js";
 
-const featured = getFeaturedMasters(DEV_MASTER_ACCOUNT_IDS);
 const readAnnotations = {
   readOnlyHint: true,
   destructiveHint: false,
@@ -28,12 +27,14 @@ export function registerMasterTools(server: McpServer, {
   profile,
   user,
   withProfileImageUrls,
+  masterAccountIds = DEV_MASTER_ACCOUNT_IDS,
 }: {
   client: SupabaseClient;
   userId: string;
   profile: Record<string, any> | null;
   user: User;
   withProfileImageUrls: (row: Record<string, any>) => Promise<any>;
+  masterAccountIds?: Record<string, string>;
 }) {
   const securitySchemes = [{ type: "oauth2", scopes: ["profile"] }];
   const state = async () => {
@@ -64,7 +65,7 @@ export function registerMasterTools(server: McpServer, {
       next_tool: requiresSelection ? "show_game" : "get_my_progress",
     };
   };
-  const choices = () => loadMasterChoices(client, userId, profile);
+  const choices = () => loadMasterChoices(client, userId, profile, masterAccountIds);
   const guarded =
     (callback: (args: any) => Promise<any>) => async (args: any) => {
       try {
@@ -212,7 +213,9 @@ export const loadMasterChoices = async (
   client: SupabaseClient,
   userId: string,
   profile: Record<string, any> | null,
+  masterAccountIds: Record<string, string> = DEV_MASTER_ACCOUNT_IDS,
 ): Promise<Array<Record<string, any>>> => {
+  const featured = getFeaturedMasters(masterAccountIds);
   const publicMasters = await client.rpc("list_public_masters", {
     p_limit: 100,
   });

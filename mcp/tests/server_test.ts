@@ -3,6 +3,7 @@ import {
   DEV_PROJECT_URL,
 } from "../../supabase/functions/game-mcp/server.ts";
 import { GAME_RULES } from "../../supabase/functions/game-mcp/game-rules.ts";
+import { getEnvironment, PROD_PROJECT_URL } from "../../supabase/functions/game-mcp/environment.ts";
 import { GAME_MASTER_INSTRUCTIONS, WORLD_RESOURCES } from "../../supabase/functions/game-mcp/game-master.ts";
 import { GAME_RULES as BROWSER_RULES } from "../../src/js/config/game-rules.js";
 
@@ -177,14 +178,51 @@ function installMock({ locked = false, userId = "owner", historyLength = 1, imag
   return calls;
 }
 
-Deno.test("production configuration is refused", () => {
+Deno.test("production has isolated configuration and unknown projects are refused", async () => {
+  const production = getEnvironment(PROD_PROJECT_URL);
+  const development = getEnvironment(DEV_PROJECT_URL);
+  assert(production.siteUrl === "https://magic.jaycee.ai" &&
+    production.serverName === "magic-game" && Object.keys(production.masterAccountIds).length === 0,
+    "Production must use its own site and original Master IDs");
+  assert(development.siteUrl === "http://localhost:3000" &&
+    development.masterAccountIds["d70b5c69-daae-4a77-9955-4385439ae292"] === "89cf977d-ecc0-4dbb-8f4f-fe6b9d7067c5",
+    "Development must preserve its isolated Master mapping");
+  const productionHandler = createHandler(PROD_PROJECT_URL, "test");
+  const productionEndpoint = `${PROD_PROJECT_URL}/functions/v1/game-mcp`;
+  const discovery = await productionHandler(new Request(`${productionEndpoint}/.well-known/oauth-protected-resource`));
+  const metadata = await discovery.json();
+  assert(metadata.resource === productionEndpoint && metadata.authorization_servers[0] === `${PROD_PROJECT_URL}/auth/v1`,
+    "Production discovery must never reference development");
+  const denied = await productionHandler(new Request(productionEndpoint));
+  assert(denied.status === 401 && denied.headers.get("WWW-Authenticate")?.includes(productionEndpoint),
+    "Production must retain the OAuth challenge before reading any user data");
+  await denied.body?.cancel();
   let refused = false;
   try {
-    createHandler("https://ndtnfwyfdfdcxljvvjfd.supabase.co", "test");
+    createHandler("https://another-project.supabase.co", "test");
   } catch {
     refused = true;
   }
-  assert(refused, "Prototype must refuse production");
+  assert(refused, "Only the explicit development and production projects are allowed");
+});
+
+Deno.test("production rejects development tokens and accepts production-issued OAuth tokens", async () => {
+  installMock();
+  try {
+    const productionHandler = createHandler(PROD_PROJECT_URL, "test-public-key");
+    const productionRequest = (access: string) => new Request(
+      `${PROD_PROJECT_URL}/functions/v1/game-mcp`, request(access),
+    );
+    const crossProject = await productionHandler(productionRequest(await token()));
+    assert(crossProject.status === 401, "Production must reject a valid development JWT");
+    await crossProject.body?.cancel();
+    const response = await productionHandler(productionRequest(await token({ iss: `${PROD_PROJECT_URL}/auth/v1` })));
+    const tools = (await response.json()).result.tools;
+    assert(tools.length === 23 && !tools.some((tool: { name: string }) => tool.name === "show_master_picker"),
+      "Production tokens must discover the current tool catalog");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 Deno.test("OAuth discovery is public; private tools require authentication", async () => {
   const response = await handler(

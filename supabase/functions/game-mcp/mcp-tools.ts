@@ -6,15 +6,17 @@ import { getMannaModel, getMannaRules, getMannaSkillModels } from "./manna.js";
 import { registerMasterTools } from "./master-tools.ts";
 import { registerGameTools } from "./game-tools.ts";
 import { registerAccountTools } from "./account-tools.ts";
+import { DEV_PROJECT_URL, getEnvironment, type GameEnvironment } from "./environment.ts";
 
 // Each request supplies its authenticated, user-scoped client and verified identity.
 export function registerTools(
   server: McpServer,
-  { client, userId, profile, user }: {
+  { client, userId, profile, user, environment = getEnvironment(DEV_PROJECT_URL) }: {
     client: SupabaseClient;
     userId: string;
     profile: (Record<string, any> & { id: string }) | null;
     user: User;
+    environment?: GameEnvironment;
   },
 ) {
   const annotations = {
@@ -83,9 +85,9 @@ export function registerTools(
       ...(Object.keys(errors).length ? { image_url_errors: errors } : {}),
     };
   };
-  registerMasterTools(server, { client, userId, profile, user, withProfileImageUrls });
-  registerGameTools(server, { client, userId, profile, user, withProfileImageUrls });
-  registerAccountTools(server, { client, userId, withProfileImageUrls });
+  registerMasterTools(server, { client, userId, profile, user, withProfileImageUrls, masterAccountIds: environment.masterAccountIds });
+  registerGameTools(server, { client, userId, profile, user, withProfileImageUrls, masterAccountIds: environment.masterAccountIds });
+  registerAccountTools(server, { client, userId, withProfileImageUrls, siteOrigin: environment.siteUrl });
   server.registerTool(
     "get_my_profile",
     {

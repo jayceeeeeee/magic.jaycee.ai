@@ -2,10 +2,10 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { z } from "zod";
 import { loadMasterChoices } from "./master-tools.ts";
-import { LOCKED_PREVIEW_MASTERS } from "./master-catalog.js";
+import { DEV_MASTER_ACCOUNT_IDS, LOCKED_PREVIEW_MASTERS } from "./master-catalog.js";
 import { GAME_RULES } from "./game-rules.ts";
 
-export const GAME_RESOURCE = "ui://magic/game-v5.html";
+export const GAME_RESOURCE = "ui://magic/game-v6.html";
 const read = {
   readOnlyHint: true,
   destructiveHint: false,
@@ -23,12 +23,13 @@ const failure = (text: string) => ({
 
 export function registerGameTools(
   server: McpServer,
-  { client, userId, profile, user, withProfileImageUrls }: {
+  { client, userId, profile, user, withProfileImageUrls, masterAccountIds = DEV_MASTER_ACCOUNT_IDS }: {
     client: SupabaseClient;
     userId: string;
     profile: Record<string, any> | null;
     user: User;
     withProfileImageUrls: (row: Record<string, any>) => Promise<any>;
+    masterAccountIds?: Record<string, string>;
   },
 ) {
   const securitySchemes = [{ type: "oauth2", scopes: ["profile"] }];
@@ -65,7 +66,7 @@ export function registerGameTools(
         "id,stage,position,title,tone,dismissible,content",
       ).eq("enabled", true).order("position"),
       client.rpc("get_practice_completion_totals"),
-      loadMasterChoices(client, userId, profile),
+      loadMasterChoices(client, userId, profile, masterAccountIds),
     ]);
     if (
       players.error || catalog.error || totals.error ||
@@ -119,6 +120,7 @@ export function registerGameTools(
     }
     return {
       kind: "game_state",
+      master_account_ids: masterAccountIds,
       retrieved_at: new Date().toISOString(),
       user: { id: userId, created_at: user.created_at },
       profile: await imageProfile(
@@ -224,7 +226,7 @@ export function registerGameTools(
           "You can change Master only before accepting your next quest.",
         );
       }
-      const candidate = (await loadMasterChoices(client, userId, profile)).find(
+      const candidate = (await loadMasterChoices(client, userId, profile, masterAccountIds)).find(
         (row) => row.id === master_id && !row.linkLocked,
       );
       if (!candidate) throw new Error("This Master is not selectable.");

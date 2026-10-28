@@ -15,6 +15,13 @@ hostnames utilisent le developpement. La branche Git ne choisit pas la base.
 Chaque page charge cette configuration avant `auth.js`; sans configuration,
 aucun client Supabase n'est cree.
 
+Le MCP utilise `functions/game-mcp/environment.ts` pour choisir explicitement
+le projet, le site et les identifiants des Masters. En production il conserve
+les UUID d'origine ; en developpement il utilise les copies indiquees ci-dessous.
+L'interface MCP recoit ce mapping du serveur, plutot que de le deduire de son
+hostname dans le chat. Les liens du compte utilisent le site de l'environnement.
+Voir [la procedure de publication MCP](../mcp/README.md#production-release).
+
 Le developpement a ete initialise depuis `schema.sql`, puis `seed.sql` : huit
 tables applicatives avec RLS, quinze notifications, bucket prive `users`, fonctions,
 permissions, triggers et tache cron. Aucun joueur, compte ou fichier de production

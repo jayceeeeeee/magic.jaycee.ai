@@ -20,13 +20,16 @@ const profileSchema = z.object({
 const imageTypes: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif" };
 const maxImageBytes = 5 * 1024 * 1024;
 
-export function registerAccountTools(server: McpServer, { client, userId, withProfileImageUrls }: {
+export function registerAccountTools(server: McpServer, { client, userId, withProfileImageUrls, siteOrigin = "http://localhost:3000" }: {
   client: SupabaseClient;
   userId: string;
   withProfileImageUrls: (row: Record<string, any>) => Promise<any>;
+  siteOrigin?: string;
 }) {
-  // Match the dev Auth Site URL; previews can provide their own frontend origin.
-  const siteUrl = new URL(Deno.env.get("MCP_SITE_URL") || "http://localhost:3000");
+  const siteUrl = new URL(Deno.env.get("MCP_SITE_URL") || siteOrigin);
+  if (siteOrigin === "https://magic.jaycee.ai" && siteUrl.origin !== siteOrigin) {
+    throw new Error("Production MCP_SITE_URL must use https://magic.jaycee.ai.");
+  }
   const read = { readOnlyHint: true, destructiveHint: false, openWorldHint: false };
   const write = { ...read, readOnlyHint: false, idempotentHint: true };
   const meta = { securitySchemes: [{ type: "oauth2", scopes: ["profile"] }] };

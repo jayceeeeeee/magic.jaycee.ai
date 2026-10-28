@@ -1,9 +1,7 @@
 import { initJayceePage } from "../../src/js/jaycee/profile-runtime.js";
 import "../../src/js/ui-sounds.js";
-import { DEV_MASTER_ACCOUNT_IDS } from "../../src/js/config/master-catalog.js";
 import { callTool, connect, gameEvent, request } from "./bridge.js";
 
-window.JayceeConfig = { masterAccountIds: DEV_MASTER_ACCOUNT_IDS };
 let snapshot = null, mounted = false;
 let mounting = null;
 const previews = new Map();
@@ -218,6 +216,7 @@ async function receive(data) {
     mounting = null;
   }
   mounted = true;
+  window.JayceeConfig = { masterAccountIds: snapshot.master_account_ids || {} };
   status.textContent = "";
   status.hidden = true;
   retry.hidden = true;

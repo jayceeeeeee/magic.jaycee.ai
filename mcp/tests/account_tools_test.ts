@@ -1,6 +1,6 @@
 import { ACCOUNT_RESOURCE, registerAccountTools } from "../../supabase/functions/game-mcp/account-tools.ts";
 const assert = (value: unknown, message: string) => { if (!value) throw new Error(message); };
-function fixture(level = 1, permanent = false) {
+function fixture(level = 1, permanent = false, siteOrigin = "http://localhost:3000") {
   const profile: any = { id: "owner", username: "Player", master: "master", permanent_account_at: permanent ? "2026-01-01" : null };
   const skills = Array.from({ length: 5 }, (_, i) => ({ id: `s${i}`, label: `Skill ${i}`, description: "" }));
   const game = Object.fromEntries([ ["user_id", "owner"], ...skills.map((s, i) => [`skill_${i}`, s.id]) ]);
@@ -39,9 +39,16 @@ function fixture(level = 1, permanent = false) {
   };
   const handlers: any = {}, configs: any = {};
   const server = { registerTool(name: string, config: any, handler: any) { configs[name] = config; handlers[name] = handler; } };
-  registerAccountTools(server as any, { client: client as any, userId: "owner", withProfileImageUrls: async (p) => ({ ...p, avatar_url: "https://storage.test/avatar.png" }) });
+  registerAccountTools(server as any, { client: client as any, userId: "owner", siteOrigin, withProfileImageUrls: async (p) => ({ ...p, avatar_url: "https://storage.test/avatar.png" }) });
   return { handlers, configs, profile, skills, calls };
 }
+Deno.test("production Account referral links use the public website", async () => {
+  const account = fixture(4, true, "https://magic.jaycee.ai");
+  const result = await account.handlers.get_account_state({});
+  assert(result.structuredContent.referral_url === "https://magic.jaycee.ai/?ref=Player",
+    "Production must not send players to localhost");
+});
+
 Deno.test("Account state and patches reuse owner data without modifying protected fields", async () => {
   const f = fixture(2);
   const shown = await f.handlers.show_account({});
