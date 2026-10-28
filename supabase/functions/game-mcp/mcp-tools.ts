@@ -3,7 +3,6 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { z } from "zod";
 import { GAME_RULES } from "./game-rules.ts";
 import { getMannaModel, getMannaRules, getMannaSkillModels } from "./manna.js";
-import { PROFILE_IMAGE_RESOURCE } from "./resource-profile-image.ts";
 import { registerMasterTools } from "./master-tools.ts";
 import { registerGameTools } from "./game-tools.ts";
 import { registerAccountTools } from "./account-tools.ts";
@@ -92,7 +91,7 @@ export function registerTools(
     {
       title: "My game profile",
       description:
-        "Read all saved profile fields for the connected user, including their manna target and account email. If onboarding.requires_master_selection is true, call show_master_picker to let the user choose their first Master. avatar_url and background_url are full signed image links, valid for one hour (image_urls_expires_at). To display an image inside the chat, use show_profile_image, which supplies a registered viewer; an image URL in text alone does not guarantee inline rendering. Missing or inaccessible images have null URLs. For calculated Manna gains, losses, balances and cycle targets use get_my_manna; balances are not stored in this profile.",
+        "Read all saved profile fields for the connected user, including their manna target and account email. If onboarding.requires_master_selection is true, call show_master_picker to let the user choose their first Master. avatar_url and background_url are full signed image links, valid for one hour (image_urls_expires_at). Use show_game or show_account to display the profile in its interactive interface. Missing or inaccessible images have null URLs. For calculated Manna gains, losses, balances and cycle targets use get_my_manna; balances are not stored in this profile.",
       inputSchema: {},
       annotations,
       _meta: { securitySchemes },
@@ -104,79 +103,6 @@ export function registerTools(
         onboarding: { requires_master_selection: !!profile && !profile.master,
           next_tool: profile && !profile.master ? "show_master_picker" : "get_my_progress" },
       }),
-  );
-  server.registerTool(
-    "show_profile_image",
-    {
-      title: "Show a profile image",
-      description:
-        "Display the user's profile photo or background inside the chat using the plugin's registered image viewer. Use this when asked to show a profile image, instead of downloading files or embedding a signed URL in Markdown or an improvised iframe. Optionally show a linked Master's image by supplying master_id from get_my_master_games. Returns a fresh signed link and viewer data; no local filesystem download is needed. Rendering requires a host with MCP Apps UI support.",
-      inputSchema: {
-        image_kind: z.enum(["avatar", "background"]).default("avatar"),
-        master_id: z.string().optional().describe(
-          "Omit for the connected user's image; otherwise use a linked Master ID from get_my_master_games.",
-        ),
-      },
-      annotations,
-      _meta: {
-        securitySchemes,
-        ui: { resourceUri: PROFILE_IMAGE_RESOURCE },
-        "openai/outputTemplate": PROFILE_IMAGE_RESOURCE,
-      },
-    },
-    async (
-      { image_kind, master_id }: {
-        image_kind: "avatar" | "background";
-        master_id?: string;
-      },
-    ) => {
-      let owner: {
-        id: string;
-        username?: string | null;
-        full_name?: string | null;
-        avatar_path?: string | null;
-        background_path?: string | null;
-      } | null = profile;
-      if (master_id && master_id !== userId) {
-        const linked = await client.from("player").select("id")
-          .eq("user_id", userId).eq("master", master_id).limit(1);
-        if (linked.error || !linked.data?.length) {
-          return toolError(
-            "This Master is not linked to your game.",
-          );
-        }
-        const master = await client.from("profiles")
-          .select("id,username,full_name,avatar_path,background_path").eq(
-            "id",
-            master_id,
-          ).maybeSingle();
-        if (master.error || !master.data) {
-          return toolError(
-            "The Master profile is unavailable.",
-          );
-        }
-        owner = master.data;
-      }
-      const images = await withProfileImageUrls(owner);
-      const imageUrl = image_kind === "avatar"
-        ? images?.avatar_url
-        : images?.background_url;
-      if (!imageUrl) {
-        return toolError(
-          "This profile has no accessible image of that kind.",
-        );
-      }
-      const data = {
-        owner_name: owner?.username || owner?.full_name || "Profile",
-        image_kind,
-        image_url: imageUrl,
-        expires_at: images?.image_urls_expires_at,
-      };
-      return {
-        structuredContent: data,
-        content: [{ type: "text" as const, text: JSON.stringify(data) }],
-      };
-    },
   );
   server.registerTool("get_my_progress", {
     title: "My game progress",

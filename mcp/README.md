@@ -1,6 +1,6 @@
 # Game MCP (development)
 
-The development version exposes twenty-five authenticated tools. Sixteen are read-only;
+The development version exposes twenty-four authenticated tools. Fifteen are read-only;
 nine actions write through the existing database APIs. `save_practice`,
 `record_game_notifications` and `prepare_account_avatar_upload` are app-only.
 
@@ -89,11 +89,6 @@ Existing read tools:
   links usable without authentication, valid for one hour. Refetch after
   `image_urls_expires_at`. Missing images have null URLs; signing failures are
   reported in `image_url_errors` without blocking the rest of the profile.
-- `show_profile_image`: displays the own or a linked Master's avatar/background
-  through a registered MCP Apps image viewer. It returns `structuredContent` and
-  a versioned UI resource with the Supabase image origin allowed by its CSP.
-  This avoids relying on external Markdown image rendering or filesystem downloads.
-  Hosts without MCP Apps UI support can still use the returned signed link.
 - `get_my_progress`: connected user's saved levels, current practice counters,
   cycle starts and accepted quests. Saved values do not include a
   timer still running in a browser tab. At most 100 player records are returned.
@@ -116,12 +111,11 @@ Existing read tools:
 `get_game_rules` replaces the removed `get_game_config` tool. Refresh tool
 discovery in existing clients after deployment.
 
-The server exposes the authoritative JSON rules and four MCP Apps views.
+The server exposes the authoritative JSON rules and three MCP Apps views.
 
 | URI | Content |
 | --- | --- |
 | `magicdev://game/rules` | Complete versioned `GAME_RULES`, including documented equations and conventions |
-| `ui://magic/profile-image-v1.html` | MCP Apps interface for showing profile images |
 | `ui://magic/master-picker-v3.html` | Shared Master selector with an authenticated MCP adapter |
 | `ui://magic/game-v5.html` | Complete main game interface using the site controller and an MCP data adapter |
 | `ui://magic/account-v2.html` | Shared Account panel, own skill editor and photo chooser with an MCP adapter |
@@ -272,7 +266,7 @@ Browser tests also cover login return paths and explicit consent/denial.
 Both Deno import maps pin package versions; commit their lockfiles when updating
 dependencies. Deploy `supabase/functions/game-mcp/` with all implementation files
 at its root (`index.ts`, `server.ts`, `mcp-tools.ts`, `mcp-resources.ts`,
-`resource-profile-image.ts`, `master-tools.ts`, `master-catalog.js`,
+`account-tools.ts`, `master-tools.ts`, `master-catalog.js`,
 `resource-master-picker.generated.ts`, `game-tools.ts`, `resource-game.generated.ts`,
 `resource-ui-assets.generated.ts`, `game-rules.ts`, `manna.js`, `deno.json`). No external local
 dependencies or parent-directory paths are required in the deployment.
@@ -283,7 +277,6 @@ File responsibilities are explicit:
 - `mcp-tools.ts`: read tools and registration of the onboarding tools.
 - `master-tools.ts`: onboarding state, Master previews and first selection.
 - `mcp-resources.ts`: all `registerResource` calls and resource readers.
-- `resource-profile-image.ts`: HTML/UI content for the image resource.
 - `game-rules.ts`: authoritative data catalog, independent of MCP registration.
 - `manna.js`: deterministic calculations used by tools and the browser.
 

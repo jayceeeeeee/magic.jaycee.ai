@@ -6,11 +6,6 @@ import { GAME_HTML } from "./resource-game.generated.ts";
 import { GAME_RESOURCE } from "./game-tools.ts";
 import { ACCOUNT_RESOURCE } from "./account-tools.ts";
 import { ACCOUNT_HTML } from "./resource-account.generated.ts";
-import {
-  PROFILE_IMAGE_MIME,
-  PROFILE_IMAGE_RESOURCE,
-  profileImageWidget,
-} from "./resource-profile-image.ts";
 
 export const GAME_RULES_URI = "magicdev://game/rules";
 
@@ -46,19 +41,4 @@ export function registerResources(server: McpServer, projectUrl: string) {
     }],
   }));
 
-  server.registerResource("profile-image", PROFILE_IMAGE_RESOURCE, {
-    mimeType: PROFILE_IMAGE_MIME,
-  }, async () => ({
-    contents: [{
-      uri: PROFILE_IMAGE_RESOURCE,
-      mimeType: PROFILE_IMAGE_MIME,
-      text: profileImageWidget(projectUrl),
-      _meta: {
-        ui: {
-          prefersBorder: true,
-          csp: { resourceDomains: [projectUrl], connectDomains: [] },
-        },
-      },
-    }],
-  }));
 }

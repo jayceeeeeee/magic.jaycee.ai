@@ -244,7 +244,7 @@ Deno.test("read tools expose own data and public rules using user credentials", 
     const listed = await handler(request(access));
     const tools = (await listed.json()).result.tools;
     assert(
-      tools.length === 25 &&
+      tools.length === 24 &&
         tools.every((t: { name: string; annotations: { readOnlyHint: boolean } }) =>
           t.annotations.readOnlyHint === (!["select_master","change_master","sync_game_progress","save_practice","accept_quest","record_game_notifications","update_account_profile","save_account_skills","prepare_account_avatar_upload"].includes(t.name))
         ),
@@ -259,29 +259,7 @@ Deno.test("read tools expose own data and public rules using user credentials", 
       profileData.background_url === `${DEV_PROJECT_URL}/storage/v1/object/sign/users/owner/background.png?token=test` &&
       Date.parse(profileData.image_urls_expires_at) > Date.now(),
       `Profile must provide absolute usable image links and their expiry: ${JSON.stringify(profileData)}`);
-    const imageTool = tools.find((tool: { name: string }) => tool.name === "show_profile_image");
-    const viewerUri = imageTool._meta.ui.resourceUri;
-    const viewer = await handler(request(access, "resources/read", { uri: viewerUri }));
-    const resource = (await viewer.json()).result.contents[0];
-    assert(resource.mimeType === "text/html;profile=mcp-app" &&
-      resource._meta.ui.csp.resourceDomains[0] === DEV_PROJECT_URL &&
-      resource.text.includes("ui/notifications/tool-result"),
-      "Image viewer must be registered with the host bridge and exact image CSP domain");
-    const displayedImage = await handler(request(access, "tools/call", {
-      name: "show_profile_image", arguments: {},
-    }));
-    const imageData = (await displayedImage.json()).result.structuredContent;
-    assert(imageData.image_url === profileData.avatar_url && imageData.owner_name === "Owner",
-      "Image display must supply fresh viewer data for the authenticated user");
-    const displayedMaster = await handler(request(access, "tools/call", {
-      name: "show_profile_image", arguments: { master_id: "master-one" },
-    }));
-    assert((await displayedMaster.json()).result.structuredContent.owner_name === "Master",
-      "Linked Master images should be displayable");
-    const unlinkedMaster = await handler(request(access, "tools/call", {
-      name: "show_profile_image", arguments: { master_id: "unlinked" },
-    }));
-    assert((await unlinkedMaster.json()).result.isError, "Unlinked profiles must not be exposed through the viewer");
+    assert(!tools.some((tool: { name: string }) => tool.name === "show_profile_image"), "Standalone image tool should no longer be advertised");
     const game = await handler(request(access, "tools/call", { name: "get_my_game", arguments: {} }));
     const gameData = JSON.parse((await game.json()).result.content[0].text);
     assert(gameData.game.id === "authored-game" && gameData.skills[0].id === "own-skill", "Wrong owned game data");
@@ -386,7 +364,7 @@ Deno.test("authenticated knowledge resources match official rules and keep priva
     const access = await token();
     const listing = await handler(request(access, "resources/list"));
     const listed = (await listing.json()).result.resources;
-    assert(listed.length === 5 && listed.some((resource: { uri: string }) => resource.uri === "ui://magic/account-v2.html"),
+    assert(listed.length === 4 && listed.some((resource: { uri: string }) => resource.uri === "ui://magic/account-v2.html"),
       "Official rules and all UI resources should be advertised");
     const accountResponse = await handler(request(access, "resources/read", { uri: "ui://magic/account-v2.html" }));
     const account = (await accountResponse.json()).result.contents[0];
@@ -416,7 +394,7 @@ Deno.test("authenticated knowledge resources match official rules and keep priva
         JSON.stringify(data) === JSON.stringify(JSON.parse(result.content[0].text)), "Official Resource, Tool and rules must be identical");
       assert(Object.keys(result).join() === "content", "Rules tool must return only immutable rules");
     }
-    for (const uri of ["game://config", "game://rules/manna", "game://examples/manna", "game://unknown"]) {
+    for (const uri of ["ui://magic/profile-image-v1.html", "game://config", "game://rules/manna", "game://examples/manna", "game://unknown"]) {
       const removed = await handler(request(access, "resources/read", { uri }));
       assert((await removed.json()).error, "Removed or unknown resources must not resolve");
     }
