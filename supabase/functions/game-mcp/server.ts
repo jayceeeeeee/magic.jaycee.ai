@@ -1,5 +1,6 @@
 import { registerResources } from "./mcp-resources.ts";
 import { registerTools } from "./mcp-tools.ts";
+import { GAME_MASTER_INSTRUCTIONS, registerGameMasterPrompt } from "./game-master.ts";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { createClient } from "@supabase/supabase-js";
@@ -91,7 +92,10 @@ export function createHandler(projectUrl: string, publicKey: string) {
       return json({ error: "This game account is locked." }, 403);
     }
 
-    const server = new McpServer({ name: "magic-game-dev", version: "0.1.0" });
+    const server = new McpServer({ name: "magic-game-dev", version: "0.1.0" }, {
+      instructions: GAME_MASTER_INSTRUCTIONS,
+    });
+    registerGameMasterPrompt(server);
     registerResources(server, projectUrl);
     registerTools(server, { client, userId, profile, user: userData.user });
     const transport = new WebStandardStreamableHTTPServerTransport({

@@ -3,6 +3,7 @@ import {
   DEV_PROJECT_URL,
 } from "../../supabase/functions/game-mcp/server.ts";
 import { GAME_RULES } from "../../supabase/functions/game-mcp/game-rules.ts";
+import { GAME_MASTER_INSTRUCTIONS, WORLD_RESOURCES } from "../../supabase/functions/game-mcp/game-master.ts";
 import { GAME_RULES as BROWSER_RULES } from "../../src/js/config/game-rules.js";
 
 const assert = (condition: unknown, message: string) => {
@@ -364,7 +365,7 @@ Deno.test("authenticated knowledge resources match official rules and keep priva
     const access = await token();
     const listing = await handler(request(access, "resources/list"));
     const listed = (await listing.json()).result.resources;
-    assert(listed.length === 4 && listed.some((resource: { uri: string }) => resource.uri === "ui://magic/account-v2.html"),
+    assert(listed.length === 7 && listed.some((resource: { uri: string }) => resource.uri === "ui://magic/account-v2.html"),
       "Official rules and all UI resources should be advertised");
     const accountResponse = await handler(request(access, "resources/read", { uri: "ui://magic/account-v2.html" }));
     const account = (await accountResponse.json()).result.contents[0];
@@ -402,6 +403,77 @@ Deno.test("authenticated knowledge resources match official rules and keep priva
     globalThis.fetch = originalFetch;
   }
 });
+Deno.test("Game Master initialization, prompts and world resources use the authenticated MCP protocol", async () => {
+  const calls = installMock();
+  try {
+    const access = await token();
+    const initialized = await handler(request(access, "initialize", {
+      protocolVersion: "2025-11-25",
+      capabilities: {},
+      clientInfo: { name: "generic-mcp-test", version: "1" },
+    }));
+    const init = (await initialized.json()).result;
+    assert(init.instructions === GAME_MASTER_INSTRUCTIONS && init.capabilities.prompts &&
+      init.capabilities.resources && init.capabilities.tools,
+      "Initialization must advertise instructions and all standard capabilities to a generic client");
+    const listing = await handler(request(access, "prompts/list"));
+    const prompts = (await listing.json()).result.prompts;
+    assert(prompts.length === 1 && prompts[0].name === "game_master",
+      "Discover the single reusable Game Master prompt");
+    const before = calls.length;
+    const promptResponse = await handler(request(access, "prompts/get", { name: "game_master" }));
+    const prompt = (await promptResponse.json()).result;
+    assert(prompt.messages.length === 1 && prompt.messages[0].role === "user" &&
+      prompt.messages[0].content.type === "text", "Prompt must use standard MCP messages");
+    const text = prompt.messages[0].content.text;
+    assert(text.startsWith("You are the Game Master of Magic Dev.") &&
+      text.includes(GAME_MASTER_INSTRUCTIONS) &&
+      WORLD_RESOURCES.every((resource) => text.includes(resource.text)),
+      "Prompt must embed the same instructions and complete guides for clients without resource support");
+    assert(calls.slice(before).every(({ url }) => url.pathname === "/auth/v1/user" ||
+      url.pathname === "/rest/v1/profiles" || url.pathname.endsWith("/.well-known/jwks.json")),
+      "Fetching a prompt must not fetch gameplay data or mutate state");
+    const resourcesResponse = await handler(request(access, "resources/list"));
+    const listed = (await resourcesResponse.json()).result.resources;
+    for (const resource of WORLD_RESOURCES) {
+      assert(listed.some((row: { uri: string; mimeType: string }) =>
+        row.uri === resource.uri && row.mimeType === "text/markdown"), "World guide must be discoverable");
+      const response = await handler(request(access, "resources/read", { uri: resource.uri }));
+      const content = (await response.json()).result.contents[0];
+      assert(content.text === resource.text && content.uri === resource.uri &&
+        content.mimeType === "text/markdown", "World guide must return its registered content");
+      assert(!content.text.includes("owner@example.test") && !content.text.includes('"owner"'),
+        "Static world guides must not leak the authenticated player's data");
+      const denied = await handler(request(undefined, "resources/read", { uri: resource.uri }));
+      assert(denied.status === 401, "World guides retain the existing authentication boundary");
+      await denied.body?.cancel();
+    }
+    for (const method of ["prompts/list", "prompts/get", "initialize"]) {
+      const denied = await handler(request(undefined, method, { name: "game_master" }));
+      assert(denied.status === 401, "Prompt and initialization access requires authentication");
+      await denied.body?.cancel();
+    }
+    const unknown = await handler(request(access, "prompts/get", { name: "unknown" }));
+    assert((await unknown.json()).error, "Unknown prompts must produce a protocol error");
+    // Optional capabilities are never required before invoking existing tools.
+    const fallback = await handler(request(access, "tools/call", { name: "get_my_progress", arguments: {} }));
+    const saved = (await fallback.json()).result;
+    assert(!saved.isError && JSON.parse(saved.content[0].text).players[0].master === "master-one",
+      "Tools must remain usable without activating the prompt or reading resources");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+Deno.test("world mechanics derive all fixed Skill values from the authoritative catalog", () => {
+  const guide = WORLD_RESOURCES.find((resource) => resource.name === "world-mechanics")!.text;
+  for (const skill of GAME_RULES.skills) {
+    const line = guide.split("\n").find((line) => line.startsWith(`| ${skill.skillColumn}`));
+    assert(line?.includes(`| ${skill.fractalLabel} | ${skill.cycleLabel ?? "None"} | ${skill.cycleSeconds ?? "None"} | ${skill.practiceGoalSeconds ?? "No timed objective"} |`),
+      "Mechanics guide must use the exact shared cycle and goal for each slot");
+  }
+});
+
 Deno.test("Manna includes completion history beyond one PostgREST page", async () => {
   installMock({ historyLength: 1050 });
   try {

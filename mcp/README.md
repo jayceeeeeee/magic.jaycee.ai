@@ -1,5 +1,10 @@
 # Game MCP (development)
 
+The connected AI can act as the **Game Master** through standard server
+instructions, the `game_master` prompt and three world resources. See
+[the Game Master guide](GAME_MASTER.md) for the narrative, protocol access,
+authority boundaries, client fallbacks and verification.
+
 The development version exposes twenty-four authenticated tools. Fifteen are read-only;
 nine actions write through the existing database APIs. `save_practice`,
 `record_game_notifications` and `prepare_account_avatar_upload` are app-only.
@@ -278,6 +283,7 @@ File responsibilities are explicit:
 - `master-tools.ts`: onboarding state, Master previews and first selection.
 - `mcp-resources.ts`: all `registerResource` calls and resource readers.
 - `game-rules.ts`: authoritative data catalog, independent of MCP registration.
+- `game-master.ts`: shared Game Master instructions, prompt and static world guides.
 - `manna.js`: deterministic calculations used by tools and the browser.
 
 The gateway JWT check is disabled for this function so OAuth discovery and custom

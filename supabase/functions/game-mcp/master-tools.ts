@@ -82,7 +82,7 @@ export function registerMasterTools(server: McpServer, {
   server.registerTool("get_onboarding_state", {
     title: "My game onboarding",
     description:
-      "Check this when starting with the game plugin. If requires_master_selection is true, call show_master_picker so the user can choose their first Master. Returns the existing selection deadline; does not start or extend it.",
+      "Check this when starting with the game plugin as Magic Dev's Game Master, the AI guide distinct from the chosen Master. The MCP account follows the authenticated Level 1 path; do not replay website Guest Prayer. If requires_master_selection is true, call show_master_picker so the user can choose their first Master. Returns the existing selection deadline; does not start or extend it or change state. Never choose for the player. If UI is unsupported, explain returned choices in text and use get_master_details to discuss teachings before an explicit selection.",
     inputSchema: {},
     annotations: readAnnotations,
     _meta: { securitySchemes },

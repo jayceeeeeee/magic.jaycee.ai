@@ -364,7 +364,7 @@ export function registerTools(
   server.registerTool("get_my_game", {
     title: "My authored game and skills",
     description:
-      "Read the game and skills authored by the connected user for other players to learn. These are not the skills the user practices as a student. Do not use these skill names to label the user's practice time or quest progress; use get_my_master_games for that. These definitions may be used with get_game_config to calculate values for the user's authored game.",
+      "Read the game and skills authored by the connected user for other players to learn. These are not the skills the user practices as a student. Do not use these skill names to label the user's practice time or quest progress; use get_my_master_games for that. Use get_game_rules for official mechanics and get_account_state for creation and publication permissions. This read does not create or publish a game.",
     inputSchema: {},
     annotations,
     _meta: { securitySchemes },
