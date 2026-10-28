@@ -5,6 +5,7 @@ import { GAME_RULES } from "./game-rules.ts";
 import { getMannaModel, getMannaRules, getMannaSkillModels } from "./manna.js";
 import { PROFILE_IMAGE_RESOURCE } from "./resource-profile-image.ts";
 import { registerMasterTools } from "./master-tools.ts";
+import { registerGameTools } from "./game-tools.ts";
 
 // Each request supplies its authenticated, user-scoped client and verified identity.
 export function registerTools(
@@ -83,6 +84,7 @@ export function registerTools(
     };
   };
   registerMasterTools(server, { client, userId, profile, user, withProfileImageUrls });
+  registerGameTools(server, { client, userId, profile, user, withProfileImageUrls });
   server.registerTool(
     "get_my_profile",
     {

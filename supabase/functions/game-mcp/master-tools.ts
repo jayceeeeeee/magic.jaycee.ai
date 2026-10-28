@@ -8,7 +8,7 @@ import {
   LOCKED_PREVIEW_MASTERS,
 } from "./master-catalog.js";
 
-export const MASTER_PICKER_RESOURCE = "ui://magic/master-picker-v2.html";
+export const MASTER_PICKER_RESOURCE = "ui://magic/master-picker-v3.html";
 const featured = getFeaturedMasters(DEV_MASTER_ACCOUNT_IDS);
 const readAnnotations = {
   readOnlyHint: true,
@@ -66,34 +66,7 @@ export function registerMasterTools(server: McpServer, {
       next_tool: requiresSelection ? "show_master_picker" : "get_my_progress",
     };
   };
-  const choices = async (): Promise<Array<Record<string, any>>> => {
-    const publicMasters = await client.rpc("list_public_masters", {
-      p_limit: 100,
-    });
-    if (publicMasters.error) throw new Error("Masters could not be loaded.");
-    let rows: Record<string, any>[] = publicMasters.data || [];
-    if (profile?.referrer_id) {
-      const referral = await client.rpc("get_public_referrer", {
-        p_referrer_id: profile.referrer_id,
-        p_username: null,
-      });
-      if (referral.error) {
-        throw new Error("Your referring Master could not be loaded.");
-      }
-      const referrer = referral.data?.[0];
-      if (referrer && !rows.some((row) => row.id === referrer.id)) {
-        rows = [...rows, referrer];
-      }
-    }
-    return rows.filter((row) =>
-      row.id !== userId &&
-      (featured.has(row.id) || row.id === profile?.referrer_id)
-    )
-      .map((row) => ({
-        ...row,
-        linkLocked: featured.get(row.id)?.linkLocked === true,
-      }));
-  };
+  const choices = () => loadMasterChoices(client, userId, profile);
   const guarded =
     (callback: (args: any) => Promise<any>) => async (args: any) => {
       try {
@@ -291,3 +264,36 @@ export function registerMasterTools(server: McpServer, {
     }),
   );
 }
+
+export const loadMasterChoices = async (
+  client: SupabaseClient,
+  userId: string,
+  profile: Record<string, any> | null,
+): Promise<Array<Record<string, any>>> => {
+  const publicMasters = await client.rpc("list_public_masters", {
+    p_limit: 100,
+  });
+  if (publicMasters.error) throw new Error("Masters could not be loaded.");
+  let rows: Record<string, any>[] = publicMasters.data || [];
+  if (profile?.referrer_id) {
+    const referral = await client.rpc("get_public_referrer", {
+      p_referrer_id: profile.referrer_id,
+      p_username: null,
+    });
+    if (referral.error) {
+      throw new Error("Your referring Master could not be loaded.");
+    }
+    const referrer = referral.data?.[0];
+    if (referrer && !rows.some((row) => row.id === referrer.id)) {
+      rows = [...rows, referrer];
+    }
+  }
+  return rows.filter((row) =>
+    row.id !== userId &&
+    (featured.has(row.id) || row.id === profile?.referrer_id)
+  )
+    .map((row) => ({
+      ...row,
+      linkLocked: featured.get(row.id)?.linkLocked === true,
+    }));
+};

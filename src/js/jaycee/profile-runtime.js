@@ -23,6 +23,7 @@ import {
   syncSkillProgress,
 } from "../config/data.js";
 
+const readPlayerName = () => { try { return getDisplayValue(window.localStorage.getItem("player_full_name")); } catch { return ""; } };
 const ACTIVE_RING_LIMIT = 3;
 const YEAR_SECONDS = GAME_RULES.skills[0].cycleSeconds;
 
@@ -32,7 +33,7 @@ const getSignupUrl = () => {
 
 const redirectToSignup = () => {
   const signupUrl = getSignupUrl();
-  const storedFullName = getDisplayValue(window.localStorage.getItem("player_full_name"));
+  const storedFullName = readPlayerName();
 
   signupUrl.searchParams.set("redirect", `${window.location.pathname}${window.location.search}`);
   if (storedFullName) {
@@ -364,7 +365,7 @@ const createVitalsPanel = ({
       }
       : null;
   const level = hasPlayerProfile ? displayLevel : 1;
-  const storedUsername = getDisplayValue(window.localStorage.getItem("player_full_name"));
+  const storedUsername = readPlayerName();
   const profileName = getDisplayValue(playerProfile?.username)
     || getDisplayValue(playerProfile?.full_name)
     || (!hasPlayerProfile ? storedUsername : "")
@@ -572,12 +573,12 @@ const createSkillForms = (skills) => (
   }))
 );
 
-const attachProfileAvatarUrls = async (client, profiles) => Promise.all(
+const attachProfileAvatarUrlsWith = async (client, profiles, resolveAvatar = getAvatarImageUrl) => Promise.all(
   profiles.map(async (profile) => {
     try {
       return {
         ...profile,
-        avatarUrl: await getAvatarImageUrl(client, profile)
+        avatarUrl: await resolveAvatar(client, profile)
       };
     } catch {
       return {
@@ -588,7 +589,9 @@ const attachProfileAvatarUrls = async (client, profiles) => Promise.all(
   })
 );
 
-export const initJayceePage = async () => {
+export const initJayceePage = async ({ data = null, auth = window.JayceeAuth, notificationFactory = options => new NotificationStore(options), onGameEvent = () => {}, onError = () => {}, practiceCheckpointMs = 0 } = {}) => {
+  const api = data || { acceptQuest: (...args) => acceptQuest(...args), switchMaster: (...args) => switchMaster(...args), createPlayerForGame: (...args) => createPlayerForGame(...args), fetchAdminProfile: (...args) => fetchAdminProfile(...args), fetchPlayerForGame: (...args) => fetchPlayerForGame(...args), fetchPlayersForUser: (...args) => fetchPlayersForUser(...args), fetchProfileByUserId: (...args) => fetchProfileByUserId(...args), fetchProfileByUsername: (...args) => fetchProfileByUsername(...args), fetchPublicProfiles: (...args) => fetchPublicProfiles(...args), fetchSkillsByIds: (...args) => fetchSkillsByIds(...args), fetchUserGameSettings: (...args) => fetchUserGameSettings(...args), getAvatarImageUrl: (...args) => getAvatarImageUrl(...args), recordSkillPractice: (...args) => recordSkillPractice(...args), syncSkillProgress: (...args) => syncSkillProgress(...args) };
+  const attachProfileAvatarUrls = (client, profiles) => attachProfileAvatarUrlsWith(client, profiles, api.getAvatarImageUrl);
   const shell = document.querySelector("[data-profile-shell]");
   const gamePanel = shell?.querySelector("[data-game-content]");
   if (!shell || !gamePanel) return;
@@ -661,6 +664,7 @@ export const initJayceePage = async () => {
     }
     if (completed_occurrence) notifications?.record('master_linked.v1', 'completed', completed_occurrence);
     if (progressed) {
+      onGameEvent({ type: 'level_changed', player });
       if (selectedAbilityIndex !== null) {
         closeSkillDescription(selectedAbilityIndex);
       } else {
@@ -678,15 +682,15 @@ export const initJayceePage = async () => {
     masterLineage = null;
     if (masterProfile.master) {
       try {
-        const profile = await fetchProfileByUserId(supabaseClient, masterProfile.master);
+        const profile = await api.fetchProfileByUserId(supabaseClient, masterProfile.master);
         if (profile) [masterLineage] = await attachProfileAvatarUrls(supabaseClient, [profile]);
       } catch (error) {
         console.warn("Could not load the Master's Master", error);
       }
     }
-    activeMasterGame = masterGame || await fetchUserGameSettings(supabaseClient, masterProfile);
+    activeMasterGame = masterGame || await api.fetchUserGameSettings(supabaseClient, masterProfile);
 
-    skills = await fetchSkillsByIds(supabaseClient, GAME_RULES.skills.map((skill) => skill.skillColumn).map((column) => activeMasterGame?.[column]));
+    skills = await api.fetchSkillsByIds(supabaseClient, GAME_RULES.skills.map((skill) => skill.skillColumn).map((column) => activeMasterGame?.[column]));
     skillForms = createSkillForms(skills);
     gameSettings = activeMasterGame;
     gameForm = createGameForm(gameSettings);
@@ -706,8 +710,8 @@ export const initJayceePage = async () => {
     renderVitalsPanel();
 
     try {
-      currentPlayer = await createPlayerForGame(supabaseClient, playerProfile, currentProfile);
-      playerRows = await fetchPlayersForUser(supabaseClient, playerProfile);
+      currentPlayer = await api.createPlayerForGame(supabaseClient, playerProfile, currentProfile);
+      playerRows = await api.fetchPlayersForUser(supabaseClient, playerProfile);
     } catch (error) {
       console.error("Jaycee player could not be created", error);
     } finally {
@@ -725,7 +729,8 @@ export const initJayceePage = async () => {
     try {
       if (practice) await practice.flush();
       const level = Number(currentPlayer.level);
-      const result = await acceptQuest(supabaseClient, currentPlayer.id, level);
+      const result = await api.acceptQuest(supabaseClient, currentPlayer.id, level);
+      onGameEvent({ type: 'quest_accepted', player: result.player });
       applySkillProgress(result);
       notifications?.record(level === 2 ? 'level_two_prepare.v1' : 'level_three_prepare.v1', 'completed', `${result.player.id}:${level}`);
     } catch (error) {
@@ -772,11 +777,12 @@ export const initJayceePage = async () => {
       onPlay: handlePlayClick,
       onAcceptMaster: handleAcceptMasterClick,
       onLoadMasterDetails: async (master) => {
+        if (data?.fetchMasterDetails) return data.fetchMasterDetails(supabaseClient, master);
         const [profile, game] = await Promise.all([
-          fetchProfileByUserId(supabaseClient, master.id),
-          fetchUserGameSettings(supabaseClient, master)
+          api.fetchProfileByUserId(supabaseClient, master.id),
+          api.fetchUserGameSettings(supabaseClient, master)
         ]);
-        const skills = await fetchSkillsByIds(supabaseClient, GAME_RULES.skills.map((skill) => skill.skillColumn).map((column) => game?.[column]));
+        const skills = await api.fetchSkillsByIds(supabaseClient, GAME_RULES.skills.map((skill) => skill.skillColumn).map((column) => game?.[column]));
         return { lore: profile?.lore, game, skills };
       },
       player: practice?.project(currentPlayer) || currentPlayer,
@@ -854,10 +860,12 @@ export const initJayceePage = async () => {
 
         if (practice.active?.skillNumber === index) {
           practice.stop();
+          onGameEvent({ type: 'practice_stopped', player_id: currentPlayer.id, skill_number: index });
           closeSkillDescription(index);
           return;
         }
         practice.start(currentPlayer.id, index, currentPlayer[`skill_${index}_start`] || null);
+        onGameEvent({ type: 'practice_started', player_id: currentPlayer.id, skill_number: index });
         updateLiveUI();
       },
       isDescriptionClosing: closingAbilityIndex !== null,
@@ -931,6 +939,7 @@ export const initJayceePage = async () => {
     shell.querySelectorAll("[data-practice-toggle]").forEach((button) => {
       const isPracticing = Number(button.dataset.practiceToggle) === activeSkill;
       button.textContent = isPracticing ? "Stop" : "Start";
+      button.dataset.uiSound = isPracticing ? "buttonClick" : "skillStart";
       button.setAttribute("aria-pressed", String(isPracticing));
     });
     const status = shell.querySelector(".profile-practice-status");
@@ -952,7 +961,7 @@ export const initJayceePage = async () => {
       if (Number.isFinite(quest.deadline) && Date.now() >= quest.deadline) {
         cycleRefreshInFlight = true;
         try {
-          await window.JayceeAuth?.checkAccountAccess();
+          await auth?.checkAccountAccess();
         } catch {
           cycleRefreshRetryAt = Date.now() + 5000;
         } finally {
@@ -973,7 +982,7 @@ export const initJayceePage = async () => {
       // Save queued practice against its old clock before renewing any cycle.
       if (practice) await practice.flush();
       if (practice?.error) throw new Error(practice.error);
-      const result = await syncSkillProgress(supabaseClient, playerId);
+      const result = await api.syncSkillProgress(supabaseClient, playerId);
       if (currentPlayer?.id === playerId) {
         applySkillProgress(result);
         updateLiveUI();
@@ -998,7 +1007,7 @@ export const initJayceePage = async () => {
     renderVitalsPanel();
 
     try {
-      const masterGame = await fetchUserGameSettings(supabaseClient, masterProfile);
+      const masterGame = await api.fetchUserGameSettings(supabaseClient, masterProfile);
 
       if (!masterGame?.id || !masterGame.skill_1) {
         throw new Error("This Master has no game available yet.");
@@ -1006,15 +1015,16 @@ export const initJayceePage = async () => {
 
       practice?.stop();
       if (practice) await practice.flush();
-      const player = await switchMaster(supabaseClient, masterProfile.id);
+      const player = await api.switchMaster(supabaseClient, masterProfile.id);
       playerProfile = { ...playerProfile, master: masterProfile.id };
+      onGameEvent({ type: 'master_selected', master: masterProfile.username, player });
       currentPlayer = player;
       selectedAbilityIndex = null;
       lastMannaAbilityIndex = null;
       closingAbilityIndex = null;
       if (descriptionCloseTimer) window.clearTimeout(descriptionCloseTimer);
       descriptionCloseTimer = 0;
-      playerRows = await fetchPlayersForUser(supabaseClient, playerProfile);
+      playerRows = await api.fetchPlayersForUser(supabaseClient, playerProfile);
       await loadMasterGame(masterProfile, masterGame);
       window.dispatchEvent(new CustomEvent("jaycee:player-updated", { detail: { player } }));
     } catch (error) {
@@ -1030,7 +1040,7 @@ export const initJayceePage = async () => {
   const refreshPlayerProfile = async () => {
     if (!supabaseClient) return;
 
-    const sessionResult = await window.JayceeAuth?.getSession?.();
+    const sessionResult = await auth?.getSession?.();
     const user = sessionResult?.data?.session?.user;
 
     if (!user) return;
@@ -1038,7 +1048,7 @@ export const initJayceePage = async () => {
 
     accountCreatedAt = getDisplayValue(user.created_at);
 
-    const refreshedProfile = await fetchProfileByUserId(supabaseClient, user.id);
+    const refreshedProfile = await api.fetchProfileByUserId(supabaseClient, user.id);
 
     if (!refreshedProfile) return;
 
@@ -1046,26 +1056,26 @@ export const initJayceePage = async () => {
     if (getDisplayValue(currentProfile?.id) === getDisplayValue(refreshedProfile.id)) {
       currentProfile = refreshedProfile;
     }
-    playerRows = await fetchPlayersForUser(supabaseClient, refreshedProfile);
+    playerRows = await api.fetchPlayersForUser(supabaseClient, refreshedProfile);
     activeMasterProfile = refreshedProfile.master
-      ? await fetchProfileByUserId(supabaseClient, refreshedProfile.master)
+      ? await api.fetchProfileByUserId(supabaseClient, refreshedProfile.master)
       : null;
     currentPlayer = activeMasterProfile
-      ? await fetchPlayerForGame(supabaseClient, refreshedProfile, activeMasterProfile)
+      ? await api.fetchPlayerForGame(supabaseClient, refreshedProfile, activeMasterProfile)
       : null;
-    if (currentPlayer) applySkillProgress(await syncSkillProgress(supabaseClient, currentPlayer.id));
+    if (currentPlayer) applySkillProgress(await api.syncSkillProgress(supabaseClient, currentPlayer.id));
     if (practice?.active && practice.active.playerId !== currentPlayer?.id) practice.stop();
     if (activeMasterProfile) await loadMasterGame(activeMasterProfile);
 
     try {
-      playerAvatarUrl = await getAvatarImageUrl(supabaseClient, refreshedProfile);
+      playerAvatarUrl = await api.getAvatarImageUrl(supabaseClient, refreshedProfile);
     } catch (error) {
       console.warn("Jaycee player avatar could not be refreshed", error);
       playerAvatarUrl = "";
     }
 
     try {
-      publicProfiles = await attachProfileAvatarUrls(supabaseClient, await fetchPublicProfiles(supabaseClient, 100, {
+      publicProfiles = await attachProfileAvatarUrls(supabaseClient, await api.fetchPublicProfiles(supabaseClient, 100, {
         referrerId: playerProfile?.referrer_id || null,
         referralUsername: playerProfile ? "" : window.JayceeReferral?.getUsername() || ""
       }));
@@ -1085,14 +1095,14 @@ export const initJayceePage = async () => {
   window.addEventListener("jaycee:account-updated", refreshPlayerProfile);
 
   try {
-    const client = await window.JayceeAuth.getSupabaseClient();
+    const client = await auth.getSupabaseClient();
     supabaseClient = client;
-    const sessionResult = await window.JayceeAuth?.getSession?.();
+    const sessionResult = await auth?.getSession?.();
     const user = sessionResult?.data?.session?.user;
 
     accountCreatedAt = getDisplayValue(user?.created_at);
 
-    notifications = new NotificationStore({
+    notifications = notificationFactory({
       client, userId: user?.id,
       onChange: () => {
         const status = shell.querySelector('[data-notification-status]');
@@ -1126,12 +1136,12 @@ export const initJayceePage = async () => {
       }
     });
 
-    const profile = publicUsername ? await fetchProfileByUsername(client, publicUsername) : null;
+    const profile = publicUsername ? await api.fetchProfileByUsername(client, publicUsername) : null;
     currentProfile = profile;
     playerProfile = user
       ? getDisplayValue(profile?.id) === getDisplayValue(user.id)
         ? profile
-        : await fetchProfileByUserId(client, user.id)
+        : await api.fetchProfileByUserId(client, user.id)
       : null;
 
     if (hasUserProfile && !profile) {
@@ -1140,27 +1150,27 @@ export const initJayceePage = async () => {
       return;
     }
 
-    playerRows = playerProfile ? await fetchPlayersForUser(client, playerProfile) : [];
+    playerRows = playerProfile ? await api.fetchPlayersForUser(client, playerProfile) : [];
     if (playerProfile?.master) {
-      activeMasterProfile = await fetchProfileByUserId(client, playerProfile.master);
+      activeMasterProfile = await api.fetchProfileByUserId(client, playerProfile.master);
       currentPlayer = activeMasterProfile
-        ? await fetchPlayerForGame(client, playerProfile, activeMasterProfile)
+        ? await api.fetchPlayerForGame(client, playerProfile, activeMasterProfile)
         : null;
     }
     if (activeMasterProfile) {
       await loadMasterGame(activeMasterProfile);
     } else {
-      gameSettings = hasUserProfile ? await fetchUserGameSettings(client, profile) : null;
+      gameSettings = hasUserProfile ? await api.fetchUserGameSettings(client, profile) : null;
       gameForm = createGameForm(gameSettings);
-      skills = await fetchSkillsByIds(client, GAME_RULES.skills.map((skill) => skill.skillColumn).map((column) => gameSettings?.[column]));
+      skills = await api.fetchSkillsByIds(client, GAME_RULES.skills.map((skill) => skill.skillColumn).map((column) => gameSettings?.[column]));
       skillForms = createSkillForms(skills);
       currentPlayer = profile && playerProfile
-        ? await fetchPlayerForGame(client, playerProfile, profile)
+        ? await api.fetchPlayerForGame(client, playerProfile, profile)
         : currentPlayer;
     }
     if (playerProfile) {
       try {
-        playerAvatarUrl = await getAvatarImageUrl(client, playerProfile);
+        playerAvatarUrl = await api.getAvatarImageUrl(client, playerProfile);
       } catch (error) {
         console.warn("Jaycee player avatar could not be loaded", error);
         playerAvatarUrl = "";
@@ -1168,7 +1178,7 @@ export const initJayceePage = async () => {
     }
 
     try {
-      publicProfiles = await attachProfileAvatarUrls(client, await fetchPublicProfiles(client, 100, {
+      publicProfiles = await attachProfileAvatarUrls(client, await api.fetchPublicProfiles(client, 100, {
         referrerId: playerProfile?.referrer_id || null,
         referralUsername: playerProfile ? "" : window.JayceeReferral?.getUsername() || ""
       }));
@@ -1182,7 +1192,7 @@ export const initJayceePage = async () => {
       publicProfiles = [];
     }
     try {
-      const fetchedAdminProfile = await fetchAdminProfile(client);
+      const fetchedAdminProfile = await api.fetchAdminProfile(client);
       const [profileWithAvatar] = fetchedAdminProfile
         ? await attachProfileAvatarUrls(client, [fetchedAdminProfile])
         : [];
@@ -1197,12 +1207,12 @@ export const initJayceePage = async () => {
     if (playerProfile) {
       practice = new PracticeTimer({
         userId: playerProfile.id,
-        save: (session) => recordSkillPractice(supabaseClient, playerProfile, session),
+        save: (session) => api.recordSkillPractice(supabaseClient, playerProfile, session),
         onSaved: applySkillProgress,
         onChange: updateLiveUI
       });
       await practice.flush();
-      if (currentPlayer) applySkillProgress(await syncSkillProgress(client, currentPlayer.id));
+      if (currentPlayer) applySkillProgress(await api.syncSkillProgress(client, currentPlayer.id));
     }
     shell.hidden = false;
     renderVitalsPanel();
@@ -1220,8 +1230,14 @@ export const initJayceePage = async () => {
       }, 1000);
     };
     startClocks();
+    const checkpointClock = practiceCheckpointMs > 0 ? window.setInterval(() => { void practice?.checkpoint(); }, practiceCheckpointMs) : 0;
+    if (practiceCheckpointMs > 0) document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') practice?.stop();
+    });
     window.addEventListener("online", () => { void practice?.flush(); });
     window.addEventListener("pagehide", () => {
+      practice?.stop();
+      if (checkpointClock) window.clearInterval(checkpointClock);
       window.clearInterval(uiClock);
       window.clearInterval(questClock);
       uiClock = 0;
@@ -1231,6 +1247,7 @@ export const initJayceePage = async () => {
     });
   } catch (error) {
     console.error("Jaycee profile load failed", error);
+    onError(error);
     shell.hidden = false;
   }
 };

@@ -19,6 +19,7 @@ window.addEventListener('message',event=>{
  const m=event.data;
  const reply=result=>frame.contentWindow.postMessage({jsonrpc:'2.0',id:m.id,result},'*');
  if(m.method==='ui/initialize')reply({protocolVersion:'2026-01-26',hostCapabilities:{},hostInfo:{name:'test',version:'1'}});
+ if(m.method==='ui/update-model-context'||m.method==='ui/message')reply({});
  if(m.method==='ui/notifications/initialized')frame.contentWindow.postMessage({jsonrpc:'2.0',method:'ui/notifications/tool-result',params:{structuredContent:data}},'*');
  if(m.method==='tools/call'){
   if(m.params.name==='get_master_details')reply({structuredContent:{lore:'A shared **Master** story.',game:{skill_0:'s0',skill_1:'s1'},skills:[{id:'s0',label:'Passive',description:'A shared ability.'},{id:'s1',label:'Prayer'}]}});
@@ -31,7 +32,7 @@ window.addEventListener('message',event=>{
  }
 });
 frame.srcdoc=${
-  JSON.stringify(MASTER_PICKER_HTML).replaceAll("</script", "<\\/script")
+  JSON.stringify(MASTER_PICKER_HTML.replace(/<link href="https:\/\/fonts.googleapis.com[^>]+>/g, "")).replaceAll("</script", "<\\/script")
 };`;
 const checks =
   `const assert=(value,message)=>{if(!value)throw new Error(message)};

@@ -1,3 +1,4 @@
+import { callTool, connect, gameEvent } from "./bridge.js";
 // Thin MCP adapter. Cards, dialog, Markdown and ability previews belong to the site UI.
 import { createMastersNoticeContent } from "../../src/js/jaycee/master-picker.js";
 import { formatDuration } from "../../src/js/jaycee/skill-panel.js";
@@ -8,35 +9,8 @@ const root = document.getElementById("master-picker");
 const status = document.getElementById("status");
 const countdown = document.getElementById("countdown");
 const retry = document.getElementById("retry");
-const pending = new Map();
-let requestId = 0;
 let current = null;
 let saving = false;
-const notify = (method, params) =>
-  window.parent.postMessage({ jsonrpc: "2.0", method, params }, "*");
-const request = (method, params) =>
-  new Promise((resolve, reject) => {
-    const id = ++requestId;
-    const timer = setTimeout(() => {
-      pending.delete(id);
-      reject(new Error("The chat did not respond. Try again."));
-    }, 30000);
-    pending.set(id, { resolve, reject, timer });
-    window.parent.postMessage({ jsonrpc: "2.0", id, method, params }, "*");
-  });
-const callTool = async (name, args = {}) => {
-  const response = await request("tools/call", { name, arguments: args });
-  if (response.isError) {
-    throw new Error(
-      response.content?.find((item) => item.type === "text")?.text ||
-        "The operation failed.",
-    );
-  }
-  if (!response.structuredContent) {
-    throw new Error("The game returned no data. Try again.");
-  }
-  return response.structuredContent;
-};
 const showError = (error) => {
   status.textContent = error.message || "The game could not be loaded.";
   retry.hidden = false;
@@ -94,7 +68,7 @@ function render(data) {
           });
           saving = false;
           render(selected);
-          notify("ui/update-model-context", { structuredContent: selected });
+          void gameEvent({ type: "master_selected", ...selected });
         } catch (error) {
           saving = false;
           render(current);
@@ -116,45 +90,5 @@ retry.addEventListener("click", async () => {
     retry.disabled = false;
   }
 });
-window.addEventListener("message", (event) => {
-  if (event.source !== window.parent) return;
-  const message = event.data;
-  if (!message || message.jsonrpc !== "2.0") return;
-  const operation = pending.get(message.id);
-  if (operation) {
-    clearTimeout(operation.timer);
-    pending.delete(message.id);
-    if (message.error) {
-      operation.reject(
-        new Error(message.error.message || "The request failed."),
-      );
-    } else operation.resolve(message.result);
-    return;
-  }
-  if (message.method === "ui/notifications/tool-result") {
-    if (message.params?.isError) {
-      showError(
-        new Error(
-          message.params.content?.find((item) => item.type === "text")?.text ||
-            "Masters unavailable.",
-        ),
-      );
-    } else render(message.params?.structuredContent);
-  }
-});
-new ResizeObserver(() =>
-  notify("ui/notifications/size-changed", {
-    height: document.body.scrollHeight,
-  })
-).observe(document.body);
 setInterval(updateCountdown, 1000);
-request("ui/initialize", {
-  appInfo: { name: "magic-master-picker", version: "1.0.0" },
-  appCapabilities: {},
-  protocolVersion: "2026-01-26",
-}).then(() => notify("ui/notifications/initialized", {})).catch(showError);
-render(window.openai?.toolOutput);
-window.addEventListener(
-  "openai:set_globals",
-  (event) => render(event.detail?.globals?.toolOutput),
-);
+connect({ name: "magic-master-picker", onResult: render, onError: showError });

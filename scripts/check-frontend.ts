@@ -1,8 +1,9 @@
 // Verify local references and module reachability without contacting Supabase.
 import { syncGame } from "./sync-game.ts";
-import { buildMasterPicker } from "./build-master-picker.ts";
+import { buildMasterPicker, buildGame } from "./build-master-picker.ts";
 await syncGame(true);
 await buildMasterPicker(true);
+await buildGame(true);
 const root = new URL("../", import.meta.url);
 const modules = new Set<string>();
 const visited = new Set<string>();

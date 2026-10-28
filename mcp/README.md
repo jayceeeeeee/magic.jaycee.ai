@@ -1,7 +1,32 @@
 # Game MCP (development)
 
-The development version exposes thirteen authenticated tools. Twelve are read-only;
-`select_master` writes the first Master choice through the existing game RPC.
+The development version exposes twenty authenticated tools. Fourteen are read-only;
+six game actions write through existing game RPCs. `save_practice` and
+`record_game_notifications` are available to the app UI only.
+
+The main entry point is **`show_game`** ("affiche le game"). It displays the same
+main game shell, controller, notifications, profile HUD, abilities and practice
+buttons as `game.html`. The MCP adapter supplies data and actions without creating
+a browser Supabase session. `get_game_state` returns the saved snapshot without UI.
+`sync_game_progress`, `accept_quest` and `change_master` expose focused actions;
+Master changes retain the site's pending Level 2/3 restrictions.
+
+Practice uses the site's `PracticeTimer`, measures elapsed time in the open UI,
+checkpoints every ten seconds, and stops on visibility loss or teardown. Failed
+saves retain their original cumulative counter for retry. The last unsaved slice
+can be lost if the host destroys the iframe before a save completes. Reopening
+loads saved progress; it does not resume an unattended timer. The model does not
+receive an action for inventing practice seconds.
+
+Important actions (Master selection, quest acceptance and level changes) update
+model context and request a conversational follow-up. Practice Start/Stop updates
+context silently. Notification dismissals and timer ticks do not create chat turns.
+On mount, the UI revalidates the conversation's cached snapshot before rendering;
+old notification receipts are never displayed while current state is loading.
+It imports the site's delegated button-sound handler, including skill Start/Stop.
+The site and full MCP view share Rajdhani and Share Tech Mono embedded in
+`src/css/game-fonts.css` (pinned Google Fonts, SIL licenses under `licenses/fonts/`).
+The existing optional Noto Sans SC stylesheet remains available for CJK text.
 
 First-Master onboarding:
 
@@ -65,7 +90,8 @@ The server exposes the authoritative JSON rules and two MCP Apps views.
 | --- | --- |
 | `magicdev://game/rules` | Complete versioned `GAME_RULES`, including documented equations and conventions |
 | `ui://magic/profile-image-v1.html` | MCP Apps interface for showing profile images |
-| `ui://magic/master-picker-v2.html` | Shared Master selector with an authenticated MCP adapter |
+| `ui://magic/master-picker-v3.html` | Shared Master selector with an authenticated MCP adapter |
+| `ui://magic/game-v3.html` | Complete main game interface using the site controller and an MCP data adapter |
 
 `supabase/functions/game-mcp/mcp-resources.ts` builds these representations from
 the authoritative `game-rules.ts` in the same directory.
@@ -196,6 +222,7 @@ the UI URI when a change would break a cached view.
 .tools/deno.exe run --allow-read scripts/check-frontend.ts
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/browser.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/mcp-ui.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File tests/game-mcp-ui.ps1
 ```
 
 MCP tests use real signed test JWTs and mocked database/Auth responses. They check
@@ -213,7 +240,8 @@ Both Deno import maps pin package versions; commit their lockfiles when updating
 dependencies. Deploy `supabase/functions/game-mcp/` with all implementation files
 at its root (`index.ts`, `server.ts`, `mcp-tools.ts`, `mcp-resources.ts`,
 `resource-profile-image.ts`, `master-tools.ts`, `master-catalog.js`,
-`resource-master-picker.generated.ts`, `game-rules.ts`, `manna.js`, `deno.json`). No external local
+`resource-master-picker.generated.ts`, `game-tools.ts`, `resource-game.generated.ts`,
+`resource-ui-assets.generated.ts`, `game-rules.ts`, `manna.js`, `deno.json`). No external local
 dependencies or parent-directory paths are required in the deployment.
 
 File responsibilities are explicit:

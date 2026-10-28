@@ -27,6 +27,17 @@ export class PracticeTimer {
     void this.flush();
   }
 
+  // Save a slice while continuing to measure the remaining active practice.
+  checkpoint() {
+    if (this.active) {
+      const now = performance.now();
+      const totalSeconds = Math.max(0, now - this.active.since) / 1000;
+      if (totalSeconds > 0) this.pending.push({ ...this.active, totalSeconds });
+      this.active.since = now;
+    }
+    return this.flush();
+  }
+
   project(player) {
     if (!player) return null;
     const projected = { ...player };
