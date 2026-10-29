@@ -9,10 +9,10 @@ type Config = {
 
 type PendingEmail = {
   user_id: string | null;
-  prayer_id: string;
+  prayer_id?: string;
   delivery_started_at: string;
   sent_at: string | null;
-  payload: { username: string; problem: string; prayer: string; created_at: string };
+  payload: { username: string; problem?: string; prayer?: string; email?: string; created_at: string };
 };
 
 export function createHandler(config: Config, requestFetch: typeof fetch = fetch) {
@@ -26,17 +26,20 @@ export function createHandler(config: Config, requestFetch: typeof fetch = fetch
     }
     let userId: string;
     let filter: string;
+    let signup = false;
     try {
       const body = await request.json();
-      userId = body.notification_id ?? body.user_id;
-      filter = body.notification_id ? 'id' : 'user_id';
+      signup = body.signup_id !== undefined;
+      userId = signup ? body.signup_id : body.notification_id ?? body.user_id;
+      filter = signup || body.notification_id ? 'id' : 'user_id';
       if (typeof userId !== 'string' || !/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(userId)) {
         return new Response('Invalid account', { status: 400 });
       }
     } catch {
       return new Response('Invalid JSON', { status: 400 });
     }
-    const url = `${config.supabaseUrl}/rest/v1/first_prayer_emails?${filter}=eq.${userId}`;
+    const table = signup ? 'signup_emails' : 'first_prayer_emails';
+    const url = `${config.supabaseUrl}/rest/v1/${table}?${filter}=eq.${userId}`;
     const headers = {
       apikey: config.serviceRoleKey,
       Authorization: `Bearer ${config.serviceRoleKey}`,
@@ -60,20 +63,26 @@ export function createHandler(config: Config, requestFetch: typeof fetch = fetch
         headers: {
           Authorization: `Bearer ${config.resendApiKey}`,
           'Content-Type': 'application/json',
-          'Idempotency-Key': `first-prayer/${item.prayer_id}`,
+          'Idempotency-Key': signup ? `signup/${item.user_id}` : `first-prayer/${item.prayer_id}`,
         },
         body: JSON.stringify({
           from: config.from,
           to: [config.to],
-          subject: item.user_id ? 'Magic — Première prière d’un nouveau compte' : 'Magic — Nouvelle prière avant inscription',
-          text: [
+          subject: signup ? 'Magic — Nouvelle inscription' : item.user_id ? 'Magic — Première prière d’un nouveau compte' : 'Magic — Nouvelle prière avant inscription',
+          text: (signup ? [
+            'Un nouvel utilisateur vient de créer son compte Magic.',
+            `Email : ${item.payload.email}`,
+            `Nom : ${item.payload.username || 'Non renseigné'}`,
+            `Compte : ${item.user_id}`,
+            `Date : ${item.payload.created_at}`,
+          ] : [
             item.user_id ? 'Un compte vient d’envoyer sa première prière.' : 'Un visiteur vient d’envoyer une prière avant inscription.',
             `Nom : ${item.payload.username}`,
             `Compte : ${item.user_id || 'Visiteur sans compte'}`,
             `Date : ${item.payload.created_at}`,
             '', 'Problème :', item.payload.problem,
             '', 'Prière :', item.payload.prayer,
-          ].join('\n'),
+          ]).join('\n'),
         }),
       });
       if (!sent.ok) throw new Error(`Resend returned ${sent.status}`);
@@ -87,7 +96,7 @@ export function createHandler(config: Config, requestFetch: typeof fetch = fetch
       return Response.json({ sent: true });
     } catch (error) {
       // Log no prayer, recipient, credential or provider response body.
-      console.error('First prayer email failed:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('Notification email failed:', error instanceof Error ? error.message : 'Unknown error');
       return new Response('Delivery failed; queued for retry', { status: 502 });
     }
   };

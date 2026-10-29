@@ -85,3 +85,26 @@ Deno.test('anonymous notification uses its queue ID and explains the pre-signup 
   assert(email.subject.includes('avant inscription') && email.text.includes('Visiteur sans compte'));
   assert(calls[2].url.includes(`?id=eq.${notificationId}`));
 });
+
+Deno.test('signup uses its dedicated queue, email address and stable account idempotency key', async () => {
+  const signupId = '44444444-4444-4444-8444-444444444444';
+  const calls: { url: string; init: RequestInit }[] = [];
+  const mockFetch = ((url: string, init: RequestInit) => {
+    calls.push({ url, init });
+    if (calls.length === 1) return Promise.resolve(Response.json([{
+      ...item(), prayer_id: undefined,
+      payload: { email: 'new@example.com', username: '', created_at: '2026-10-29' },
+    }]));
+    if (calls.length === 2) return Promise.resolve(Response.json({ id: 'signup-email-id' }));
+    return Promise.resolve(new Response(null, { status: 204 }));
+  }) as typeof fetch;
+  const response = await createHandler(config, mockFetch)(request(undefined, { signup_id: signupId }));
+  assert(response.status === 200);
+  assert(calls[0].url.includes(`/signup_emails?id=eq.${signupId}`));
+  const email = JSON.parse(String(calls[1].init.body));
+  assert(email.subject === 'Magic — Nouvelle inscription');
+  assert(email.text.includes('new@example.com') && email.text.includes('Non renseigné'));
+  assert(!email.text.includes('Prière :'));
+  assert(new Headers(calls[1].init.headers).get('Idempotency-Key') === `signup/${userId}`);
+  assert(calls[2].url.includes(`/signup_emails?id=eq.${signupId}`));
+});

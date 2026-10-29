@@ -1,9 +1,21 @@
-# Première prière : notification email
+# Prières et inscriptions : notifications email
 
 Un email est envoyé dès qu'un visiteur soumet une prière **avant inscription**.
 Chaque prière anonyme déclenche une notification ; aucune identité de visiteur
 fiable ne permet de dédupliquer par personne. Pour un compte connecté, seule sa
 première prière déclenche un email. Aucun email historique n'est envoyé.
+
+Chaque nouveau compte disposant d'un email déclenche aussi une notification
+`Magic — Nouvelle inscription`, dès sa création, avant confirmation de l'email.
+Elle contient l'email, le nom s'il est renseigné, l'identifiant et la date.
+Les simples sessions Auth anonymes et les comptes sans email sont exclus.
+Les mises à jour, connexions et confirmations ne déclenchent pas un deuxième
+email d'inscription. Cette notification est indépendante de celle de la prière.
+
+Le même endpoint traite les deux files : `first_prayer_emails` et `signup_emails`.
+Le webhook interne utilise `notification_id` pour une prière et `signup_id` pour
+une inscription. Le destinataire et l'expéditeur restent ceux des trois secrets
+déjà configurés ; aucun secret supplémentaire n'est nécessaire.
 
 La migration crée une file `first_prayer_emails`, inaccessible aux clients. Sa clé
 primaire identifie chaque notification ; les contraintes uniques sur `user_id`
@@ -46,14 +58,16 @@ Exemple CLI, après consultation de `supabase functions deploy --help` :
 supabase functions deploy first-prayer-email --project-ref PROJECT_REF --no-verify-jwt
 ```
 
-Appliquer les migrations `20261028235034_first_prayer_email.sql`, puis
-`20261029000308_anonymous_prayer_email.sql` au projet
-visé, sans rejouer l'historique complet. Ajouter l'URL dans Vault une fois
+Sur un projet sans notifications, appliquer les migrations
+`20261028235034_first_prayer_email.sql`, puis
+`20261029000308_anonymous_prayer_email.sql` pour les prières, puis
+`20261029001520_signup_email.sql` pour les inscriptions. Sur un projet déjà équipé,
+appliquer uniquement les migrations manquantes. Ajouter l'URL dans Vault une fois
 la fonction et ses secrets prêts. Sans URL dans Vault, la file reste en attente.
 Le schéma de référence `schema.sql` contient le même mécanisme pour les projets neufs.
 
 L'envoi se fait après validation de la transaction, puis toutes les cinq minutes
-en cas d'échec. Resend reçoit une clé d'idempotence stable par prière. La reprise
+en cas d'échec. Resend reçoit une clé d'idempotence stable par prière ou inscription. La reprise
 s'arrête après 23 heures à partir de la première tentative, avant expiration de la
 fenêtre d'idempotence Resend de 24 heures. Les entrées expirées restent dans la file
 pour inspection manuelle : ne pas remettre leur date à zéro sans vérifier chez
@@ -71,6 +85,9 @@ Function ; les erreurs de transport sont dans `net._http_response`.
 `supabase/tests/first_prayer_email.sql` teste l'enregistrement, les soumissions
 anonymes avec le rôle `anon`, l'unicité des comptes et les droits avec rollback. Ses secrets Vault sont retirés
 uniquement dans la transaction de test pour empêcher tout email réel.
+`supabase/tests/signup_email.sql` couvre aussi la création avant confirmation,
+l'absence de doublon sur modification, l'exclusion des sessions anonymes et la
+suppression des données de notification avec le compte. Il utilise un rollback.
 
 Après activation en dev, envoyer une première puis une deuxième prière depuis un
 compte de test : une seule notification doit être acceptée, et une seule entrée
@@ -104,3 +121,13 @@ L'audit ne signale aucune nouvelle alerte de sécurité bloquante. L'information
 « RLS Enabled No Policy » sur la file est intentionnelle : aucun accès client,
 seul `service_role` lit et met à jour les reçus. Les alertes sur les deux fonctions
 Auth historiques et la protection contre les mots de passe compromis préexistaient.
+
+Inscriptions, même jour : migration `signup_email` appliquée en dev et production,
+fonction partagée dev v5 / production v3. Six tests du handler, contrôle TypeScript,
+tests SQL des inscriptions et régression des prières avec rollback passés. Dans
+chaque environnement, un compte technique créé puis modifié a produit une seule
+notification acceptée par Resend. Les deux comptes techniques et leurs entrées
+de file ont ensuite été supprimés, avec vérification. Les tests d'envoi utilisent
+une insertion dans `auth.users` ; ils ne remplacent pas un parcours navigateur
+complet d'inscription et de confirmation. RLS sans politique sur `signup_emails`
+est intentionnel, comme pour la file des prières : accès serveur uniquement.
