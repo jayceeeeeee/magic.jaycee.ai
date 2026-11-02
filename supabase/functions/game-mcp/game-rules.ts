@@ -3,7 +3,7 @@ export const GAME_RULES = Object.freeze(
   {
     version: "1.0.0",
     description:
-      "Official immutable Magic Dev rules. Skill columns identify existing slots; Fractal labels do not create entities. Player-defined Skill names and identities remain in the database.",
+      "Official immutable jaycee.ai rules. Skill columns identify existing slots; Fractal labels do not create entities. Player-defined Skill names and identities remain in the database.",
     lifeMaxYears: 1000000,
     baseZoneMeters: 40075017,
     ratios: [1826.211, 24, 24],

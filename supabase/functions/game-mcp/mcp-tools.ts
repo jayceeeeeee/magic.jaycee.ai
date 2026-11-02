@@ -522,7 +522,7 @@ export function registerTools(
   server.registerTool("get_game_rules", {
     title: "Official game rules",
     description:
-      "Returns the official, immutable Magic Dev game configuration, including Skill cycles, practice objectives, spatial zones, Manna equations, variable definitions and explanatory documentation. Use this tool to understand game rules and interpret player statistics. The returned values are authoritative. This tool does not return personal player data or calculate player balances.",
+      "Returns the official, immutable jaycee.ai game configuration, including Skill cycles, practice objectives, spatial zones, Manna equations, variable definitions and explanatory documentation. Use this tool to understand game rules and interpret player statistics. The returned values are authoritative. This tool does not return personal player data or calculate player balances.",
     inputSchema: {},
     annotations,
     _meta: { securitySchemes },

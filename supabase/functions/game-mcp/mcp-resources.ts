@@ -6,7 +6,7 @@ import { GAME_RESOURCE } from "./game-tools.ts";
 import { ACCOUNT_RESOURCE } from "./account-tools.ts";
 import { ACCOUNT_HTML } from "./resource-account.generated.ts";
 
-export const GAME_RULES_URI = "magicdev://game/rules";
+export const GAME_RULES_URI = "jaycee://game/rules";
 
 // Resources expose content to read. Tool handlers live in mcp-tools.ts.
 export function registerResources(server: McpServer, projectUrl: string) {
@@ -27,7 +27,7 @@ export function registerResources(server: McpServer, projectUrl: string) {
     _meta:{ui:{prefersBorder:true,csp:{resourceDomains:[projectUrl,"data:","https://fonts.googleapis.com","https://fonts.gstatic.com"],connectDomains:[]}}},
   }]}));
   server.registerResource("game-rules", GAME_RULES_URI, {
-    title: "Official Magic Dev game rules",
+    title: "Official jaycee.ai game rules",
     description:
       "Complete immutable rules, fixed Skill cycles, practice goals, zones and documented Manna equations. No player data or personal calculations.",
     mimeType: "application/json",

@@ -60,4 +60,4 @@ const show = async (result) => {
   }
 };
 retry.addEventListener("click", () => void show({ kind: "account_state" }));
-connect({ name: "Magic Account", onResult: (value) => void show(value), onError: failed });
+connect({ name: "jaycee.ai Account", onResult: (value) => void show(value), onError: failed });

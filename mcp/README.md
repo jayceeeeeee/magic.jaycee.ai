@@ -112,7 +112,7 @@ Existing read tools:
 - `get_my_records`: own practice completions, prayers or notification receipts,
   in pages of 50 with `kind` and `offset`.
 - `get_game_rules`: the complete, immutable `GAME_RULES` catalog, without player
-  data or calculations. Identical to `magicdev://game/rules`.
+  data or calculations. Identical to `jaycee://game/rules`.
 
 `get_game_rules` replaces the removed `get_game_config` tool. Refresh tool
 discovery in existing clients after deployment.
@@ -121,7 +121,7 @@ The server exposes the authoritative JSON rules, three world guides and two MCP 
 
 | URI | Content |
 | --- | --- |
-| `magicdev://game/rules` | Complete versioned `GAME_RULES`, including documented equations and conventions |
+| `jaycee://game/rules` | Complete versioned `GAME_RULES`, including documented equations and conventions |
 | `ui://magic/game-v6.html` | Complete main game interface with server-selected environment and Master IDs |
 | `ui://magic/account-v2.html` | Shared Account panel, own skill editor and photo chooser with an MCP adapter |
 

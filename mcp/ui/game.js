@@ -268,7 +268,7 @@ retry.addEventListener("click", async () => {
   }
 });
 connect({
-  name: "magic-game",
+  name: "jaycee.ai",
   onResult: (data) => {
     void receive(data).catch(showError);
   },

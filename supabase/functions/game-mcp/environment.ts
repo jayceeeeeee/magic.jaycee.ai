@@ -7,7 +7,7 @@ export function getEnvironment(projectUrl: string) {
   if (projectUrl === PROD_PROJECT_URL) {
     return {
       name: "production",
-      serverName: "magic-game",
+      serverName: "jaycee.ai",
       siteUrl: "https://magic.jaycee.ai",
       masterAccountIds: {} as Record<string, string>,
     };
@@ -15,12 +15,12 @@ export function getEnvironment(projectUrl: string) {
   if (projectUrl === DEV_PROJECT_URL) {
     return {
       name: "development",
-      serverName: "magic-game-dev",
+      serverName: "jaycee.ai-dev",
       siteUrl: "http://localhost:3000",
       masterAccountIds: DEV_MASTER_ACCOUNT_IDS as Record<string, string>,
     };
   }
-  throw new Error("Unsupported Magic Dev Supabase project.");
+  throw new Error("Unsupported jaycee.ai Supabase project.");
 }
 
 export type GameEnvironment = ReturnType<typeof getEnvironment>;

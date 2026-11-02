@@ -182,7 +182,7 @@ Deno.test("production has isolated configuration and unknown projects are refuse
   const production = getEnvironment(PROD_PROJECT_URL);
   const development = getEnvironment(DEV_PROJECT_URL);
   assert(production.siteUrl === "https://magic.jaycee.ai" &&
-    production.serverName === "magic-game" && Object.keys(production.masterAccountIds).length === 0,
+    production.serverName === "jaycee.ai" && Object.keys(production.masterAccountIds).length === 0,
     "Production must use its own site and original Master IDs");
   assert(development.siteUrl === "http://localhost:3000" &&
     development.masterAccountIds["d70b5c69-daae-4a77-9955-4385439ae292"] === "89cf977d-ecc0-4dbb-8f4f-fe6b9d7067c5",
@@ -408,7 +408,7 @@ Deno.test("authenticated knowledge resources match official rules and keep priva
     const accountResponse = await handler(request(access, "resources/read", { uri: "ui://magic/account-v2.html" }));
     const account = (await accountResponse.json()).result.contents[0];
     assert(account.mimeType === "text/html;profile=mcp-app" && account._meta.ui.csp.connectDomains.join() === DEV_PROJECT_URL && account.text.includes("account-embed") && !account.text.includes("owner@example"), "Account resource must share presentation without embedding private data");
-    for (const uri of ["magicdev://game/rules"]) {
+    for (const uri of ["jaycee://game/rules"]) {
       assert(listed.some((resource: { uri: string; mimeType: string }) => resource.uri === uri && resource.mimeType === "application/json"),
         `Missing knowledge resource ${uri}`);
       const anonymous = await handler(request(undefined, "resources/read", { uri }));
@@ -456,7 +456,7 @@ Deno.test("Game Master initialization, prompts and world resources use the authe
     assert(prompt.messages.length === 1 && prompt.messages[0].role === "user" &&
       prompt.messages[0].content.type === "text", "Prompt must use standard MCP messages");
     const text = prompt.messages[0].content.text;
-    assert(text.startsWith("You are the Game Master of Magic Dev.") &&
+    assert(text.startsWith("You are the Game Master of jaycee.ai.") &&
       text.includes(GAME_MASTER_INSTRUCTIONS) &&
       WORLD_RESOURCES.every((resource) => text.includes(resource.text)),
       "Prompt must embed the same instructions and complete guides for clients without resource support");
@@ -465,6 +465,13 @@ Deno.test("Game Master initialization, prompts and world resources use the authe
       "Fetching a prompt must not fetch gameplay data or mutate state");
     const resourcesResponse = await handler(request(access, "resources/list"));
     const listed = (await resourcesResponse.json()).result.resources;
+    const toolsResponse = await handler(request(access, "tools/list"));
+    const tools = (await toolsResponse.json()).result.tools;
+    const branding = JSON.stringify({ init, prompts, text, listed, tools, rules: GAME_RULES });
+    assert(!/magic[\s_-]*dev|magic-game|Magic Account/i.test(branding),
+      "All model-facing instructions, guides, rules and discovery metadata must use current branding");
+    assert(text.includes("Use jaycee.ai as the product and plugin name"),
+      "The guide must make the player-facing product name explicit");
     for (const resource of WORLD_RESOURCES) {
       assert(listed.some((row: { uri: string; mimeType: string }) =>
         row.uri === resource.uri && row.mimeType === "text/markdown"), "World guide must be discoverable");

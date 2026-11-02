@@ -1,4 +1,4 @@
-# Magic Dev Game Master
+# jaycee.ai Game Master
 
 The connected AI interprets saved state, coaches the player, orchestrates existing
 tools and narrates verified events. The chosen Master remains the author of the
@@ -15,10 +15,10 @@ the existing rules and UI resources. All retain request authentication and locks
 | --- | --- | --- |
 | Server instructions | `initialize` → `result.instructions` | Role, authority, autonomy, trust, tone and entry tools |
 | Prompt | `prompts/get` with `{"name":"game_master"}` | Four responsibilities, tool routing and all three guides |
-| Identity | `magicdev://world/identity` | World, coaching, narrative and existing visual presentation |
-| Journey | `magicdev://world/journey` | Entry points, Levels 1–4, deadlines, creation and mentorship |
-| Mechanics | `magicdev://world/mechanics` | Skill table generated from `GAME_RULES`, practice and Manna |
-| Exact rules (existing) | `get_game_rules` or `magicdev://game/rules` | Full official configuration and equations |
+| Identity | `jaycee://world/identity` | World, coaching, narrative and existing visual presentation |
+| Journey | `jaycee://world/journey` | Entry points, Levels 1–4, deadlines, creation and mentorship |
+| Mechanics | `jaycee://world/mechanics` | Skill table generated from `GAME_RULES`, practice and Manna |
+| Exact rules (existing) | `get_game_rules` or `jaycee://game/rules` | Full official configuration and equations |
 
 Use `prompts/list` and `resources/list` for discovery, and `resources/read` with
 the selected URI for a guide. The prompt has no arguments, performs no gameplay

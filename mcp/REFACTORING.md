@@ -66,7 +66,7 @@ Modified:
 
 ## MCP compatibility
 
-- Official JSON Resource: `magicdev://game/rules`.
+- Official JSON Resource: `jaycee://game/rules`.
 - Parameterless read-only Tool: `get_game_rules`, returning the identical object.
 - Eight player-specific tools remain usable. `get_game_rules` replaces the removed
   `get_game_config` tool; refresh client tool discovery after deployment.
