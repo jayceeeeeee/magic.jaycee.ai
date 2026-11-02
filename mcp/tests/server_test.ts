@@ -73,7 +73,7 @@ function request(accessToken?: string, method = "tools/list", args?: unknown) {
     }),
   });
 }
-function installMock({ locked = false, userId = "owner", historyLength = 1, imageFailure = false } = {}) {
+function installMock({ locked = false, userId = "owner", historyLength = 1, imageFailure = false, prayerFailure = false } = {}) {
   const calls: { url: URL; auth: string | null }[] = [];
   globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
     const req = new Request(input, init);
@@ -169,6 +169,20 @@ function installMock({ locked = false, userId = "owner", historyLength = 1, imag
       assert(url.searchParams.get("user_id") === "eq.owner", "Prayers must use owner ID");
       return Promise.resolve(Response.json([]));
     }
+    if (url.pathname === "/rest/v1/rpc/check_account_access") {
+      return Promise.resolve(Response.json({ locked }));
+    }
+    if (url.pathname === "/rest/v1/rpc/submit_prayer") {
+      return req.json().then((body) => {
+        assert(req.method === "POST" && !body.user_id && !body.p_user_id && !body.practice_seconds,
+          "Prayer identity must be bound by authenticated RPC without practice credits");
+        return prayerFailure ? Response.json({ message: "Unavailable" }, { status: 503 }) : Response.json({
+          id: body.p_prayer_id, user_id: "owner", process: "tree-v1", tree: body.p_tree,
+          player_id: body.p_player_id, master_id: "master-one", username: "Owner",
+          problem: body.p_tree.binah.description, prayer: body.p_tree.chokmah.description,
+        });
+      });
+    }
     if (url.pathname === "/rest/v1/user_notifications") {
       assert(url.searchParams.get("user_id") === "eq.owner", "Notifications must use owner ID");
       return Promise.resolve(Response.json([{ notification_id: "welcome.v1" }]));
@@ -218,7 +232,7 @@ Deno.test("production rejects development tokens and accepts production-issued O
     await crossProject.body?.cancel();
     const response = await productionHandler(productionRequest(await token({ iss: `${PROD_PROJECT_URL}/auth/v1` })));
     const tools = (await response.json()).result.tools;
-    assert(tools.length === 23 && !tools.some((tool: { name: string }) => tool.name === "show_master_picker"),
+    assert(tools.length === 25 && !tools.some((tool: { name: string }) => tool.name === "show_master_picker"),
       "Production tokens must discover the current tool catalog");
   } finally {
     globalThis.fetch = originalFetch;
@@ -283,9 +297,9 @@ Deno.test("read tools expose own data and public rules using user credentials", 
     const listed = await handler(request(access));
     const tools = (await listed.json()).result.tools;
     assert(
-      tools.length === 23 && !tools.some((tool: { name: string }) => tool.name === "show_master_picker") &&
+      tools.length === 25 && !tools.some((tool: { name: string }) => tool.name === "show_master_picker") &&
         tools.every((t: { name: string; annotations: { readOnlyHint: boolean } }) =>
-          t.annotations.readOnlyHint === (!["select_master","change_master","sync_game_progress","save_practice","accept_quest","record_game_notifications","update_account_profile","save_account_skills","prepare_account_avatar_upload"].includes(t.name))
+          t.annotations.readOnlyHint === (!["submit_prayer","select_master","change_master","sync_game_progress","save_practice","accept_quest","record_game_notifications","update_account_profile","save_account_skills","prepare_account_avatar_upload"].includes(t.name))
         ),
       "Game actions must be advertised as writes",
     );
@@ -403,7 +417,7 @@ Deno.test("authenticated knowledge resources match official rules and keep priva
     const access = await token();
     const listing = await handler(request(access, "resources/list"));
     const listed = (await listing.json()).result.resources;
-    assert(listed.length === 6 && listed.some((resource: { uri: string }) => resource.uri === "ui://magic/account-v2.html"),
+    assert(listed.length === 7 && listed.some((resource: { uri: string }) => resource.uri === "ui://magic/account-v2.html"),
       "Official rules and all UI resources should be advertised");
     const accountResponse = await handler(request(access, "resources/read", { uri: "ui://magic/account-v2.html" }));
     const account = (await accountResponse.json()).result.contents[0];
@@ -509,6 +523,35 @@ Deno.test("world mechanics derive all fixed Skill values from the authoritative 
     assert(line?.includes(`| ${skill.fractalLabel} | ${skill.cycleLabel ?? "None"} | ${skill.cycleSeconds ?? "None"} | ${skill.practiceGoalSeconds ?? "No timed objective"} |`),
       "Mechanics guide must use the exact shared cycle and goal for each slot");
   }
+});
+
+Deno.test("prayer tools work over authenticated MCP without prompt/resource activation", async () => {
+  const tree = Object.fromEntries(["kether","chokmah","binah","chesed","geburah","tipharet","netzach","hod","yesod"]
+    .map((k) => [k,{ title:k, description:`Player words for ${k}` }]));
+  const args = { prayer_id:"11111111-1111-4111-8111-111111111111",
+    player_id:"22222222-2222-4222-8222-222222222222", tree, confirmed:true };
+  try {
+    const calls = installMock();
+    const access = await token();
+    const guide = await handler(request(access,"tools/call",{ name:"get_prayer_guide", arguments:{} }));
+    const context = (await guide.json()).result.structuredContent;
+    assert(context.guide.includes("Follow the conversation, not a checklist") && context.player_id === "own-game" &&
+      context.sefirot.length === 9, "Generic clients must receive the full guide with verified context");
+    const before = calls.length;
+    const invalid = await handler(request(access,"tools/call",{ name:"submit_prayer", arguments:{...args,confirmed:false} }));
+    assert((await invalid.json()).result.isError && !calls.slice(before).some((c) => c.url.pathname.endsWith("/rpc/submit_prayer")),
+      "Missing approval must be rejected before a database write");
+    const saved = await handler(request(access,"tools/call",{ name:"submit_prayer", arguments:args }));
+    const data = (await saved.json()).result.structuredContent;
+    assert(data.prayer.id === args.prayer_id && data.prayer.tree.yesod.description === tree.yesod.description &&
+      !data.practice_recorded && !data.master_message_sent, "Authenticated prayer result lost tree or invented side effects");
+    assert(calls.filter((c) => c.url.pathname.endsWith("/rpc/submit_prayer")).every((c) => c.auth === `Bearer ${access}`),
+      "Prayer writes must use caller credentials");
+    installMock({prayerFailure:true});
+    const failed = await handler(request(access,"tools/call",{ name:"submit_prayer", arguments:args }));
+    const error = (await failed.json()).result;
+    assert(error.isError && !error.structuredContent, "Failed save must not claim success");
+  } finally { globalThis.fetch = originalFetch; }
 });
 
 Deno.test("Manna includes completion history beyond one PostgREST page", async () => {

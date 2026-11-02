@@ -1,13 +1,19 @@
 # Game MCP
 
 The connected AI can act as the **Game Master** through standard server
-instructions, the `game_master` prompt and three world resources. See
+instructions, the `game_master` prompt, three world guides and a prayer guide. See
 [the Game Master guide](GAME_MASTER.md) for the narrative, protocol access,
 authority boundaries, client fallbacks and verification.
 
-The server exposes twenty-three authenticated tools. Fourteen are read-only;
-nine actions write through the existing database APIs. `save_practice`,
+The server exposes twenty-five authenticated tools. Fifteen are read-only;
+ten actions write through the database APIs. `save_practice`,
 `record_game_notifications` and `prepare_account_avatar_upload` are app-only.
+
+**Prayer conversations** use `get_prayer_guide` and `submit_prayer` for active
+Skill 1 from Level 1 for every Master. The player explores nine sefirot freely,
+reviews titles/descriptions, and approves saving. The existing Start/Stop timer
+records practice separately. See [PRAYER.md](PRAYER.md) for the guide, compatible
+storage, example format, tests and required migration before Edge deployment.
 
 **`show_account`** ("affiche mon compte") opens the Account panel separately from
 the game. It imports the site's `account-panel.js`, `game-editor.js`, CSS and
@@ -117,11 +123,12 @@ Existing read tools:
 `get_game_rules` replaces the removed `get_game_config` tool. Refresh tool
 discovery in existing clients after deployment.
 
-The server exposes the authoritative JSON rules, three world guides and two MCP Apps views.
+The server exposes the authoritative JSON rules, three world guides, the prayer guide and two MCP Apps views.
 
 | URI | Content |
 | --- | --- |
 | `jaycee://game/rules` | Complete versioned `GAME_RULES`, including documented equations and conventions |
+| `jaycee://practice/prayer` | Nine-sefirot Skill 1 conversation, non-linear mapping, review and saving |
 | `ui://magic/game-v6.html` | Complete main game interface with server-selected environment and Master IDs |
 | `ui://magic/account-v2.html` | Shared Account panel, own skill editor and photo chooser with an MCP adapter |
 
@@ -274,7 +281,7 @@ Both Deno import maps pin package versions; commit their lockfiles when updating
 dependencies. Deploy `supabase/functions/game-mcp/` with all implementation files
 at its root (`index.ts`, `server.ts`, `mcp-tools.ts`, `mcp-resources.ts`,
 `account-tools.ts`, `master-tools.ts`, `master-catalog.js`,
-`game-master.ts`, `environment.ts`, `resource-account.generated.ts`, `game-tools.ts`, `resource-game.generated.ts`,
+  `game-master.ts`, `prayer-guide.ts`, `prayer-tools.ts`, `environment.ts`, `resource-account.generated.ts`, `game-tools.ts`, `resource-game.generated.ts`,
 `resource-ui-assets.generated.ts`, `game-rules.ts`, `manna.js`, `deno.json`). No external local
 dependencies or parent-directory paths are required in the deployment.
 

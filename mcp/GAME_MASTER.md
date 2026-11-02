@@ -4,6 +4,14 @@ The connected AI interprets saved state, coaches the player, orchestrates existi
 tools and narrates verified events. The chosen Master remains the author of the
 teaching. There is no additional LLM, provider SDK, database table or agent service.
 
+Active Skill 1 now has a shared nine-sefirot prayer conversation from Level 1
+for every Master. `get_prayer_guide` supplies the complete flexible guide and
+active participation; `submit_prayer` saves the approved summary using an
+owner-scoped, idempotent RPC. The guide is also included in the prompt and at
+`jaycee://practice/prayer`. See [PRAYER.md](PRAYER.md) for storage, real timer
+handling, examples and deployment. These additions do not grant practice time,
+change progression or send a message to the Master.
+
 ## Context exposed by the server
 
 `supabase/functions/game-mcp/game-master.ts` holds the shared instructions, world
@@ -23,7 +31,8 @@ the existing rules and UI resources. All retain request authentication and locks
 Use `prompts/list` and `resources/list` for discovery, and `resources/read` with
 the selected URI for a guide. The prompt has no arguments, performs no gameplay
 queries and includes all guides directly for clients lacking resource support.
-Static guides contain no private player data. No extra tool was introduced.
+Static guides contain no private player data. The prayer guide and save tools
+are documented separately in PRAYER.md.
 
 Existing tool names, schemas, result formats and handlers are preserved. Focused
 descriptions on onboarding, state and acceptance provide guidance when the host
