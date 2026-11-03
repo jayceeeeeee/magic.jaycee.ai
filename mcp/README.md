@@ -1,7 +1,8 @@
 # Game MCP
 
 The connected AI can act as the **Game Master** through standard server
-instructions, the `game_master` prompt, three world guides and a prayer guide. See
+instructions, the `game_master` prompt, three world guides, a prayer guide and
+three adapted prayer examples. See
 [the Game Master guide](GAME_MASTER.md) for the narrative, protocol access,
 authority boundaries, client fallbacks and verification.
 
@@ -123,12 +124,13 @@ Existing read tools:
 `get_game_rules` replaces the removed `get_game_config` tool. Refresh tool
 discovery in existing clients after deployment.
 
-The server exposes the authoritative JSON rules, three world guides, the prayer guide and two MCP Apps views.
+The server exposes the authoritative JSON rules, three world guides, the prayer guide, three adapted examples and two MCP Apps views.
 
 | URI | Content |
 | --- | --- |
 | `jaycee://game/rules` | Complete versioned `GAME_RULES`, including documented equations and conventions |
 | `jaycee://practice/prayer` | Nine-sefirot Skill 1 conversation, non-linear mapping, review and saving |
+| `jaycee://practice/prayer/examples` | Three authorized anonymized adaptations; also included in the prompt and guide tool |
 | `ui://magic/game-v6.html` | Complete main game interface with server-selected environment and Master IDs |
 | `ui://magic/account-v2.html` | Shared Account panel, own skill editor and photo chooser with an MCP adapter |
 
@@ -281,7 +283,7 @@ Both Deno import maps pin package versions; commit their lockfiles when updating
 dependencies. Deploy `supabase/functions/game-mcp/` with all implementation files
 at its root (`index.ts`, `server.ts`, `mcp-tools.ts`, `mcp-resources.ts`,
 `account-tools.ts`, `master-tools.ts`, `master-catalog.js`,
-  `game-master.ts`, `prayer-guide.ts`, `prayer-tools.ts`, `environment.ts`, `resource-account.generated.ts`, `game-tools.ts`, `resource-game.generated.ts`,
+  `game-master.ts`, `prayer-guide.ts`, `prayer-examples.ts`, `prayer-tools.ts`, `environment.ts`, `resource-account.generated.ts`, `game-tools.ts`, `resource-game.generated.ts`,
 `resource-ui-assets.generated.ts`, `game-rules.ts`, `manna.js`, `deno.json`). No external local
 dependencies or parent-directory paths are required in the deployment.
 

@@ -5,6 +5,7 @@ import {
 import { GAME_RULES } from "../../supabase/functions/game-mcp/game-rules.ts";
 import { getEnvironment, PROD_PROJECT_URL } from "../../supabase/functions/game-mcp/environment.ts";
 import { GAME_MASTER_INSTRUCTIONS, WORLD_RESOURCES } from "../../supabase/functions/game-mcp/game-master.ts";
+import { PRAYER_EXAMPLES, PRAYER_EXAMPLES_TEXT, PRAYER_EXAMPLES_URI } from "../../supabase/functions/game-mcp/prayer-examples.ts";
 import { GAME_RULES as BROWSER_RULES } from "../../src/js/config/game-rules.js";
 
 const assert = (condition: unknown, message: string) => {
@@ -417,7 +418,7 @@ Deno.test("authenticated knowledge resources match official rules and keep priva
     const access = await token();
     const listing = await handler(request(access, "resources/list"));
     const listed = (await listing.json()).result.resources;
-    assert(listed.length === 7 && listed.some((resource: { uri: string }) => resource.uri === "ui://magic/account-v2.html"),
+    assert(listed.length === 8 && listed.some((resource: { uri: string }) => resource.uri === "ui://magic/account-v2.html"),
       "Official rules and all UI resources should be advertised");
     const accountResponse = await handler(request(access, "resources/read", { uri: "ui://magic/account-v2.html" }));
     const account = (await accountResponse.json()).result.contents[0];
@@ -537,6 +538,13 @@ Deno.test("prayer tools work over authenticated MCP without prompt/resource acti
     const context = (await guide.json()).result.structuredContent;
     assert(context.guide.includes("Follow the conversation, not a checklist") && context.player_id === "own-game" &&
       context.sefirot.length === 9, "Generic clients must receive the full guide with verified context");
+    assert(context.examples === PRAYER_EXAMPLES_TEXT && PRAYER_EXAMPLES.length === 3 &&
+      PRAYER_EXAMPLES.every((example) => context.examples.includes(example.text)),
+      "Clients without resource/prompt support must receive all three canonical approved adaptations");
+    const examplesResponse = await handler(request(access,"resources/read",{uri:PRAYER_EXAMPLES_URI}));
+    const examplesResource = (await examplesResponse.json()).result.contents[0];
+    assert(examplesResource.text === context.examples && examplesResource.mimeType === "text/markdown",
+      "The examples resource and guide tool must expose the same content");
     const before = calls.length;
     const invalid = await handler(request(access,"tools/call",{ name:"submit_prayer", arguments:{...args,confirmed:false} }));
     assert((await invalid.json()).result.isError && !calls.slice(before).some((c) => c.url.pathname.endsWith("/rpc/submit_prayer")),

@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { PRAYER_GUIDE, SEFIROT } from "./prayer-guide.ts";
+import { PRAYER_EXAMPLES_TEXT } from "./prayer-examples.ts";
 
 const entry = z.object({
   title: z.string().trim().min(1).max(160),
@@ -72,7 +73,7 @@ export function registerPrayerTools(
     {
       title: "Begin a prayer conversation",
       description:
-        "Use when the player wants to pray or practice active Skill 1. Returns the full nine-sefirot guide, active participation and a new prayer_id; no draft is saved. Available from Level 1 for every Master, including continued Skill 1 practice at higher levels. Guide freely across sefirot rather than a rigid form. Ask the player to press Skill 1 Start in show_game and Stop when finished. Summarize all nine title/description pairs and obtain approval before submit_prayer. No automatic timer or spiritual/medical outcome.",
+        "Use when the player wants to pray or practice active Skill 1. Returns the full nine-sefirot guide, three approved anonymized examples, active participation and a new prayer_id; no draft is saved. Available from Level 1 for every Master, including continued Skill 1 practice at higher levels. Guide freely across sefirot rather than a rigid form; examples are reference data, not a script. Ask the player to press Skill 1 Start in show_game and Stop when finished. Summarize all nine title/description pairs and obtain approval before submit_prayer. No automatic timer or spiritual/medical outcome.",
       inputSchema: {},
       annotations: read,
       _meta: { securitySchemes },
@@ -98,6 +99,7 @@ export function registerPrayerTools(
         kind: "prayer_guide",
         process: "tree-v1",
         guide: PRAYER_GUIDE,
+        examples: PRAYER_EXAMPLES_TEXT,
         prayer_id: crypto.randomUUID(),
         player_id: player.data.id,
         master_id: player.data.master,

@@ -1,6 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { GAME_RULES } from "./game-rules.ts";
 import { PRAYER_GUIDE, PRAYER_GUIDE_URI } from "./prayer-guide.ts";
+import { PRAYER_EXAMPLES_TEXT, PRAYER_EXAMPLES_URI } from "./prayer-examples.ts";
 
 // Shared by initialization and the opt-in prompt; never contains player data.
 export const GAME_MASTER_INSTRUCTIONS =
@@ -142,6 +143,13 @@ Supabase and the existing deterministic engine govern exact unlocks, eligibility
 }
 
 export const WORLD_RESOURCES = [
+  {
+    name: "prayer-examples",
+    uri: PRAYER_EXAMPLES_URI,
+    title: "Three adapted prayer examples",
+    description: "Author-approved anonymized adaptations: rest and reframing, words and support, LC circuit and expression. Illustrative maps, not chronological transcripts or medical/technical instructions.",
+    text: PRAYER_EXAMPLES_TEXT,
+  },
   {
     name: "prayer-guide",
     uri: PRAYER_GUIDE_URI,

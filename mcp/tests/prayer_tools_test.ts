@@ -7,6 +7,7 @@ import {
   PRAYER_GUIDE,
   SEFIROT,
 } from "../../supabase/functions/game-mcp/prayer-guide.ts";
+import { PRAYER_EXAMPLES_TEXT } from "../../supabase/functions/game-mcp/prayer-examples.ts";
 
 const assert = (v: unknown, message: string) => {
   if (!v) throw new Error(message);
@@ -111,7 +112,7 @@ Deno.test("prayer guide is available for every Master from Level 1, without pers
     const f = fixture({ level });
     const data = (await f.call("get_prayer_guide")).structuredContent;
     assert(
-      data.guide === PRAYER_GUIDE && data.player_id === player &&
+      data.guide === PRAYER_GUIDE && data.examples === PRAYER_EXAMPLES_TEXT && data.player_id === player &&
         data.master_id === master && data.level === level,
       "Missing verified prayer context",
     );

@@ -15,6 +15,9 @@ Masters et reste praticable aux niveaux suivants.
 - `get_prayer_guide` : restitue le guide complet et les identifiants vérifiés,
   même sur un client sans resources/prompts. Ne sauvegarde pas de brouillon.
 - Resource `jaycee://practice/prayer` et prompt `game_master` : même guide.
+- `prayer-examples.ts` : trois adaptations anonymisées autorisées par l'auteur,
+  exposées dans `jaycee://practice/prayer/examples`, le prompt et le champ
+  `examples` renvoyé par `get_prayer_guide`.
 - `submit_prayer` : enregistre uniquement la synthèse que le joueur approuve.
 
 Le guide respecte le vocabulaire spirituel du jeu tout en distinguant ce cadre
@@ -87,6 +90,45 @@ universelle. On pourra commencer avec les documents joints à une conversation,
 puis intégrer les versions validées au plugin sans ajouter une base vectorielle
 avant d'en avoir besoin.
 
+### Trois exemples sélectionnés le 3 novembre 2026
+
+L'auteur a autorisé la publication de trois adaptations de ses notes. Les
+originaux complets ne sont pas copiés dans le dépôt ni chargés par le serveur.
+Les noms de personnes, lieux, histoires relationnelles, images et liens privés
+ont été retirés. Les titres, condensés et questions d'accompagnement proposés
+sont des ajouts éditoriaux identifiés, pas des dialogues historiques reconstitués.
+
+| Note source privée | Exemple publié | Ce qu'il enseigne |
+| --- | --- | --- |
+| `_Left tigh muscle Elongation.md` | Élongation : retrouver le repos déjà présent | Une qualité commune transforme le sens de deux situations opposées ; conserver le Kether initial et son nouveau regard |
+| `_Fascia & Butt nerves.md` | Sensations nerveuses : des mots au soutien et au partage | Chesed peut être une parole ; une réalisation se trouve déjà en Geburah, puis s'étend ailleurs dans l'arbre |
+| `LC circuit - Tesla EM field.md` | Circuit LC : explorer une technique et sa propre expression | Exploration hors santé, changement d'échelle et frame de correspondances L/C à respecter sans en faire un nouveau formulaire universel |
+
+Le tableau LC a ses lignes remplies dans sa propre frame ; il n'est pas qualifié
+d'incomplet parce que ses pôles ne sont pas formulés comme des émotions. Si le
+joueur veut sauvegarder une prière à partir de cette recherche, l'IA clarifie
+avec lui le vécu et la synthèse à consigner selon le guide général, sans inventer
+des émotions et sans recopier mécaniquement le tableau technique en base.
+
+Les trois adaptations gardent les prises de conscience et les analogies utiles,
+mais ne présentent pas les hypothèses médicales ou électroniques des notes comme
+des faits vérifiés. Une sensation spirituelle ne prouve ni guérison physique,
+ni transmission d'énergie à autrui, ni action effectuée. Les passages de l'ancien
+Malkuth sont rapprochés de Yesod ; aucune modification du schéma n'est nécessaire.
+
+Le guide souligne maintenant le tableau comme espace de travail vivant,
+l'amorce généralement linéaire sur les trois premières sefirot puis le flow
+libre dès Chesed, les retours sur Kether, les découvertes dans la prose hors
+tableau et la différence entre une activité présente et une action envisagée.
+
+Lors d'un essai conversationnel, vérifier notamment que l'IA : accueille une
+réalisation en Geburah sans demander d'attendre Yesod ; conserve « Words » comme
+point de départ de Chesed sans inventer une interaction ; n'annonce pas une
+vidéo publiée ou une guérison ; respecte les pôles L/C ; ne demande pas au joueur
+de reproduire les réalisations de l'auteur. Les tests techniques vérifient la
+disponibilité des mêmes exemples via tool, prompt et resource, pas la qualité
+subjective de l'accompagnement par chaque modèle.
+
 ## Vérification et déploiement
 
 Les tests MCP couvrent la validation, l'accès au guide, l'envoi approuvé et les
@@ -145,3 +187,21 @@ fonctions triggers et protection des mots de passe compromis désactivée. Ces
 réglages préexistants n'ont pas été modifiés par cette release. Références :
 [droits des fonctions SECURITY DEFINER](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable),
 [protection des mots de passe](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
+
+### Publication des exemples du 3 novembre 2026
+
+Les trois adaptations décrites plus haut et les précisions du guide sont
+déployées dans `game-mcp` : version **32 en développement**, version **7 en
+production**. Les deux bundles ont le même SHA-256 :
+`91547894e3b2c24844274550b0c64c08b1752fc66ff29221d288f8312cb856e5`.
+Aucune migration de base ni modification du formulaire web n'était nécessaire.
+
+Les 46 tests passent, avec vérification du même texte d'exemples par le tool et
+la resource, ainsi que son inclusion dans le prompt. Les contrôles de cohérence
+des règles et des interfaces passent. Les serveurs dev et production répondent
+HTTP 200 à la discovery OAuth et HTTP 401 aux requêtes sans authentification.
+Un appel authentifié de `get_prayer_guide` via le plugin de production a renvoyé
+le texte des trois exemples, comparé à l'identique à la source locale. Cet appel
+ne sauvegarde ni brouillon ni prière. L'essai conversationnel décrit plus haut
+reste à faire avec les modèles/clients visés ; les tests techniques ne prouvent
+pas qu'ils suivront spontanément toutes les nuances de la pratique.
