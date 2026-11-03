@@ -471,7 +471,7 @@ const createGuestLoginSection = () => {
   form.innerHTML = `
     <label class="profile-field-wide"><span><span data-i18n>Email</span></span><input type="email" name="email" autocomplete="email" required></label>
     <label class="profile-field-wide"><span><span data-i18n>Password</span></span><input type="password" name="password" autocomplete="current-password" required></label>
-    <button class="account-panel-action profile-field-wide" type="submit"><span data-i18n>Log in</span></button>
+    <button class="account-panel-action profile-field-wide" type="submit" data-i18n>Log in</button>
     <p class="profile-field-wide" role="status" data-panel-login-status></p>`;
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -493,6 +493,7 @@ const createGuestLoginSection = () => {
       submit.disabled = false;
     }
   });
+  translateTree(form);
   content.append(form);
   return section;
 };
