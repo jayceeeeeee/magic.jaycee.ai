@@ -74,7 +74,7 @@ function request(accessToken?: string, method = "tools/list", args?: unknown) {
     }),
   });
 }
-function installMock({ locked = false, userId = "owner", historyLength = 1, imageFailure = false, prayerFailure = false } = {}) {
+function installMock({ locked = false, userId = "owner", historyLength = 1, imageFailure = false, prayerFailure = false, technomancy = false } = {}) {
   const calls: { url: URL; auth: string | null }[] = [];
   globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
     const req = new Request(input, init);
@@ -109,6 +109,7 @@ function installMock({ locked = false, userId = "owner", historyLength = 1, imag
       );
     }
     if (url.pathname === "/rest/v1/profiles") {
+      if (url.searchParams.get("id") === "eq.89cf977d-ecc0-4dbb-8f4f-fe6b9d7067c5") return Promise.resolve(Response.json({id:"89cf977d-ecc0-4dbb-8f4f-fe6b9d7067c5",username:"Cedric",master:null}));
       if (url.searchParams.get("id") === "eq.master-one") {
         return Promise.resolve(Response.json({ id: "master-one", username: "Master",
           avatar_path: "master-one/master portrait.png", background_path: null }));
@@ -124,7 +125,7 @@ function installMock({ locked = false, userId = "owner", historyLength = 1, imag
         "Profile query must use the verified user ID",
       );
       return Promise.resolve(
-        Response.json({ id: "owner", username: "Owner", locked, master: "master-one",
+        Response.json({ id: "owner", username: "Owner", locked, master: technomancy ? "89cf977d-ecc0-4dbb-8f4f-fe6b9d7067c5" : "master-one",
           avatar_path: "avatar photo.jpg", background_path: "users/owner/background.png",
           manna_target: 10, manna_cycle: "hour", manna_unit: "EUR" }),
       );
@@ -134,10 +135,10 @@ function installMock({ locked = false, userId = "owner", historyLength = 1, imag
         url.searchParams.get("user_id") === "eq.owner",
         "Progress must be restricted to its owner",
       );
-      if (url.searchParams.has("master") && url.searchParams.get("master") !== "eq.master-one") {
+      if (url.searchParams.has("master") && url.searchParams.get("master") !== (technomancy ? "eq.89cf977d-ecc0-4dbb-8f4f-fe6b9d7067c5" : "eq.master-one")) {
         return Promise.resolve(Response.json([]));
       }
-      return Promise.resolve(Response.json([{ id: "own-game", level: 4, master: "master-one",
+      return Promise.resolve(Response.json([{ id: "own-game", level: 4, master: technomancy ? "89cf977d-ecc0-4dbb-8f4f-fe6b9d7067c5" : "master-one",
         skill_1_practice: 0, skill_2_practice: 0, skill_3_practice: 3,
         skill_1_start: "2026-01-01T00:00:00Z", skill_2_start: "2026-01-01T00:00:00Z",
         skill_3_start: "2026-01-01T00:00:00Z" }]));
@@ -532,7 +533,7 @@ Deno.test("prayer tools work over authenticated MCP without prompt/resource acti
   const args = { prayer_id:"11111111-1111-4111-8111-111111111111",
     player_id:"22222222-2222-4222-8222-222222222222", tree, confirmed:true };
   try {
-    const calls = installMock();
+    const calls = installMock({technomancy:true});
     const access = await token();
     const guide = await handler(request(access,"tools/call",{ name:"get_prayer_guide", arguments:{} }));
     const context = (await guide.json()).result.structuredContent;

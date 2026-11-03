@@ -71,6 +71,21 @@ Deno.test("prayer migration and SQL access/compatibility tests pass in isolated 
       throw new Error("Schema snapshot differs from prayer migration");
     }
     await db.exec(migration);
+    const restriction = await Deno.readTextFile(
+      new URL(
+        "../../supabase/migrations/20261103004202_cedric_technomancy.sql",
+        import.meta.url,
+      ),
+    );
+    if (
+      !schema.includes(
+        restriction.slice(
+          restriction.indexOf("-- Canonical production"),
+          restriction.lastIndexOf("commit;"),
+        ).trim(),
+      )
+    ) throw new Error("Schema differs from Technomancy restriction");
+    await db.exec(restriction);
     const existing = await db.query<
       { process: string; tree: unknown; problem: string }
     >("select process,tree,problem from public.prayers where username='Existing guest'");

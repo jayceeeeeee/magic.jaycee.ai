@@ -89,7 +89,7 @@ export function registerTools(
   registerMasterTools(server, { client, userId, profile, user, withProfileImageUrls, masterAccountIds: environment.masterAccountIds });
   registerGameTools(server, { client, userId, profile, user, withProfileImageUrls, masterAccountIds: environment.masterAccountIds });
   registerAccountTools(server, { client, userId, withProfileImageUrls, siteOrigin: environment.siteUrl });
-  registerPrayerTools(server, { client, userId });
+  registerPrayerTools(server, { client, userId, masterAccountIds: environment.masterAccountIds });
   server.registerTool(
     "get_my_profile",
     {

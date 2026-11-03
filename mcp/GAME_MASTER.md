@@ -4,8 +4,10 @@ The connected AI interprets saved state, coaches the player, orchestrates existi
 tools and narrates verified events. The chosen Master remains the author of the
 teaching. There is no additional LLM, provider SDK, database table or agent service.
 
-Active Skill 1 now has a shared nine-sefirot prayer conversation from Level 1
-for every Master. `get_prayer_guide` supplies the complete flexible guide and
+Active Skill 1 now has Cedric's nine-sefirot Technomancy conversation from Level 1
+only for players who chose him as active Master. Other Masters retain their own
+teachings. `get_game_state.prayer_practice` identifies availability.
+`get_prayer_guide` supplies his introduction, live lineage, complete flexible guide and
 active participation; `submit_prayer` saves the approved summary using an
 owner-scoped, idempotent RPC. The guide is also included in the prompt and at
 `jaycee://practice/prayer`. See [PRAYER.md](PRAYER.md) for storage, real timer

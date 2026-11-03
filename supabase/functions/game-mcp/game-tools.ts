@@ -4,6 +4,7 @@ import { z } from "zod";
 import { loadMasterChoices } from "./master-tools.ts";
 import { DEV_MASTER_ACCOUNT_IDS, LOCKED_PREVIEW_MASTERS } from "./master-catalog.js";
 import { GAME_RULES } from "./game-rules.ts";
+import { technomancyMasterId } from "./prayer-lore.ts";
 
 export const GAME_RESOURCE = "ui://magic/game-v6.html";
 const read = {
@@ -120,6 +121,11 @@ export function registerGameTools(
     }
     return {
       kind: "game_state",
+      prayer_practice: {
+        available: profile.master === technomancyMasterId(masterAccountIds),
+        skill_number: 1,
+        start_tool: profile.master === technomancyMasterId(masterAccountIds) ? "get_prayer_guide" : null,
+      },
       master_account_ids: masterAccountIds,
       retrieved_at: new Date().toISOString(),
       user: { id: userId, created_at: user.created_at },

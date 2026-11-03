@@ -2,7 +2,10 @@
 begin;
 select set_config('test.prayer_owner', gen_random_uuid()::text, true);
 select set_config('test.prayer_other', gen_random_uuid()::text, true);
-select set_config('test.prayer_master', gen_random_uuid()::text, true);
+-- On a migrated Supabase dev database use the existing creator without updating
+-- their profile. In isolated PostgreSQL create the canonical fixture if absent.
+select set_config('test.prayer_master',coalesce((select id::text from public.profiles where id='89cf977d-ecc0-4dbb-8f4f-fe6b9d7067c5'), 'd70b5c69-daae-4a77-9955-4385439ae292'), true);
+select set_config('test.prayer_other_master',gen_random_uuid()::text,true);
 select set_config('test.prayer_player', gen_random_uuid()::text, true);
 select set_config('test.prayer_foreign_player', gen_random_uuid()::text, true);
 select set_config('test.prayer_id', gen_random_uuid()::text, true);
@@ -14,12 +17,14 @@ select set_config('test.prayer_tree', (
 insert into auth.users(id,created_at) values
   (current_setting('test.prayer_owner')::uuid,now()),
   (current_setting('test.prayer_other')::uuid,now()),
-  (current_setting('test.prayer_master')::uuid,now());
+  (current_setting('test.prayer_master')::uuid,now()),
+  (current_setting('test.prayer_other_master')::uuid,now()) on conflict(id) do nothing;
 insert into public.profiles(id,username,permanent_account_at) values
   (current_setting('test.prayer_owner')::uuid,'prayer-test-'||current_setting('test.prayer_owner'),now()),
   (current_setting('test.prayer_other')::uuid,'prayer-test-'||current_setting('test.prayer_other'),now()),
-  (current_setting('test.prayer_master')::uuid,'prayer-test-'||current_setting('test.prayer_master'),now())
-on conflict(id) do update set permanent_account_at=now();
+  (current_setting('test.prayer_master')::uuid,'prayer-test-'||current_setting('test.prayer_master'),now()),
+  (current_setting('test.prayer_other_master')::uuid,'prayer-test-'||current_setting('test.prayer_other_master'),now())
+on conflict(id) do nothing;
 update public.profiles set master=current_setting('test.prayer_master')::uuid
 where id in (current_setting('test.prayer_owner')::uuid,current_setting('test.prayer_other')::uuid);
 insert into public.player(id,user_id,master,level,skill_1_start) values
@@ -82,11 +87,25 @@ end;
 $$;
 reset role;
 
--- A later Master/level change must not invalidate an identical retry.
-update public.profiles set master=null where id=current_setting('test.prayer_owner')::uuid;
+-- After changing away from Cedric, own history remains readable but submission
+-- (including replay) is unavailable. A same-name impostor grants no access.
+update public.profiles set full_name='Cédric JAUBERT' where id=current_setting('test.prayer_other_master')::uuid;
+update public.profiles set master=current_setting('test.prayer_other_master')::uuid where id=current_setting('test.prayer_owner')::uuid;
+insert into public.player(id,user_id,master,level,skill_1_start)
+values(gen_random_uuid(),current_setting('test.prayer_owner')::uuid,current_setting('test.prayer_other_master')::uuid,1,now());
 set local role authenticated;
 do $$ begin
-  perform public.submit_prayer(current_setting('test.prayer_id')::uuid,current_setting('test.prayer_player')::uuid,current_setting('test.prayer_tree')::jsonb);
+  if not exists(select 1 from public.prayers where id=current_setting('test.prayer_id')::uuid) then raise exception 'FAIL: own history lost after Master change'; end if;
+  begin
+    perform public.submit_prayer(current_setting('test.prayer_id')::uuid,current_setting('test.prayer_player')::uuid,current_setting('test.prayer_tree')::jsonb);
+    raise exception 'FAIL: restricted skill still available for replay';
+  exception when insufficient_privilege then null; end;
+  begin
+    insert into public.prayers(user_id,username,problem,prayer,tree,process,player_id,master_id)
+      select auth.uid(),'Player','Player words for binah','Player words for chokmah',current_setting('test.prayer_tree')::jsonb,'tree-v1',id,master
+      from public.player where user_id=auth.uid() and master=current_setting('test.prayer_other_master')::uuid;
+    raise exception 'FAIL: another Master accepted a direct tree insert';
+  exception when insufficient_privilege then null; end;
   begin
     perform public.submit_prayer(gen_random_uuid(),current_setting('test.prayer_player')::uuid,current_setting('test.prayer_tree')::jsonb);
     raise exception 'FAIL: stale active Master accepted';

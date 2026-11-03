@@ -8,12 +8,13 @@ import {
   SEFIROT,
 } from "../../supabase/functions/game-mcp/prayer-guide.ts";
 import { PRAYER_EXAMPLES_TEXT } from "../../supabase/functions/game-mcp/prayer-examples.ts";
+import { TECHNOMANCY_MASTER_ID } from "../../supabase/functions/game-mcp/prayer-lore.ts";
 
 const assert = (v: unknown, message: string) => {
   if (!v) throw new Error(message);
 };
 const owner = "11111111-1111-4111-8111-111111111111";
-const master = "22222222-2222-4222-8222-222222222222";
+const master = "89cf977d-ecc0-4dbb-8f4f-fe6b9d7067c5";
 const player = "33333333-3333-4333-8333-333333333333";
 const prayer = "44444444-4444-4444-8444-444444444444";
 const tree = Object.fromEntries(
@@ -26,6 +27,9 @@ function fixture(
     foreign = false,
     failed = false,
     level = 1,
+    otherMaster = false,
+    production = false,
+    lineageName = "Paramahansa Yogananda" as string | null,
   } = {},
 ) {
   const calls: { name: string; args: any }[] = [];
@@ -40,6 +44,7 @@ function fixture(
     } as any,
     {
       userId: owner,
+      ...(production ? { masterAccountIds: {} } : {}),
       client: {
         async rpc(name: string, args: any) {
           calls.push({ name, args });
@@ -78,19 +83,51 @@ function fixture(
             maybeSingle: async () => {
               calls.push({ name, args: filters });
               if (name === "profiles") {
+                if (
+                  filters.id === master || filters.id === TECHNOMANCY_MASTER_ID
+                ) {
+                  return {
+                    data: {
+                      id: filters.id,
+                      username: "Cedric",
+                      master: lineageName ? "parent-master" : null,
+                    },
+                    error: null,
+                  };
+                }
+                if (filters.id === "parent-master") {
+                  return {
+                    data: { id: "parent-master", full_name: lineageName },
+                    error: null,
+                  };
+                }
                 assert(filters.id === owner, "Profile must be owner scoped");
                 return {
-                  data: { id: owner, master: unlinked ? null : master },
+                  data: {
+                    id: owner,
+                    master: unlinked
+                      ? null
+                      : otherMaster
+                      ? "another-master"
+                      : production
+                      ? TECHNOMANCY_MASTER_ID
+                      : master,
+                  },
                   error: null,
                 };
               }
               assert(
                 name === "player" && filters.user_id === owner &&
-                  filters.master === master,
+                  filters.master ===
+                    (production ? TECHNOMANCY_MASTER_ID : master),
                 "Participation must be owner and active Master scoped",
               );
               return {
-                data: foreign ? null : { id: player, master, level },
+                data: foreign ? null : {
+                  id: player,
+                  master: production ? TECHNOMANCY_MASTER_ID : master,
+                  level,
+                },
                 error: null,
               };
             },
@@ -107,12 +144,13 @@ function fixture(
   };
 }
 
-Deno.test("prayer guide is available for every Master from Level 1, without persisting a draft", async () => {
+Deno.test("Cedric's prayer guide starts at Level 1 with live lineage and no saved draft", async () => {
   for (const level of [1, 2, 3, 4]) {
     const f = fixture({ level });
     const data = (await f.call("get_prayer_guide")).structuredContent;
     assert(
-      data.guide === PRAYER_GUIDE && data.examples === PRAYER_EXAMPLES_TEXT && data.player_id === player &&
+      data.guide === PRAYER_GUIDE && data.examples === PRAYER_EXAMPLES_TEXT &&
+        data.player_id === player &&
         data.master_id === master && data.level === level,
       "Missing verified prayer context",
     );
@@ -130,11 +168,39 @@ Deno.test("prayer guide is available for every Master from Level 1, without pers
     );
   }
   for (
-    const options of [{ locked: true }, { unlinked: true }, { foreign: true }]
+    const options of [{ locked: true }, { unlinked: true }, { foreign: true }, {
+      otherMaster: true,
+    }]
   ) {
     const r = await fixture(options).call("get_prayer_guide");
     assert(r.isError, "Unavailable participation must fail");
   }
+});
+
+Deno.test("Technomancy introduction uses environment identity and live or missing lineage", async () => {
+  const original = (await fixture().call("get_prayer_guide")).structuredContent;
+  assert(
+    original.lineage.name === "Paramahansa Yogananda" &&
+      original.introduction.includes("According to his spiritual teaching") &&
+      original.introduction.includes("Paramahansa Yogananda"),
+    "Missing introduction or lineage",
+  );
+  const changed =
+    (await fixture({ production: true, lineageName: "A different teacher" })
+      .call("get_prayer_guide")).structuredContent;
+  assert(
+    changed.master_id === TECHNOMANCY_MASTER_ID &&
+      changed.introduction.includes("A different teacher") &&
+      !changed.introduction.includes("Yogananda"),
+    "Production identity or changed lineage ignored",
+  );
+  const missing =
+    (await fixture({ lineageName: null }).call("get_prayer_guide"))
+      .structuredContent;
+  assert(
+    missing.lineage === null && !missing.introduction.includes("Yogananda"),
+    "Unknown lineage must not be invented",
+  );
 });
 
 Deno.test("prayer requires approval, nine strict entries and bounded title/description strings", async () => {

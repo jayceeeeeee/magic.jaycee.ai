@@ -11,7 +11,9 @@ ten actions write through the database APIs. `save_practice`,
 `record_game_notifications` and `prepare_account_avatar_upload` are app-only.
 
 **Prayer conversations** use `get_prayer_guide` and `submit_prayer` for active
-Skill 1 from Level 1 for every Master. The player explores nine sefirot freely,
+Skill 1 from Level 1 only for players who chose Cedric as active Master. The
+introduction explains his Technomancy teaching with his live Master lineage.
+The player explores nine sefirot freely,
 reviews titles/descriptions, and approves saving. The existing Start/Stop timer
 records practice separately. See [PRAYER.md](PRAYER.md) for the guide, compatible
 storage, example format, tests and required migration before Edge deployment.
@@ -283,7 +285,7 @@ Both Deno import maps pin package versions; commit their lockfiles when updating
 dependencies. Deploy `supabase/functions/game-mcp/` with all implementation files
 at its root (`index.ts`, `server.ts`, `mcp-tools.ts`, `mcp-resources.ts`,
 `account-tools.ts`, `master-tools.ts`, `master-catalog.js`,
-  `game-master.ts`, `prayer-guide.ts`, `prayer-examples.ts`, `prayer-tools.ts`, `environment.ts`, `resource-account.generated.ts`, `game-tools.ts`, `resource-game.generated.ts`,
+  `game-master.ts`, `prayer-guide.ts`, `prayer-examples.ts`, `prayer-lore.ts`, `prayer-tools.ts`, `environment.ts`, `resource-account.generated.ts`, `game-tools.ts`, `resource-game.generated.ts`,
 `resource-ui-assets.generated.ts`, `game-rules.ts`, `manna.js`, `deno.json`). No external local
 dependencies or parent-directory paths are required in the deployment.
 

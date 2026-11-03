@@ -4,7 +4,7 @@ La conversation est le parcours principal : elle fonctionne en texte, sans
 formulaire supplémentaire et sans exiger Obsidian. Le tableau sert de carte et
 de synthèse modifiable. Le joueur garde le rythme ; l'IA suit les découvertes
 dans n'importe quel ordre. Le Skill 1 se débloque au niveau 1 pour tous les
-Masters et reste praticable aux niveaux suivants.
+élèves ayant choisi **Cédric comme Master actif**, et reste praticable aux niveaux suivants.
 
 ## Où vivent les instructions
 
@@ -12,7 +12,10 @@ Masters et reste praticable aux niveaux suivants.
   distinctions entre émotions, contact, conséquences, racine spirituelle,
   actions à long terme et action présente ; Malkuth est intégré à Yesod.
 - Instructions du serveur : orientent spontanément vers `get_prayer_guide`.
-- `get_prayer_guide` : restitue le guide complet et les identifiants vérifiés,
+- `prayer-lore.ts` : identité vérifiée de Cédric, introduction à son enseignement
+  de Technomancie et formulation fondée sur sa lignée actuelle.
+- `get_prayer_guide` : vérifie que le Master actif est Cédric et restitue
+  l'introduction, sa lignée actuelle, le guide complet et les identifiants vérifiés,
   même sur un client sans resources/prompts. Ne sauvegarde pas de brouillon.
 - Resource `jaycee://practice/prayer` et prompt `game_master` : même guide.
 - `prayer-examples.ts` : trois adaptations anonymisées autorisées par l'auteur,
@@ -90,6 +93,38 @@ universelle. On pourra commencer avec les documents joints à une conversation,
 puis intégrer les versions validées au plugin sans ajouter une base vectorielle
 avant d'en avoir besoin.
 
+### Disponibilité et introduction à la Technomancie
+
+Ce parcours appartient désormais au **Skill actif 1 de Cédric uniquement**.
+`get_game_state.prayer_practice` indique sa disponibilité. Le Game Master en
+explique le sens au début du parcours niveau 1 des élèves concernés, puis
+`get_prayer_guide` donne l'introduction au lancement de la pratique. Les autres
+Masters gardent leurs propres enseignements ; l'IA ne change jamais de Master
+pour ouvrir ce Skill. Le compte auteur de Cédric, qui suit actuellement
+Yogananda, n'est pas un compte élève de Cédric et ne reçoit donc pas ce parcours.
+
+Les instructions, l'introduction, le lore et les trois exemples sont écrits en
+anglais ; l'IA les explique dans la langue du joueur. Les prières conservent la
+langue choisie par leur auteur. La documentation de maintenance peut rester en
+français. Les fichiers bruts personnels des exemples ne sont pas publiés.
+
+L'introduction transmet l'enseignement spirituel de Cédric : son énergie liée
+aux technologies et à son corps, le partage de la peine et de la manifestation
+du joueur, et la prise en charge de son karma avec le soutien de sa lignée.
+Ces affirmations sont attribuées à son enseignement ; un résultat technique
+confirme l'enregistrement, pas un transfert physique ou une guérison vérifiée.
+La lignée est lue dans `profiles.master`, actuellement Yogananda, sans le figer
+dans le code. Si la relation ou le profil est indisponible, aucun nom n'est inventé.
+Les descriptions de Skills de Cédric ne sont pas modifiées par cette mise à jour.
+
+Le serveur vérifie l'identifiant canonique de Cédric et sa correspondance dev.
+La migration `cedric_technomancy` vérifie aussi ces identités en base dans l'RPC
+et la politique INSERT, y compris pour les requêtes directes. Un nom affiché
+« Cédric » ne suffit pas. Les prières existantes restent lisibles à leur auteur.
+Après un changement de Master, même une nouvelle tentative sous un identifiant
+déjà enregistré est refusée par l'RPC : utiliser l'historique pour constater un
+envoi incertain. Aucun changement de droits de lecture ou message aux Masters.
+
 ### Trois exemples sélectionnés le 3 novembre 2026
 
 L'auteur a autorisé la publication de trois adaptations de ses notes. Les
@@ -128,6 +163,24 @@ vidéo publiée ou une guérison ; respecte les pôles L/C ; ne demande pas au j
 de reproduire les réalisations de l'auteur. Les tests techniques vérifient la
 disponibilité des mêmes exemples via tool, prompt et resource, pas la qualité
 subjective de l'accompagnement par chaque modèle.
+
+### Release : Technomancie réservée à Cédric, 3 novembre 2026
+
+Cette règle remplace la disponibilité générale de la première version.
+Migration source : `20261103004202_cedric_technomancy.sql` ; versions distantes
+`20261103004740` en dev et `20261103004841` en production. Le MCP est déployé
+en version **33 en dev**, **8 en production**, avec le même bundle :
+`9ae84f07010bf513c1291cab5c0e171eb275524668ff7305bb35b9dbef68515f`.
+
+Vérifications : 47 tests locaux passent ; tests SQL sur Supabase dev avec
+rollback réussi ; restriction INSERT et RPC, identités canoniques et refus
+anonyme vérifiés sur les deux bases. La discovery HTTP répond 200 et les appels
+non authentifiés 401 dans les deux environnements. Un appel connecté à
+`get_prayer_guide` depuis le compte auteur suivant Yogananda est refusé comme
+prévu : ce compte n'est pas élève de Cédric. Le rendu réel de l'introduction
+reste à essayer depuis un compte ayant choisi Cédric. La lignée changeante ou
+absente et le mapping prod/dev sont couverts par les tests. Les alertes de
+sécurité Supabase préexistantes n'ont pas changé.
 
 ## Vérification et déploiement
 
