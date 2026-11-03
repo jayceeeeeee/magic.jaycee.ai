@@ -25,16 +25,17 @@
             <div class="prayer-fields">
                 <label>
                     <span><span data-i18n>Problem</span></span>
-                    <textarea name="problem" rows="1" placeholder="Describe the problem you want to solve today and what is its negative feeling." data-autogrow required data-i18n-attrs="placeholder"></textarea>
+                    <textarea name="problem" rows="2" placeholder="Describe the problem you want to solve today and what is its negative feeling." data-autogrow required data-i18n-attrs="placeholder"></textarea>
                 </label>
 
                 <label>
                     <span><span data-i18n>Prayer</span></span>
-                    <textarea name="prayer" rows="1" placeholder="Write a prayer about this problem and what positive feeling you want out of this." data-autogrow required data-i18n-attrs="placeholder"></textarea>
+                    <textarea name="prayer" rows="2" placeholder="Write a prayer about this problem and what positive feeling you want out of this." data-autogrow required data-i18n-attrs="placeholder"></textarea>
                 </label>
             </div>
 
             <button class="prayer-submit" type="submit"><span data-i18n>Continue</span></button>
+            <p class="prayer-status" data-prayer-status role="status" aria-live="polite" hidden></p>
         </form>
     </main>
 

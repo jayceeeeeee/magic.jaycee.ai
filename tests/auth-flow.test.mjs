@@ -72,6 +72,46 @@ export const runAuthFlowTests = async ({ authSource, pageSource, indexSource, lo
   prayer.doc.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true })); await tick();
   assert(new URL(prayer.win.location.href, origin).pathname === '/game.html', 'Narrative prayer must still lead to the guest game');
 
+  for (const embedded of [false, true]) {
+    const repeat = setup('/prayer.html', '?close=1');
+    repeat.session({});
+    repeat.doc.body.innerHTML = '<form class="prayer-form"><textarea name="problem">Problem</textarea><textarea name="prayer">Prayer</textarea><button type="submit">Continue</button></form><p data-prayer-status hidden></p>';
+    let closes = 0, inserts = 0;
+    const targetWindow = embedded ? { location: {}, close() { closes++; } } : repeat.win;
+    if (embedded) repeat.win.top = targetWindow;
+    else repeat.win.close = () => { closes++; };
+    repeat.win.JayceeAuth.getSupabaseClient = async () => ({
+      auth: { getSession: async () => ({ data: { session: { user: { id: 'session-user' } } } }) },
+      from: () => ({ insert: async row => {
+        assert(row.user_id === 'session-user', 'Repeat prayer lost its signed-in user');
+        inserts++; return { error: null };
+      } })
+    });
+    new Function('document', 'window', prayerSource)(repeat.doc, repeat.win);
+    repeat.doc.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true })); await tick();
+    assert(inserts === 1 && closes === 1, 'Close mode must save the prayer before closing its tab');
+    assert(!targetWindow.location.href && !repeat.win.location.href, 'Close mode must not navigate to another game');
+    const status = repeat.doc.querySelector('[data-prayer-status]');
+    assert(!status.hidden && status.dataset.type === 'success' && status.textContent.includes('close this tab'),
+      'Blocked tab closure must leave a visible success message');
+    assert(repeat.doc.querySelector('button').disabled, 'Completed prayer must not be sent twice');
+  }
+
+  const failedPrayer = setup('/prayer.html', '?close=1');
+  failedPrayer.doc.body.innerHTML = prayer.doc.body.innerHTML + '<p data-prayer-status hidden></p>';
+  failedPrayer.doc.querySelector('button').disabled = false;
+  let failedCloses = 0;
+  failedPrayer.win.close = () => { failedCloses++; };
+  failedPrayer.win.JayceeAuth.getSupabaseClient = async () => ({
+    auth: { getSession: async () => ({ data: { session: null } }) },
+    from: () => ({ insert: async () => ({ error: { message: 'Save failed' } }) })
+  });
+  new Function('document', 'window', prayerSource)(failedPrayer.doc, failedPrayer.win);
+  failedPrayer.doc.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true })); await tick();
+  assert(failedCloses === 0 && !failedPrayer.win.location.href, 'Failed prayer must not close or redirect');
+  assert(!failedPrayer.doc.querySelector('button').disabled && failedPrayer.doc.querySelector('[data-prayer-status]').dataset.type === 'error',
+    'Failed prayer must show an error and allow retry');
+
   const signup = setup('/signup.html', signupLink.search); signup.mountForm('signup'); await signup.init();
   assert(!signup.win.location.href && !signup.doc.querySelector('form').hidden, 'Direct signup must not redirect to the narrative');
   const loginLink = new URL(signup.doc.querySelector('[data-auth-switch] a').getAttribute('href'), origin);

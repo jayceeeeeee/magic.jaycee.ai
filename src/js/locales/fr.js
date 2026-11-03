@@ -246,6 +246,8 @@ export const FR = Object.freeze({
   "Write a prayer about this problem and what positive feeling you want out of this.":
     "Écrivez une prière à propos de ce problème et du sentiment positif que vous souhaitez ressentir.",
   "Prayer could not be sent.": "La prière n’a pas pu être envoyée.",
+  "Prayer sent. You can close this tab and return to your game.":
+    "Prière envoyée. Vous pouvez fermer cet onglet et revenir à votre partie.",
   "Jaycee.ai title screen": "Écran d’accueil de Jaycee.ai",
   "Play jaycee.ai": "Jouer à jaycee.ai",
   "Jaycee lore": "Histoire de Jaycee",

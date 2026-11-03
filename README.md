@@ -4,6 +4,11 @@ Site statique HTML/CSS/JavaScript, avec Supabase pour les comptes, les données 
 les règles de progression. Aucun build ni serveur JavaScript supplémentaire.
 Servir la racine du dépôt en HTTP pour ouvrir les pages et leurs modules.
 
+Pour proposer une prière depuis un skill dans un nouvel onglet, utiliser
+`/prayer.html?close=1`. Après l’enregistrement, la page tente de fermer son onglet.
+Si le navigateur refuse, un message invite à le fermer pour revenir au jeu déjà
+ouvert. Sans ce paramètre, la redirection habituelle est conservée.
+
 La configuration publique des connexions est dans `src/js/config/app-config.js` :
 `magic.jaycee.ai` utilise la production ; localhost et les previews utilisent
 `magic-dev`. Voir [les environnements](supabase/environments.md) et

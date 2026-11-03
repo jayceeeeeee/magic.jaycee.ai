@@ -1,6 +1,7 @@
 import { setText } from './i18n.js';
 (function () {
     const isEmbedded = window.self !== window.top;
+    const closeOnComplete = new URLSearchParams(window.location.search).get("close") === "1";
     const prayerForm = document.querySelector(".prayer-form");
     const prayerStatus = document.querySelector("[data-prayer-status]");
     const prayerUsername = document.querySelector("[data-prayer-username]");
@@ -47,6 +48,7 @@ import { setText } from './i18n.js';
         }
 
         setText(prayerStatus, message);
+        prayerStatus.hidden = !message;
         prayerStatus.dataset.type = type;
         notifyHeight();
     }
@@ -60,13 +62,10 @@ import { setText } from './i18n.js';
     }
 
     function resizeAutogrowField(field) {
-        if (!field.value.trim()) {
-            field.style.height = "";
-            return;
-        }
-
-        field.style.height = "auto";
-        field.style.height = `${field.scrollHeight}px`;
+        field.style.height = "";
+        const styles = getComputedStyle(field);
+        const borders = parseFloat(styles.borderTopWidth) + parseFloat(styles.borderBottomWidth);
+        field.style.height = `${field.scrollHeight + borders}px`;
     }
 
     function resizeAutogrowFields() {
@@ -137,6 +136,12 @@ import { setText } from './i18n.js';
                 created_at: new Date().toISOString(),
             }));
             await window.JayceeUI?.waitForSound();
+            if (closeOnComplete) {
+                setStatus("Prayer sent. You can close this tab and return to your game.", "success");
+                // The success message remains visible if the browser blocks closing this tab.
+                (isEmbedded ? window.top : window).close();
+                return;
+            }
             const destination = window.JayceeAuth?.isConnectionReturn?.()
                 ? window.JayceeAuth.withAuthRedirect("/signup.html") : "/game.html";
             (isEmbedded ? window.top : window).location.href = window.JayceeReferral?.withReferral(destination) || destination;
@@ -150,7 +155,14 @@ import { setText } from './i18n.js';
     });
 
     window.addEventListener("load", notifyHeight);
-    window.addEventListener("resize", notifyHeight);
+    function updateFieldLayout() {
+        resizeAutogrowFields();
+        notifyHeight();
+    }
+
+    window.addEventListener("resize", updateFieldLayout);
+    window.addEventListener("jaycee:language-changed", updateFieldLayout);
+    document.fonts?.ready.then(updateFieldLayout);
     resizeAutogrowFields();
     updatePrayerStatusLayout();
 })();

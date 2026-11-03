@@ -36,7 +36,7 @@ body {
     display: grid;
     align-content: center;
     place-items: center;
-    gap: clamp(30px, 7svh, 58px);
+    gap: clamp(22px, 4svh, 40px);
     padding: 24px;
 }
 
@@ -102,13 +102,12 @@ body {
 
 .prayer-form textarea {
     width: 100%;
-    height: 54px;
-    min-height: 54px;
+    min-height: calc(2lh + 30px);
     max-height: 180px;
     box-sizing: border-box;
     padding: 14px 20px;
     border: 1px solid rgba(var(--accent-rgb), 0.32);
-    border-radius: 999px;
+    border-radius: 24px;
     background:
         linear-gradient(90deg, rgba(var(--accent-rgb), 0.08), transparent 72%),
         rgba(0, 0, 0, 0.24);
@@ -118,7 +117,7 @@ body {
     font-weight: 600;
     line-height: 1.42;
     outline: none;
-    overflow: hidden;
+    overflow: auto;
     resize: none;
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.07),
@@ -199,7 +198,7 @@ body {
     font-family: "Share Tech Mono", monospace;
     font-size: 0.86rem;
     line-height: 1.35;
-    text-align: right;
+    text-align: center;
 }
 
 .prayer-status[data-type="error"] {
@@ -212,8 +211,6 @@ body {
 
 @media (max-width: 620px) {
     .prayer-page-main {
-        min-height: auto;
-        align-content: start;
         padding: 18px;
     }
 
@@ -226,8 +223,7 @@ body {
     }
 
     .prayer-form textarea {
-        height: 58px;
-        min-height: 58px;
+        min-height: calc(2lh + 26px);
         padding: 12px 17px;
         font-size: 0.92rem;
         line-height: 1.2;
