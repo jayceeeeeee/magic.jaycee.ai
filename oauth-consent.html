@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="no-referrer">
-  <title>Connect your account | jaycee.ai</title>
+  <title data-i18n>Connect your account | jaycee.ai</title>
   <link rel="icon" type="image/svg+xml" href="/src/assets/brand/jaycee-core-sigil.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,52 +15,52 @@
 <body class="auth-game-page consent-page">
   <main class="auth-page consent-main">
     <section class="auth-panel consent-panel" aria-labelledby="consent-title">
-      <a class="consent-brand" href="/" aria-label="jaycee.ai home"><img src="/src/assets/brand/jaycee-core-sigil.svg" alt="">jaycee.ai</a>
-      <p class="consent-eyebrow">Game account connection</p>
-      <h1 id="consent-title">Continue your adventure</h1>
-      <p class="consent-status" data-consent-status role="status">Checking the connection request…</p>
+      <a class="consent-brand" href="/" aria-label="jaycee.ai home" data-i18n-attrs="aria-label"><img src="/src/assets/brand/jaycee-core-sigil.svg" alt="">jaycee.ai</a>
+      <p class="consent-eyebrow"><span data-i18n>Game account connection</span></p>
+      <h1 id="consent-title"><span data-i18n>Continue your adventure</span></h1>
+      <p class="consent-status" data-consent-status role="status"><span data-i18n>Checking the connection request…</span></p>
       <div data-consent-account hidden>
-        <p class="consent-intro">Connect your game account to your application.</p>
+        <p class="consent-intro"><span data-i18n>Connect your game account to your application.</span></p>
         <div class="consent-permission">
           <span class="consent-permission-icon" aria-hidden="true">↗</span>
-          <div><strong>Your adventure, in the conversation</strong><p>View and play your game: explore Masters, accept quests, and save practice measured in the game interface. Choosing a Master or accepting a quest starts its clock.</p></div>
+          <div><strong><span data-i18n>Your adventure, in the conversation</span></strong><p><span data-i18n>View and play your game: explore Masters, accept quests, and save practice measured in the game interface. Choosing a Master or accepting a quest starts its clock.</span></p></div>
         </div>
         <details class="consent-technical">
-          <summary>Game MCP permissions</summary>
+          <summary><span data-i18n>Game MCP permissions</span></summary>
           <dl>
-            <dt>Identity</dt><dd>Identify your account and read your basic profile (openid, profile).</dd>
-            <dt>Email</dt><dd>Read your email address and whether it is verified (email).</dd>
-            <dt>Stay connected</dt><dd>Renew the connection without asking you to log in each time (offline_access).</dd>
-            <dt>Account access</dt><dd>The connected application receives your existing account permissions, including private profile settings, game data and permitted changes. Identity scopes do not limit database access. Connect only applications you trust.</dd>
-            <dt>Saved progress</dt><dd>Read your level, skills and saved adventure progress.</dd>
-            <dt>First Master</dt><dd>Save the first Master you explicitly select and start your Level 1 quest.</dd>
-            <dt>Quests and practice</dt><dd>Accept quests you choose, save practice measured by the interface, synchronize progress, and record notification actions. Change Master only when the game rules allow it.</dd>
+            <dt><span data-i18n>Identity</span></dt><dd><span data-i18n>Identify your account and read your basic profile (openid, profile).</span></dd>
+            <dt><span data-i18n>Email</span></dt><dd><span data-i18n>Read your email address and whether it is verified (email).</span></dd>
+            <dt><span data-i18n>Stay connected</span></dt><dd><span data-i18n>Renew the connection without asking you to log in each time (offline_access).</span></dd>
+            <dt><span data-i18n>Account access</span></dt><dd><span data-i18n>The connected application receives your existing account permissions, including private profile settings, game data and permitted changes. Identity scopes do not limit database access. Connect only applications you trust.</span></dd>
+            <dt><span data-i18n>Saved progress</span></dt><dd><span data-i18n>Read your level, skills and saved adventure progress.</span></dd>
+            <dt><span data-i18n>First Master</span></dt><dd><span data-i18n>Save the first Master you explicitly select and start your Level 1 quest.</span></dd>
+            <dt><span data-i18n>Quests and practice</span></dt><dd><span data-i18n>Accept quests you choose, save practice measured by the interface, synchronize progress, and record notification actions. Change Master only when the game rules allow it.</span></dd>
           </dl>
         </details>
         <div class="consent-actions">
-          <a class="account-button consent-cancel" href="/">Cancel</a>
-          <button class="account-button auth-submit" type="button" data-consent-continue>Connect account <span aria-hidden="true">→</span></button>
+          <a class="account-button consent-cancel" href="/"><span data-i18n>Cancel</span></a>
+          <button class="account-button auth-submit" type="button" data-consent-continue><span data-i18n>Connect account</span> <span aria-hidden="true">→</span></button>
         </div>
-        <button class="consent-switch" type="button" data-consent-switch>Use another account</button>
+        <button class="consent-switch" type="button" data-consent-switch><span data-i18n>Use another account</span></button>
       </div>
       <div data-consent-details hidden>
-        <p class="consent-intro"><strong data-consent-client></strong> wants to connect to your game account.</p>
+        <p class="consent-intro"><strong data-consent-client></strong> <span data-i18n>wants to connect to your game account.</span></p>
         <div class="consent-permission">
           <span class="consent-permission-icon" aria-hidden="true">↗</span>
-          <div><strong>Your adventure, in the conversation</strong><p>View and play your game: explore Masters, accept quests, and save practice measured in the game interface. Choosing a Master or accepting a quest starts its clock.</p></div>
+          <div><strong><span data-i18n>Your adventure, in the conversation</span></strong><p><span data-i18n>View and play your game: explore Masters, accept quests, and save practice measured in the game interface. Choosing a Master or accepting a quest starts its clock.</span></p></div>
         </div>
         <details class="consent-technical">
-          <summary>Connection details</summary>
-          <dl><dt>Identity permissions</dt><dd data-consent-scopes></dd><dt>Return address</dt><dd data-consent-redirect></dd></dl>
+          <summary><span data-i18n>Connection details</span></summary>
+          <dl><dt><span data-i18n>Identity permissions</span></dt><dd data-consent-scopes></dd><dt><span data-i18n>Return address</span></dt><dd data-consent-redirect></dd></dl>
         </details>
         <div class="consent-actions">
-          <button class="account-button consent-cancel" type="button" data-consent-deny>Cancel</button>
-          <button class="account-button auth-submit" type="button" data-consent-approve>Connect account <span aria-hidden="true">→</span></button>
+          <button class="account-button consent-cancel" type="button" data-consent-deny><span data-i18n>Cancel</span></button>
+          <button class="account-button auth-submit" type="button" data-consent-approve><span data-i18n>Connect account</span> <span aria-hidden="true">→</span></button>
         </div>
       </div>
       <div class="consent-recovery" data-consent-recovery hidden>
-        <p>Try again, or restart the connection from your application if this request has expired.</p>
-        <button class="account-button consent-cancel" type="button" data-consent-retry>Try again</button>
+        <p><span data-i18n>Try again, or restart the connection from your application if this request has expired.</span></p>
+        <button class="account-button consent-cancel" type="button" data-consent-retry><span data-i18n>Try again</span></button>
       </div>
     </section>
   </main>
@@ -68,5 +68,6 @@
   <script src="/src/js/auth/auth.js"></script>
   <script type="module" src="/src/js/auth/oauth-consent.js"></script>
   <script type="module" src="/src/js/ui-sounds.js"></script>
+  <script type="module" src="/src/js/jaycee/account.js"></script>
 </body>
 </html>

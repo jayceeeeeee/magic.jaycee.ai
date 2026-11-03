@@ -1,6 +1,12 @@
+import { setText, createLanguagePicker } from '../../src/js/i18n.js';
 import { initJayceePage } from "../../src/js/jaycee/profile-runtime.js";
 import "../../src/js/ui-sounds.js";
 import { callTool, connect, gameEvent, request } from "./bridge.js";
+
+const languageControls = document.createElement('div');
+languageControls.className = 'hud-left-controls';
+languageControls.append(createLanguagePicker());
+document.body.append(languageControls);
 
 let snapshot = null, mounted = false;
 let mounting = null;
@@ -10,7 +16,7 @@ const retry = document.getElementById("game-retry");
 const showError = (error) => {
   document.querySelector("[data-profile-shell]").hidden = false;
   status.hidden = false;
-  status.textContent = error.message || "The game could not be loaded.";
+  setText(status, error.message || "The game could not be loaded.");
   retry.hidden = false;
 };
 const refresh = async () => {
@@ -217,7 +223,7 @@ async function receive(data) {
   }
   mounted = true;
   window.JayceeConfig = { masterAccountIds: snapshot.master_account_ids || {} };
-  status.textContent = "";
+  setText(status, "");
   status.hidden = true;
   retry.hidden = true;
   await initJayceePage({
@@ -258,7 +264,7 @@ retry.addEventListener("click", async () => {
   try {
     await receive(await refresh());
     window.dispatchEvent(new CustomEvent("jaycee:account-updated"));
-    status.textContent = "";
+    setText(status, "");
     status.hidden = true;
     retry.hidden = true;
   } catch (e) {

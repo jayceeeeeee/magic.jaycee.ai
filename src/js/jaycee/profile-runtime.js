@@ -1,3 +1,4 @@
+import { t, message, setText, setAttributeText, textNode, bindTranslation, getLocale } from '../i18n.js';
 import { createNoticeMasterBadge, createMastersNoticeContent, isMasterLinkLocked } from "./master-picker.js";
 import { formatDuration, getPassiveSkillModel, getActiveSkillModels, getUltimateModel, getActiveQuestInfo, updateQuestCountdown, createQuestCountdown, updatePracticeDetails, createLockedIcon, createSkillPanel } from "./skill-panel.js";
 import { GAME_RULES } from "../config/game-rules.js";
@@ -68,18 +69,18 @@ const getAgeInSeconds = (birthDate) => {
 const formatYearsFromSeconds = (secondsValue) => {
   const seconds = Number(secondsValue);
 
-  if (!Number.isFinite(seconds) || seconds <= 0) return "0y";
+  if (!Number.isFinite(seconds) || seconds <= 0) return t("0y");
 
   const years = Math.round(seconds / YEAR_SECONDS);
 
-  return `${years.toLocaleString()}y`;
+  return t('{years}y', { years: years.toLocaleString(getLocale()) });
 };
 
 const getCurrencySymbol = (unit) => {
   const currency = normalizeMannaUnit(unit);
 
   try {
-    const symbol = new Intl.NumberFormat(undefined, {
+    const symbol = new Intl.NumberFormat(getLocale(), {
       currency,
       currencyDisplay: "narrowSymbol",
       style: "currency"
@@ -96,7 +97,7 @@ const formatMannaValue = (value, unit) => {
 
   if (!Number.isFinite(numericValue)) return "";
 
-  const amount = new Intl.NumberFormat(undefined, {
+  const amount = new Intl.NumberFormat(getLocale(), {
     maximumFractionDigits: 2,
     minimumFractionDigits: 0
   }).format(numericValue);
@@ -154,11 +155,11 @@ const createVitalBar = ({ centered = false, current, label, locked = false, max,
   bar.classList.toggle("is-locked", locked);
   header.className = "profile-vital-header";
   name.className = "profile-vital-name";
-  name.textContent = label;
+  name.append(textNode(label));
   if (locked) {
     const badge = document.createElement("small");
     badge.className = "profile-vital-lock";
-    badge.append(createLockedIcon("profile-vital-lock-icon"), document.createTextNode("Locked"));
+    badge.append(createLockedIcon("profile-vital-lock-icon"), textNode("Locked"));
     name.append(badge);
   }
   track.className = "profile-vital-track";
@@ -184,18 +185,27 @@ const createMannaBar = (mannaModel, locked = false) => createVitalBar({
 });
 
 const appendNotificationText = (element, text, textValues = {}, masterBadgeProfile = null) => {
-  String(text).split(/(\{[a-zA-Z]+\})/g).forEach((part) => {
-    const key = part.slice(1, -1);
-    const value = interpolateNotification(part, textValues);
-    if (part === '{masterName}' && masterBadgeProfile) {
-      element.append(createNoticeMasterBadge(masterBadgeProfile));
-    } else if (['{passiveSkillName}', '{skillOneName}', '{skillTwoName}', '{skillThreeName}', '{skillFourName}', '{skillName}', '{masterName}'].includes(part) && Object.hasOwn(textValues, key)) {
-      const emphasis = document.createElement("em");
-      emphasis.textContent = value;
-      element.append(emphasis);
-    } else {
-      element.append(document.createTextNode(value));
-    }
+  bindTranslation(element, 'notification', () => {
+    element.replaceChildren();
+    const spec = text && typeof text === 'object' ? text : message(text);
+    // Translate the template before inserting player values or Master badges.
+    const template = t(spec.key, spec.values);
+    const values = Object.fromEntries(Object.entries(textValues).map(([key, value]) => [
+      key, value && typeof value === 'object' && 'key' in value ? t(value.key, value.values) : value
+    ]));
+    String(template).split(/(\{[a-zA-Z]+\})/g).forEach((part) => {
+      const key = part.slice(1, -1);
+      const value = interpolateNotification(part, values);
+      if (part === '{masterName}' && masterBadgeProfile) {
+        element.append(createNoticeMasterBadge(masterBadgeProfile));
+      } else if (['{passiveSkillName}', '{skillOneName}', '{skillTwoName}', '{skillThreeName}', '{skillFourName}', '{skillName}', '{masterName}'].includes(part) && Object.hasOwn(textValues, key)) {
+        const emphasis = document.createElement('em');
+        emphasis.textContent = value;
+        element.append(emphasis);
+      } else {
+        element.append(document.createTextNode(value));
+      }
+    });
   });
 };
 
@@ -225,7 +235,9 @@ const createProfileNotice = ({
   header.className = "profile-notice-title";
   icon.className = "profile-notice-icon";
   icon.textContent = tone === "unlocked" ? "+" : tone === "quest" ? "!" : "i";
-  header.replaceChildren(icon, title);
+  const caption = document.createElement('span');
+  setText(caption, title);
+  header.replaceChildren(icon, caption);
   copy.className = "profile-notice-copy";
   const lines = Array.isArray(text) ? text : getDisplayValue(text) ? [text] : [];
   lines.forEach((line) => {
@@ -250,11 +262,11 @@ const createProfileNotice = ({
     closeButton.className = "profile-notice-close";
     closeButton.type = "button";
     closeButton.textContent = "x";
-    closeButton.setAttribute("aria-label", "Dismiss notification");
+    setAttributeText(closeButton, "aria-label", "Dismiss notification");
     closeButton.addEventListener("click", () => dismissPanel("dismissed"));
     okButton.className = "profile-notice-ok";
     okButton.type = "button";
-    okButton.textContent = "Ok";
+    setText(okButton, "Ok");
     okButton.addEventListener("click", () => dismissPanel("read"));
     panel.append(okButton, closeButton);
   }
@@ -263,7 +275,7 @@ const createProfileNotice = ({
 };
 
 const getLinkedQuestText = (questInfo) => (
-  `You have ${questInfo.passiveTime} to do ${questInfo.requiredTime} of {skillName}. During this time you cannot link yourself to another Master. If you fail, your account will be deleted automatically. Click on the new unlocked skill below to start.`
+  message('You have {passiveTime} to do {requiredTime} of {skillName}. During this time you cannot link yourself to another Master. If you fail, your account will be deleted automatically. Click on the new unlocked skill below to start.', { passiveTime: questInfo.passiveTime, requiredTime: questInfo.requiredTime })
 );
 
 const createLinkedMasterNoticeContent = ({ masterProfile, questInfo, level = 1 }) => {
@@ -272,7 +284,7 @@ const createLinkedMasterNoticeContent = ({ masterProfile, questInfo, level = 1 }
   const secondLine = document.createElement("p");
 
   firstLine.append(
-    document.createTextNode("Your energy has been linked to "),
+    textNode("Your energy has been linked to "),
     createNoticeMasterBadge(masterProfile),
     document.createTextNode(".")
   );
@@ -308,7 +320,7 @@ const formatKarmaYears = (yearsValue) => {
 
   if (!Number.isFinite(years) || years <= 0) return "0";
 
-  return years.toLocaleString(undefined, {
+  return years.toLocaleString(getLocale(), {
     maximumFractionDigits: years < 1 ? 8 : 2
   });
 };
@@ -387,7 +399,7 @@ const createVitalsPanel = ({
   const profileHealthSeconds = (getAgeInSeconds(playerProfile?.birth_date) || 0)
     + (Number(playerProfile?.years_burned) || 0) * YEAR_SECONDS;
   const lifeSeconds = hasPlayerProfile ? profileHealthSeconds : guestLifeSeconds;
-  const lifeValueText = effectivePlayer ? formatYearsFromSeconds(lifeSeconds) : `${formatKarmaYears(prayerKarmaYears)}y`;
+  const lifeValueText = effectivePlayer ? formatYearsFromSeconds(lifeSeconds) : t("{years}y", { years: formatKarmaYears(prayerKarmaYears) });
   const linkedQuestInfo = getActiveQuestInfo({
     activeModels,
     player: effectivePlayer
@@ -398,18 +410,18 @@ const createVitalsPanel = ({
   noticeMasterUsernameElement.textContent = noticeMasterUsername;
   noticeMasterContent.append(
     createNoticeMasterBadge(noticeMasterProfile),
-    document.createTextNode(" has crossed path with you"),
+    textNode(" has crossed path with you"),
     document.createElement("br"),
-    document.createTextNode("and has decided to take charge of your karma!"),
+    textNode("and has decided to take charge of your karma!"),
     document.createElement("br"),
     document.createElement("br"),
     noticeMasterUsernameElement,
-    document.createTextNode(" has the special ability "),
-    Object.assign(document.createElement("i"), { textContent: "Technomancy" }),
-    document.createTextNode(" that allows him to connect his energy to technology. If your prayer has been done faithfully he will be able to take your karma and help you from the spirit world. Your data will be deleted right after.")
+    textNode(" has the special ability "),
+    textNode("Technomancy"),
+    textNode(" that allows him to connect his energy to technology. If your prayer has been done faithfully he will be able to take your karma and help you from the spirit world. Your data will be deleted right after.")
   );
   profileLabel.className = "profile-section-label";
-  profileLabel.textContent = "Profile";
+  setText(profileLabel, "Profile");
   profileLabel.hidden = !hasPlayerProfile;
   hud.hidden = !hasPlayerProfile;
   bars.className = "profile-vital-stack";
@@ -420,23 +432,23 @@ const createVitalsPanel = ({
       locked: !(Number(capabilityLevel ?? player?.level) >= 2),
       max: lifeMaxSeconds,
       tone: "health",
-      valueText: `${lifeValueText} / ${GAME_RULES.lifeMaxYears.toLocaleString()}y`
+      valueText: `${lifeValueText} / ${t("{years}y", { years: GAME_RULES.lifeMaxYears.toLocaleString(getLocale()) })}`
     }),
     createMannaBar(mannaModel, !(Number(capabilityLevel ?? player?.level) >= 2))
   );
   panel.replaceChildren();
 
   const values = {
-    lifeMaxYears: lifeMaxYears.toLocaleString(),
+    lifeMaxYears: lifeMaxYears.toLocaleString(getLocale()),
     prayerKarmaYears: formatKarmaYears(prayerKarmaYears),
     remainingKarmaYears: formatKarmaYears(remainingKarmaYears),
     firstActivePassiveTime,
-    passiveSkillName,
-    skillOneName: activeModels[0]?.skillLabel || "your first skill",
-    skillTwoName: activeModels[1]?.skillLabel || "your second skill",
-    skillThreeName: activeModels[2]?.skillLabel || "your third skill",
-    skillFourName: ultimateModel?.skillLabel || "your ultimate skill",
-    masterName: getDisplayValue(activeMasterProfile?.username) || "your Master"
+    passiveSkillName: passiveSkillName === 'your passive skill' ? message('your passive skill') : passiveSkillName,
+    skillOneName: activeModels[0]?.skillLabel || message('your first skill'),
+    skillTwoName: activeModels[1]?.skillLabel || message('your second skill'),
+    skillThreeName: activeModels[2]?.skillLabel || message('your third skill'),
+    skillFourName: ultimateModel?.skillLabel || message('your ultimate skill'),
+    masterName: getDisplayValue(activeMasterProfile?.username) || message('your Master')
   };
   // Public profiles already pass the server's visibility/playability filter.
   // Guests use the invite username; confirmed accounts use the saved UUID only.
@@ -486,7 +498,7 @@ const createVitalsPanel = ({
       if (countdown && !isQuestAcceptance) masterChoices.prepend(countdown);
       linkStatus.className = "profile-master-link-status";
       linkStatus.setAttribute("role", "status");
-      linkStatus.textContent = masterLinkError || (isMasterSaving ? "Linking..." : publicProfiles.length ? "" : "No Masters available yet.");
+      setText(linkStatus, masterLinkError || (isMasterSaving ? "Linking..." : publicProfiles.length ? "" : "No Masters available yet."));
       masterChoices.append(linkStatus);
       content = masterChoices;
     }
@@ -494,7 +506,7 @@ const createVitalsPanel = ({
       action = document.createElement('button');
       action.className = 'profile-play-button';
       action.type = 'button';
-      action.textContent = definition.content.actionLabel || 'Accept';
+      setText(action, definition.content.actionLabel || 'Accept');
       action.addEventListener('click', async () => {
         action.disabled = true;
         await onEvent('clicked', { waitForEnd: true });
@@ -507,13 +519,13 @@ const createVitalsPanel = ({
       action = document.createElement('button');
       action.className = 'profile-play-button';
       action.type = 'button';
-      action.textContent = isQuestAcceptSaving ? 'Starting...' : 'Accept';
+      setText(action, isQuestAcceptSaving ? 'Starting...' : 'Accept');
       action.disabled = isQuestAcceptSaving || isMasterSaving;
       action.addEventListener('click', () => { void onAcceptQuest(); });
       if (questAcceptError) {
         const status = document.createElement('p');
         status.setAttribute('role', 'alert');
-        status.textContent = questAcceptError;
+        setText(status, questAcceptError);
         choices.append(status);
       }
     }
@@ -532,7 +544,7 @@ const createVitalsPanel = ({
   const syncStatus = document.createElement('p');
   syncStatus.dataset.notificationStatus = '';
   syncStatus.setAttribute('role', 'status');
-  syncStatus.textContent = notifications?.error || '';
+  setText(syncStatus, notifications?.error || '');
   syncStatus.hidden = !syncStatus.textContent;
   panel.append(syncStatus);
 
@@ -553,7 +565,7 @@ const createVitalsPanel = ({
       : (storedUsername || "?").slice(0, 1).toUpperCase();
   }
   levelBadge.className = "profile-player-level";
-  levelBadge.textContent = `${profileName} - Level ${level}`;
+  setText(levelBadge, message('{name} - Level {level}', { name: profileName, level }));
   identity.append(avatar, levelBadge);
   hud.append(identity, bars);
   panel.append(hud);
@@ -923,7 +935,7 @@ export const initJayceePage = async ({ data = null, auth = window.JayceeAuth, no
         + (Number(playerProfile.years_burned) || 0) * YEAR_SECONDS;
       updateVitalBar(shell.querySelector("[data-profile-vitals] .is-health"), {
         current: health, max: GAME_RULES.lifeMaxYears * YEAR_SECONDS,
-        valueText: `${formatYearsFromSeconds(health)} / ${GAME_RULES.lifeMaxYears.toLocaleString()}y`
+        valueText: `${formatYearsFromSeconds(health)} / ${t("{years}y", { years: GAME_RULES.lifeMaxYears.toLocaleString(getLocale()) })}`
       });
     }
 
@@ -932,18 +944,18 @@ export const initJayceePage = async ({ data = null, auth = window.JayceeAuth, no
       const isPracticing = index === activeSkill;
       button.classList.toggle("is-practicing", isPracticing);
       button.setAttribute("aria-pressed", String(button.classList.contains("is-active")));
-      button.dataset.state = isPracticing
-        ? `Using · ${formatDuration(Math.floor(practice.sessionElapsed()), { compact: false }) || "0s"}`
-        : index === 0 ? "Passive" : button.disabled ? "" : index === 4 ? "Ultimate" : "Ready";
+      setAttributeText(button, "data-state", isPracticing
+        ? message("Using · {time}", { time: formatDuration(Math.floor(practice.sessionElapsed()), { compact: false }) || "0s" })
+        : index === 0 ? "Passive" : button.disabled ? "" : index === 4 ? "Ultimate" : "Ready");
     });
     shell.querySelectorAll("[data-practice-toggle]").forEach((button) => {
       const isPracticing = Number(button.dataset.practiceToggle) === activeSkill;
-      button.textContent = isPracticing ? "Stop" : "Start";
+      setText(button, isPracticing ? "Stop" : "Start");
       button.dataset.uiSound = isPracticing ? "buttonClick" : "skillStart";
       button.setAttribute("aria-pressed", String(isPracticing));
     });
     const status = shell.querySelector(".profile-practice-status");
-    if (status) status.textContent = practice?.error || "";
+    if (status) setText(status, practice?.error || "");
     if (activeSkill && models[activeSkill - 1]?.skill
       && Number(player?.[`skill_${activeSkill}_practice`]) >= models[activeSkill - 1].questSeconds) {
       practice.stop();
@@ -1107,7 +1119,7 @@ export const initJayceePage = async ({ data = null, auth = window.JayceeAuth, no
       onChange: () => {
         const status = shell.querySelector('[data-notification-status]');
         if (status) {
-          status.textContent = notifications.error;
+          setText(status, notifications.error);
           status.hidden = !notifications.error;
         }
       }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Log in - Jaycee.ai</title>
+  <title data-i18n>Log in - Jaycee.ai</title>
   <link rel="icon" type="image/svg+xml" sizes="any" href="/src/assets/brand/jaycee-core-sigil.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,18 +16,18 @@
   <main class="auth-page signup-page-main">
     <section class="auth-panel" aria-labelledby="auth-title">
       <h1 class="game-brand-title" id="auth-title"><a href="/">jaycee.ai</a></h1>
-      <p class="auth-eyebrow">Jaycee.ai&gt; Account login</p>
+      <p class="auth-eyebrow"><span data-i18n>Jaycee.ai&gt; Account login</span></p>
 
       <form class="auth-form" data-auth-form data-auth-mode="login">
         <label>
-          <span>Email</span>
+          <span><span data-i18n>Email</span></span>
           <input type="email" name="email" autocomplete="email" required>
         </label>
         <label>
-          <span>Password</span>
+          <span><span data-i18n>Password</span></span>
           <input type="password" name="password" autocomplete="current-password" minlength="6" required>
         </label>
-        <button class="account-button account-button-primary auth-submit" type="submit">Log in</button>
+        <button class="account-button account-button-primary auth-submit" type="submit"><span data-i18n>Log in</span></button>
       </form>
 
       <p class="auth-status" data-auth-status aria-live="polite"></p>
@@ -37,10 +37,10 @@
 
 
   <script src="/src/js/referral.js"></script>
-  <script src="/src/js/auth/invite.js"></script>
+  <script type="module" src="/src/js/auth/invite.js"></script>
   <script src="/src/js/config/app-config.js"></script>
   <script src="/src/js/auth/auth.js"></script>
-  <script src="/src/js/auth/page.js"></script>
+  <script type="module" src="/src/js/auth/page.js"></script>
   <script type="module" src="/src/js/ui-sounds.js"></script>
   <script type="module" src="/src/js/jaycee/account.js"></script>
 </body>

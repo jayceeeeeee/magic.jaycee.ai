@@ -1,3 +1,4 @@
+import { setText } from '../i18n.js';
 (function () {
     // Capture the callback type before supabase-js consumes the URL fragment.
     const key = "jaycee.invite_password_pending";
@@ -16,15 +17,15 @@
         dialog.innerHTML = `
           <section class="auth-panel">
             <h1 class="game-brand-title" id="invite-password-title">jaycee.ai</h1>
-            <p class="auth-eyebrow">Welcome to Jaycee.ai!</p>
-            <p>Choose a password to finish setting up your account.</p>
+            <p class="auth-eyebrow"><span data-i18n>Welcome to Jaycee.ai!</span></p>
+            <p><span data-i18n>Choose a password to finish setting up your account.</span></p>
             <form class="auth-form" data-invite-password-form>
-              <label><span>Password</span><input type="password" name="password" autocomplete="new-password" minlength="6" required></label>
-              <label><span>Confirm password</span><input type="password" name="confirmation" autocomplete="new-password" minlength="6" required></label>
-              <button class="account-button account-button-primary auth-submit" type="submit" disabled>Continue</button>
+              <label><span><span data-i18n>Password</span></span><input type="password" name="password" autocomplete="new-password" minlength="6" required></label>
+              <label><span><span data-i18n>Confirm password</span></span><input type="password" name="confirmation" autocomplete="new-password" minlength="6" required></label>
+              <button class="account-button account-button-primary auth-submit" type="submit" disabled><span data-i18n>Continue</span></button>
             </form>
-            <p class="auth-status" role="status" aria-live="polite">Checking your invitation...</p>
-            <button class="account-button" type="button" data-invite-exit hidden>Back to log in</button>
+            <p class="auth-status" role="status" aria-live="polite"><span data-i18n>Checking your invitation...</span></p>
+            <button class="account-button" type="button" data-invite-exit hidden><span data-i18n>Back to log in</span></button>
           </section>`;
         document.body.append(dialog);
         dialog.addEventListener("cancel", (event) => event.preventDefault());
@@ -54,7 +55,7 @@
                 await window.JayceeUI?.waitForSound();
                 window.location.replace("/login.html");
             } catch (error) {
-                status.textContent = error?.message || "Could not log out. Please try again.";
+                setText(status, error?.message || "Could not log out. Please try again.");
                 button.disabled = false;
             }
         });
@@ -63,14 +64,14 @@
             event.preventDefault();
             if (saving || submit.disabled || !client || !userId) return;
             if (password.value !== confirmation.value) {
-                status.textContent = "Passwords do not match.";
+                setText(status, "Passwords do not match.");
                 confirmation.focus();
                 return;
             }
             if (!form.reportValidity()) return;
             saving = true;
             submit.disabled = true;
-            status.textContent = "Saving your password...";
+            setText(status, "Saving your password...");
             try {
                 const { data, error } = await client.auth.getUser();
                 if (error || data.user?.id !== userId) throw new Error("Your session has changed. Please reopen your invitation.");
@@ -78,11 +79,11 @@
                 if (result.error) throw result.error;
                 clearPending();
                 form.reset();
-                status.textContent = "Password saved.";
+                setText(status, "Password saved.");
                 await window.JayceeUI?.waitForSound();
                 window.location.replace("/game.html");
             } catch (error) {
-                status.textContent = error?.message || "Could not save your password. Please try again.";
+                setText(status, error?.message || "Could not save your password. Please try again.");
                 submit.disabled = false;
             } finally {
                 saving = false;
@@ -103,11 +104,11 @@
                 return;
             }
             try { window.sessionStorage.setItem(key, userId); } catch { /* Optional storage. */ }
-            status.textContent = "";
+            setText(status, "");
             submit.disabled = false;
             password.focus();
         } catch (error) {
-            status.textContent = error?.message || "Could not check your invitation. Please reload to try again.";
+            setText(status, error?.message || "Could not check your invitation. Please reload to try again.");
             exit.hidden = false;
         }
     }

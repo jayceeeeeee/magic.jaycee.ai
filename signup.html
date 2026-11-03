@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Create an account - Jaycee.ai</title>
+  <title data-i18n>Create an account - Jaycee.ai</title>
   <link rel="icon" type="image/svg+xml" sizes="any" href="/src/assets/brand/jaycee-core-sigil.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,31 +16,31 @@
   <main class="auth-page signup-page-main">
     <section class="auth-panel" aria-labelledby="auth-title">
       <h1 class="game-brand-title" id="auth-title"><a href="/">jaycee.ai</a></h1>
-      <p class="auth-eyebrow">Jaycee.ai&gt; Create an account</p>
+      <p class="auth-eyebrow"><span data-i18n>Jaycee.ai&gt; Create an account</span></p>
 
       <form class="auth-form" data-auth-form data-auth-mode="signup">
         <label>
-          <span>Email</span>
+          <span><span data-i18n>Email</span></span>
           <input type="email" name="email" autocomplete="email" required>
         </label>
         <label>
-          <span>Password</span>
+          <span><span data-i18n>Password</span></span>
           <input type="password" name="password" autocomplete="new-password" minlength="6" required>
         </label>
-        <button class="account-button account-button-primary auth-submit" type="submit">Sign up</button>
+        <button class="account-button account-button-primary auth-submit" type="submit"><span data-i18n>Sign up</span></button>
       </form>
 
       <p class="auth-status" data-auth-status aria-live="polite"></p>
-      <p class="auth-switch" data-auth-switch>Already have an account? <a href="/login.html" data-auth-mode="login">Log in</a></p>
+      <p class="auth-switch" data-auth-switch><span data-i18n>Already have an account?</span> <a href="/login.html" data-auth-mode="login"><span data-i18n>Log in</span></a></p>
     </section>
   </main>
 
 
   <script src="/src/js/referral.js"></script>
-  <script src="/src/js/auth/invite.js"></script>
+  <script type="module" src="/src/js/auth/invite.js"></script>
   <script src="/src/js/config/app-config.js"></script>
   <script src="/src/js/auth/auth.js"></script>
-  <script src="/src/js/auth/page.js"></script>
+  <script type="module" src="/src/js/auth/page.js"></script>
   <script type="module" src="/src/js/ui-sounds.js"></script>
   <script type="module" src="/src/js/jaycee/account.js"></script>
 </body>

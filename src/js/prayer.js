@@ -1,3 +1,4 @@
+import { setText } from './i18n.js';
 (function () {
     const isEmbedded = window.self !== window.top;
     const prayerForm = document.querySelector(".prayer-form");
@@ -45,14 +46,14 @@
             return;
         }
 
-        prayerStatus.textContent = message;
+        setText(prayerStatus, message);
         prayerStatus.dataset.type = type;
         notifyHeight();
     }
 
     function updatePrayerStatusLayout() {
         if (prayerStatus) {
-            prayerStatus.textContent = "";
+            setText(prayerStatus, "");
         }
 
         requestAnimationFrame(notifyHeight);

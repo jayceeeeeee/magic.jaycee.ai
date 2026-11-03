@@ -1,4 +1,4 @@
-# Browser regression suite. Run from the repository root with Chrome installed.
+﻿# Browser regression suite. Run from the repository root with Chrome installed.
 # Uses mocks; writes only to TEMP and never connects to Supabase.
 $ErrorActionPreference = 'Stop'
 & .\.tools\deno.exe run --allow-read scripts/sync-game.ts --check
@@ -6,12 +6,15 @@ if ($LASTEXITCODE -ne 0) { throw 'Browser game artifacts are stale. Run scripts/
 $checkDir = Join-Path $env:TEMP ('jaycee-browser-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $checkDir | Out-Null
 function Read-BrowserSource($path) {
-  return ((Get-Content -LiteralPath $path -Raw -Encoding UTF8) -replace '(?s)import\s+.*?from\s+["''][^"'']+["''];', '').Replace('export ', '')
+  return ((Get-Content -LiteralPath $path -Raw -Encoding UTF8) -replace '(?s)import\s+.*?from\s+["''][^"'']+["''];', '').Replace('export ', '').TrimStart([char]0xfeff, [char]13, [char]10, [char]32)
 }
 $syntaxSources = ConvertTo-Json -InputObject @(Get-ChildItem -LiteralPath 'src/js' -Recurse -Filter '*.js' | Where-Object { $_.FullName -notmatch '[\\/]vendor[\\/]' } | ForEach-Object {
   @{ name = $_.Name; source = Read-BrowserSource $_.FullName }
 }) -Depth 3 -Compress
-$prelude = (Read-BrowserSource 'src/js/config/game-rules.js') + (Read-BrowserSource 'src/js/jaycee/notifications.js')
+$prelude = "(()=>{`n" + (Read-BrowserSource 'src/js/locales/fr.js') + (Read-BrowserSource 'src/js/i18n.js') + "`nObject.assign(globalThis,{t,message,setText,setAttributeText,textNode,bindTranslation,getLocale,getLanguage,setLanguage,translateTree,createLanguagePicker,LANGUAGE_KEY,FR});})();`n"
+# Existing gameplay regressions assert English copy; default-language coverage is isolated in i18n.test.mjs.
+$prelude += "setLanguage('en',{persist:false});`n"
+$prelude += (Read-BrowserSource 'src/js/config/game-rules.js') + (Read-BrowserSource 'src/js/jaycee/notifications.js')
 $prelude += Read-BrowserSource 'src/js/config/manna.js'
 $prelude += Read-BrowserSource 'tests/manna.test.mjs'
 $prelude += Read-BrowserSource 'tests/quest-lock-auth.test.mjs'
@@ -22,6 +25,7 @@ $prelude += Read-BrowserSource 'tests/app-config.test.mjs'
 $prelude += Read-BrowserSource 'tests/oauth-consent.test.mjs'
 $prelude += Read-BrowserSource 'tests/auth-flow.test.mjs'
 $prelude += Read-BrowserSource 'tests/game-page.test.mjs'
+$prelude += Read-BrowserSource 'tests/i18n.test.mjs'
 $authSource = ConvertTo-Json -InputObject ([string](Get-Content 'src/js/auth/auth.js' -Raw -Encoding UTF8)) -Compress
 $gameHtml = ConvertTo-Json -InputObject ([string](Get-Content 'game.html' -Raw -Encoding UTF8)) -Compress
 $gameStyles = ConvertTo-Json -InputObject ([string]((Get-Content 'src/css/global.css' -Raw -Encoding UTF8) + (Get-Content 'src/css/game-ui.css' -Raw -Encoding UTF8) + (Get-Content 'src/css/game.css' -Raw -Encoding UTF8) + (Get-Content 'src/css/master-picker.css' -Raw -Encoding UTF8))) -Compress
@@ -86,7 +90,7 @@ for(const choice of previewRow.querySelectorAll('.profile-master-choice')){
 const silentSlider=runtime.createVitalsPanel({...guestSliderOptions,notifications:{...options.notifications,definitions:[{id:'masters_present.v1',stage:'guest',content:{component:'masters'}}]}});
 assert(silentSlider.querySelector('.profile-masters-carousel')&&!silentSlider.textContent.includes("You're in luck"),'Slider inserted hardcoded intro when catalog text was absent');
 const previousPlayerName=window.localStorage.getItem('player_full_name');
-window.localStorage.setItem('player_full_name','Cédric');
+window.localStorage.setItem('player_full_name','CÃ©dric');
 const unnamedPlayerPanel=runtime.createVitalsPanel({...options,playerProfile:{id:'user',username:'  ',full_name:null}});
 assert(unnamedPlayerPanel.querySelector('.profile-player-level').textContent.startsWith('Unknown - Level'),'Unnamed account reused a previous browser name');
 const fullNamePlayerPanel=runtime.createVitalsPanel({...options,playerProfile:{id:'user',username:null,full_name:'Actual Name'}});
@@ -280,7 +284,8 @@ document.querySelector('[data-account-save]').click();await new Promise(resolve=
 assert(new URL(document.querySelector('[data-referral-link]').value).searchParams.get('ref')==='Renamed User','Referral link did not refresh after saving a new username');
 '@
 $browser = $browser.Replace('__AUTH_SOURCE__', $authSource).Replace('__RUNTIME__', $runtime).Replace('__SHARED_UI__', (ConvertTo-Json -InputObject $sharedUI -Compress)).Replace('__EDITOR__', $editor).Replace('__ACCOUNT__', $account).Replace('__SYNTAX_SOURCES__', $syntaxSources).Replace('__GAME_HTML__', $gameHtml).Replace('__GAME_STYLES__', $gameStyles)
-$html = '<!doctype html><body>RUNNING<script>(async()=>{try{' + $prelude + $checks + $browser + "document.body.textContent='PASS: JavaScript syntax, game UI, notifications, Level 2/3 acceptance, clocks, practice gating, skill names, Master carousel, game validation/save and live Skills unlock.';}catch(error){document.body.textContent='FAIL: '+error.stack;}})();</script>"
+$html = '<!doctype html><body>RUNNING<script>(async()=>{try{' + $prelude + $checks + $browser + "await runI18nTests({runtime,i18nSource:syntaxSources.find(file=>file.name==='i18n.js').source,styles:__GAME_STYLES__});document.body.textContent='PASS: JavaScript syntax, game UI, notifications, Level 2/3 acceptance, clocks, practice gating, skill names, Master carousel, game validation/save, live Skills unlock and English/French translations.';}catch(error){document.body.textContent='FAIL: '+error.stack;}})();</script>"
+$html = $html.Replace('__GAME_STYLES__', $gameStyles)
 Set-Content -LiteralPath (Join-Path $checkDir 'check.html') -Value $html -Encoding UTF8
 $process = Start-Process 'C:/Program Files/Google/Chrome/Application/chrome.exe' -ArgumentList @('--headless','--disable-gpu','--disable-software-rasterizer','--in-process-gpu','--no-sandbox','--no-first-run','--virtual-time-budget=5000','--dump-dom',('--user-data-dir='+(Join-Path $checkDir 'profile')),('file:///'+(Join-Path $checkDir 'check.html').Replace('\','/'))) -RedirectStandardOutput (Join-Path $checkDir 'stdout.txt') -RedirectStandardError (Join-Path $checkDir 'stderr.txt') -WindowStyle Hidden -PassThru
 if (-not $process.WaitForExit(20000)) {

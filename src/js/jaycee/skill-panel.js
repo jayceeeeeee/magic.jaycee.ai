@@ -1,3 +1,4 @@
+import { t, message, setText, setAttributeText, textNode } from '../i18n.js';
 import { GAME_RULES } from "../config/game-rules.js";
 import { getDisplayValue } from "../config/data.js";
 import { isQuestPending } from "./notifications.js";
@@ -18,7 +19,7 @@ export const formatDuration = (secondsValue, { compact = true } = {}) => {
   const minutes = Math.floor(seconds / 60);
   seconds -= minutes * 60;
   const parts = [
-    ...(days ? [`${days}d`] : []),
+    ...(days ? [t('{days}d', { days })] : []),
     ...(hours ? [`${hours}h`] : []),
     ...(minutes ? [`${minutes}min`] : []),
     ...(seconds ? [`${seconds}s`] : [])
@@ -110,9 +111,9 @@ export const getActiveQuestInfo = ({ activeModels = [], player = null, selectedA
 export const updateQuestCountdown = (element, now = Date.now()) => {
   const remainingSeconds = Math.max(0, Math.ceil((Number(element.dataset.questDeadline) - now) / 1000));
 
-  element.textContent = remainingSeconds > 0
-    ? `Time remaining: ${formatDuration(remainingSeconds, { compact: false })}`
-    : "Quest time expired.";
+  setText(element, remainingSeconds > 0
+    ? message('Time remaining: {time}', { time: formatDuration(remainingSeconds, { compact: false }) })
+    : "Quest time expired.");
 };
 
 export const createQuestCountdown = (deadline) => {
@@ -132,9 +133,9 @@ export const updatePracticeDetails = (element, questInfo) => {
     updateQuestCountdown(countdown);
   } else {
     delete countdown.dataset.questDeadline;
-    countdown.textContent = "Time remaining: —";
+    setText(countdown, "Time remaining: —");
   }
-  element.querySelector("[data-practice-progress]").textContent = `Practice: ${questInfo.practiceTime} / ${questInfo.activeTime}`;
+  setText(element.querySelector("[data-practice-progress]"), message('Practice: {done} / {remaining}', { done: questInfo.practiceTime, remaining: questInfo.activeTime }));
 };
 
 export const createLockedIcon = (className = "profile-ability-lock-icon") => {
@@ -180,13 +181,14 @@ export const createSkillPanel = ({
 
   section.className = "profile-parameter-panel";
   section.dataset.profileParameters = "";
-  heading.textContent = "Abilities";
+  setText(heading, "Abilities");
   buttons.className = "profile-ability-bar";
   description.className = "profile-parameter-section";
 
   if (passiveModel) {
     abilities.push({
       label: getDisplayValue(passiveModel.skill?.label) || "No skill",
+      placeholder: !getDisplayValue(passiveModel.skill?.label),
       description: passiveModel.skill?.description || "",
       type: "passive",
       unlockLevel: 0
@@ -195,6 +197,7 @@ export const createSkillPanel = ({
   activeModels.forEach((skillModel, index) => {
     abilities.push({
       label: getDisplayValue(skillModel.skillLabel) || "No skill",
+      placeholder: !getDisplayValue(skillModel.skillLabel) || (!skillModel.skill && skillModel.skillLabel === "No skill"),
       description: skillModel.skill?.description || "",
       type: "active",
       unlockLevel: index + 1
@@ -204,6 +207,7 @@ export const createSkillPanel = ({
   if (ultimateModel) {
     abilities.push({
       label: getDisplayValue(ultimateModel.skillLabel) || "No skill",
+      placeholder: !getDisplayValue(ultimateModel.skillLabel),
       description: ultimateModel.skillDescription || "",
       type: "ultimate",
       unlockLevel: 4
@@ -228,17 +232,18 @@ export const createSkillPanel = ({
     button.type = "button";
     button.dataset.skillIndex = String(index);
     button.dataset.skillLabel = ability.label;
-    button.dataset.state = ability.type === "passive" ? "Passive" : isLocked ? "" : ability.type === "ultimate" ? "Ultimate" : "Ready";
+    setAttributeText(button, "data-state", ability.type === "passive" ? "Passive" : isLocked ? "" : ability.type === "ultimate" ? "Ultimate" : "Ready");
     button.disabled = isLocked;
-    button.textContent = ability.label;
-    button.title = "View skill details";
+    if (ability.placeholder) button.append(textNode("No skill"));
+    else button.textContent = ability.label;
+    setAttributeText(button, "title", "View skill details");
     button.setAttribute("aria-pressed", String(isActive));
     if (isLocked) {
       const lockStatus = document.createElement("span");
       const lockText = document.createElement("span");
 
       lockStatus.className = "profile-ability-lock-status";
-      lockText.textContent = "Locked";
+      setText(lockText, "Locked");
       lockStatus.append(createLockedIcon(), lockText);
       button.append(lockStatus);
     } else {
@@ -275,10 +280,11 @@ export const createSkillPanel = ({
       const label = document.createElement("span");
       const name = document.createElement("span");
       lineage.className = "account-master-identity profile-skill-practice-details profile-ultimate-master";
-      label.textContent = "Linked to:";
+      setText(label, "Linked to:");
       name.textContent = getDisplayValue(masterLineage?.username)
         || getDisplayValue(masterLineage?.full_name)
         || (hasLineageMaster ? "Master unavailable" : "God");
+      if (!getDisplayValue(masterLineage?.username) && !getDisplayValue(masterLineage?.full_name)) setText(name, hasLineageMaster ? "Master unavailable" : "God");
       lineage.append(label);
       if (masterLineage) {
         const avatar = document.createElement("span");
@@ -304,7 +310,7 @@ export const createSkillPanel = ({
       if (practicingSkillIndex !== activeIndex) toggle.dataset.uiSound = "skillStart";
       toggle.disabled = isDescriptionClosing || !player?.id || !activeModels[activeIndex - 1]?.skill
         || (activeIndex === Number(player?.level) && isQuestPending(player));
-      toggle.textContent = practicingSkillIndex === activeIndex ? "Stop" : "Start";
+      setText(toggle, practicingSkillIndex === activeIndex ? "Stop" : "Start");
       toggle.addEventListener("click", () => onTogglePractice?.(activeIndex));
       description.append(toggle);
     }

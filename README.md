@@ -31,6 +31,16 @@ le déploiement de la base est une étape distincte, à demander explicitement.
 
 ## Vérifier les changements
 
+La langue de l’interface est gérée par `src/js/i18n.js`, avec le français par
+défaut et le choix mémorisé dans le navigateur (`jaycee:language`). Les messages
+français sont centralisés dans `src/js/locales/fr.js` : le texte anglais sert de
+clé, et les paramètres `{name}` doivent être conservés dans la traduction.
+Utiliser `setText` / `setAttributeText` pour les messages dynamiques et
+`data-i18n` / `data-i18n-attrs` pour le HTML. Les notifications sont traduites
+avant l’insertion des noms et autres valeurs, sans modifier leurs reçus en base.
+Tout nouveau texte du catalogue de notifications doit aussi être ajouté au
+dictionnaire. Les contenus écrits par les joueurs restent dans leur langue.
+
 Depuis la racine, avec Chrome installé sous Windows :
 
 ```powershell

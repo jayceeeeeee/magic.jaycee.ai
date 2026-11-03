@@ -1,3 +1,4 @@
+import { t, message, setText, setAttributeText, textNode, getLocale, translateTree, createLanguagePicker } from '../i18n.js';
 import {
   PROFILE_TABLE,
   USER_IMAGES_BUCKET,
@@ -20,7 +21,7 @@ const getLoginUrl = () => (
 const setStatus = (element, message, isError = false) => {
   if (!element) return;
 
-  element.textContent = message;
+  setText(element, message);
   element.dataset.state = isError ? "error" : "ready";
 };
 
@@ -45,7 +46,7 @@ const createSection = (title, className = "") => {
 
   section.className = ["jaycee-account-section", className].filter(Boolean).join(" ");
   heading.className = "profile-section-label";
-  heading.textContent = title;
+  setText(heading, title);
   content.className = "jaycee-account-section-content";
   section.append(heading, content);
 
@@ -57,7 +58,7 @@ const createTextField = ({ inputMode = "", label, name, type = "text", value = "
   const text = document.createElement("span");
   const input = document.createElement("input");
 
-  text.textContent = label;
+  setText(text, label);
   input.name = name;
   input.type = type;
   input.value = getDisplayValue(value);
@@ -75,13 +76,13 @@ const createSelectField = ({ label, name, options, value = "" }) => {
   const select = document.createElement("select");
   const normalizedValue = getDisplayValue(value);
 
-  text.textContent = label;
+  setText(text, label);
   select.name = name;
   select.replaceChildren(...options.map((optionConfig) => {
     const option = document.createElement("option");
 
     option.value = optionConfig.value;
-    option.textContent = optionConfig.label;
+    setText(option, optionConfig.label);
 
     return option;
   }));
@@ -105,15 +106,13 @@ const getCurrencyOptions = () => {
     currencies = fallbackCurrencies;
   }
 
-  const names = typeof Intl.DisplayNames === "function"
-    ? new Intl.DisplayNames([navigator.language || "en"], { type: "currency" })
-    : null;
-
   return currencies.map((currency) => {
-    const name = names?.of(currency);
 
     return {
-      label: name && name !== currency ? `${currency} - ${name}` : currency,
+      label: () => {
+        const localizedName = typeof Intl.DisplayNames === "function" ? new Intl.DisplayNames([getLocale()], { type: "currency" }).of(currency) : currency;
+        return localizedName && localizedName !== currency ? `${currency} - ${localizedName}` : currency;
+      },
       value: currency
     };
   });
@@ -154,17 +153,17 @@ const createReferralControls = (profile, createLink = (username) => window.Jayce
   const share = document.createElement("button");
   const status = document.createElement("p");
   section.className = "profile-referral";
-  label.textContent = "Invite a friend";
+  setText(label, "Invite a friend");
   input.type = "text";
   input.readOnly = true;
-  input.setAttribute("aria-label", "Your referral link");
+  setAttributeText(input, "aria-label", "Your referral link");
   input.dataset.referralLink = "";
   label.append(input);
   actions.className = "profile-referral-actions";
   copy.type = share.type = "button";
   copy.className = share.className = "account-button account-button-ghost";
-  copy.textContent = "Copy link";
-  share.textContent = "Share";
+  setText(copy, "Copy link");
+  setText(share, "Share");
   share.hidden = typeof navigator.share !== "function";
   status.setAttribute("role", "status");
   actions.append(copy, share);
@@ -173,7 +172,7 @@ const createReferralControls = (profile, createLink = (username) => window.Jayce
   const refresh = () => {
     input.value = createLink(profile.username) || "";
     copy.disabled = share.disabled = !input.value;
-    status.textContent = "";
+    setText(status, "");
   };
   const copyLink = async () => {
     refresh();
@@ -185,11 +184,11 @@ const createReferralControls = (profile, createLink = (username) => window.Jayce
         input.select();
         if (!document.execCommand("copy")) throw new Error("Clipboard unavailable");
       }
-      status.textContent = "Link copied.";
+      setText(status, "Link copied.");
     } catch {
       input.focus();
       input.select();
-      status.textContent = "Select and copy the link above.";
+      setText(status, "Select and copy the link above.");
     }
   };
   copy.addEventListener("click", () => { void copyLink(); });
@@ -222,11 +221,11 @@ const createCharacterSection = ({ avatarUrl = "", profile }) => {
   avatarControl.className = "account-avatar-control";
   avatarPreview.className = "account-avatar-preview";
   avatarButton.className = "account-avatar-button";
-  avatarText.textContent = "Profile photo";
+  setText(avatarText, "Profile photo");
   avatarInput.name = "avatar";
   avatarInput.type = "file";
   avatarInput.accept = "image/*";
-  avatarButton.textContent = "Choose";
+  setText(avatarButton, "Choose");
   if (avatarUrl) {
     const image = document.createElement("img");
 
@@ -291,7 +290,7 @@ const createMasterSection = ({ client, profile, skills, data, getUsername = () =
   visibilityInput.name = "visibility";
   visibilityInput.checked = Boolean(profile.visibility);
   visibilityInput.setAttribute("aria-describedby", "account-visibility-hint");
-  visibilityField.append(visibilityInput, document.createTextNode("Make my account visible"));
+  visibilityField.append(visibilityInput, textNode("Make my account visible"));
   hint.id = "account-visibility-hint";
   hint.className = "account-visibility-hint";
   hint.setAttribute("role", "status");
@@ -306,10 +305,10 @@ const createMasterSection = ({ client, profile, skills, data, getUsername = () =
     publicationControls.hidden = level < 4;
     section.hidden = level < 4 || !masterId;
     visibilityField.hidden = level < 4;
-    const message = !state.ready ? "Loading your skills..." : missing.length
-      ? `Choose a username and name all five skills before making your account visible. Missing: ${missing.join(", ")}.` : "";
-    hint.textContent = message;
-    hint.hidden = level < 4 || !message;
+    const publicationMessage = !state.ready ? "Loading your skills..." : missing.length
+      ? message('Choose a username and name all five skills before making your account visible. Missing: {missing}.', { missing: () => missing.map(key => t(key)).join(', ') }) : "";
+    setText(hint, publicationMessage);
+    hint.hidden = level < 4 || !publicationMessage;
     // A visible account can always be made private, even if skills are incomplete.
     visibilityInput.disabled = !visibilityInput.checked && (!state.ready || missing.length > 0);
   };
@@ -319,7 +318,7 @@ const createMasterSection = ({ client, profile, skills, data, getUsername = () =
     if (id === masterId) return;
     masterId = id;
     avatar.replaceChildren();
-    name.textContent = id ? "Loading Master..." : "";
+    setText(name, id ? "Loading Master..." : "");
     if (!id) return;
     try {
       const master = await data.fetchProfileByUserId(client, id);
@@ -334,7 +333,7 @@ const createMasterSection = ({ client, profile, skills, data, getUsername = () =
       image.alt = "";
       avatar.replaceChildren(image);
     } catch {
-      if (masterId === id) name.textContent = "Master unavailable";
+      if (masterId === id) setText(name, "Master unavailable");
     }
   };
   void setMaster(profile.master);
@@ -444,21 +443,23 @@ const mountAccountPanel = () => {
   shell.className = "account-panel-shell is-account-panel-collapsed";
   shell.dataset.accountShell = "";
   shell.innerHTML = `
-    <a class="account-hud-trigger donate-hud-trigger" href="https://buy.stripe.com/14A14o70HbZXdtr73FfQI01" target="_blank" rel="noopener noreferrer">Donate</a>
-    <button class="account-hud-trigger" type="button" data-account-toggle aria-controls="account-panel" aria-expanded="false" aria-label="Open account">
+    <div class="hud-left-controls"><a class="account-hud-trigger donate-hud-trigger" href="https://buy.stripe.com/14A14o70HbZXdtr73FfQI01" target="_blank" rel="noopener noreferrer"><span data-i18n>Donate</span></a></div>
+    <button class="account-hud-trigger" type="button" data-account-toggle aria-controls="account-panel" aria-expanded="false" aria-label="Open account" data-i18n-attrs="aria-label">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"></path><path d="M4.5 20a7.5 7.5 0 0 1 15 0"></path></svg>
     </button>
     <section class="account-side-panel" id="account-panel" aria-labelledby="account-title" tabindex="-1">
-      <div class="profile-settings-header"><p class="profile-kicker">jaycee.ai &gt; account</p><h1 id="account-title">Account</h1></div>
-      <div class="profile-resonance-status" data-account-status aria-live="polite">Loading account...</div>
+      <div class="profile-settings-header"><p class="profile-kicker"><span data-i18n>jaycee.ai &gt; account</span></p><h1 id="account-title"><span data-i18n>Account</span></h1></div>
+      <div class="profile-resonance-status" data-account-status aria-live="polite"><span data-i18n>Loading account...</span></div>
       <div class="jaycee-account-sections" data-account-sections></div>
       <div class="profile-settings-actions" data-account-actions hidden>
-        <button class="account-panel-action" type="button" data-account-save>Save</button>
-        <button class="account-panel-action" type="button" data-account-logout>Log out</button>
+        <button class="account-panel-action" type="button" data-account-save><span data-i18n>Save</span></button>
+        <button class="account-panel-action" type="button" data-account-logout><span data-i18n>Log out</span></button>
         <p data-account-save-status aria-live="polite"></p>
-        <p class="account-help">Need help? <a href="mailto:jaubertcedric13@gmail.com">contact me</a>.</p>
+        <p class="account-help"><span data-i18n>Need help?</span> <a href="mailto:jaubertcedric13@gmail.com"><span data-i18n>contact me</span></a>.</p>
       </div>
     </section>`;
+  shell.querySelector('.hud-left-controls').append(createLanguagePicker());
+  translateTree(shell);
   document.body.append(shell);
 };
 
@@ -468,9 +469,9 @@ const createGuestLoginSection = () => {
 
   form.className = "profile-details-controls jaycee-account-form";
   form.innerHTML = `
-    <label class="profile-field-wide"><span>Email</span><input type="email" name="email" autocomplete="email" required></label>
-    <label class="profile-field-wide"><span>Password</span><input type="password" name="password" autocomplete="current-password" required></label>
-    <button class="account-panel-action profile-field-wide" type="submit">Log in</button>
+    <label class="profile-field-wide"><span><span data-i18n>Email</span></span><input type="email" name="email" autocomplete="email" required></label>
+    <label class="profile-field-wide"><span><span data-i18n>Password</span></span><input type="password" name="password" autocomplete="current-password" required></label>
+    <button class="account-panel-action profile-field-wide" type="submit"><span data-i18n>Log in</span></button>
     <p class="profile-field-wide" role="status" data-panel-login-status></p>`;
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -531,7 +532,7 @@ export const initJayceeAccountPage = async ({ auth = window.JayceeAuth, data = {
     if (!collapsible) isOpen = true;
     shell.classList.toggle("is-account-panel-collapsed", !isOpen);
     toggleButton.setAttribute("aria-expanded", String(isOpen));
-    toggleButton.setAttribute("aria-label", isOpen ? "Close account" : "Open account");
+    setAttributeText(toggleButton, "aria-label", isOpen ? "Close account" : "Open account");
     panel.inert = !isOpen;
     if (isOpen) {
       panel?.focus?.();

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jaycee.ai</title>
+  <title data-i18n>Jaycee.ai</title>
   <link rel="icon" type="image/svg+xml" sizes="any" href="/src/assets/brand/jaycee-core-sigil.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,16 +13,16 @@
   <link rel="stylesheet" href="/src/css/game-ui.css">
 </head>
 <body>
-  <main class="game-title-screen" aria-label="Jaycee.ai title screen">
+  <main class="game-title-screen" aria-label="Jaycee.ai title screen" data-i18n-attrs="aria-label">
     <div class="game-grid" aria-hidden="true"></div>
     <div class="game-vignette" aria-hidden="true"></div>
 
     <section class="game-title-stage">
       <h1 class="game-brand-title"><a href="/">jaycee.ai</a></h1>
-      <button class="game-play-button" type="button" data-start-game aria-label="Play jaycee.ai">
+      <button class="game-play-button" type="button" data-start-game aria-label="Play jaycee.ai" data-i18n-attrs="aria-label">
         <span class="game-play-ring" aria-hidden="true"></span>
         <img src="./src/assets/brand/jaycee-core-sigil.svg" alt="">
-        <span class="game-play-label">Play</span>
+        <span class="game-play-label"><span data-i18n>Play</span></span>
       </button>
     </section>
   </main>
@@ -30,7 +30,7 @@
   <script src="/src/js/referral.js"></script>
   <script src="./src/js/index.js"></script>
   <script type="module" src="/src/js/ui-sounds.js"></script>
-  <script src="/src/js/auth/invite.js"></script>
+  <script type="module" src="/src/js/auth/invite.js"></script>
   <script src="/src/js/config/app-config.js"></script>
   <script src="/src/js/auth/auth.js"></script>
   <script type="module" src="/src/js/jaycee/account.js"></script>

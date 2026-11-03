@@ -2,6 +2,7 @@ import { marked } from "../vendor/marked-18.0.14.js";
 import DOMPurify from "../vendor/dompurify-3.4.17.js";
 
 export const renderSkillMarkdown = (element, markdown) => {
+  element.dataset.playerContent = '';
   const html = marked.parse(String(markdown || ""), { async: false, gfm: true });
 
   element.innerHTML = DOMPurify.sanitize(html, {

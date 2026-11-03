@@ -133,7 +133,7 @@ async function buildView(check: boolean, account = false) {
     const body = game
       ? page.match(/<main[\s\S]*?<\/main>/)?.[0]?.replace(
         "</main>",
-        '<p id="game-status" role="status" hidden></p><button id="game-retry" hidden>Try again</button></main>',
+        '<p id="game-status" role="status" hidden></p><button id="game-retry" data-i18n hidden>Try again</button></main>',
       )
       : "";
     if (game && !body) throw new Error("Could not read the shared game shell.");
@@ -142,7 +142,7 @@ async function buildView(check: boolean, account = false) {
         script.replaceAll("</script", "<\\/script")
       }</script></body></html>`;
     const accountHtml =
-      `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${fonts}<style>${css}</style></head><body class="game-page account-embed"><p id="account-status" role="status">Loading account…</p><button id="account-retry" hidden>Try again</button><script>${
+      `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">${fonts}<style>${css}</style></head><body class="game-page account-embed"><p id="account-status" role="status" data-i18n>Loading account…</p><button id="account-retry" data-i18n hidden>Try again</button><script>${
         script.replaceAll("</script", "<\\/script")
       }</script></body></html>`;
     await Deno.writeTextFile(

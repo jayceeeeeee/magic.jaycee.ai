@@ -1,3 +1,4 @@
+import { t, message, setText } from '../i18n.js';
 export async function initOAuthConsent({ win = window, doc = document } = {}) {
     const status = doc.querySelector("[data-consent-status]");
     const details = doc.querySelector("[data-consent-details]");
@@ -33,7 +34,7 @@ export async function initOAuthConsent({ win = window, doc = document } = {}) {
                 if (error) throw error;
                 win.location.assign(loginPath);
             } catch (error) {
-                status.textContent = error.message || "Could not switch accounts. Please try again.";
+                setText(status, error.message || "Could not switch accounts. Please try again.");
                 approve.disabled = deny.disabled = switchAccount.disabled = false;
                 continueAccount.disabled = false;
             }
@@ -41,7 +42,7 @@ export async function initOAuthConsent({ win = window, doc = document } = {}) {
         // Loading authorization details can auto-approve an existing grant and
         // bind this request to the current user. Choose the account BEFORE that
         // call so switching accounts preserves a pending authorization request.
-        status.textContent = `Signed in as ${user.email || "your game account"}.`;
+        setText(status, message('Signed in as {account}.', { account: user.email || t('your game account') }));
         accountChoice.hidden = false;
         await new Promise(resolve => {
             continueAccount.addEventListener("click", () => {
@@ -49,7 +50,7 @@ export async function initOAuthConsent({ win = window, doc = document } = {}) {
                 choosingAccount = false;
                 continueAccount.disabled = switchAccount.disabled = true;
                 accountChoice.hidden = true;
-                status.textContent = "Loading the connection request…";
+                setText(status, "Loading the connection request…");
                 resolve();
             });
         });
@@ -67,15 +68,17 @@ export async function initOAuthConsent({ win = window, doc = document } = {}) {
             return;
         }
         if (!data || !("authorization_id" in data)) throw new Error("This connection request is no longer available.");
-        doc.querySelector("[data-consent-client]").textContent = data.client.name || "This application";
-        doc.querySelector("[data-consent-scopes]").textContent = data.scope || "None";
+        if (data.client.name) doc.querySelector("[data-consent-client]").textContent = data.client.name;
+        else setText(doc.querySelector("[data-consent-client]"), "This application");
+        if (data.scope) doc.querySelector("[data-consent-scopes]").textContent = data.scope;
+        else setText(doc.querySelector("[data-consent-scopes]"), "None");
         doc.querySelector("[data-consent-redirect]").textContent = data.redirect_uri;
-        status.textContent = `Signed in as ${user.email || "your game account"}.`;
+        setText(status, message('Signed in as {account}.', { account: user.email || t('your game account') }));
         const decide = async (approved) => {
             if (approve.disabled || deny.disabled) return;
             approve.disabled = deny.disabled = true;
             if (switchAccount) switchAccount.disabled = true;
-            status.textContent = approved ? "Connecting your account…" : "Cancelling the connection…";
+            setText(status, approved ? "Connecting your account…" : "Cancelling the connection…");
             try {
                 const response = approved
                     ? await client.auth.oauth.approveAuthorization(authorizationId, { skipBrowserRedirect: true })
@@ -91,7 +94,7 @@ export async function initOAuthConsent({ win = window, doc = document } = {}) {
                 win.location.assign(redirect.href);
             } catch (error) {
                 details.hidden = false;
-                status.textContent = error.message || "The connection could not be completed.";
+                setText(status, error.message || "The connection could not be completed.");
                 approve.disabled = deny.disabled = false;
                 if (switchAccount) switchAccount.disabled = false;
             }
@@ -111,7 +114,7 @@ export async function initOAuthConsent({ win = window, doc = document } = {}) {
     } catch (error) {
         accountChoice.hidden = true;
         details.hidden = true;
-        status.textContent = error.message || "This connection request could not be loaded.";
+        setText(status, error.message || "This connection request could not be loaded.");
         if (recovery) recovery.hidden = false;
     }
 }

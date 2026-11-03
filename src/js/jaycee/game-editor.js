@@ -1,3 +1,4 @@
+import { setText, setAttributeText } from '../i18n.js';
 import { GAME_RULES } from "../config/game-rules.js";
 ﻿import { fetchUserGameSettings, fetchSkillsByIds, saveOwnGame } from "../config/data.js";
 
@@ -31,21 +32,21 @@ export const createSkillsSection = ({ client, profile, createSection, data = {},
   editor.className = "jaycee-game-editor";
   fields.className = "profile-game-skill-fields";
   fields.disabled = true;
-  loreCaption.textContent = "Lore";
+  setText(loreCaption, "Lore");
   lore.name = "lore";
   lore.value = profile.lore || "";
   lore.rows = 2;
   lore.maxLength = 20000;
-  lore.placeholder = "Write your own character's story in a markdwon format.";
+  setAttributeText(lore, "placeholder", "Write your own character's story in a markdwon format.");
   lore.addEventListener("input", onChange);
   loreLabel.append(loreCaption, lore);
   fields.append(loreLabel);
   selector.name = "skill_selector";
-  selectorCaption.textContent = "Skill";
+  setText(selectorCaption, "Skill");
   slots.forEach((slot, index) => {
     const option = document.createElement("option");
     option.value = String(index);
-    option.textContent = index === 4 ? "Ultimate · Locked" : slot;
+    setText(option, index === 4 ? "Ultimate · Locked" : slot);
     option.disabled = index === 4;
     selector.append(option);
   });
@@ -86,16 +87,16 @@ export const createSkillsSection = ({ client, profile, createSection, data = {},
     const description = document.createElement("textarea");
     group.className = "profile-game-skill";
     group.hidden = index !== 0;
-    caption.textContent = "Name";
+    setText(caption, "Name");
     name.name = `skill_${index}_label`;
     name.maxLength = 120;
-    name.placeholder = "Put your skill name.";
+    setAttributeText(name, "placeholder", "Put your skill name.");
     name.addEventListener("input", onChange);
     name.disabled = index === 4;
-    descriptionCaption.textContent = "Description";
+    setText(descriptionCaption, "Description");
     description.name = `skill_${index}_description`;
     description.rows = 1;
-    description.placeholder = "Put your skill description in markdown format.";
+    setAttributeText(description, "placeholder", "Put your skill description in markdown format.");
     description.maxLength = 20000;
     description.disabled = index === 4;
     description.addEventListener("input", () => resizeDescription(description));
@@ -106,14 +107,14 @@ export const createSkillsSection = ({ client, profile, createSection, data = {},
     inputs.push({ name, description, group });
   });
   retry.type = "button";
-  retry.textContent = "Retry";
+  setText(retry, "Retry");
   retry.hidden = true;
   status.setAttribute("role", "status");
   status.hidden = true;
   editor.append(fields, status, retry);
   content.append(editor);
   const setStatus = (message) => {
-    status.textContent = message;
+    setText(status, message);
     status.hidden = !message;
   };
 
@@ -165,7 +166,7 @@ export const createSkillsSection = ({ client, profile, createSection, data = {},
     setUnlocked: (unlocked, highestLevel = 3) => {
       accessLevel = highestLevel;
       selector.options[4].disabled = accessLevel < 4;
-      selector.options[4].textContent = accessLevel >= 4 ? "Ultimate" : "Ultimate · Locked";
+      setText(selector.options[4], accessLevel >= 4 ? "Ultimate" : "Ultimate · Locked");
       inputs[4].name.disabled = accessLevel < 4;
       inputs[4].description.disabled = accessLevel < 4;
       showSelected();

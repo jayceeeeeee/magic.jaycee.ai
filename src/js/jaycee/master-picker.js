@@ -1,3 +1,4 @@
+import { message, setText, setAttributeText } from '../i18n.js';
 import { getFeaturedMasters, LOCKED_PREVIEW_MASTERS } from "../config/master-catalog.js";
 import { getDisplayValue } from "../config/data.js";
 import { renderSkillMarkdown } from "./markdown.js";
@@ -13,7 +14,7 @@ export const createNoticeMasterBadge = (profile, fallbackUsername = "Unknown") =
   badge.className = "profile-notice-master-card";
   avatar.className = "profile-notice-master-avatar";
   name.className = "profile-notice-master-name";
-  name.textContent = username;
+  if (getDisplayValue(profile?.username) || getDisplayValue(profile?.full_name)) name.textContent = username; else setText(name, fallbackUsername);
 
   if (profile?.avatarUrl) {
     const image = document.createElement("img");
@@ -51,7 +52,7 @@ const openMasterCard = (profile, { onSelect = null, onLoadDetails = null, trigge
   dialog.setAttribute('aria-labelledby', 'profile-master-card-name');
   close.className = 'profile-master-dialog-close';
   close.type = 'button';
-  close.setAttribute('aria-label', 'Close profile card');
+  setAttributeText(close, "aria-label", 'Close profile card');
   close.textContent = '×';
   avatar.className = 'profile-master-dialog-avatar';
   avatar.textContent = getMasterInitial(profile);
@@ -63,18 +64,20 @@ const openMasterCard = (profile, { onSelect = null, onLoadDetails = null, trigge
     avatar.replaceChildren(image);
   }
   username.id = 'profile-master-card-name';
-  username.textContent = getDisplayValue(profile.username) || 'Unknown';
+  if (getDisplayValue(profile.username)) username.textContent = profile.username; else setText(username, 'Unknown');
   fullName.className = 'profile-master-dialog-full-name';
   fullName.textContent = getDisplayValue(profile.full_name);
   lore.className = 'profile-master-dialog-lore profile-skill-description';
-  renderSkillMarkdown(lore, getDisplayValue(profile.lore) || (onLoadDetails ? '' : 'This story is still being written.'));
+  if (getDisplayValue(profile.lore)) renderSkillMarkdown(lore, profile.lore);
+  else setText(lore, onLoadDetails ? '' : 'This story is still being written.');
   details.className = 'profile-master-dialog-details';
   details.setAttribute('aria-live', 'polite');
   action.className = 'profile-master-dialog-action';
   action.type = 'button';
-  action.textContent = onSelect ? 'Select' : 'OK';
+  setText(action, onSelect ? 'Select' : 'OK');
   const renderDetails = ({ lore: profileLore = profile.lore, game = null, skills = [] } = {}) => {
-    renderSkillMarkdown(lore, getDisplayValue(profileLore) || 'This story is still being written.');
+    if (getDisplayValue(profileLore)) renderSkillMarkdown(lore, profileLore);
+    else setText(lore, 'This story is still being written.');
     let selectedIndex = null;
     const renderAbilities = () => {
       const models = { gameForm: game, skillForms: skills };
@@ -123,7 +126,7 @@ const openMasterCard = (profile, { onSelect = null, onLoadDetails = null, trigge
   action.focus();
   if (onLoadDetails) {
     const load = async () => {
-      details.textContent = 'Loading profile…';
+      setText(details, 'Loading profile…');
       details.setAttribute('aria-busy', 'true');
       try {
         const data = await onLoadDetails(profile);
@@ -132,10 +135,10 @@ const openMasterCard = (profile, { onSelect = null, onLoadDetails = null, trigge
         if (!dialog.isConnected) return;
         const message = document.createElement('p');
         const retry = document.createElement('button');
-        message.textContent = 'The profile details could not be loaded.';
+        setText(message, 'The profile details could not be loaded.');
         retry.type = 'button';
         retry.className = 'profile-master-dialog-retry';
-        retry.textContent = 'Try again';
+        setText(retry, 'Try again');
         retry.addEventListener('click', () => void load());
         details.replaceChildren(message, retry);
       } finally {
@@ -166,7 +169,7 @@ export const createMastersNoticeContent = (profiles, { onSelect = null, onLoadDe
     carousel.className = `profile-masters-carousel${reverse ? " is-reversed" : ""}`;
     carousel.tabIndex = 0;
     carousel.setAttribute("role", "region");
-    carousel.setAttribute("aria-label", label);
+    setAttributeText(carousel, "aria-label", label);
     const pauseOnInteraction = () => carousel.classList.remove('is-resuming');
     carousel.addEventListener('pointerenter', pauseOnInteraction);
     carousel.addEventListener('focusin', pauseOnInteraction);
@@ -194,12 +197,12 @@ export const createMastersNoticeContent = (profiles, { onSelect = null, onLoadDe
           choice.className = `profile-master-choice${isLocked ? " is-locked" : ""}`;
           choice.type = "button";
           choice.disabled = isSaving || isLocked;
-          choice.setAttribute("aria-label", isLocked
-            ? `${getDisplayValue(profile.username)}'s game is locked`
-            : `View ${getDisplayValue(profile.username)}'s profile`);
+          setAttributeText(choice, "aria-label", isLocked
+            ? message("{name}'s game is locked", { name: getDisplayValue(profile.username) })
+            : message("View {name}'s profile", { name: getDisplayValue(profile.username) }));
           choice.setAttribute('aria-haspopup', 'dialog');
           if (isLocked) {
-            choice.title = "This Master's game is temporarily locked.";
+            setAttributeText(choice, "title", "This Master's game is temporarily locked.");
             card.append(createLockedIcon("profile-master-lock-icon"));
           }
           if (copy > 0 || repeat > 0) {

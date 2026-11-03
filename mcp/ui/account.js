@@ -1,3 +1,4 @@
+import { setText } from '../../src/js/i18n.js';
 import { initJayceeAccountPage } from "../../src/js/jaycee/account-panel.js";
 import "../../src/js/ui-sounds.js";
 import { callTool, connect, request } from "./bridge.js";
@@ -9,7 +10,7 @@ const status = document.querySelector("#account-status");
 const retry = document.querySelector("#account-retry");
 const failed = (error) => {
   status.hidden = false;
-  status.textContent = error?.message || "Account could not be loaded.";
+  setText(status, error?.message || "Account could not be loaded.");
   retry.hidden = false;
 };
 const remember = (value) => {

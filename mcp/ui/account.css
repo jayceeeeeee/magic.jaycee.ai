@@ -10,6 +10,15 @@ body.account-embed { min-height: 0; padding: 0; }
   overflow: visible;
 }
 .account-embed .account-hud-trigger { display: none; }
+.account-embed .hud-left-controls {
+  position: relative;
+  top: auto;
+  left: auto;
+  width: min(430px, 100%);
+  margin-inline: auto;
+  padding: 12px 18px 0;
+  justify-content: flex-end;
+}
 .account-embed.has-account-panel .profile-manna-fields {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }

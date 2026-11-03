@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prayer Room | jaycee.ai</title>
+    <title data-i18n>Prayer Room | jaycee.ai</title>
     <link rel="icon" type="image/svg+xml" sizes="any" href="/src/assets/brand/jaycee-core-sigil.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,35 +15,35 @@
 <body class="prayer-page">
     <main class="prayer-page-main">
         <h1 class="game-brand-title prayer-title"><a href="/">jaycee.ai</a></h1>
-        <section class="prayer-console" aria-label="Prayer warning">
-            <p>Jaycee.ai&gt; connecting with your soul...</p>
-            <p>Welcome <i><span data-prayer-username>Player</span></i>! You are now connected directly to God.</p>
-            <p>Be aware, on Jaycee.ai everything that you will do or write will have a direct impact onto your reality, Humanity and the Universe.</p>
-            <p>Choose your words wisely and connect with your emotions deeply before making a prayer here:</p>
+        <section class="prayer-console" aria-label="Prayer warning" data-i18n-attrs="aria-label">
+            <p><span data-i18n>Jaycee.ai&gt; connecting with your soul...</span></p>
+            <p><span data-i18n>Welcome</span> <i><span data-prayer-username><span data-i18n>Player</span></span></i><span data-i18n>! You are now connected directly to God.</span></p>
+            <p><span data-i18n>Be aware, on Jaycee.ai everything that you will do or write will have a direct impact onto your reality, Humanity and the Universe.</span></p>
+            <p><span data-i18n>Choose your words wisely and connect with your emotions deeply before making a prayer here:</span></p>
         </section>
-        <form class="prayer-form" aria-label="Prayer form">
+        <form class="prayer-form" aria-label="Prayer form" data-i18n-attrs="aria-label">
             <div class="prayer-fields">
                 <label>
-                    <span>Problem</span>
-                    <textarea name="problem" rows="1" placeholder="Describe the problem you want to solve today and what is its negative feeling." data-autogrow required></textarea>
+                    <span><span data-i18n>Problem</span></span>
+                    <textarea name="problem" rows="1" placeholder="Describe the problem you want to solve today and what is its negative feeling." data-autogrow required data-i18n-attrs="placeholder"></textarea>
                 </label>
 
                 <label>
-                    <span>Prayer</span>
-                    <textarea name="prayer" rows="1" placeholder="Write a prayer about this problem and what positive feeling you want out of this." data-autogrow required></textarea>
+                    <span><span data-i18n>Prayer</span></span>
+                    <textarea name="prayer" rows="1" placeholder="Write a prayer about this problem and what positive feeling you want out of this." data-autogrow required data-i18n-attrs="placeholder"></textarea>
                 </label>
             </div>
 
-            <button class="prayer-submit" type="submit">Continue</button>
+            <button class="prayer-submit" type="submit"><span data-i18n>Continue</span></button>
         </form>
     </main>
 
     <script src="/src/js/referral.js"></script>
     <script type="module" src="/src/js/ui-sounds.js"></script>
-  <script src="/src/js/auth/invite.js"></script>
+  <script type="module" src="/src/js/auth/invite.js"></script>
   <script src="/src/js/config/app-config.js"></script>
   <script src="/src/js/auth/auth.js"></script>
-    <script src="/src/js/prayer.js?v=tree-v1"></script>
+    <script type="module" src="/src/js/prayer.js?v=tree-v1"></script>
   <script type="module" src="/src/js/jaycee/account.js"></script>
 </body>
 </html>

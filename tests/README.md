@@ -14,6 +14,7 @@ connecte pas à Supabase et n'a pas besoin de Node ni d'un serveur HTTP.
 | --- | --- |
 | `browser.ps1` | Syntaxe des modules JS, notifications, placeholders, carrousel et locks, compte à rebours, acceptation, panneau du compte et sauvegarde des skills |
 | `game-page.test.mjs` | Démarrage du jeu avec son HTML et CSS actuels, visiteur et compte connecté, mise en page mobile et style des boutons |
+| `i18n.test.mjs` | Anglais/français, choix mémorisé, stockage bloqué, synchronisation entre onglets, formulaires préservés, notifications et contrôles sur mobile |
 | `notifications.test.mjs` | Reçus, stockage local, reconnexion, isolation des comptes et reprises après erreur |
 | `level-two-quest.test.mjs`, `level-three-quest.test.mjs`, `level-four.test.mjs` | Éligibilité des notifications aux différents niveaux |
 | `manna.test.mjs` | Calculs par skill et cumul annuel |
@@ -36,3 +37,6 @@ de test : les mocks ne valident pas l'exécution réelle des fonctions SQL.
 `.tools/deno.exe run --allow-read scripts/check-frontend.ts` vérifie aussi que les
 ressources et imports locaux existent, que les modules du frontend sont accessibles
 depuis les pages et que les variables CSS utilisées sont définies.
+
+`.tools/deno.exe test --allow-read tests/i18n-catalog.test.ts` vérifie aussi les
+paramètres des traductions et la couverture du catalogue de notifications.

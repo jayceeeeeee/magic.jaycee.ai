@@ -1,3 +1,4 @@
+import { setText } from '../i18n.js';
 (function () {
     function isExistingAccountSignupResult(result) {
         const identities = result?.data?.user?.identities;
@@ -43,11 +44,11 @@
                     if (userError) throw userError;
                     if (!verified?.user) throw new Error("Your session could not be verified. Return to the original connection window and log in.");
                 }
-                status.textContent = data?.session
+                setText(status, data?.session
                     ? "Email confirmed. Return to the original connection window to continue."
-                    : "Return to the original connection window and log in to continue.";
+                    : "Return to the original connection window and log in to continue.");
             } catch (error) {
-                status.textContent = error?.message || "The email confirmation could not be completed.";
+                setText(status, error?.message || "The email confirmation could not be completed.");
             }
             return;
         }
@@ -100,11 +101,11 @@
                     } catch {
                         resumeError = "Your previous session could not be cleared. Please try again.";
                     }
-                    status.textContent = resumeError;
+                    setText(status, resumeError);
                     return false;
                 }
                 resumeError = error?.message || "Your session could not be verified. Please log in again.";
-                status.textContent = resumeError;
+                setText(status, resumeError);
                 return false;
             } finally {
                 resuming = false;
@@ -136,30 +137,30 @@
         }
 
         function showExistingAccountMessage() {
-            status.textContent = "An account with this email already exists.";
-            switcher.innerHTML = `Already have an account? <a href="${createAuthHref("/login.html", "login")}" data-auth-mode="login">Log in instead</a>.`;
+            setText(status, "An account with this email already exists.");
+            switcher.innerHTML = `<span data-i18n>Already have an account?</span> <a href="${createAuthHref("/login.html", "login")}" data-auth-mode="login"><span data-i18n>Log in instead</span></a>.`;
         }
 
         function renderMode() {
             const isSignup = mode === "signup";
 
-            submit.textContent = isSignup ? "Sign up" : "Log in";
+            setText(submit, isSignup ? "Sign up" : "Log in");
             password.autocomplete = isSignup ? "new-password" : "current-password";
             form.hidden = false;
             switcher.hidden = false;
             switcher.innerHTML = isSignup
-                ? `Already have an account? <a href="${createAuthHref("/login.html", "login")}" data-auth-mode="login">Log in</a>`
-                : `No account yet? <a href="${createAuthHref("/signup.html", "signup")}">Sign up</a>`;
-            status.textContent = resumeError;
+                ? `<span data-i18n>Already have an account?</span> <a href="${createAuthHref("/login.html", "login")}" data-auth-mode="login"><span data-i18n>Log in</span></a>`
+                : `<span data-i18n>No account yet?</span> <a href="${createAuthHref("/signup.html", "signup")}"><span data-i18n>Sign up</span></a>`;
+            setText(status, resumeError);
         }
 
         async function showConfirmation() {
             awaitingConfirmation = true;
             form.hidden = true;
             password.value = "";
-            status.textContent = isConnection
+            setText(status, isConnection
                 ? "Check your email to confirm your account, then return to this window."
-                : "Check your email to confirm your account.";
+                : "Check your email to confirm your account.");
             if (!isConnection) return;
             try { window.sessionStorage.setItem(pendingKey, String(Date.now())); } catch {}
             try {
@@ -177,7 +178,7 @@
             event.preventDefault();
             if (awaitingConfirmation) return;
             if (submit.disabled) return;
-            status.textContent = "";
+            setText(status, "");
             submit.disabled = true;
 
             const formData = new FormData(form);
@@ -196,7 +197,7 @@
                     })
                     : await window.JayceeAuth.signIn(email, passwordValue);
             } catch (error) {
-                status.textContent = error?.message || "Could not connect. Please try again.";
+                setText(status, error?.message || "Could not connect. Please try again.");
                 return;
             } finally {
                 submit.disabled = false;
@@ -208,7 +209,7 @@
                     return;
                 }
 
-                status.textContent = result.error.message;
+                setText(status, result.error.message);
                 return;
             }
 
@@ -222,7 +223,7 @@
                 return;
             }
 
-            status.textContent = "You are logged in.";
+            setText(status, "You are logged in.");
             clearPendingConfirmation();
             await window.JayceeUI?.waitForSound();
             window.location.href = redirectPath
@@ -233,7 +234,7 @@
         renderMode();
         if (awaitingConfirmation) await showConfirmation();
         if (callbackParams.has("error_description")) {
-            status.textContent = callbackParams.get("error_description");
+            setText(status, callbackParams.get("error_description"));
         }
     }
 
