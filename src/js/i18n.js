@@ -1,12 +1,12 @@
 import { FR } from "./locales/fr.js";
 
 export const LANGUAGE_KEY = "jaycee:language";
-const supported = (value) => value === "en" ? "en" : "fr";
+const supported = (value) => value === "fr" ? "fr" : "en";
 const readLanguage = () => {
   try {
     return supported(globalThis.localStorage?.getItem(LANGUAGE_KEY));
   } catch {
-    return "fr";
+    return "en";
   }
 };
 let language = readLanguage();

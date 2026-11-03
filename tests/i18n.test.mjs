@@ -4,15 +4,15 @@ export async function runI18nTests({ runtime, i18nSource, styles }) {
   const isolated = storage => new Function('globalThis', 'document', 'FR', `${i18nSource}; return { getLanguage, setLanguage, t };`)(storage, undefined, FR);
   const env = { localStorage: { getItem: key => stored.get(key), setItem: (key, value) => stored.set(key, value) } };
   const firstPage = isolated(env);
-  assert(firstPage.getLanguage() === 'fr', 'French must be the initial default');
+  assert(firstPage.getLanguage() === 'en', 'English must be the initial default');
   firstPage.setLanguage('en');
   assert(isolated(env).getLanguage() === 'en', 'an explicit English preference must be restored');
   firstPage.setLanguage('fr');
   assert(isolated(env).getLanguage() === 'fr', 'language was not restored on the next page');
   firstPage.setLanguage('xx');
-  assert(firstPage.getLanguage() === 'fr', 'unsupported language did not fall back to French');
+  assert(firstPage.getLanguage() === 'en', 'unsupported language did not fall back to English');
   const blocked = isolated({ get localStorage() { throw new Error('blocked'); } });
-  assert(blocked.getLanguage() === 'fr', 'blocked storage must default to French');
+  assert(blocked.getLanguage() === 'en', 'blocked storage must default to English');
   blocked.setLanguage('fr');
   assert(blocked.t('Save') === 'Enregistrer', 'blocked storage prevented in-memory language selection');
 

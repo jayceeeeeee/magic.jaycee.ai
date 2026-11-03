@@ -36,7 +36,7 @@ le déploiement de la base est une étape distincte, à demander explicitement.
 
 ## Vérifier les changements
 
-La langue de l’interface est gérée par `src/js/i18n.js`, avec le français par
+La langue de l’interface est gérée par `src/js/i18n.js`, avec l’anglais par
 défaut et le choix mémorisé dans le navigateur (`jaycee:language`). Les messages
 français sont centralisés dans `src/js/locales/fr.js` : le texte anglais sert de
 clé, et les paramètres `{name}` doivent être conservés dans la traduction.
