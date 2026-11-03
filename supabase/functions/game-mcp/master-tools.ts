@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { z } from "zod";
 import { GAME_RULES } from "./game-rules.ts";
+import { technomancyMasterId } from "./prayer-lore.ts";
 import {
   DEV_MASTER_ACCOUNT_IDS,
   getFeaturedMasters,
@@ -181,7 +182,8 @@ export function registerMasterTools(server: McpServer, {
           requires_master_selection: false,
           master_id,
           player: existing.data,
-          next_tool: "get_my_progress",
+          next_tool: master_id === technomancyMasterId(masterAccountIds) ? "get_prayer_guide" : "get_my_progress",
+          introduce_skill: master_id === technomancyMasterId(masterAccountIds),
         });
       }
       const candidate = (await choices()).find((row) => row.id === master_id);
@@ -203,7 +205,8 @@ export function registerMasterTools(server: McpServer, {
         master_id,
         master_name: candidate.username,
         player: selected.data,
-        next_tool: "get_my_progress",
+        next_tool: master_id === technomancyMasterId(masterAccountIds) ? "get_prayer_guide" : "get_my_progress",
+        introduce_skill: master_id === technomancyMasterId(masterAccountIds),
       });
     }),
   );

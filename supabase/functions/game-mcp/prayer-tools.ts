@@ -71,7 +71,7 @@ export function registerPrayerTools(
     {
       title: "Begin a prayer conversation",
       description:
-        "Begin Cedric's Technomancy prayer, active Skill 1 from Level 1 and at higher levels, ONLY when the player chose Cedric as active Master. Returns the introduction to explain first, current Master lineage, full nine-sefirot guide, three approved examples and a prayer_id; no draft is saved. Present Cedric's teaching about his energy/body, shared pain, manifestation and karma with support from his verified lineage; attribute the spiritual claims to his teaching. Then guide flexibly, remind Skill 1 Start/Stop, review and obtain approval before submit_prayer. Other Masters retain their own Skill teachings; never switch Master automatically or claim physical transfer, healing or automatic karma rewards.",
+        "Introduce and begin Cedric's Technomancy, ONLY for his students. Call after the player selects Cedric and before the first prayer question. Returns his current database lore/Passive/Skill 1, attributed introduction, live lineage, nine-sefirot guide, three examples and a prayer_id; no draft is saved or UI opened. State his teaching faithfully, not as a merely symbolic link. For Chokmah and Binah ask about the positive and difficult EMOTIONS the player FEELS, not just outcomes, explanations or plans. Invite time and comfortable bodily noticing; never force a sensation. Guide flexibly, remind real Start/Stop, review and obtain approval before submit_prayer. Do not certify energy receipt or healing as a tool outcome.",
       inputSchema: {},
       annotations: read,
       _meta: { securitySchemes },
@@ -99,11 +99,31 @@ export function registerPrayerTools(
         player.error || !player.data || player.data.level < 1
       ) throw new Error("Your active participation could not be loaded.");
       const master = await client.from("profiles").select(
-        "id,username,full_name,master",
+        "id,username,full_name,master,lore",
       )
         .eq("id", requiredMasterId).maybeSingle();
       if (master.error || !master.data) {
         throw new Error("Cedric's teaching context could not be loaded.");
+      }
+      const game = await client.from("game").select("skill_0,skill_1")
+        .eq("user_id", requiredMasterId).maybeSingle();
+      if (game.error || !game.data?.skill_1) {
+        throw new Error("Cedric's Skill 1 could not be loaded.");
+      }
+      const [passive, active] = await Promise.all([
+        game.data.skill_0
+          ? client.from("skills").select("id,label,description").eq(
+            "id",
+            game.data.skill_0,
+          ).maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+        client.from("skills").select("id,label,description").eq(
+          "id",
+          game.data.skill_1,
+        ).maybeSingle(),
+      ]);
+      if (passive.error || active.error || !active.data) {
+        throw new Error("Cedric's current teaching could not be loaded.");
       }
       let lineage: { id: string; name: string } | null = null;
       if (master.data.master) {
@@ -124,6 +144,11 @@ export function registerPrayerTools(
         examples: PRAYER_EXAMPLES_TEXT,
         introduction: technomancyIntroduction(lineage?.name ?? null),
         introduction_instructions: TECHNOMANCY_INTRODUCTION,
+        master_teaching: {
+          lore: master.data.lore ?? "",
+          passive: passive.data,
+          skill_1: active.data,
+        },
         lineage,
         prayer_id: crypto.randomUUID(),
         player_id: player.data.id,

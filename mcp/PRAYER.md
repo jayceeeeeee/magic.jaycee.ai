@@ -292,3 +292,12 @@ Main n'a ?t? ni modifi?e ni fusionn?e : l'auteur publiera lui-m?me le nouveau
 code de sauvegarde par son merge. ? sa demande, la suppression en production
 a pr?c?d? ce merge ; l'ancien formulaire peut refuser les envois jusqu'? cette
 publication. Ne pas rejouer les migrations d?j? appliqu?es au moment du merge.
+
+
+### Release : introduction et emotions, 3 novembre 2026
+
+Le guide presente le transfert energetique affirme par Cedric avec une attribution claire a son enseignement, sans le reformuler en symbole ni certifier une guerison. Chokmah et Binah commencent par les emotions ressenties, positives et difficiles ; la perception corporelle est facultative et aucune sensation n'est imposee. Ces consignes sont partagees par le prompt, les resources, les exemples et les descriptions des tools.
+
+Apres select_master pour Cedric, next_tool vaut get_prayer_guide et introduce_skill vaut true. Le suivi de selection depuis l'interface demande la meme introduction, avant toute question et sans lancer le timer ni enregistrer automatiquement. Le guide renvoie master_teaching : lore public, Passive et Skill 1 actuels en base, avec la lignee verifiee. Les profils dev et production ne sont pas synchronises automatiquement.
+
+Deploiement game-mcp : dev 35, production 10 ; meme SHA-256 46f97858354c39f7a3cc04f962d19536ebf7f41dcfcd11695f263a5d37ffd611. Les 49 tests MCP, le controle TypeScript, la generation UI et le parcours navigateur passent. Les harness du formulaire et du navigateur ont ete adaptes a la localisation existante. La connexion magic-dev actuelle renvoie une erreur interne du connecteur ; le rendu conversationnel reste a revalider apres rafraichissement du plugin. Aucune modification de main, du schema ou du formulaire.

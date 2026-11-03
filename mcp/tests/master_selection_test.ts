@@ -258,6 +258,8 @@ Deno.test("selection uses the existing RPC, is retry-safe and cannot change a li
     selected.player.level === 1 && !selected.requires_master_selection,
     "RPC must start Level 1",
   );
+  assert(selected.next_tool === "get_prayer_guide" && selected.introduce_skill,
+    "Cedric selection must introduce his Skill before practice");
   await f.call("select_master", { master_id: masterId });
   assert(f.writes() === 1, "Repeated click must not restart the quest");
   assert(

@@ -144,6 +144,7 @@ function installMock({ locked = false, userId = "owner", historyLength = 1, imag
         skill_3_start: "2026-01-01T00:00:00Z" }]));
     }
     if (url.pathname === "/rest/v1/game") {
+      if (url.searchParams.get("user_id") === "eq.89cf977d-ecc0-4dbb-8f4f-fe6b9d7067c5") return Promise.resolve(Response.json({skill_0:"teacher-passive",skill_1:"teacher-active"}));
       if (url.searchParams.get("user_id") === "in.(master-one)") {
         return Promise.resolve(Response.json([{ id: "master-game", user_id: "master-one",
           skill_1: "master-skill", skill_3: "master-earth" }]));
@@ -152,6 +153,7 @@ function installMock({ locked = false, userId = "owner", historyLength = 1, imag
       return Promise.resolve(Response.json({ id: "authored-game", user_id: "owner", skill_0: "own-skill" }));
     }
     if (url.pathname === "/rest/v1/skills") {
+      if (["eq.teacher-passive", "eq.teacher-active"].includes(url.searchParams.get("id") || "")) return Promise.resolve(Response.json({id:url.searchParams.get("id")!.slice(3),label:"Current skill",description:"Current teaching"}));
       if (url.searchParams.get("id") === "in.(master-skill,master-earth)") {
         return Promise.resolve(Response.json([{ id: "master-skill", label: "Quest" },
           { id: "master-earth", label: "Master Earth" }]));

@@ -1,4 +1,4 @@
-// Execute the actual classic browser script with a minimal DOM and Supabase stub.
+// Execute the browser module body with a minimal DOM, localization and Supabase stub.
 const assert = (ok: unknown, message: string) => {
   if (!ok) throw new Error(message);
 };
@@ -70,8 +70,9 @@ async function submit({ signedIn = false, fail = false } = {}) {
     "FormData",
     "performance",
     "requestAnimationFrame",
-    source,
-  )(win, document, FormData, { now: () => 0 }, () => {});
+    "setText",
+    source.replace(/^import \{ setText \} from '\.\/i18n\.js';\r?\n/, ""),
+  )(win, document, FormData, { now: () => 0 }, () => {}, (el: any, text: string) => { el.textContent = text; });
   await onSubmit({ preventDefault() {} });
   return { inserted, storage, button, status, win };
 }

@@ -30,9 +30,12 @@ export async function gameEvent(event) {
   await request("ui/update-model-context", { structuredContent: event }).catch(
     () => {},
   );
+  const nextStep = event.type === "master_selected"
+    ? "Read get_game_state for the selected Master. If prayer_practice.available is true, call get_prayer_guide and introduce Cedric's Technomancy using its current master_teaching, introduction and lineage before asking the first prayer question. Emphasize the felt positive and difficult emotions in Chokmah/Binah. Do not start practice or save automatically. If another Master was selected, introduce their own first Skill instead."
+    : "Briefly explain the new quest or progression using the saved game state.";
   const text = `Game action completed in the interface: ${
     JSON.stringify(event)
-  }. Briefly explain the new quest or progression using the saved game state. Do not repeat the action.`;
+  }. ${nextStep} Do not repeat the action.`;
   try {
     await request("ui/message", {
       role: "user",

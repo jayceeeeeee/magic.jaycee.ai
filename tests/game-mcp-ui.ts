@@ -127,7 +127,7 @@ frame.srcdoc=${
     GAME_HTML.replace(/<link href="https:\/\/fonts.googleapis.com[^>]+>/g, "")
       .replace(
         "<head>",
-        '<head><script>window.__played=[];window.Audio=class extends EventTarget{constructor(src){super();this.src=src;}play(){window.__played.push(this.src);queueMicrotask(()=>this.dispatchEvent(new Event("ended")));return Promise.resolve();}};<\/script>',
+        '<head><script>localStorage.setItem("jaycee:language","en");window.__played=[];window.Audio=class extends EventTarget{constructor(src){super();this.src=src;}play(){window.__played.push(this.src);queueMicrotask(()=>this.dispatchEvent(new Event("ended")));return Promise.resolve();}};<\/script>',
       ),
   ).replaceAll("</script", "<\\/script")
 };`;

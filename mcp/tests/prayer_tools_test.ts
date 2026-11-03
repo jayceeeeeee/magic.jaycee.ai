@@ -87,6 +87,7 @@ function fixture(
                     data: {
                       id: filters.id,
                       username: "Cedric",
+                      lore: "Current public teaching",
                       master: lineageName ? "parent-master" : null,
                     },
                     error: null,
@@ -109,6 +110,22 @@ function fixture(
                       : production
                       ? TECHNOMANCY_MASTER_ID
                       : master,
+                  },
+                  error: null,
+                };
+              }
+              if (name === "game") {
+                return {
+                  data: { skill_0: "passive", skill_1: "active" },
+                  error: null,
+                };
+              }
+              if (name === "skills") {
+                return {
+                  data: {
+                    id: filters.id,
+                    label: filters.id,
+                    description: "Current skill description",
                   },
                   error: null,
                 };
@@ -178,7 +195,12 @@ Deno.test("Technomancy introduction uses environment identity and live or missin
   const original = (await fixture().call("get_prayer_guide")).structuredContent;
   assert(
     original.lineage.name === "Paramahansa Yogananda" &&
-      original.introduction.includes("According to his spiritual teaching") &&
+      original.introduction.includes(
+        "describes his Technomancy teaching this way",
+      ) &&
+      original.master_teaching.lore === "Current public teaching" &&
+      original.master_teaching.skill_1.description ===
+        "Current skill description" &&
       original.introduction.includes("Paramahansa Yogananda"),
     "Missing introduction or lineage",
   );
