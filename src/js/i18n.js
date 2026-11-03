@@ -120,27 +120,24 @@ export const setLanguage = (value, { persist = true } = {}) => {
 export const createLanguagePicker = () => {
   const label = document.createElement("label");
   label.className = "language-picker";
-  const flag = document.createElement("span");
-  flag.setAttribute("aria-hidden", "true");
+  const code = document.createElement("span");
+  code.setAttribute("aria-hidden", "true");
   const select = document.createElement("select");
   select.dataset.languageSelect = "";
   setAttributeText(select, "aria-label", "Language");
-  for (const [value, title] of [["en", "🇬🇧 English"], ["fr", "🇫🇷 Français"]]) {
+  for (const [value, title] of [["en", "English"], ["fr", "Français"]]) {
     const option = document.createElement("option");
     option.value = value;
     option.textContent = title;
     select.append(option);
   }
-  // SVG flags also render on Windows versions without flag emoji glyphs.
   const refresh = () => {
     select.value = language;
-    flag.innerHTML = language === "fr"
-      ? '<svg viewBox="0 0 30 20" width="24" height="16"><path fill="#fff" d="M0 0h30v20H0z"/><path fill="#002395" d="M0 0h10v20H0z"/><path fill="#ed2939" d="M20 0h10v20H20z"/></svg>'
-      : '<svg viewBox="0 0 30 20" width="24" height="16"><path fill="#012169" d="M0 0h30v20H0z"/><path stroke="#fff" stroke-width="5" d="m0 0 30 20M30 0 0 20"/><path stroke="#c8102e" stroke-width="2" d="m0 0 30 20M30 0 0 20"/><path stroke="#fff" stroke-width="7" d="M15 0v20M0 10h30"/><path stroke="#c8102e" stroke-width="4" d="M15 0v20M0 10h30"/></svg>';
+    code.textContent = language.toUpperCase();
   };
   bindTranslation(select, "language", refresh);
   select.addEventListener("change", () => setLanguage(select.value));
-  label.append(flag, select);
+  label.append(code, select);
   return label;
 };
 

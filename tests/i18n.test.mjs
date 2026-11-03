@@ -102,8 +102,8 @@ export async function runI18nTests({ runtime, i18nSource, styles }) {
     const donate = doc.querySelector('.donate-hud-trigger').getBoundingClientRect();
     const language = doc.querySelector('.language-picker').getBoundingClientRect();
     const account = doc.querySelector('[data-account-toggle]').getBoundingClientRect();
-    const flag = doc.querySelector('.language-picker > span svg').getBoundingClientRect();
-    assert(Math.abs(flag.top + flag.height / 2 - language.top - language.height / 2) < 0.5, `flag is not vertically centered at ${width}px`);
+    const code = doc.querySelector('.language-picker > span');
+    assert(code.textContent === 'FR' && !code.querySelector('svg'), `language code is missing at ${width}px`);
     const arrow = frame.contentWindow.getComputedStyle(doc.querySelector('.language-picker'), '::after');
     assert(arrow.top === `${(language.height - 2) / 2}px` && arrow.transform === 'matrix(1, 0, 0, 1, 0, -4)', `arrow is not vertically centered at ${width}px`);
     assert(language.left >= donate.right && language.right < account.left && language.height >= 34, `HUD controls overlap at ${width}px`);
