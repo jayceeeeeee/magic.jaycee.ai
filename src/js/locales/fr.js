@@ -275,7 +275,7 @@ export const FR = Object.freeze({
   "Connect with a Master: Each Master offers a different path, with different quests and benefits. You have {firstActivePassiveTime} to choose a Master and get your first quest. Beyond that timing your account will be deleted automatically. Click on a Master below to link to their game.":
     "Liez-vous à un Maître : chaque Maître propose un chemin différent, avec ses propres quêtes et avantages. Vous avez {firstActivePassiveTime} pour choisir un Maître et recevoir votre première quête. Passé ce délai, votre compte sera automatiquement supprimé. Cliquez sur un Maître ci-dessous pour rejoindre son jeu.",
   "Unlock Level 2: burn Karma faster and try to get enlightened in this life, save your progress and connect directly with a Master.":
-    "Débloquez le niveau 2 : brûlez votre karma plus vite et tentez d’atteindre l’éveil dans cette vie, enregistrez votre progression et entrez en lien direct avec un Maître.",
+    "Débloquez le niveau 2 : brûlez votre karma plus vite et tentez d’atteindre l'illumination dans cette vie, enregistrez votre progression et entrez en lien direct avec un Maître.",
   "Congratulations! You have been granted a permanent account linked to {masterName}.  You now have the ability to make your account visible for others to play your game! Go to your account to enable it.":
     "Félicitations ! Vous avez obtenu un compte permanent lié à {masterName}. Vous pouvez désormais rendre votre compte visible pour que d’autres jouent à votre jeu ! Activez cette option dans votre compte.",
   "Congratulations! You have unlocked Level 4! You have access to a new skill {skillFourName} and burned 1 more year of Karma!":
