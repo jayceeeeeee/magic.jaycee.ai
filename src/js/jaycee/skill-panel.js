@@ -112,7 +112,7 @@ export const updateQuestCountdown = (element, now = Date.now()) => {
   const remainingSeconds = Math.max(0, Math.ceil((Number(element.dataset.questDeadline) - now) / 1000));
 
   setText(element, remainingSeconds > 0
-    ? message('Time remaining: {time}', { time: formatDuration(remainingSeconds, { compact: false }) })
+    ? message('Time remaining: {time}', { time: formatDuration(remainingSeconds, { compact: element.hasAttribute("data-practice-deadline") }) })
     : "Quest time expired.");
 };
 
@@ -163,6 +163,8 @@ export const createSkillPanel = ({
   isDescriptionClosing = false,
   onSelect,
   onTogglePractice,
+  continuity = { enabled: false, limit: 1 },
+  onContinuityChange,
   passiveModel,
   player = null,
   practicingSkillIndex = null,
@@ -258,6 +260,62 @@ export const createSkillPanel = ({
       const details = document.createElement("div");
       const countdown = document.createElement("p");
       const progress = document.createElement("p");
+      const header = document.createElement("div");
+      const controls = document.createElement("div");
+      const options = document.createElement("div");
+      const mode = document.createElement("select");
+      const count = document.createElement("input");
+      const cycles = document.createElement("p");
+
+      header.className = "profile-practice-header";
+      controls.className = "profile-continuity";
+      options.className = "profile-continuity-options";
+      for (const [value, label] of [["limited", "Custom cycles"], ["infinite", "Continuous"]]) {
+        const option = document.createElement("option");
+        option.value = value;
+        setText(option, label);
+        mode.append(option);
+      }
+      mode.value = continuity.enabled && !continuity.limit ? "infinite" : "limited";
+      mode.disabled = isDescriptionClosing || !player?.id;
+      setAttributeText(mode, "aria-label", "Repetition mode");
+      // A text field can show ∞ while disabled; numeric input mode keeps the keypad.
+      count.type = "text";
+      count.inputMode = "numeric";
+      count.pattern = "[0-9]+";
+      count.maxLength = 4;
+      let customCount = continuity.customLimit || continuity.limit || 1;
+      setAttributeText(count, "aria-label", "Total practice cycles");
+      setAttributeText(count, "title", "Total practice cycles, including the current cycle");
+      const updateOptions = () => {
+        const infinite = mode.value === "infinite";
+        count.disabled = mode.disabled || infinite;
+        count.value = infinite ? "∞" : String(customCount);
+      };
+      const change = () => {
+        if (!count.disabled) {
+          customCount = /^[0-9]+$/.test(count.value)
+            ? Math.min(9999, Math.max(1, Number(count.value))) : 1;
+        }
+        updateOptions();
+        onContinuityChange?.(activeIndex, {
+          enabled: true, limit: mode.value === "infinite" ? null : customCount, customLimit: customCount
+        });
+      };
+      // Preserve the custom count when toggling to and from infinity.
+      mode.addEventListener("change", () => { updateOptions(); change(); });
+      count.addEventListener("beforeinput", (event) => {
+        if (event.data && /[^0-9]/.test(event.data)) event.preventDefault();
+      });
+      count.addEventListener("input", () => {
+        if (/[^0-9]/.test(count.value)) count.value = String(customCount);
+      });
+      count.addEventListener("change", change);
+      cycles.dataset.practiceCycles = String(activeIndex);
+      setText(cycles, message("Cycles: {done} / {total}", { done: 0, total: continuity.enabled ? continuity.limit || "∞" : 1 }));
+      options.append(mode, count);
+      controls.append(options, cycles);
+      updateOptions();
 
       details.className = "profile-skill-practice-details";
       details.dataset.skillPracticeDetails = String(activeIndex);
@@ -265,7 +323,8 @@ export const createSkillPanel = ({
       progress.dataset.practiceProgress = "";
       details.append(countdown, progress);
       updatePracticeDetails(details, getActiveQuestInfo({ activeModels, player, selectedAbilityIndex: activeIndex }));
-      description.append(details);
+      header.append(details, controls);
+      description.append(header);
       if (activeAbility.description.trim()) description.append(document.createElement("hr"));
     }
     if (activeAbility.description.trim()) {

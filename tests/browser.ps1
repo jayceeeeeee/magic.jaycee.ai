@@ -240,6 +240,26 @@ assert(lineageUltimate.querySelector('.profile-ultimate-master')?.textContent===
 assert(runtime.getActiveQuestInfo({activeModels:models,player:levelFour}).deadline!==null,'Level 4 active skill timer is missing');
 const levelFourActive=runtime.createSkillPanel({activeModels:models,currentLevel:4,passiveModel:{skill:null},player:levelFour,selectedIndex:3});
 assert(levelFourActive.querySelector('[data-skill-practice-details]')&&levelFourActive.querySelector('[data-quest-deadline]'),'Level 4 active descriptions lost their countdown/practice details');
+let continuityOptions;
+const continuityPanel=runtime.createSkillPanel({activeModels:models,currentLevel:4,passiveModel:{skill:null},player:levelFour,selectedIndex:3,onContinuityChange:(_index,value)=>continuityOptions=value});
+const repeatMode=continuityPanel.querySelector('.profile-continuity select'),repeatCount=continuityPanel.querySelector('.profile-continuity input');
+assert(repeatMode.value==='limited'&&repeatMode.options.length===2&&repeatCount.value==='1','Practice must default to one custom cycle with two modes');
+assert(!repeatCount.disabled&&!repeatCount.hidden,'Custom count must be visible and editable');
+assert(continuityPanel.querySelector('.profile-continuity').children.length===2,'Cycle controls must occupy exactly two rows');
+repeatCount.value='12';repeatCount.dispatchEvent(new Event('change'));
+assert(continuityOptions.enabled&&continuityOptions.limit===12&&!repeatCount.hidden,'Finite continuity did not enable twelve cycles');
+repeatMode.value='infinite';repeatMode.dispatchEvent(new Event('change'));
+assert(continuityOptions.limit===null&&!repeatCount.hidden&&repeatCount.disabled&&repeatCount.value==='∞','Infinite mode must show a disabled infinity field');
+repeatMode.value='limited';repeatMode.dispatchEvent(new Event('change'));
+assert(repeatCount.value==='12'&&!repeatCount.disabled,'Returning to custom mode must restore its count');
+repeatCount.value='0';repeatCount.dispatchEvent(new Event('change'));
+assert(continuityOptions.limit===1,'Invalid cycle counts must be clamped to one');
+for(const invalid of ['-3','2.5','2,5','1e3','Infinity','']){
+  repeatCount.value=invalid;repeatCount.dispatchEvent(new Event('change'));
+  assert(continuityOptions.limit===1&&repeatCount.value==='1','Invalid cycle counts must never reach the timer: '+invalid);
+}
+const decimalInput=new InputEvent('beforeinput',{data:'.',cancelable:true});repeatCount.dispatchEvent(decimalInput);
+assert(decimalInput.defaultPrevented,'Decimal separators must be rejected while typing');
 assert(!isNotificationVisible(definitions[1],null,{hasAccount:true,hasMaster:true,player:levelFour}),'Timed quest still visible at Level 4');
 let savedProfile;
 let copiedReferral,sharedReferral;

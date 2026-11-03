@@ -148,6 +148,29 @@ assert(frame.contentWindow.__played.at(-1)===${
 },'Skill button click sound missing');
 assert(doc.querySelector('.profile-skill-description strong')?.textContent==='ability 1','Shared Markdown missing');
 await doc.fonts.ready;
+const repeatMode=doc.querySelector('.profile-continuity select');
+assert(repeatMode.value==='limited'&&doc.querySelector('.profile-continuity input').value==='1','Practice must default to one custom cycle');
+repeatMode.value='limited';repeatMode.dispatchEvent(new Event('change'));
+const timerRect=doc.querySelector('[data-skill-practice-details]').getBoundingClientRect();
+const repeatRect=doc.querySelector('.profile-continuity').getBoundingClientRect();
+assert(repeatRect.left>=timerRect.right&&Math.abs(repeatRect.top-timerRect.top)<2,'Continuity must sit to the right of the timers');
+assert(doc.documentElement.scrollWidth<=frame.clientWidth,'Repeat settings overflow the mobile viewport');
+const countRect=doc.querySelector('.profile-continuity input').getBoundingClientRect();
+assert(Math.abs(countRect.top-repeatMode.getBoundingClientRect().top)<2,'The custom count must share the selector row');
+assert(doc.querySelector('.profile-continuity').children.length===2,'Cycle controls must stay on two rows');
+assert(Math.abs(repeatRect.height-timerRect.height)<2,'Cycle controls must match the height of the two timers');
+repeatMode.value='infinite';repeatMode.dispatchEvent(new Event('change'));
+assert(doc.querySelector('.profile-continuity input').disabled&&doc.querySelector('.profile-continuity input').value==='∞','Infinite mode must keep a visible disabled infinity field');
+repeatMode.value='limited';repeatMode.dispatchEvent(new Event('change'));
+const language=doc.querySelector('[data-language-select]');
+language.value='fr';language.dispatchEvent(new Event('change'));
+assert(repeatMode.selectedOptions[0].textContent==='Cycles personnalisés','Custom cycle label must be natural French');
+for(const line of doc.querySelectorAll('[data-skill-practice-details] p')){
+  const lineHeight=parseFloat(frame.contentWindow.getComputedStyle(line).lineHeight);
+  assert(line.getBoundingClientRect().height<lineHeight*1.5,'French timer text must stay on one line per timer');
+}
+language.value='en';language.dispatchEvent(new Event('change'));
+repeatMode.value='limited';repeatMode.dispatchEvent(new Event('change'));
 assert(frame.contentWindow.getComputedStyle(doc.querySelector('[data-practice-toggle="1"]')).fontFamily.includes('Rajdhani'),'Start/Stop font must match the shared app font');
 doc.querySelector('[data-practice-toggle="1"]').click();
 assert(frame.contentWindow.__played.at(-1)===${

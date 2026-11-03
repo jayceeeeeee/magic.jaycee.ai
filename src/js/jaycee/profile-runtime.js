@@ -637,6 +637,7 @@ export const initJayceePage = async ({ data = null, auth = window.JayceeAuth, no
   let skillForms = [];
   let skills = [];
   let practice = null;
+  const continuity = new Map();
   let notifications = null;
   const sounds = new SoundEffects();
   let isQuestAcceptSaving = false;
@@ -870,20 +871,34 @@ export const initJayceePage = async ({ data = null, auth = window.JayceeAuth, no
           || (index === Number(currentPlayer.level) && isQuestPending(currentPlayer))
           || !activeModels[index - 1]?.skill) return;
 
-        if (practice.active?.skillNumber === index) {
+        if (practice.skillNumber === index) {
           practice.stop();
           onGameEvent({ type: 'practice_stopped', player_id: currentPlayer.id, skill_number: index });
           closeSkillDescription(index);
           return;
         }
-        practice.start(currentPlayer.id, index, currentPlayer[`skill_${index}_start`] || null);
+        if (practice.pending.length || practice.error) return;
+        const cycleSeconds = activeModels[index - 1].questSeconds;
+        practice.start(currentPlayer.id, index, currentPlayer[`skill_${index}_start`] || null, {
+          ...(continuity.get(index) || {}), cycleSeconds,
+          remainingSeconds: Math.max(0, cycleSeconds - (Number(currentPlayer[`skill_${index}_practice`]) || 0))
+        });
         onGameEvent({ type: 'practice_started', player_id: currentPlayer.id, skill_number: index });
+        updateLiveUI();
+      },
+      continuity: continuity.get(closingAbilityIndex ?? selectedAbilityIndex),
+      onContinuityChange: (index, options) => {
+        continuity.set(index, options);
+        if (practice?.skillNumber === index) {
+          Object.assign(practice.run, options);
+          if (options.enabled && options.limit && practice.run.completed >= options.limit) practice.stop();
+        }
         updateLiveUI();
       },
       isDescriptionClosing: closingAbilityIndex !== null,
       passiveModel,
       player: practice?.project(currentPlayer) || currentPlayer,
-      practicingSkillIndex: practice?.active?.skillNumber ?? null,
+      practicingSkillIndex: practice?.skillNumber ?? null,
       selectedIndex: closingAbilityIndex ?? selectedAbilityIndex,
       masterLineage,
       hasLineageMaster: Boolean(activeMasterProfile.master),
@@ -907,8 +922,9 @@ export const initJayceePage = async ({ data = null, auth = window.JayceeAuth, no
   };
 
   const updateLiveUI = () => {
+    practice?.tick?.();
     const player = practice?.project(currentPlayer) || currentPlayer;
-    const activeSkill = practice?.active?.skillNumber;
+    const activeSkill = practice?.skillNumber ?? practice?.active?.skillNumber;
     const models = getActiveSkillModels({ gameForm, skillForms });
     shell.querySelectorAll("[data-skill-practice-details]").forEach((element) => {
       updatePracticeDetails(element, getActiveQuestInfo({
@@ -945,7 +961,7 @@ export const initJayceePage = async ({ data = null, auth = window.JayceeAuth, no
       button.classList.toggle("is-practicing", isPracticing);
       button.setAttribute("aria-pressed", String(button.classList.contains("is-active")));
       setAttributeText(button, "data-state", isPracticing
-        ? message("Using · {time}", { time: formatDuration(Math.floor(practice.sessionElapsed()), { compact: false }) || "0s" })
+        ? practice.continuation ? "Saving cycle…" : message("Using · {time}", { time: formatDuration(Math.floor(practice.sessionElapsed()), { compact: false }) || "0s" })
         : index === 0 ? "Passive" : button.disabled ? "" : index === 4 ? "Ultimate" : "Ready");
     });
     shell.querySelectorAll("[data-practice-toggle]").forEach((button) => {
@@ -956,10 +972,15 @@ export const initJayceePage = async ({ data = null, auth = window.JayceeAuth, no
     });
     const status = shell.querySelector(".profile-practice-status");
     if (status) setText(status, practice?.error || "");
-    if (activeSkill && models[activeSkill - 1]?.skill
-      && Number(player?.[`skill_${activeSkill}_practice`]) >= models[activeSkill - 1].questSeconds) {
-      practice.stop();
-    }
+    shell.querySelectorAll("[data-practice-cycles]").forEach((element) => {
+      const index = Number(element.dataset.practiceCycles);
+      const run = practice?.run;
+      const completed = run?.skillNumber === index ? run.completed : 0;
+      const options = continuity.get(index);
+      setText(element, message("Cycles: {done} / {total}", {
+        done: completed, total: options?.enabled ? options.limit || "∞" : Math.max(1, completed + (practice?.skillNumber === index ? 1 : 0))
+      }));
+    });
   };
 
   const refreshExpiredSkillCycles = async () => {

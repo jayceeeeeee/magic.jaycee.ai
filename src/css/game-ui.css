@@ -575,6 +575,58 @@
 .profile-skill-practice-details p {
   margin: 0;
 }
+.profile-practice-header {
+  --practice-line-height: 1.08rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px 16px;
+}
+.profile-practice-header .profile-skill-practice-details { min-width: 0; overflow-wrap: anywhere; line-height: var(--practice-line-height); }
+.profile-continuity {
+  display: grid;
+  justify-items: end;
+  grid-template-rows: repeat(2, var(--practice-line-height));
+  gap: 0;
+  margin-left: auto;
+  color: var(--accent-soft);
+  font: 0.68rem/var(--practice-line-height) "Share Tech Mono", monospace;
+}
+.profile-continuity-options {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.profile-continuity [hidden] { display: none; }
+.profile-continuity :is(input, select):focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 3px;
+}
+.profile-continuity-options :is(input, select) {
+  box-sizing: border-box;
+  height: var(--practice-line-height);
+  min-height: 0;
+  padding: 0 5px;
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
+  border-radius: 5px;
+  background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.1), rgba(0, 0, 0, 0.24));
+  color: var(--accent-soft);
+  font: inherit;
+  line-height: 1;
+}
+.profile-continuity-options input { text-align: center; }
+.profile-continuity-options input:disabled { opacity: 0.6; cursor: default; }
+.profile-continuity-options input { width: 42px; }
+.profile-continuity-options select { field-sizing: content; width: auto; cursor: pointer; }
+.profile-continuity-options option { background: #131b1d; }
+.profile-continuity p { margin: 0; opacity: 0.75; white-space: nowrap; }
+@media (max-width: 480px) {
+  .profile-practice-header { --practice-line-height: 0.975rem; column-gap: 8px; }
+  .profile-practice-header .profile-skill-practice-details { font-size: 0.65rem; }
+  .profile-continuity { font-size: 0.62rem; }
+  .profile-continuity-options { gap: 5px; }
+  .profile-continuity-options input { width: 34px; }
+}
 .profile-parameter-section > hr {
   width: 100%;
   margin: 5px 0;

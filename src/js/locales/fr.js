@@ -1,5 +1,13 @@
 // English source messages are translation keys. Preserve every {placeholder}.
 export const FR = Object.freeze({
+  "One cycle": "Un seul cycle",
+  "Custom cycles": "Cycles personnalisés",
+  "Continuous": "En continu",
+  "Saving cycle…": "Enregistrement…",
+  "Repetition mode": "Mode de répétition",
+  "Total practice cycles": "Nombre total de cycles",
+  "Total practice cycles, including the current cycle": "Nombre total de cycles, cycle actuel inclus",
+  "Cycles: {done} / {total}": "Cycles : {done} / {total}",
   "Donate": "Faire un don",
   "Language": "Langue",
   "Play": "Jouer",
