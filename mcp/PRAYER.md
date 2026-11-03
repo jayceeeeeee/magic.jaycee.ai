@@ -38,24 +38,27 @@ existant reste distinct et conserve son comportement.
 
 ## Stockage et compatibilité
 
-Même table `public.prayers`. Les champs `problem`, `prayer`, `username` et les
-anciennes lignes sont conservés. Les nouvelles colonnes sont :
+Même table `public.prayers`, avec `tree` comme unique stockage du contenu.
+Les colonnes `problem` et `prayer` sont supprimées. Les prières présentes au
+moment de la migration sont conservées dans leur arbre.
 
 | Colonne | Usage |
 | --- | --- |
-| `tree` (JSONB nullable) | Neuf clés fixes, chacune avec `title` et `description` séparés |
+| `tree` (JSONB non nul) | Chaque sefira enregistrée contient `title` et `description` |
 | `process` | `basic-v1` pour le formulaire historique ; `tree-v1` pour les neuf sefirot |
 | `player_id` | Participation du joueur au moment de l'enregistrement |
 | `master_id` | Master associé au moment de l'enregistrement |
 
-Pour une nouvelle prière complète, `problem = tree.binah.description` et
-`prayer = tree.chokmah.description`. Kether est distinct dans `tree.kether`.
-Le formulaire existant continue d'insérer ses deux textes sans changement.
-`get_my_records(kind="prayers")` renvoie l'arbre complet ; pour une ligne
-historique il présente ses deux textes sous Binah et Chokmah, sans inventer
-Kether, les titres ou les autres sefirot. Aucun backfill irréversible.
+Le formulaire garde exactement ses deux champs visibles, labels et placeholders.
+Son code de sauvegarde envoie `tree.binah` (Problem) et `tree.chokmah` (Prayer),
+avec `process='basic-v1'`. Il n'invente pas de Kether ou d'autres sefirot.
+Le plugin enregistre neuf sefirot sous `process='tree-v1'` ; sa restriction aux
+élèves de Cédric reste inchangée. `get_my_records` renvoie directement le même
+arbre enregistré, sans format de secours. Les emails de première prière et les
+snapshots de leur file utilisent eux aussi `tree`.
 
-La base valide les neuf clés, les types et les limites, impose l'utilisateur
+La base valide les deux clés du formulaire ou les neuf clés du parcours complet,
+les types et les limites. Pour le parcours complet elle impose l'utilisateur
 connecté et sa participation active, et garde les droits de lecture existants.
 Les autres utilisateurs et le Master n'obtiennent aucun droit supplémentaire
 sur le texte des prières. Aucun service-role dans le MCP.
@@ -258,3 +261,34 @@ le texte des trois exemples, comparé à l'identique à la source locale. Cet ap
 ne sauvegarde ni brouillon ni prière. L'essai conversationnel décrit plus haut
 reste à faire avec les modèles/clients visés ; les tests techniques ne prouvent
 pas qu'ils suivront spontanément toutes les nuances de la pratique.
+
+### Release : stockage tree unique et notification, 3 novembre 2026
+
+Migration source : 20261103010623_unified_prayer_tree.sql ; versions distantes
+20261103011601 en dev et 20261103011700 en production. Les colonnes problem et
+prayer sont retir?es ; les deux lignes dev et la ligne production pr?sentes
+ont ?t? conserv?es dans tree. Aucune passerelle pour les anciens payloads.
+Les deux champs du formulaire, ses labels et placeholders restent inchang?s ;
+seul le payload et le cache du script sont adapt?s.
+
+MCP : version 34 en dev et 9 en production. Email : version 6 en dev et 4 en
+production. Les emails et leur file utilisent tree ; les r?gles first-only
+et les acc?s priv?s restent inchang?s. La notification prayer_learned.v1 garde
+son ID, son ?tape account, son caract?re dismissible et les re?us existants.
+Seul son texte est remplac? par les deux paragraphes demand?s.
+
+49 tests locaux et la suite navigateur passent, ainsi que les contr?les
+frontend/r?gles/UI. Tests SQL pri?res et email ex?cut?s sur Supabase dev avec
+rollback ; aucun email de test envoy?. Colonnes, absence de passerelle, compte
+des pri?res, notification et lecture sous r?le authenticated v?rifi?s en
+production. Les alertes de s?curit? Supabase pr?existantes sont inchang?es.
+Le MCP public r?pond (discovery 200, anonyme 401), mais les appels via la
+connexion actuelle du plugin renvoient une erreur interne du connecteur, m?me
+pour get_my_progress. La lecture SQL avec les droits du joueur et les tests
+MCP locaux passent ; la lecture depuis le client connect? reste ? revalider
+(apr?s rafra?chissement/reconnexion si n?cessaire).
+
+Main n'a ?t? ni modifi?e ni fusionn?e : l'auteur publiera lui-m?me le nouveau
+code de sauvegarde par son merge. ? sa demande, la suppression en production
+a pr?c?d? ce merge ; l'ancien formulaire peut refuser les envois jusqu'? cette
+publication. Ne pas rejouer les migrations d?j? appliqu?es au moment du merge.

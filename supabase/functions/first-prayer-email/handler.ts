@@ -12,7 +12,7 @@ type PendingEmail = {
   prayer_id?: string;
   delivery_started_at: string;
   sent_at: string | null;
-  payload: { username: string; problem?: string; prayer?: string; email?: string; created_at: string };
+  payload: { username: string; tree?: Record<string, {title: string; description: string}>; email?: string; created_at: string };
 };
 
 export function createHandler(config: Config, requestFetch: typeof fetch = fetch) {
@@ -80,8 +80,10 @@ export function createHandler(config: Config, requestFetch: typeof fetch = fetch
             `Nom : ${item.payload.username}`,
             `Compte : ${item.user_id || 'Visiteur sans compte'}`,
             `Date : ${item.payload.created_at}`,
-            '', 'Problème :', item.payload.problem,
-            '', 'Prière :', item.payload.prayer,
+            ...['kether','chokmah','binah','chesed','geburah','tipharet','netzach','hod','yesod'].flatMap((sefira) => {
+              const entry = item.payload.tree?.[sefira];
+              return entry ? ['', `${sefira} — ${entry.title}`, entry.description] : [];
+            }),
           ]).join('\n'),
         }),
       });

@@ -131,3 +131,5 @@ de file ont ensuite été supprimés, avec vérification. Les tests d'envoi util
 une insertion dans `auth.users` ; ils ne remplacent pas un parcours navigateur
 complet d'inscription et de confirmation. RLS sans politique sur `signup_emails`
 est intentionnel, comme pour la file des prières : accès serveur uniquement.
+
+Le contenu des pri?res est d?sormais lu uniquement dans payload.tree (Binah/Chokmah pour le formulaire, neuf sefirot pour le plugin). Les snapshots sont normalis?s par la migration unified_prayer_tree.

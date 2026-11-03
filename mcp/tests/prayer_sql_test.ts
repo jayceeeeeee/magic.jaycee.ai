@@ -32,7 +32,11 @@ Deno.test("prayer migration and SQL access/compatibility tests pass in isolated 
         $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
       grant usage on schema auth to anon, authenticated;
       grant usage on schema private to authenticated;
-      ${table("profiles")} ${table("player")} ${table("prayers")}
+      ${table("profiles")} ${table("player")} ${table("prayers")} ${
+      table("notifications")
+    }
+      create table public.first_prayer_emails(user_id uuid unique,prayer_id uuid,payload jsonb);
+      create function private.dispatch_first_prayer_emails() returns void language plpgsql as $$ begin return; end; $$;
       alter table public.profiles add primary key(id);
       alter table public.player add primary key(id);
       alter table public.prayers add primary key(id);
@@ -86,16 +90,33 @@ Deno.test("prayer migration and SQL access/compatibility tests pass in isolated 
       )
     ) throw new Error("Schema differs from Technomancy restriction");
     await db.exec(restriction);
+    await db.exec(`insert into public.notifications(id,stage,position,title,tone,dismissible,enabled,content) values('prayer_learned.v1','account',10,'Unlocked','unlocked',true,true,'{"text":"Old prayer notice"}')`);
+    await db.exec(
+      await Deno.readTextFile(
+        new URL(
+          "../../supabase/migrations/20261103010623_unified_prayer_tree.sql",
+          import.meta.url,
+        ),
+      ),
+    );
+    // The new website submits the same two texts directly into tree.
+    await db.exec(
+      `insert into public.prayers(username,tree) values('Tree guest','{"binah":{"title":"Problem","description":"A concern"},"chokmah":{"title":"Prayer","description":"An intention"}}')`,
+    );
     const existing = await db.query<
-      { process: string; tree: unknown; problem: string }
-    >("select process,tree,problem from public.prayers where username='Existing guest'");
+      { process: string; tree: any }
+    >("select process,tree from public.prayers where username='Existing guest'");
     if (
       existing.rows[0]?.process !== "basic-v1" ||
-      existing.rows[0]?.tree !== null ||
-      existing.rows[0]?.problem !== "Existing problem"
+      existing.rows[0]?.tree.binah.description !== "Existing problem" ||
+      existing.rows[0]?.tree.chokmah.description !== "Existing prayer"
     ) {
       throw new Error("Migration changed a legacy prayer");
     }
+    const retired = await db.query("select column_name from information_schema.columns where table_schema='public' and table_name='prayers' and column_name in ('problem','prayer')");
+    if (retired.rows.length) throw new Error("Redundant prayer columns remain");
+    const notice = await db.query<{stage:string;dismissible:boolean;content:any}>("select stage,dismissible,content from public.notifications where id='prayer_learned.v1'");
+    if (notice.rows[0]?.stage!=='account' || !notice.rows[0]?.dismissible || notice.rows[0]?.content.text.length!==2 || !notice.rows[0]?.content.text[0].includes('1,000,000') || notice.rows[0]?.content.text[1]!=='Connect with a Master below and use your first skill to burn Karma faster.') throw new Error("Notice text or original behavior changed");
     const permissions = await db.query<
       { invoker: boolean; authenticated: boolean; anonymous: boolean }
     >(`select

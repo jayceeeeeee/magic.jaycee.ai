@@ -1,5 +1,4 @@
 import {
-  prayerRecord,
   prayerTreeSchema,
   registerPrayerTools,
 } from "../../supabase/functions/game-mcp/prayer-tools.ts";
@@ -66,8 +65,6 @@ function fixture(
               user_id: owner,
               player_id: args.p_player_id,
               master_id: master,
-              problem: tree.binah.description,
-              prayer: tree.chokmah.description,
             },
             error: null,
           };
@@ -265,25 +262,5 @@ Deno.test("approved prayer uses user RPC and stable retry ID, without practice c
     failed.isError && !failed.structuredContent &&
       failed.content[0].text.includes("same prayer_id"),
     "Uncertain save must not claim success or use a new ID",
-  );
-});
-
-Deno.test("legacy prayer records retain their actual two fields without inventing a tree", () => {
-  const legacy = prayerRecord({
-    id: prayer,
-    problem: "Pain and sadness",
-    prayer: "I seek ease",
-    tree: null,
-  });
-  assert(
-    legacy.process === "basic-v1" &&
-      legacy.tree.binah.description === legacy.problem &&
-      legacy.tree.chokmah.description === legacy.prayer &&
-      legacy.tree.binah.title === null && !legacy.tree.kether,
-    "Legacy mapping must not invent missing content",
-  );
-  assert(
-    prayerRecord({ tree, process: "tree-v1" }).tree === tree,
-    "Complete trees must retain all entries",
   );
 });

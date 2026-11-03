@@ -9,7 +9,7 @@ const userId = '11111111-1111-4111-8111-111111111111';
 const item = () => ({
   user_id: userId, prayer_id: '22222222-2222-4222-8222-222222222222',
   delivery_started_at: new Date().toISOString(), sent_at: null,
-  payload: { username: '<User>', problem: 'Help me', prayer: 'Thank you', created_at: '2026-10-29' },
+  payload: { username: '<User>', tree: { binah: {title:'Problem',description:'Help me'}, chokmah:{title:'Prayer',description:'Thank you'} }, created_at: '2026-10-29' },
 });
 const request = (secret = config.webhookSecret, body: unknown = { user_id: userId }) => new Request('https://example.test', {
   method: 'POST', headers: { 'x-prayer-webhook-secret': secret }, body: JSON.stringify(body),
@@ -36,7 +36,7 @@ Deno.test('uses stored content, fixed destination and stable idempotency key; re
   assert((await createHandler(config, mockFetch)(request(undefined, { user_id: userId, to: 'attacker@example.com' }))).status === 200);
   assert(calls.length === 3);
   const email = JSON.parse(String(calls[1].init.body));
-  assert(email.to[0] === config.to && email.text.includes('<User>'));
+  assert(email.to[0] === config.to && email.text.includes('<User>') && email.text.includes('Help me') && email.text.includes('Thank you'));
   assert(!('html' in email));
   assert(new Headers(calls[1].init.headers).get('Idempotency-Key') === `first-prayer/${item().prayer_id}`);
   assert(calls[2].init.method === 'PATCH' && JSON.parse(String(calls[2].init.body)).sent_at);
@@ -53,6 +53,18 @@ Deno.test('skips already sent, absent, historical and expired entries', async ()
     await createHandler(config, mockFetch)(request());
     assert(calls === 1);
   }
+});
+
+Deno.test('prayer email includes all nine tree entries without legacy columns', async () => {
+  const tree=Object.fromEntries(['kether','chokmah','binah','chesed','geburah','tipharet','netzach','hod','yesod'].map(k=>[k,{title:k,description:`Words for ${k}`} ]));
+  let text='';
+  const mockFetch=((url:string,init:RequestInit)=>{
+    if (url.includes('select=*')) return Promise.resolve(Response.json([{...item(),payload:{username:'Player',tree,created_at:'2026-11-03'}}]));
+    if (url==='https://api.resend.com/emails') {text=JSON.parse(String(init.body)).text;return Promise.resolve(Response.json({id:'receipt'}));}
+    return Promise.resolve(new Response(null,{status:204}));
+  }) as typeof fetch;
+  assert((await createHandler(config,mockFetch)(request())).status===200);
+  assert(Object.keys(tree).every(k=>text.includes(`Words for ${k}`)));
 });
 
 Deno.test('provider failure leaves queue pending; receipt failure retries with the same key', async () => {

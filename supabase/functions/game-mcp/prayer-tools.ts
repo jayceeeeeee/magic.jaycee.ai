@@ -32,19 +32,6 @@ export const submitPrayerSchema = z.object({
   confirmed: z.literal(true),
 }).strict();
 
-// Legacy website rows remain untouched; expose their two actual fields without
-// inventing a separate Kether problem, titles or the other six sefirot.
-export function prayerRecord<T extends Record<string, any>>(row: T) {
-  return {
-    ...row,
-    tree: row.tree ?? {
-      binah: { title: null, description: row.problem },
-      chokmah: { title: null, description: row.prayer },
-    },
-    process: row.process ?? "basic-v1",
-  };
-}
-
 export function registerPrayerTools(
   server: McpServer,
   { client, userId, masterAccountIds = DEV_MASTER_ACCOUNT_IDS }: {
@@ -180,7 +167,7 @@ export function registerPrayerTools(
       }
       return {
         kind: "prayer_saved",
-        prayer: prayerRecord(saved.data),
+        prayer: saved.data,
         practice_recorded: false,
         master_message_sent: false,
         reminder:

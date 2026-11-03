@@ -37,9 +37,8 @@ do $$
 declare t jsonb := current_setting('test.prayer_tree')::jsonb; r jsonb; again jsonb;
 begin
   r := public.submit_prayer(current_setting('test.prayer_id')::uuid,current_setting('test.prayer_player')::uuid,t);
-  if r->>'process'<>'tree-v1' or r->'tree'<>t or r->>'problem'<>t->'binah'->>'description'
-    or r->>'prayer'<>t->'chokmah'->>'description' or r->>'master_id'<>current_setting('test.prayer_master') then
-    raise exception 'FAIL: saved tree or legacy projection differs';
+  if r->>'process'<>'tree-v1' or r->'tree'<>t or r ? 'problem' or r ? 'prayer' or r->>'master_id'<>current_setting('test.prayer_master') then
+    raise exception 'FAIL: saved tree differs or legacy fields leaked';
   end if;
   again := public.submit_prayer(current_setting('test.prayer_id')::uuid,current_setting('test.prayer_player')::uuid,t);
   if again<>r or (select count(*) from public.prayers where id=current_setting('test.prayer_id')::uuid)<>1 then
@@ -71,18 +70,18 @@ begin
     raise exception 'FAIL: malformed tree accepted';
   end if;
   begin
-    insert into public.prayers(user_id,username,problem,prayer,tree,process,player_id,master_id)
-      values(auth.uid(),'Player',t->'binah'->>'description',t->'chokmah'->>'description',t,'tree-v1',
+    insert into public.prayers(user_id,username,tree,process,player_id,master_id)
+      values(auth.uid(),'Player',t,'tree-v1',
         current_setting('test.prayer_foreign_player')::uuid,current_setting('test.prayer_master')::uuid);
     raise exception 'FAIL: direct foreign attribution accepted';
   exception when insufficient_privilege then null; end;
   begin
-    insert into public.prayers(user_id,username,problem,prayer,tree,process,player_id,master_id)
-      values(auth.uid(),'Player','Mismatch',t->'chokmah'->>'description',t,'tree-v1',
+    insert into public.prayers(user_id,username,tree,process,player_id,master_id)
+      values(auth.uid(),'Player',t-'yesod','tree-v1',
         current_setting('test.prayer_player')::uuid,current_setting('test.prayer_master')::uuid);
-    raise exception 'FAIL: mismatched legacy projection accepted';
+    raise exception 'FAIL: partial full tree accepted';
   exception when check_violation then null; end;
-  insert into public.prayers(user_id,username,problem,prayer) values(auth.uid(),'Player','Problem','Prayer');
+  insert into public.prayers(user_id,username,tree) values(auth.uid(),'Player',jsonb_build_object('binah',jsonb_build_object('title','Problem','description','Problem'),'chokmah',jsonb_build_object('title','Prayer','description','Prayer')));
 end;
 $$;
 reset role;
@@ -101,8 +100,8 @@ do $$ begin
     raise exception 'FAIL: restricted skill still available for replay';
   exception when insufficient_privilege then null; end;
   begin
-    insert into public.prayers(user_id,username,problem,prayer,tree,process,player_id,master_id)
-      select auth.uid(),'Player','Player words for binah','Player words for chokmah',current_setting('test.prayer_tree')::jsonb,'tree-v1',id,master
+    insert into public.prayers(user_id,username,tree,process,player_id,master_id)
+      select auth.uid(),'Player',current_setting('test.prayer_tree')::jsonb,'tree-v1',id,master
       from public.player where user_id=auth.uid() and master=current_setting('test.prayer_other_master')::uuid;
     raise exception 'FAIL: another Master accepted a direct tree insert';
   exception when insufficient_privilege then null; end;
@@ -150,15 +149,15 @@ end; $$;
 reset role;
 select set_config('request.jwt.claim.sub','',true);
 set local role anon;
-insert into public.prayers(username,problem,prayer) values('Guest','Guest problem','Guest prayer');
+insert into public.prayers(username,tree) values('Guest',jsonb_build_object('binah',jsonb_build_object('title','Problem','description','Guest problem'),'chokmah',jsonb_build_object('title','Prayer','description','Guest prayer')));
 do $$ begin
   begin
     perform public.submit_prayer(gen_random_uuid(),current_setting('test.prayer_player')::uuid,current_setting('test.prayer_tree')::jsonb);
     raise exception 'FAIL: anonymous RPC execution accepted';
   exception when insufficient_privilege then null; end;
   begin
-    insert into public.prayers(username,problem,prayer,tree,process,player_id,master_id)
-      values('Guest','Player words for binah','Player words for chokmah',current_setting('test.prayer_tree')::jsonb,'tree-v1',
+    insert into public.prayers(username,tree,process,player_id,master_id)
+      values('Guest',current_setting('test.prayer_tree')::jsonb,'tree-v1',
         current_setting('test.prayer_player')::uuid,current_setting('test.prayer_master')::uuid);
     raise exception 'FAIL: anonymous tree accepted';
   exception when insufficient_privilege then null; end;

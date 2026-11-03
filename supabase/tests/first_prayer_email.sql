@@ -9,23 +9,23 @@ declare
   anonymous_id uuid := gen_random_uuid();
 begin
   insert into auth.users (id, email) values (account_id, account_id || '@example.test');
-  insert into public.prayers (id, user_id, username, problem, prayer)
-    values (first_id, account_id, 'Test', 'Problem', 'First prayer');
-  insert into public.prayers (user_id, username, problem, prayer)
-    values (account_id, 'Test', 'Problem', 'Second prayer');
-  insert into public.prayers (id, username, problem, prayer)
-    values (anonymous_id, 'Visitor', 'Problem', 'Anonymous prayer');
+  insert into public.prayers (id, user_id, username, tree)
+    values (first_id, account_id, 'Test', jsonb_build_object('binah',jsonb_build_object('title','Problem','description','Problem'),'chokmah',jsonb_build_object('title','Prayer','description','First prayer')));
+  insert into public.prayers (user_id, username, tree)
+    values (account_id, 'Test', jsonb_build_object('binah',jsonb_build_object('title','Problem','description','Problem'),'chokmah',jsonb_build_object('title','Prayer','description','Second prayer')));
+  insert into public.prayers (id, username, tree)
+    values (anonymous_id, 'Visitor', jsonb_build_object('binah',jsonb_build_object('title','Problem','description','Problem'),'chokmah',jsonb_build_object('title','Prayer','description','Anonymous prayer')));
   if (select count(*) from public.first_prayer_emails where user_id = account_id) <> 1 then
     raise exception 'Expected exactly one queue entry';
   end if;
   if not exists (select 1 from public.first_prayer_emails
-    where user_id = account_id and prayer_id = first_id and payload->>'prayer' = 'First prayer'
+    where user_id = account_id and prayer_id = first_id and payload->'tree'->'chokmah'->>'description' = 'First prayer'
       and sent_at is null and delivery_started_at is null) then
     raise exception 'First prayer must remain queued without configuration';
   end if;
   if not exists (select 1 from public.first_prayer_emails
     where prayer_id = anonymous_id and user_id is null
-      and payload->>'prayer' = 'Anonymous prayer' and sent_at is null) then
+      and payload->'tree'->'chokmah'->>'description' = 'Anonymous prayer' and sent_at is null) then
     raise exception 'Anonymous prayer must be queued';
   end if;
   if has_table_privilege('anon', 'public.first_prayer_emails', 'select')
@@ -38,7 +38,7 @@ begin
 end;
 $$;
 set local role anon;
-insert into public.prayers (username, problem, prayer)
-values ('Anonymous RLS test', 'Test', 'Public submission can enqueue a notification');
+insert into public.prayers (username, tree)
+values ('Anonymous RLS test', jsonb_build_object('binah',jsonb_build_object('title','Problem','description','Problem'),'chokmah',jsonb_build_object('title','Prayer','description','Public submission can enqueue a notification')));
 reset role;
 rollback;

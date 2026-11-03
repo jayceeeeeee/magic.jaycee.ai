@@ -6,7 +6,7 @@ import { getMannaModel, getMannaRules, getMannaSkillModels } from "./manna.js";
 import { registerMasterTools } from "./master-tools.ts";
 import { registerGameTools } from "./game-tools.ts";
 import { registerAccountTools } from "./account-tools.ts";
-import { prayerRecord, registerPrayerTools } from "./prayer-tools.ts";
+import { registerPrayerTools } from "./prayer-tools.ts";
 import { DEV_PROJECT_URL, getEnvironment, type GameEnvironment } from "./environment.ts";
 
 // Each request supplies its authenticated, user-scoped client and verified identity.
@@ -501,7 +501,7 @@ export function registerTools(
       }
       const rows = kind === "prayers"
         ? await client.from("prayers").select(
-          "id,created_at,problem,prayer,username,tree,process,player_id,master_id",
+          "id,created_at,username,tree,process,player_id,master_id",
         )
           .eq("user_id", userId).order("created_at", { ascending: false })
           .order("id", { ascending: false })
@@ -516,7 +516,7 @@ export function registerTools(
       return result({
         kind,
         offset,
-        records: rows.data?.slice(0, pageSize).map((row) => kind === "prayers" ? prayerRecord(row) : row),
+        records: rows.data?.slice(0, pageSize),
         has_more: (rows.data?.length ?? 0) > pageSize,
       });
     },

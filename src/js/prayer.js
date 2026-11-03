@@ -31,8 +31,11 @@
         const storedFullName = window.localStorage.getItem("player_full_name");
 
         return {
-            problem: String(formData.get("problem") || "").trim(),
-            prayer: String(formData.get("prayer") || "").trim(),
+            tree: {
+                binah: { title: "Problem", description: String(formData.get("problem") || "").trim() },
+                chokmah: { title: "Prayer", description: String(formData.get("prayer") || "").trim() },
+            },
+            process: "basic-v1",
             username: String(storedFullName || "Unknown user").trim(),
         };
     }
@@ -84,8 +87,8 @@
         const { data: sessionData } = await client.auth.getSession();
         const userId = sessionData?.session?.user?.id || null;
         const prayerRow = {
-            problem: payload.problem,
-            prayer: payload.prayer,
+            tree: payload.tree,
+            process: payload.process,
             username: payload.username,
         };
 
